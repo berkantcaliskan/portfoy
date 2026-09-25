@@ -1,0 +1,123 @@
+export type Department =
+  | 'Pazarlama'
+  | 'Satış'
+  | 'Müşteri İlişkileri'
+  | 'Muhasebe'
+  | 'Yönetim'
+
+export const CANONICAL_DEPARTMENTS: Department[] = [
+  'Pazarlama',
+  'Satış',
+  'Müşteri İlişkileri',
+  'Muhasebe',
+  'Yönetim',
+]
+
+export type UserRole = 'ADMIN' | 'MANAGER' | 'SPECIALIST' | 'REPRESENTATIVE' | 'MEMBER'
+export type AccessScope = 'ALL' | 'DEPARTMENT' | 'ASSIGNED_ONLY'
+
+export interface UserPermissions {
+  canEditProjectPrice?: boolean
+  canChangeFlatStatus?: boolean
+  canApproveDiscounts?: boolean
+  canRefundDeposit?: boolean
+  canManageTeam?: boolean
+  canReshareFiles?: boolean
+}
+
+export type NavPageId =
+  | 'dashboard'
+  // Pazarlama
+  | 'portfolio'
+  | 'marketing-campaigns'
+  | 'marketing-reports'
+  // Satış
+  | 'crm'
+  | 'appointments'
+  | 'sales-performance'
+  // Müşteri İlişkileri
+  | 'customers'
+  | 'followups-appointments'
+  | 'requests'
+  // Muhasebe
+  | 'collections'
+  | 'payments'
+  | 'financial-reports'
+  // Yönetim
+  | 'team-permissions'
+  | 'executive-reports'
+  | 'approvals'
+  // Ortak sabitler
+  | 'shared'
+  | 'projects'
+  // Dock / Başlat menüsü öğeleri
+  | 'contacts'
+
+export interface DepartmentPageConfig {
+  id: NavPageId
+  label: string
+  description?: string
+}
+
+/**
+ * EXACT 6 PAGES PER DEPARTMENT:
+ * 1. Başlangıç (dashboard)
+ * 2, 3, 4: Department-specific
+ * 5. Paylaşılanlar (shared)
+ * 6. Projeler (projects)
+ */
+export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> = {
+  'Pazarlama': [
+    { id: 'dashboard', label: 'Başlangıç' },
+    { id: 'portfolio', label: 'Portföy Yönetimi' },
+    { id: 'marketing-campaigns', label: 'Kampanyalar' },
+    { id: 'marketing-reports', label: 'Raporlar' },
+    { id: 'shared', label: 'Paylaşılanlar' },
+    { id: 'projects', label: 'Projeler' },
+  ],
+  'Satış': [
+    { id: 'dashboard', label: 'Başlangıç' },
+    { id: 'crm', label: 'Satış' },
+    { id: 'appointments', label: 'Randevular' },
+    { id: 'sales-performance', label: 'Performans' },
+    { id: 'shared', label: 'Paylaşılanlar' },
+    { id: 'projects', label: 'Projeler' },
+  ],
+  'Müşteri İlişkileri': [
+    { id: 'dashboard', label: 'Başlangıç' },
+    { id: 'customers', label: 'Müşteriler' },
+    { id: 'followups-appointments', label: 'Takip ve Randevular' },
+    { id: 'requests', label: 'Talepler' },
+    { id: 'shared', label: 'Paylaşılanlar' },
+    { id: 'projects', label: 'Projeler' },
+  ],
+  'Muhasebe': [
+    { id: 'dashboard', label: 'Başlangıç' },
+    { id: 'collections', label: 'Tahsilatlar' },
+    { id: 'payments', label: 'Ödemeler' },
+    { id: 'financial-reports', label: 'Finansal Raporlar' },
+    { id: 'shared', label: 'Paylaşılanlar' },
+    { id: 'projects', label: 'Projeler' },
+  ],
+  'Yönetim': [
+    { id: 'dashboard', label: 'Başlangıç' },
+    { id: 'team-permissions', label: 'Ekip ve Yetkiler' },
+    { id: 'executive-reports', label: 'Raporlar' },
+    { id: 'approvals', label: 'Onaylar' },
+    { id: 'shared', label: 'Paylaşılanlar' },
+    { id: 'projects', label: 'Projeler' },
+  ],
+}
+
+export function normalizeDepartmentName(dept: string): Department {
+  if (!dept) return 'Yönetim'
+  const clean = dept.trim().toLowerCase()
+  if (clean.includes('pazarlama')) return 'Pazarlama'
+  if (clean.includes('satış') || clean.includes('satis')) return 'Satış'
+  if (clean.includes('ilişki') || clean.includes('iliski') || clean.includes('müşteri') || clean.includes('musteri')) {
+    return 'Müşteri İlişkileri'
+  }
+  if (clean.includes('muhasebe') || clean.includes('finans')) return 'Muhasebe'
+  if (clean.includes('yönetim') || clean.includes('yonetim') || clean.includes('operasyon')) return 'Yönetim'
+  return 'Yönetim'
+}

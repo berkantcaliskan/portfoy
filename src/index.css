@@ -1,0 +1,328 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'The Seasons';
+  src: url('/fonts/TheSeasons-Regular.ttf') format('truetype'),
+       url('/fonts/The Seasons Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Seasons';
+  src: url('/fonts/TheSeasons-Bold.ttf') format('truetype'),
+       url('/fonts/The Seasons Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --bg-base: #34302d;
+    --accent-color: #b99881;
+    --accent-light: #d6beae;
+    --primary-anthracite: #282522;
+    --tertiary-white: #f3efe9;
+    --glass-border: rgba(185, 152, 129, 0.2);
+  }
+
+  [data-theme-contrast="deep"] {
+    --bg-base: #181615;
+    --primary-anthracite: #221f1d;
+  }
+
+  [data-theme-accent="#b99881"] {
+    --accent-color: #b99881;
+    --accent-light: #d6beae;
+  }
+
+  [data-theme-accent="#d97706"] {
+    --accent-color: #d97706;
+    --accent-light: #f59e0b;
+  }
+
+  [data-theme-accent="#94a3b8"] {
+    --accent-color: #94a3b8;
+    --accent-light: #cbd5e1;
+  }
+
+  [data-theme-accent="#38bdf8"] {
+    --accent-color: #38bdf8;
+    --accent-light: #7dd3fc;
+  }
+
+  /* Portföy Platformu: Başlık ve Gövde Tüm Metinler Kesinlikle Karla */
+  *, *::before, *::after {
+    font-family: 'Karla', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  html, body {
+    background-color: var(--bg-base);
+    color: #f3efe9;
+    font-family: 'Karla', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  }
+
+  /* TÜM BAŞLIKLAR KESİNLİKLE KARLA */
+  h1, h2, h3, h4, h5, h6, .font-heading, .font-serif, .font-sans, .font-codec {
+    font-family: 'Karla', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  }
+}
+
+.font-sans, .font-codec, .font-heading, .font-serif, body, h1, h2, h3, h4, h5, h6 {
+  font-family: 'Karla', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* SADECE VE SADECE LOGONUN YANINDAKİ "Portföy" HEADER METNİNDE THE SEASONS */
+.font-the-seasons, .font-theSeasons {
+  font-family: 'The Seasons', 'Cormorant Garamond', 'Playfair Display', Georgia, serif !important;
+}
+
+.font-mono, code, kbd, samp, pre {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Glassmorphism Primitives: Demirtürk Portföy Altın & Sıcak Antrasit Paleti */
+.glass-panel {
+  background: rgba(40, 37, 34, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(185, 152, 129, 0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.glass-panel-elevated {
+  background: rgba(40, 37, 34, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(185, 152, 129, 0.3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.glass-card {
+  background: rgba(40, 37, 34, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(185, 152, 129, 0.15);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  background: rgba(52, 48, 45, 0.9);
+  border-color: rgba(185, 152, 129, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.glass-card-static {
+  background: rgba(40, 37, 34, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(185, 152, 129, 0.15);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+}
+
+.glass-input {
+  background: rgba(36, 33, 30, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(185, 152, 129, 0.25);
+  color: #f3efe9;
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  outline: none;
+  background: rgba(40, 37, 34, 0.98);
+  border-color: rgba(185, 152, 129, 0.8);
+  box-shadow: 0 0 12px rgba(185, 152, 129, 0.3);
+}
+
+.glass-button-gold {
+  background: linear-gradient(135deg, var(--accent-color, #b99881), #96745f);
+  border: 1px solid rgba(243, 239, 233, 0.25);
+  box-shadow: 0 4px 16px rgba(185, 152, 129, 0.35);
+  color: #1c1a18;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.glass-button-gold:hover {
+  background: linear-gradient(135deg, #c4a58f, #a8846e);
+  box-shadow: 0 6px 20px rgba(185, 152, 129, 0.5);
+  transform: translateY(-1px);
+}
+
+.glass-button-subtle {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(185, 152, 129, 0.25);
+  color: #e2ddd5;
+  transition: all 0.2s ease;
+}
+
+.glass-button-subtle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent-color, #b99881);
+  color: #ffffff;
+}
+
+/* Demirtürk Signature Architectural Glass Blur */
+.glass-blur-box {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(185, 152, 129, 0.25);
+  color: #ffffff;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-blur-box:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(185, 152, 129, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.glass-blur-card {
+  background: rgba(40, 37, 34, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(185, 152, 129, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Sleek scrollbar with gold thumb */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(36, 33, 30, 0.85);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(185, 152, 129, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(185, 152, 129, 0.7);
+}
+
+/* Nefes Alan Gösterge Çizgisi: KESİNLİKLE KIRMIZI DEĞİL, PORTFÖY ALTIN/BRONZ & SICAK ANTRASİT TEMASI */
+@keyframes dockColorCycle {
+  0% {
+    background-position: 0% 50%;
+    box-shadow: 0 0 12px rgba(185, 152, 129, 0.65);
+  }
+  33% {
+    background-position: 50% 50%;
+    box-shadow: 0 0 16px rgba(214, 190, 174, 0.55);
+  }
+  66% {
+    background-position: 100% 50%;
+    box-shadow: 0 0 12px rgba(74, 68, 63, 0.8);
+  }
+  100% {
+    background-position: 0% 50%;
+    box-shadow: 0 0 12px rgba(185, 152, 129, 0.65);
+  }
+}
+
+.dock-breathing-line {
+  background: linear-gradient(90deg, #4a443f, var(--accent-color, #b99881), #f3efe9, #4a443f, var(--accent-color, #b99881));
+  background-size: 300% 300%;
+  animation: dockColorCycle 4s ease infinite;
+}
+
+/* Smooth Architectural Entrance Transitions */
+@keyframes heroTextFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+.animate-hero-fade {
+  animation: heroTextFadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+@keyframes modalContentPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(14px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-content {
+  animation: modalContentPopIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes mobileDrawerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-mobile-drawer {
+  animation: mobileDrawerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scrollDot {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(7px);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-scroll-dot {
+  animation: scrollDot 1.8s ease-in-out infinite;
+}
