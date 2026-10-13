@@ -10,7 +10,8 @@ import {
 } from 'lucide-react'
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { GlassBadge } from '@/components/ui/GlassBadge'
-import { formatCurrency, formatDate, formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
+import { LuxurySelect } from '@/components/ui/LuxurySelect'
+import { formatCurrency, formatDate, formatPhoneNumber, formatPhoneDisplay, generateWhatsAppUrl } from '@/utils/formatters'
 
 interface LeadTableViewProps {
   leads: Lead[]
@@ -36,22 +37,22 @@ export const LeadTableView: React.FC<LeadTableViewProps> = ({
     <div className="space-y-4">
       {/* Filter Toolbar (Pill Shaped) */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 rounded-full bg-navy-900/40 backdrop-blur-md border border-white/8">
-        <div className="flex items-center gap-2 text-xs text-slate-300">
-          <Filter className="w-4 h-4 text-brand-gold" />
-          <span className="font-semibold">Aşama Filtresi:</span>
-          <select
-            value={selectedStage}
-            onChange={(e) => setSelectedStage(e.target.value)}
-            className="bg-navy-950/80 border border-white/10 rounded-full px-3 py-1 text-xs text-white focus:outline-none focus:border-brand-gold/60"
-          >
-            <option value="ALL">Tüm Aşamalar ({leads.length})</option>
-            {Object.keys(STAGE_CONFIGS).map((k) => (
-              <option key={k} value={k}>
-                {STAGE_CONFIGS[k as LeadStage].label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LuxurySelect
+          label="Aşama Filtresi:"
+          icon={<Filter className="w-3.5 h-3.5 text-[#b99881]" />}
+          title="Aşama / Durum Filtrele"
+          value={selectedStage}
+          onChange={setSelectedStage}
+          options={[
+            { value: 'ALL', label: `Tüm Aşamalar (${leads.length})` },
+            ...Object.keys(STAGE_CONFIGS).map((k) => ({
+              value: k,
+              label: STAGE_CONFIGS[k as LeadStage].label,
+            })),
+          ]}
+          align="left"
+          minWidth="w-56"
+        />
 
         <span className="text-xs text-slate-400">
           Toplam <b>{filteredLeads.length}</b> müşteri adayı listeleniyor
@@ -106,26 +107,28 @@ export const LeadTableView: React.FC<LeadTableViewProps> = ({
 
                       {/* Phone & WhatsApp */}
                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs text-slate-300">
-                            {formatPhoneNumber(lead.phone)}
+                        <div className="flex items-center justify-between w-[180px]">
+                          <span className="font-mono text-xs text-slate-300 select-all tracking-wide">
+                            {formatPhoneDisplay(lead.phone)}
                           </span>
-                          <a
-                            href={waUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors"
-                            title="WhatsApp"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                          </a>
-                          <a
-                            href={`tel:${lead.phone}`}
-                            className="p-1.5 rounded-full bg-sky-500/15 text-sky-400 hover:bg-sky-500 hover:text-white transition-colors"
-                            title="Ara"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                          </a>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <a
+                              href={waUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors"
+                              title="WhatsApp"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                            </a>
+                            <a
+                              href={`tel:${lead.phone}`}
+                              className="p-1.5 rounded-full bg-sky-500/15 text-sky-400 hover:bg-sky-500 hover:text-white transition-colors"
+                              title="Ara"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
                         </div>
                       </td>
 

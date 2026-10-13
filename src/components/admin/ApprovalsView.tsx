@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Building,
   User,
-  DollarSign,
+  TurkishLira,
   Filter,
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
@@ -80,7 +80,7 @@ export const ApprovalsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2.5">
             <FileCheck2 className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Yönetici Onayları
             </h2>
           </div>
@@ -162,7 +162,7 @@ export const ApprovalsView: React.FC = () => {
 
                     {req.amount && (
                       <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                        <DollarSign className="w-3.5 h-3.5" />
+                        <TurkishLira className="w-3.5 h-3.5" />
                         <span>Talep Edilen Tutar: {formatCurrency(req.amount)}</span>
                       </div>
                     )}

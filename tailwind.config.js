@@ -11,7 +11,7 @@ export default {
         sans: ['"Karla"', 'system-ui', '-apple-system', 'sans-serif'],
         heading: ['"Karla"', 'system-ui', '-apple-system', 'sans-serif'],
         serif: ['"Karla"', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
         theSeasons: ['"The Seasons"', '"Cormorant Garamond"', 'Georgia', 'serif'],
         codec: ['"Karla"', 'system-ui', 'sans-serif'],
       },
@@ -48,10 +48,10 @@ export default {
           600: '#556374',
         },
         accent: {
-          DEFAULT: '#FF0000',
-          light: '#ff3333',
-          dark: '#b30000',
-          soft: 'rgba(255, 0, 0, 0.15)',
+          DEFAULT: '#b99881',
+          light: '#d6beae',
+          dark: '#96745f',
+          soft: 'rgba(185, 152, 129, 0.15)',
         },
         brand: {
           anthracite: '#313941',

@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
   Target,
@@ -11,7 +12,7 @@ import {
   PhoneCall,
   MessageSquare,
   TrendingUp,
-  DollarSign,
+  TurkishLira,
   Briefcase,
   FileCheck2,
   CalendarCheck,
@@ -59,6 +60,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const requests = requestStore.getAll()
   const metaForms = metaStore.getForms()
 
+  // Live computer time and interactive seconds state
+  const [currentTime, setCurrentTime] = useState<Date>(() => new Date())
+  const [showSeconds, setShowSeconds] = useState<boolean>(false)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Saate tıklandığında açılan saniye görünümünün 4-5 saniye sonra kendi kendine kapanması
+  useEffect(() => {
+    if (!showSeconds) return
+    const autoCloseTimer = setTimeout(() => {
+      setShowSeconds(false)
+    }, 4500)
+    return () => clearTimeout(autoCloseTimer)
+  }, [showSeconds])
+
+  const hours = String(currentTime.getHours()).padStart(2, '0')
+  const minutes = String(currentTime.getMinutes()).padStart(2, '0')
+  const seconds = String(currentTime.getSeconds()).padStart(2, '0')
+  const formattedDate = currentTime.toLocaleDateString('tr-TR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+
   // Common title header adhering to strict guidelines:
   // "Başlık her zaman Başlangıç'tır. Asla katman içinde değildir. Yanında bir ikon olabilir. Altındaki çizgi kaldırıldı."
   const renderHeader = () => (
@@ -68,13 +99,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <h1 className="text-2xl font-bold text-white tracking-wide">
           Başlangıç
         </h1>
-        <span className="text-sm font-semibold px-3 py-1 rounded-full bg-[#3d3733] text-[#b99881] border border-[#4a443f]">
-          {department}
-        </span>
       </div>
-      <div className="text-sm font-medium text-[#c4bcb5]">
-        {new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-      </div>
+
+      {/* Tarih ve Bilgisayar Saati (Saate tıklandığında hafif sola kayma ve saniye animasyonu) */}
+      <motion.div
+        animate={{ x: showSeconds ? -10 : 0 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+        className="flex items-center gap-3 text-sm font-medium text-[#d6beae] select-none"
+      >
+        <span className="whitespace-nowrap">{formattedDate}</span>
+        <button
+          type="button"
+          onClick={() => setShowSeconds((prev) => !prev)}
+          title={showSeconds ? 'Saniyeyi gizlemek için tıklayın' : 'Saniyeyi görmek için tıklayın'}
+          className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#282522]/70 hover:bg-[#282522]/90 border border-white/10 hover:border-white/25 text-[#d6beae] hover:text-white transition-all duration-200 cursor-pointer shadow-sm backdrop-blur-md"
+        >
+          <Clock className="w-3.5 h-3.5 text-[#b99881] group-hover:text-[#e4c9b3] transition-colors" />
+          <span className="font-mono tracking-tight text-xs sm:text-sm font-semibold text-white/90">
+            {hours}:{minutes}
+          </span>
+          <AnimatePresence>
+            {showSeconds && (
+              <motion.span
+                key="seconds"
+                initial={{ opacity: 0, width: 0, marginLeft: 0 }}
+                animate={{ opacity: 1, width: 'auto', marginLeft: 2 }}
+                exit={{ opacity: 0, width: 0, marginLeft: 0 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="font-mono text-xs sm:text-sm font-semibold text-[#b99881] overflow-hidden whitespace-nowrap"
+              >
+                :{seconds}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+      </motion.div>
     </div>
   )
 
@@ -86,45 +145,45 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     return (
       <div className="space-y-6">
-        {/* KPI Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Toplam Aday Havuzu</span>
-              <Users className="w-5 h-5 text-[#b99881]" />
+        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Toplam Aday Havuzu</span>
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{leads.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Aktif veri tabanı</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{leads.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Aktif veri tabanı</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Meta Ads Leadleri</span>
-              <Share2 className="w-5 h-5 text-[#38bdf8]" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Meta Ads Leadleri</span>
+              <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#38bdf8] shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{metaLeads.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Instagram & Facebook</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{metaLeads.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Instagram & Facebook</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Nitelikli Aday Oranı</span>
-              <Target className="w-5 h-5 text-[#34d399]" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Nitelikli Aday Oranı</span>
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-[#34d399] shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">%{qualifiedRate}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">{qualifiedCount} nitelikli aday</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">%{qualifiedRate}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">{qualifiedCount} nitelikli aday</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Meta Entegrasyon</span>
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Meta Entegrasyon</span>
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
             </div>
-            <div className="text-base font-bold text-emerald-400 mt-2 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              Webhook Canlı
+            <div className="text-sm sm:text-base font-bold text-emerald-400 mt-1.5 sm:mt-2 flex items-center gap-1.5 truncate">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="truncate">Webhook Canlı</span>
             </div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Graph API v19.0 Hazır</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Graph API v19.0 Hazır</div>
           </GlassCard>
         </div>
 
@@ -203,42 +262,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     return (
       <div className="space-y-6">
-        {/* KPI Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Portföyümdeki Müşteriler</span>
-              <Users className="w-5 h-5 text-[#b99881]" />
+        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Portföyümdeki Müşteriler</span>
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{myLeads.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Atanan aktif portföy</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{myLeads.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Atanan aktif portföy</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Bugünkü Randevular</span>
-              <CalendarCheck className="w-5 h-5 text-sky-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Bugünkü Randevular</span>
+              <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{todayAppointments.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Görüşme ve sunumlar</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{todayAppointments.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Görüşme ve sunumlar</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Sıcak Teklifler</span>
-              <TrendingUp className="w-5 h-5 text-amber-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Sıcak Teklifler</span>
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{hotOffers.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Sunum & Teklif aşamasında</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{hotOffers.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Sunum & Teklif aşamasında</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Rezerve Daireler</span>
-              <Building2 className="w-5 h-5 text-emerald-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Rezerve Daireler</span>
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{reservedUnits.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Opsiyonlu ünite</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{reservedUnits.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Opsiyonlu ünite</div>
           </GlassCard>
         </div>
 
@@ -306,48 +365,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // 3. MÜŞTERİ İLİŞKİLERİ BAŞLANGIÇ
   const renderCustomerRelationsDashboard = () => {
-    const uncontactedLeads = leads.filter((l) => l.stage === 'NEW')
+    const oct3Start = new Date('2026-10-02T21:00:00.000Z').getTime()
+    const uncontactedLeads = leads.filter((l) => l.stage === 'NEW' && new Date(l.createdAt).getTime() >= oct3Start)
     const qualifiedLeads = leads.filter((l) => l.stage === 'QUALIFIED')
     const openRequests = requests.filter((r) => r.status === 'Açık' || r.status === 'İşlemde')
 
     return (
       <div className="space-y-6">
-        {/* KPI Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>İletişim Bekleyen Başvurular</span>
-              <PhoneCall className="w-5 h-5 text-amber-400" />
+        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">İletişim Bekleyen Başvurular</span>
+              <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{uncontactedLeads.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">İlk arama bekleyen</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{uncontactedLeads.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">İlk arama bekleyen</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Nitelikli Belirlenenler</span>
-              <CheckCircle2 className="w-5 h-5 text-teal-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Nitelikli Belirlenenler</span>
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{qualifiedLeads.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Satışa devredilmeye hazır</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{qualifiedLeads.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Satışa devredilmeye hazır</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Açık Talepler</span>
-              <AlertCircle className="w-5 h-5 text-rose-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Açık Talepler</span>
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{openRequests.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Müşteri destek & bilgi talebi</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{openRequests.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Müşteri destek & bilgi talebi</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Organize Edilen Randevular</span>
-              <CalendarCheck className="w-5 h-5 text-[#b99881]" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Organize Edilen Randevular</span>
+              <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{appointments.length}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Satış ekibine yönlendirilen</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{appointments.length}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Satış ekibine yönlendirilen</div>
           </GlassCard>
         </div>
 
@@ -426,42 +486,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     return (
       <div className="space-y-6">
-        {/* KPI Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Tahsil Edilen Tutar</span>
-              <DollarSign className="w-5 h-5 text-emerald-400" />
+        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Tahsil Edilen Tutar</span>
+              <TurkishLira className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{formatCurrency(collectedTotal)}</div>
-            <div className="text-xs sm:text-sm text-emerald-400 font-medium mt-1.5">Kasaya giren nakit</div>
+            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{formatCurrency(collectedTotal)}</div>
+            <div className="text-[10px] sm:text-xs text-emerald-400 font-medium mt-1 sm:mt-1.5 truncate">Kasaya giren nakit</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Bekleyen Tahsilatlar</span>
-              <Clock className="w-5 h-5 text-amber-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Bekleyen Tahsilatlar</span>
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{formatCurrency(pendingTotal)}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">{pendingCollections.length} adet vadesi gelen</div>
+            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{formatCurrency(pendingTotal)}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">{pendingCollections.length} adet vadesi gelen</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Geciken Tahsilat</span>
-              <AlertCircle className="w-5 h-5 text-rose-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Geciken Tahsilat</span>
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-rose-400 mt-2 font-mono tracking-tight">{overdueCollections.length} Adet</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Takip gerektiren</div>
+            <div className="text-xl sm:text-3xl font-bold text-rose-400 mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{overdueCollections.length} adet</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Takip gerektiren</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Planlanan Ödemeler</span>
-              <Briefcase className="w-5 h-5 text-sky-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Planlanan Ödemeler</span>
+              <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{formatCurrency(pendingPaymentsTotal)}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Komisyon & Şantiye</div>
+            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{formatCurrency(pendingPaymentsTotal)}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Komisyon & Şantiye</div>
           </GlassCard>
         </div>
 
@@ -526,42 +586,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     return (
       <div className="space-y-6">
-        {/* KPI Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Toplam Satış Hacmi</span>
-              <DollarSign className="w-5 h-5 text-emerald-400" />
+        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Toplam Satış Hacmi</span>
+              <TurkishLira className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{formatCurrency(totalSalesVolume)}</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">{soldUnits.length} daire sözleşmesi</div>
+            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{formatCurrency(totalSalesVolume)}</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">{soldUnits.length} daire sözleşmesi</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Bekleyen Yönetici Onayları</span>
-              <FileCheck2 className="w-5 h-5 text-amber-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Bekleyen Onaylar</span>
+              <FileCheck2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{pendingApprovals.length}</div>
-            <div className="text-xs sm:text-sm text-amber-400 font-medium mt-1.5">İskonto & Rezervasyon onayı</div>
+            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{pendingApprovals.length}</div>
+            <div className="text-[10px] sm:text-xs text-amber-400 font-medium mt-1 sm:mt-1.5 truncate">İskonto & Rezervasyon</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Aktif Proje Envanteri</span>
-              <Building2 className="w-5 h-5 text-sky-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Proje Envanteri</span>
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mt-2 font-mono tracking-tight">{projects.length} Proje</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">{allUnits.length} toplam bağımsız bölüm</div>
+            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{projects.length} proje</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">{allUnits.length} bağımsız bölüm</div>
           </GlassCard>
 
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-sm font-medium">
-              <span>Sistem & Yetki Durumu</span>
-              <ShieldCheck className="w-5 h-5 text-teal-400" />
+          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
+              <span className="truncate">Sistem Durumu</span>
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400 shrink-0" />
             </div>
-            <div className="text-sm font-semibold text-white mt-2">5 Departman Aktif</div>
-            <div className="text-xs sm:text-sm text-[#a69f99] mt-1.5">Kurumsal yetki modeli devrede</div>
+            <div className="text-sm sm:text-base font-semibold text-white mt-1.5 sm:mt-2 truncate">5 Departman Aktif</div>
+            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Yetki modeli devrede</div>
           </GlassCard>
         </div>
 

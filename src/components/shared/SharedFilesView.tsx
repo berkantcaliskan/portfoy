@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Share2,
+  Cloud,
   Download,
   Trash2,
   Search,
@@ -46,8 +47,11 @@ export const SharedFilesView: React.FC = () => {
   const [fileName, setFileName] = useState('')
   const [folder, setFolder] = useState<FileCategory>('Proje Katalogları')
   const [fileType, setFileType] = useState<SharedFile['type']>('pdf')
-  const [shareTarget, setShareTarget] = useState<ShareTarget>('ALL_TEAM')
-  const [selectedDepts, setSelectedDepts] = useState<Department[]>(['Satış', 'Müşteri İlişkileri'])
+  const [shareTarget, setShareTarget] = useState<ShareTarget>('DEPARTMENTS')
+  const [selectedDepts, setSelectedDepts] = useState<Department[]>(() => {
+    const d = userStore.getCurrentUser()?.department
+    return d ? [d] : ['Pazarlama']
+  })
   const [canEdit, setCanEdit] = useState(false)
   const [canReshare, setCanReshare] = useState(true)
 
@@ -117,6 +121,12 @@ export const SharedFilesView: React.FC = () => {
     e.preventDefault()
     if (!currentUser || !fileName.trim()) return
 
+    if (shareTarget === 'DEPARTMENTS' && selectedDepts.length === 0) {
+      setErrorMessage('Lütfen dosyanın paylaşılacağı en az bir departman seçin.')
+      setTimeout(() => setErrorMessage(null), 3000)
+      return
+    }
+
     sharedFileStore.uploadFile(
       {
         name: fileName.trim(),
@@ -180,8 +190,8 @@ export const SharedFilesView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <Share2 className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <Cloud className="w-5 h-5 text-[#b99881]" />
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Paylaşılanlar
             </h2>
           </div>
@@ -454,6 +464,12 @@ export const SharedFilesView: React.FC = () => {
                     </label>
                   )
                 })}
+              </div>
+              <div className="p-2.5 rounded-[10px] bg-[#34302d] border border-[#4a443f] text-[11px] text-[#a69f99] flex items-start gap-2">
+                <Lock className="w-3.5 h-3.5 text-[#b99881] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-white font-medium">Departman İzolasyonu:</strong> Bu dosya yalnızca yukarıda işaretlediğiniz departman(lar)ın panellerinde görünür. Diğer departman personelleri dosyayı göremez, arayamaz veya indiremez.
+                </span>
               </div>
             </div>
           )}

@@ -5,6 +5,9 @@ import {
   UserPermissions,
   normalizeDepartmentName,
 } from '@/types/department'
+import { supabase, isSupabaseConfigured } from './supabaseClient'
+import { syncService } from './syncService'
+import { rowToUser } from './dbMapper'
 
 export type { Department, UserRole, AccessScope, UserPermissions }
 
@@ -91,52 +94,176 @@ export function generateInitialPassword(): string {
 const STORAGE_KEY_USERS = 'demirturk_users_v2'
 const STORAGE_KEY_CURRENT_USER = 'demirturk_active_user_v2'
 
+export const PERMANENT_GOD_USER: AppUser = {
+  id: 'usr-berkant',
+  fullName: 'Berkant Demirtürk',
+  username: 'berkant',
+  password: 'Berkant26.',
+  email: 'demirturkberkant@gmail.com',
+  companyName: 'Demirtürk Portföy',
+  department: 'Pazarlama',
+  departments: ['Pazarlama', 'Satış', 'Müşteri İlişkileri', 'Muhasebe', 'Yönetim'],
+  role: 'ADMIN',
+  isManager: true,
+  scope: 'ALL',
+  permissions: {
+    canEditProjectPrice: true,
+    canChangeFlatStatus: true,
+    canApproveDiscounts: true,
+    canRefundDeposit: true,
+    canManageTeam: true,
+    canReshareFiles: true,
+  },
+  mustChangePassword: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+}
+
 type Listener = () => void
 
 class UserStore {
-  private users: AppUser[] = []
-  private currentUser: AppUser | null = null
+  private users: AppUser[] = [PERMANENT_GOD_USER]
+  private currentUser: AppUser | null = PERMANENT_GOD_USER
   private listeners: Set<Listener> = new Set()
+  private realtimeChannel: any = null
 
   constructor() {
     this.loadFromStorage()
+    this.initRealtime()
+  }
+
+  public setLoadedUsers(users: AppUser[]) {
+    if (users && users.length > 0) {
+      const filtered = users.filter(
+        (u) =>
+          u.id !== 'usr-admin-1' &&
+          u.email !== 'berkant@demirturkinsaat.com' &&
+          u.fullName !== 'Berkant Çalışkan'
+      )
+      const hasGodUser = filtered.some(
+        (u) => u.id === PERMANENT_GOD_USER.id || u.email === PERMANENT_GOD_USER.email
+      )
+      const finalList = hasGodUser ? filtered : [PERMANENT_GOD_USER, ...filtered]
+      this.users = finalList.map((u) => {
+        const normalized = this.normalizeUser(u)
+        // Cloud sync guard: if incoming cloud record lacks avatarUrl but local/memory has it, retain it
+        if (!normalized.avatarUrl) {
+          const inMemoryUser = this.users.find((eu) => eu.id === normalized.id)
+          if (inMemoryUser?.avatarUrl) {
+            normalized.avatarUrl = inMemoryUser.avatarUrl
+          }
+        }
+        return normalized
+      })
+      try {
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(this.users))
+      } catch {}
+      const isLoggedOut = typeof window !== 'undefined' && localStorage.getItem('demirturk_logged_out') === 'true'
+      if (!isLoggedOut) {
+        if (!this.currentUser || !this.users.some((u) => u.id === this.currentUser?.id)) {
+          this.currentUser =
+            this.users.find((u) => u.email === PERMANENT_GOD_USER.email) ||
+            this.users[0] ||
+            null
+          if (this.currentUser) {
+            try {
+              localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
+            } catch {}
+          }
+        } else {
+          // Keep currentUser synchronized with the updated users list (preserving avatar, permissions, etc.)
+          const syncedUser = this.users.find((u) => u.id === this.currentUser?.id)
+          if (syncedUser) {
+            this.currentUser = syncedUser
+            try {
+              localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
+            } catch {}
+          }
+        }
+      }
+      this.notify()
+    }
+  }
+
+  private initRealtime() {
+    if (!isSupabaseConfigured() || this.realtimeChannel) return
+    this.realtimeChannel = supabase
+      .channel('realtime:app_users')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const incoming = this.normalizeUser(rowToUser(payload.new))
+          if (!this.users.some((u) => u.id === incoming.id)) {
+            this.users = [...this.users, incoming]
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const incoming = this.normalizeUser(rowToUser(payload.new))
+          const idx = this.users.findIndex((u) => u.id === incoming.id)
+          if (idx !== -1) {
+            this.users[idx] = incoming
+            if (this.currentUser?.id === incoming.id) {
+              this.currentUser = incoming
+            }
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'DELETE') {
+          this.users = this.users.filter((u) => u.id !== (payload.old as any).id)
+          this.saveToStorage()
+        }
+      })
+      .subscribe()
   }
 
   private normalizeUser(user: any): AppUser {
-    const normalizedDept = normalizeDepartmentName(user.department || 'Yönetim')
-    const rawDepts = Array.isArray(user.departments) && user.departments.length > 0
-      ? user.departments
-      : [normalizedDept]
+    const isPermanent =
+      user.id === PERMANENT_GOD_USER.id || user.email === PERMANENT_GOD_USER.email
+    const normalizedDept = normalizeDepartmentName(user.department || (isPermanent ? 'Pazarlama' : 'Yönetim'))
+    const rawDepts =
+      Array.isArray(user.departments) && user.departments.length > 0
+        ? user.departments
+        : isPermanent
+        ? PERMANENT_GOD_USER.departments
+        : [normalizedDept]
     const departments: Department[] = Array.from(new Set(rawDepts.map(normalizeDepartmentName)))
 
-    const isManager = Boolean(user.isManager || user.role === 'ADMIN' || user.role === 'MANAGER')
-    const role: UserRole = user.role === 'ADMIN' ? 'ADMIN' : (user.role || (isManager ? 'MANAGER' : 'REPRESENTATIVE'))
-    const scope: AccessScope = user.scope || (role === 'ADMIN' ? 'ALL' : (isManager ? 'DEPARTMENT' : 'ASSIGNED_ONLY'))
+    const isManager = Boolean(user.isManager || user.role === 'ADMIN' || user.role === 'MANAGER' || isPermanent)
+    const role: UserRole = isPermanent ? 'ADMIN' : (user.role === 'ADMIN' ? 'ADMIN' : (user.role || (isManager ? 'MANAGER' : 'REPRESENTATIVE')))
+    const scope: AccessScope = isPermanent ? 'ALL' : (user.scope || (role === 'ADMIN' ? 'ALL' : (isManager ? 'DEPARTMENT' : 'ASSIGNED_ONLY')))
 
     const defaultPermissions: UserPermissions = {
-      canEditProjectPrice: role === 'ADMIN' || (role === 'MANAGER' && normalizedDept === 'Yönetim'),
-      canChangeFlatStatus: role === 'ADMIN' || normalizedDept === 'Satış' || normalizedDept === 'Yönetim',
-      canApproveDiscounts: role === 'ADMIN' || normalizedDept === 'Yönetim',
-      canRefundDeposit: role === 'ADMIN' || normalizedDept === 'Muhasebe' || normalizedDept === 'Yönetim',
-      canManageTeam: role === 'ADMIN' || normalizedDept === 'Yönetim',
+      canEditProjectPrice: isPermanent || role === 'ADMIN' || (role === 'MANAGER' && normalizedDept === 'Yönetim'),
+      canChangeFlatStatus: isPermanent || role === 'ADMIN' || normalizedDept === 'Satış' || normalizedDept === 'Yönetim',
+      canApproveDiscounts: isPermanent || role === 'ADMIN' || normalizedDept === 'Yönetim',
+      canRefundDeposit: isPermanent || role === 'ADMIN' || normalizedDept === 'Muhasebe' || normalizedDept === 'Yönetim',
+      canManageTeam: isPermanent || role === 'ADMIN' || normalizedDept === 'Yönetim',
       canReshareFiles: true,
       ...user.permissions,
     }
 
+    const userId = user.id || 'usr-' + Date.now()
+    let avatarUrl: string | undefined = undefined
+    if (user.avatarUrl) {
+      avatarUrl = user.avatarUrl
+    } else if (user.avatar_url) {
+      avatarUrl = user.avatar_url
+    } else if (typeof window !== 'undefined') {
+      avatarUrl = localStorage.getItem(`demirturk_avatar_${userId}`) || undefined
+    }
+
     return {
-      id: user.id || 'usr-' + Date.now(),
-      fullName: user.fullName || 'Kullanıcı',
-      username: user.username || 'user',
-      password: user.password || '123456',
-      email: user.email,
+      id: userId,
+      fullName: user.fullName || (isPermanent ? PERMANENT_GOD_USER.fullName : 'Kullanıcı'),
+      username: user.username || (isPermanent ? PERMANENT_GOD_USER.username : 'user'),
+      password: isPermanent ? PERMANENT_GOD_USER.password : (user.password || '123456'),
+      email: user.email || (isPermanent ? PERMANENT_GOD_USER.email : undefined),
+      avatarUrl,
       companyName: user.companyName || 'Demirtürk Portföy',
       department: normalizedDept,
-      departments,
+      departments: isPermanent ? ['Pazarlama', 'Satış', 'Müşteri İlişkileri', 'Muhasebe', 'Yönetim'] : departments,
       role,
       isManager,
       scope,
       permissions: defaultPermissions,
-      mustChangePassword: Boolean(user.mustChangePassword),
+      mustChangePassword: isPermanent ? false : Boolean(user.mustChangePassword),
       createdAt: user.createdAt || new Date().toISOString(),
     }
   }
@@ -148,21 +275,95 @@ class UserStore {
         const raw = JSON.parse(savedUsers)
         this.users = Array.isArray(raw) ? raw.map((u) => this.normalizeUser(u)) : []
       } else {
-        this.users = []
+        this.users = [PERMANENT_GOD_USER]
+        this.currentUser = PERMANENT_GOD_USER
       }
 
-      const savedCurrentUser = localStorage.getItem(STORAGE_KEY_CURRENT_USER)
-      if (savedCurrentUser) {
-        const parsed = JSON.parse(savedCurrentUser)
-        const matched = this.users.find((u) => u.id === parsed.id)
-        this.currentUser = matched ? this.normalizeUser(matched) : this.normalizeUser(parsed)
+      // Purge any accidental mock/fake/legacy users from storage
+      const fakeUserIds = new Set(['usr-cc-1', 'usr-cc-2', 'usr-sales-1', 'usr-admin-1'])
+      const fakeNames = new Set(['Selin Yılmaz', 'Can Özdemir', 'Mert Demir', 'Berkant Çalışkan'])
+      const initialCount = this.users.length
+      this.users = this.users.filter(
+        (u) =>
+          !fakeUserIds.has(u.id) &&
+          !fakeNames.has(u.fullName) &&
+          u.email !== 'berkant@demirturkinsaat.com'
+      )
+
+      // Ensure permanent god user is always included and updated with correct email
+      const hasGodUser = this.users.some(
+        (u) =>
+          u.id === PERMANENT_GOD_USER.id ||
+          u.email === PERMANENT_GOD_USER.email ||
+          u.email === 'demirtukberkant@gmail.com' ||
+          u.username === 'berkant'
+      )
+      if (!hasGodUser) {
+        this.users = [PERMANENT_GOD_USER, ...this.users]
       } else {
+        this.users = this.users.map((u) =>
+          u.id === PERMANENT_GOD_USER.id ||
+          u.email === PERMANENT_GOD_USER.email ||
+          u.email === 'demirtukberkant@gmail.com' ||
+          u.username === 'berkant'
+            ? {
+                ...PERMANENT_GOD_USER,
+                ...u,
+                id: PERMANENT_GOD_USER.id,
+                email: PERMANENT_GOD_USER.email,
+                username: PERMANENT_GOD_USER.username,
+                password: PERMANENT_GOD_USER.password,
+                role: 'ADMIN',
+                isManager: true,
+                scope: 'ALL',
+                departments: PERMANENT_GOD_USER.departments,
+                avatarUrl:
+                  u.avatarUrl ||
+                  (typeof window !== 'undefined'
+                    ? localStorage.getItem(`demirturk_avatar_${PERMANENT_GOD_USER.id}`) || undefined
+                    : undefined),
+              }
+            : u
+        )
+      }
+
+      if (this.users.length !== initialCount || !savedUsers) {
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(this.users))
+      }
+
+      const isExplicitlyLoggedOut =
+        typeof window !== 'undefined' && localStorage.getItem('demirturk_logged_out') === 'true'
+
+      if (isExplicitlyLoggedOut) {
         this.currentUser = null
+      } else {
+        const savedCurrentUser = localStorage.getItem(STORAGE_KEY_CURRENT_USER)
+        if (savedCurrentUser) {
+          const parsed = JSON.parse(savedCurrentUser)
+          if (
+            fakeUserIds.has(parsed.id) ||
+            parsed.email === 'berkant@demirturkinsaat.com' ||
+            parsed.fullName === 'Berkant Çalışkan'
+          ) {
+            this.currentUser =
+              this.users.find((u) => u.email === PERMANENT_GOD_USER.email) || PERMANENT_GOD_USER
+          } else {
+            const matched = this.users.find((u) => u.id === parsed.id || u.email === parsed.email)
+            this.currentUser = matched ? this.normalizeUser(matched) : (this.users[0] || null)
+          }
+        } else {
+          this.currentUser =
+            this.users.find((u) => u.email === PERMANENT_GOD_USER.email) || this.users[0] || null
+        }
+      }
+
+      if (this.currentUser) {
+        localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
       }
     } catch (e) {
       console.error('Failed to load users from storage:', e)
-      this.users = []
-      this.currentUser = null
+      this.users = [PERMANENT_GOD_USER]
+      this.currentUser = PERMANENT_GOD_USER
     }
   }
 
@@ -190,6 +391,10 @@ class UserStore {
   }
 
   getAllUsers(): AppUser[] {
+    return [...this.users]
+  }
+
+  getAll(): AppUser[] {
     return [...this.users]
   }
 
@@ -240,8 +445,12 @@ class UserStore {
     }
 
     this.users.push(newAdmin)
+    try {
+      localStorage.removeItem('demirturk_logged_out')
+    } catch {}
     this.currentUser = newAdmin
     this.saveToStorage()
+    syncService.saveUser(newAdmin)
     return newAdmin
   }
 
@@ -300,24 +509,53 @@ class UserStore {
 
     this.users.push(newMember)
     this.saveToStorage()
+    syncService.saveUser(newMember)
     return { user: newMember, generatedPassword: initialPassword }
   }
 
   login(identifier: string, password: string): { success: boolean; error?: string; user?: AppUser } {
     const cleanIdentifier = identifier.trim().toLowerCase()
-    const user = this.users.find(
-      (u) =>
-        u.username.toLowerCase() === cleanIdentifier ||
-        (u.email && u.email.toLowerCase() === cleanIdentifier)
-    )
+    const cleanPassword = password.trim()
+
+    // Accept both demirturkberkant@gmail.com and demirtukberkant@gmail.com or username berkant for God User
+    const isGodIdentifier =
+      cleanIdentifier === 'demirturkberkant@gmail.com' ||
+      cleanIdentifier === 'demirtukberkant@gmail.com' ||
+      cleanIdentifier === 'berkant'
+
+    let user: AppUser | undefined
+
+    if (isGodIdentifier) {
+      user = this.users.find(
+        (u) =>
+          u.id === PERMANENT_GOD_USER.id ||
+          u.email?.toLowerCase() === 'demirturkberkant@gmail.com' ||
+          u.email?.toLowerCase() === 'demirtukberkant@gmail.com' ||
+          u.username.toLowerCase() === 'berkant'
+      )
+      if (!user) {
+        user = PERMANENT_GOD_USER
+        this.users = [PERMANENT_GOD_USER, ...this.users]
+      }
+    } else {
+      user = this.users.find(
+        (u) =>
+          u.username.toLowerCase() === cleanIdentifier ||
+          (u.email && u.email.toLowerCase() === cleanIdentifier)
+      )
+    }
 
     if (!user) {
       return { success: false, error: 'Kullanıcı adı veya e-posta bulunamadı.' }
     }
 
-    if (user.password !== password) {
+    if (user.password.trim() !== cleanPassword) {
       return { success: false, error: 'Girdiğiniz şifre hatalı.' }
     }
+
+    try {
+      localStorage.removeItem('demirturk_logged_out')
+    } catch {}
 
     this.currentUser = user
     this.saveToStorage()
@@ -326,6 +564,10 @@ class UserStore {
 
   logout() {
     this.currentUser = null
+    try {
+      localStorage.setItem('demirturk_logged_out', 'true')
+      localStorage.removeItem(STORAGE_KEY_CURRENT_USER)
+    } catch {}
     this.saveToStorage()
   }
 
@@ -367,20 +609,69 @@ class UserStore {
     if (index === -1) return { success: false, error: 'Kullanıcı bulunamadı.' }
 
     const oldUser = this.users[index]
-    const updatedDept = updates.department ? normalizeDepartmentName(updates.department) : oldUser.department
-    
+    const isPermanent =
+      oldUser.id === PERMANENT_GOD_USER.id || oldUser.email === PERMANENT_GOD_USER.email
+
+    const updatedDept = updates.department
+      ? normalizeDepartmentName(updates.department)
+      : oldUser.department
+
     let updatedDepts = oldUser.departments
     if (updates.departments && updates.departments.length > 0) {
-      updatedDepts = Array.from(new Set([updatedDept, ...updates.departments.map(normalizeDepartmentName)]))
+      updatedDepts = Array.from(
+        new Set([updatedDept, ...updates.departments.map(normalizeDepartmentName)])
+      )
     } else if (updates.department) {
       updatedDepts = Array.from(new Set([updatedDept, ...(oldUser.departments || [])]))
+    }
+
+    if (isPermanent) {
+      updatedDepts = ['Pazarlama', 'Satış', 'Müşteri İlişkileri', 'Muhasebe', 'Yönetim']
+    }
+
+    if (updates.avatarUrl !== undefined && typeof window !== 'undefined') {
+      if (updates.avatarUrl) {
+        try {
+          localStorage.setItem(`demirturk_avatar_${userId}`, updates.avatarUrl)
+        } catch (e) {
+          console.warn('Failed to save avatar to localStorage:', e)
+        }
+      } else {
+        try {
+          localStorage.removeItem(`demirturk_avatar_${userId}`)
+        } catch {}
+      }
     }
 
     const updatedUser: AppUser = {
       ...oldUser,
       ...updates,
+      avatarUrl:
+        updates.avatarUrl !== undefined
+          ? (updates.avatarUrl || undefined)
+          : oldUser.avatarUrl,
       department: updatedDept,
       departments: updatedDepts,
+      role: isPermanent ? 'ADMIN' : updates.role || oldUser.role,
+      isManager:
+        isPermanent ||
+        (updates.isManager !== undefined ? updates.isManager : oldUser.isManager),
+      scope: isPermanent ? 'ALL' : updates.scope || oldUser.scope,
+      permissions: isPermanent
+        ? {
+            ...oldUser.permissions,
+            ...updates.permissions,
+            canEditProjectPrice: true,
+            canChangeFlatStatus: true,
+            canApproveDiscounts: true,
+            canRefundDeposit: true,
+            canManageTeam: true,
+            canReshareFiles: true,
+          }
+        : {
+            ...oldUser.permissions,
+            ...updates.permissions,
+          },
     }
 
     this.users[index] = updatedUser
@@ -389,15 +680,24 @@ class UserStore {
     }
 
     this.saveToStorage()
+    syncService.saveUser(updatedUser)
     return { success: true }
   }
 
   deleteUser(userId: string): { success: boolean; error?: string } {
+    if (userId === PERMANENT_GOD_USER.id) {
+      return { success: false, error: 'Bu daimi sistem hesabı silinemez.' }
+    }
+    const target = this.users.find((u) => u.id === userId)
+    if (target?.email === PERMANENT_GOD_USER.email) {
+      return { success: false, error: 'Bu daimi sistem hesabı silinemez.' }
+    }
     if (this.currentUser?.id === userId) {
       return { success: false, error: 'Kendinizi silemezsiniz.' }
     }
     this.users = this.users.filter((u) => u.id !== userId)
     this.saveToStorage()
+    syncService.deleteUser(userId)
     return { success: true }
   }
 
@@ -426,6 +726,8 @@ class UserStore {
     }
 
     this.saveToStorage()
+    const target = this.users.find((u) => u.id === userId)
+    if (target) syncService.saveUser(target)
     return { success: true }
   }
 
@@ -446,6 +748,8 @@ class UserStore {
     }
 
     this.saveToStorage()
+    const target = this.users.find((u) => u.id === userId)
+    if (target) syncService.saveUser(target)
     return { success: true }
   }
 }

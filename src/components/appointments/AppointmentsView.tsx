@@ -25,6 +25,8 @@ import {
 } from '@/services/appointmentStore'
 import { userStore, AppUser } from '@/services/userStore'
 import { Lead } from '@/types/lead'
+import { PhoneInput } from '@/components/common/PhoneInput'
+import { formatAppointmentDate, toTitleCase } from '@/utils/formatters'
 
 interface AppointmentsViewProps {
   pageTitle?: string
@@ -85,7 +87,25 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!currentUser || !customerName.trim()) return
+    if (!customerName.trim()) return
+
+    const effectiveUser =
+      currentUser ||
+      userStore.getCurrentUser() ||
+      ({
+        id: 'usr-demo-rel',
+        fullName: 'Müşteri Temsilcisi',
+        department: 'Müşteri İlişkileri',
+        role: 'SPECIALIST',
+        companyName: 'Demirtürk Portföy',
+        departments: ['Müşteri İlişkileri'],
+        isManager: false,
+        scope: 'ALL',
+        permissions: {},
+        username: 'temsilci',
+        password: '',
+        createdAt: new Date().toISOString(),
+      } as AppUser)
 
     appointmentStore.createAppointment(
       {
@@ -99,7 +119,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         projectName,
         notes,
       },
-      currentUser
+      effectiveUser
     )
 
     setIsAddModalOpen(false)
@@ -130,7 +150,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         <div>
           <div className="flex items-center gap-2.5">
             <Calendar className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               {pageTitle}
             </h2>
           </div>
@@ -233,7 +253,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-[#8c857f]" />
-                      <span>{apt.date} • {apt.time}</span>
+                      <span>{formatAppointmentDate(apt.date, apt.time)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="w-3.5 h-3.5 text-[#8c857f]" />
@@ -302,7 +322,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 required
                 placeholder="Örn: Ahmet Ulucak"
                 value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
+                onChange={(e) => setCustomerName(toTitleCase(e.target.value))}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
@@ -311,13 +331,10 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Telefon Numarası *
               </label>
-              <input
-                type="text"
+              <PhoneInput
                 required
-                placeholder="+90 542 000 00 00"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                onChange={(val) => setCustomerPhone(val)}
               />
             </div>
           </div>
@@ -373,7 +390,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <input
                 type="text"
                 value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
+                onChange={(e) => setProjectName(toTitleCase(e.target.value))}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
@@ -403,7 +420,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             <input
               type="text"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(e) => setLocation(toTitleCase(e.target.value))}
               className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
             />
           </div>

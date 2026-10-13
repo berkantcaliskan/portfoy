@@ -1,5 +1,8 @@
 import { AppUser } from './userStore'
 import { permissionService } from './permissionService'
+import { supabase, isSupabaseConfigured } from './supabaseClient'
+import { syncService } from './syncService'
+import { rowToCollection, rowToPayment } from './dbMapper'
 
 export type CollectionType = 'DEPOSIT' | 'DOWN_PAYMENT' | 'INSTALLMENT' | 'FULL_PAYMENT'
 export type CollectionStatus = 'COLLECTED' | 'PENDING' | 'OVERDUE' | 'REFUNDED'
@@ -48,87 +51,8 @@ function getFutureDate(days: number): string {
   return d.toISOString().split('T')[0]
 }
 
-const INITIAL_COLLECTIONS: CollectionRecord[] = [
-  {
-    id: 'col-1',
-    customerName: 'Ahmet Ulucak',
-    projectName: 'Demirtürk Panorama Rezidans',
-    unitNumber: 'D-03',
-    type: 'DEPOSIT',
-    amount: 150000,
-    dueDate: getFutureDate(-2),
-    paidDate: getFutureDate(-2),
-    status: 'COLLECTED',
-    paymentMethod: 'Banka Havalesi (Garanti BBVA)',
-    receiptNo: 'DK-2026-8812',
-    notes: 'Daire ön kapora bedeli tahsil edildi.',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: 'col-2',
-    customerName: 'Murat Şahin',
-    projectName: 'Demirtürk Panorama Rezidans',
-    unitNumber: 'D-07',
-    type: 'DOWN_PAYMENT',
-    amount: 2600000,
-    dueDate: getFutureDate(5),
-    status: 'PENDING',
-    paymentMethod: 'EFT / Blokeli Çek',
-    notes: '%50 Peşinat sözleşme günü ödenecek.',
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-  {
-    id: 'col-3',
-    customerName: 'Yahya Şahin',
-    projectName: 'Demirtürk Panorama Rezidans',
-    unitNumber: 'D-11',
-    type: 'INSTALLMENT',
-    amount: 125000,
-    dueDate: getFutureDate(-3),
-    status: 'OVERDUE',
-    notes: 'Eylül 2026 taksit ödemesi 3 gün gecikmede.',
-    createdAt: new Date(Date.now() - 86400000 * 15).toISOString(),
-  },
-]
-
-const INITIAL_PAYMENTS: PaymentRecord[] = [
-  {
-    id: 'pay-1',
-    title: 'D-07 Satış Başarı Komisyonu',
-    payee: 'Satış Danışmanı (Berkant)',
-    category: 'COMMISSION',
-    amount: 104000,
-    dueDate: getFutureDate(10),
-    status: 'PENDING',
-    notes: 'Daire teslim peşinat tahsilatına bağlı prim.',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: 'pay-2',
-    title: 'Kaba İnşaat & Beton Şantiye Hakedişi #4',
-    payee: 'Demir İnşaat Taahhüt Ltd.',
-    category: 'CONSTRUCTION',
-    amount: 1450000,
-    dueDate: getFutureDate(3),
-    status: 'PENDING',
-    invoiceNo: 'FTR-2026-904',
-    notes: 'Panorama A Blok 6. kat döşeme hakedişi.',
-    createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-  },
-  {
-    id: 'pay-3',
-    title: 'Meta Ads Reklam Harcaması (Eylül)',
-    payee: 'Meta Platforms Ireland Ltd.',
-    category: 'MARKETING',
-    amount: 85000,
-    dueDate: getFutureDate(-1),
-    paidDate: getFutureDate(-1),
-    status: 'PAID',
-    invoiceNo: 'FB-INV-2026-981',
-    notes: 'Instagram & Facebook lead toplama kampanyaları bütçesi.',
-    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-  },
-]
+const INITIAL_COLLECTIONS: CollectionRecord[] = []
+const INITIAL_PAYMENTS: PaymentRecord[] = []
 
 type Listener = () => void
 
@@ -136,9 +60,60 @@ class AccountingStore {
   private collections: CollectionRecord[] = []
   private payments: PaymentRecord[] = []
   private listeners: Set<Listener> = new Set()
+  private realtimeChannel: any = null
 
   constructor() {
     this.loadFromStorage()
+    this.initRealtime()
+  }
+
+  public setLoadedAccounting(collections: CollectionRecord[], payments: PaymentRecord[]) {
+    this.collections = collections || []
+    this.payments = payments || []
+    try {
+      localStorage.setItem(STORAGE_KEY_COLLECTIONS, JSON.stringify(this.collections))
+      localStorage.setItem(STORAGE_KEY_PAYMENTS, JSON.stringify(this.payments))
+    } catch {}
+    this.notify()
+  }
+
+  private initRealtime() {
+    if (!isSupabaseConfigured() || this.realtimeChannel) return
+    this.realtimeChannel = supabase
+      .channel('realtime:accounting')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const incoming = rowToCollection(payload.new)
+          if (!this.collections.some((c) => c.id === incoming.id)) {
+            this.collections = [incoming, ...this.collections]
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const incoming = rowToCollection(payload.new)
+          const idx = this.collections.findIndex((c) => c.id === incoming.id)
+          if (idx !== -1) {
+            this.collections[idx] = incoming
+            this.saveToStorage()
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const incoming = rowToPayment(payload.new)
+          if (!this.payments.some((p) => p.id === incoming.id)) {
+            this.payments = [incoming, ...this.payments]
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const incoming = rowToPayment(payload.new)
+          const idx = this.payments.findIndex((p) => p.id === incoming.id)
+          if (idx !== -1) {
+            this.payments[idx] = incoming
+            this.saveToStorage()
+          }
+        }
+      })
+      .subscribe()
   }
 
   private loadFromStorage() {
@@ -192,6 +167,7 @@ class AccountingStore {
     }
 
     this.saveToStorage()
+    syncService.saveCollection(this.collections[index])
     return true
   }
 
@@ -203,6 +179,7 @@ class AccountingStore {
     }
     this.collections = [newRecord, ...this.collections]
     this.saveToStorage()
+    syncService.saveCollection(newRecord)
     return newRecord
   }
 
@@ -214,6 +191,7 @@ class AccountingStore {
     }
     this.payments = [newRecord, ...this.payments]
     this.saveToStorage()
+    syncService.savePayment(newRecord)
     return newRecord
   }
 
@@ -228,6 +206,7 @@ class AccountingStore {
     }
 
     this.saveToStorage()
+    syncService.savePayment(this.payments[index])
     return true
   }
 
@@ -263,6 +242,7 @@ class AccountingStore {
     }
 
     this.saveToStorage()
+    syncService.saveCollection(this.collections[index])
     return { success: true }
   }
 }

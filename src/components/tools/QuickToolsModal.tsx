@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Calculator,
   FileText,
-  DollarSign,
+  TurkishLira,
   TrendingUp,
   Percent,
   Copy,
@@ -554,7 +554,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     { id: 'payments', label: 'Ödemeler', icon: Wallet },
     { id: 'notepad', label: 'Not Defteri', icon: FileText },
     { id: 'calculator', label: 'Hesap Makinesi', icon: Calculator },
-    { id: 'commission', label: 'Satış Primi', icon: DollarSign },
+    { id: 'commission', label: 'Satış Primi', icon: TurkishLira },
     { id: 'currency', label: 'Döviz & Kur', icon: ArrowRightLeft },
     { id: 'mortgage', label: 'Konut Kredisi', icon: TrendingUp },
     { id: 'deedFee', label: 'Tapu Harcı', icon: PieChart },
@@ -584,7 +584,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden">
           {/* Backdrop Blur Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -592,83 +592,82 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/75 backdrop-blur-md cursor-pointer"
+            className="fixed inset-0 bg-black/65 backdrop-blur-md cursor-pointer"
           />
 
-          {/* Wrapper for Left List + Right Modal Box */}
-          <div className="relative z-10 flex flex-col md:flex-row items-stretch md:items-center justify-center gap-4 lg:gap-8 w-full max-w-5xl my-auto">
-            {/* SOL LİSTE: KUTUCUĞUN İÇİNDE DEĞİL, DİREKT KENARDA, KATMANSIZ */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="w-full md:w-64 shrink-0 max-h-[140px] md:max-h-[82vh] overflow-y-auto space-y-1 py-1 pr-1 select-none scrollbar-thin scrollbar-thumb-white/10"
-            >
-              <div className="hidden md:flex items-center justify-between px-3.5 py-2 text-sm font-bold text-[#b99881] uppercase tracking-wider">
-                <span>Araçlar</span>
-                <span className="text-sm text-[#8c857f] font-normal">{toolsList.length}</span>
-              </div>
-              <div className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-1 md:pb-0">
-                {toolsList.map((tool) => {
-                  const Icon = tool.icon
-                  const isActive = activeTool === tool.id
-                  return (
-                    <button
-                      key={tool.id}
-                      type="button"
-                      onClick={() => setActiveTool(tool.id)}
-                      className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[15px] font-medium transition-all cursor-pointer whitespace-nowrap text-left shrink-0 md:shrink ${
-                        isActive
-                          ? 'text-white font-bold bg-[#b99881]/25 border border-[#b99881]/50 shadow-md shadow-black/40'
-                          : 'text-[#a69f99] hover:text-white hover:bg-white/5 border border-transparent'
-                      }`}
-                    >
-                      <Icon
-                        className={`w-5 h-5 shrink-0 transition-colors ${
-                          isActive ? 'text-[#b99881]' : 'text-[#8c857f]'
+          {/* 
+            QUICK TOOLS WRAPPER (Menü Dışarıda, Pencere Sağda, Ayarlar ile Eşit Boyut)
+          */}
+          <div className="relative z-10 flex items-stretch gap-7 max-w-[96vw] h-[680px] max-h-[90vh]">
+            
+            {/* Left Sidebar Menu: Pencere dışı, hiçbir katmana dahil olmadan sadece yazı ve ikonlar */}
+            <aside className="w-[210px] shrink-0 flex flex-col justify-between py-3 text-[#f3efe9] select-none">
+              <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+                <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-1 mb-2.5 flex items-center justify-between">
+                  <span>Uygulamalar</span>
+                  <span className="text-[9px] text-[#8c857f]">{toolsList.length} Araç</span>
+                </div>
+                <nav className="space-y-1">
+                  {toolsList.map((tool) => {
+                    const Icon = tool.icon
+                    const isActive = activeTool === tool.id
+                    return (
+                      <button
+                        key={tool.id}
+                        type="button"
+                        onClick={() => setActiveTool(tool.id)}
+                        className={`w-full flex items-center gap-3 px-1.5 py-1.5 text-xs transition-colors cursor-pointer text-left ${
+                          isActive
+                            ? 'text-[#b99881] font-bold'
+                            : 'text-[#a69f99] hover:text-white font-medium'
                         }`}
-                      />
-                      <span className="truncate">{tool.label}</span>
-                    </button>
-                  )
-                })}
+                      >
+                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#b99881]' : 'text-[#8c857f]'}`} />
+                        <span className="truncate">{tool.label}</span>
+                        {isActive && (
+                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#b99881] shrink-0" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </nav>
               </div>
-            </motion.div>
+            </aside>
 
-            {/* SAĞ KUTUCUK: SADECE AKTİF ARAÇ */}
+            {/* Sağ Pencere: Sabit boyutlu, genişletilmiş ve dikey uzatılmış */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative flex-1 min-w-0 max-w-2xl rounded-[36px] bg-[#34302d] border border-[#4a443f] p-6 sm:p-8 shadow-2xl shadow-black/80 flex flex-col max-h-[85vh]"
+              className="w-[820px] max-w-[calc(96vw-240px)] h-full rounded-[32px] bg-[#2b2724]/95 backdrop-blur-2xl border border-[#4a443f] shadow-2xl shadow-black/80 flex flex-col overflow-hidden text-[#f3efe9] select-none font-sans relative"
             >
-              {/* Top glass reflection highlight */}
+              {/* Top subtle highlight */}
               <div className="pointer-events-none absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#b99881]/40 to-transparent" />
 
-              {/* Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-[#4a443f] mb-4 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#282522] border border-[#b99881]/30 flex items-center justify-center text-[#b99881] shrink-0 shadow-inner">
-                    {currentTool ? <currentTool.icon className="w-5 h-5" /> : <Calculator className="w-5 h-5" />}
+              {/* Modal Header */}
+              <div className="px-7 py-4 border-b border-[#4a443f]/60 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-[#b99881]/15 text-[#b99881] flex items-center justify-center shrink-0">
+                    {currentTool ? <currentTool.icon className="w-4 h-4" /> : <Calculator className="w-4 h-4" />}
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white tracking-wide">
-                      {currentTool?.label}
-                    </h3>
-                    <p className="text-sm text-[#b99881]/80">Demirtürk Portföy & Hızlı Finans Aracı</p>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-bold text-white tracking-wide truncate">
+                      {currentTool?.label || 'Başlat Uygulaması'}
+                    </h2>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="rounded-full p-2 text-[#a69f99] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-full text-[#a69f99] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Kapat"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4.5 h-4.5" />
                 </button>
               </div>
 
-              {/* Tool Content Scrollable */}
-              <div className="flex-1 overflow-y-auto pr-1">
+              {/* Right Content Area: Fixed container, scrolls internally */}
+              <main className="flex-1 p-7 overflow-y-auto space-y-4">
 
                 {/* ---------------------------------------------------- */}
                 {/* TOOL 0: ÖDEMELER (PAYMENTS & EXPENSE TRACKER)        */}
@@ -2220,11 +2219,11 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             <p className="text-xs text-[#8c857f]">Müşteri mülk turu ve teklif görüşmesi süresini takip edin.</p>
           </div>
         )}
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      )}
-    </AnimatePresence>
+      </main>
+    </motion.div>
+  </div>
+</div>
+)}
+</AnimatePresence>
   )
 }

@@ -204,7 +204,7 @@ export const MailWorkspaceModal: React.FC<MailWorkspaceModalProps> = ({
       description="Demirtürk İnşaat kurumsal mailcow ve IMAP/SMTP posta sunucusu yönetimi"
       maxWidth="7xl"
     >
-      <div className="flex flex-col h-[78vh] min-h-[580px] -mt-2 -mx-1 text-sm font-sans select-none">
+      <div className="flex flex-col h-[65vh] min-h-[440px] max-h-[580px] text-sm font-sans select-none">
         
         {/* Üst Yönetim Çubuğu: Hesap Değiştirici, Arama ve Ana Eylemler */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#4a443f] px-2 shrink-0">

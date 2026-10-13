@@ -29,8 +29,6 @@ export const GlassCard: React.FC<GlassCardProps> = ({
       )}
       {...props}
     >
-      {/* Subtle top glare highlight for genuine glass look */}
-      <div className="pointer-events-none absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       {children}
     </div>
   )

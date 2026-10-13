@@ -42,18 +42,16 @@ export class PermissionService {
       if (user.department === 'Pazarlama') {
         return lead.source === 'META_ADS' || lead.channel.includes('Facebook') || lead.channel.includes('Instagram') || lead.stage === 'NEW'
       }
-      // Müşteri İlişkileri sees leads that are in qualification/contact stage
+      // Müşteri İlişkileri manages all customer records, inquiries, and sales handover tracking
       if (user.department === 'Müşteri İlişkileri') {
-        return (
-          lead.stage === 'NEW' ||
-          lead.stage === 'CONTACTED' ||
-          lead.stage === 'QUALIFIED' ||
-          lead.assignedToUserId === user.id
-        )
+        return true
       }
-      // Satış sees leads assigned to sales or in sales stages
+      // Satış sees leads assigned to sales or in sales stages, plus all website leads
       if (user.department === 'Satış') {
         return (
+          lead.source === 'WEBSITE' ||
+          lead.channel?.toLowerCase().includes('web') ||
+          lead.tags?.some((t) => t.toLowerCase().includes('web')) ||
           lead.assignedToUserId === user.id ||
           ['QUALIFIED', 'APPOINTMENT', 'PRESENTATION', 'OFFER', 'WON', 'LOST'].includes(lead.stage)
         )
@@ -89,8 +87,15 @@ export class PermissionService {
     switch (file.shareTarget) {
       case 'ALL_TEAM':
         return true
-      case 'DEPARTMENTS':
-        return Boolean(file.targetDepartments?.includes(user.department))
+      case 'DEPARTMENTS': {
+        const allowed = file.targetDepartments || []
+        if (allowed.length === 0) return false
+        if (allowed.includes(user.department)) return true
+        if (Array.isArray(user.departments) && user.departments.some((d) => allowed.includes(d))) {
+          return true
+        }
+        return false
+      }
       case 'MEMBERS':
         return Boolean(file.targetMemberIds?.includes(user.id))
       case 'MANAGEMENT':

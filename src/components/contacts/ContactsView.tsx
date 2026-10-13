@@ -19,6 +19,8 @@ import { contactStore, Contact, ContactCategory } from '@/services/contactStore'
 import { userStore } from '@/services/userStore'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { GlassModal } from '@/components/ui/GlassModal'
+import { PhoneInput } from '@/components/common/PhoneInput'
 import { formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
 
 export const ContactsView: React.FC = () => {
@@ -67,7 +69,7 @@ export const ContactsView: React.FC = () => {
       category: 'EKIP',
       company: u.companyName || 'Demirtürk Gayrimenkul',
       title: u.isManager || u.role === 'ADMIN' ? 'Yönetici' : `${u.department} Danışmanı`,
-      notes: `@${u.username} - Sistem Kullanıcısı`,
+      notes: `@${u.username}`,
       createdAt: u.createdAt,
     }))
 
@@ -90,7 +92,7 @@ export const ContactsView: React.FC = () => {
   const categoryLabels: Record<ContactCategory, { label: string; color: string }> = {
     EKIP: { label: 'Ekip & Danışman', color: '#b99881' },
     MUSTERI: { label: 'Müşteri / Alıcı', color: '#60a5fa' },
-    ORTAK: { label: 'İş Ortağı / Paydaş', color: '#34d399' },
+    ORTAK: { label: 'İş Ortağı & Noter', color: '#34d399' },
     DIGER: { label: 'Diğer', color: '#a69f99' },
   }
 
@@ -171,7 +173,7 @@ export const ContactsView: React.FC = () => {
             <div className="w-8 h-8 rounded-full bg-[#b99881]/15 border border-[#b99881]/30 flex items-center justify-center text-[#b99881]">
               <UserCheck className="w-4 h-4" />
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Kişiler
             </h2>
           </div>
@@ -202,7 +204,7 @@ export const ContactsView: React.FC = () => {
             { id: 'ALL', label: 'Tümü', count: combinedContacts.length },
             { id: 'EKIP', label: 'Ekip & Danışmanlar', count: combinedContacts.filter((c) => c.category === 'EKIP').length },
             { id: 'MUSTERI', label: 'Müşteriler', count: combinedContacts.filter((c) => c.category === 'MUSTERI').length },
-            { id: 'ORTAK', label: 'İş Ortakları / Noter', count: combinedContacts.filter((c) => c.category === 'ORTAK').length },
+            { id: 'ORTAK', label: 'İş Ortakları & Noter', count: combinedContacts.filter((c) => c.category === 'ORTAK').length },
           ].map((cat) => {
             const isActive = selectedCategory === cat.id
             return (
@@ -370,11 +372,6 @@ export const ContactsView: React.FC = () => {
                         </button>
                       </>
                     )}
-                    {contact.id.startsWith('usr-') && (
-                      <span className="text-[10px] text-[#8c857f] px-2 py-0.5 rounded-full bg-[#34302d]">
-                        Ekip Hesabı
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -384,22 +381,13 @@ export const ContactsView: React.FC = () => {
       )}
 
       {/* Add / Edit Contact Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#282522] border border-[#4a443f] rounded-[32px] p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#4a443f]">
-              <h3 className="text-base font-bold text-white">
-                {editingContact ? 'Kişiyi Düzenle' : 'Yeni Kişi Ekle'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-[#a69f99] hover:text-white p-1 rounded-full hover:bg-white/5"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+      <GlassModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingContact ? 'Kişiyi Düzenle' : 'Yeni Kişi Ekle'}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
               <div>
                 <label className="text-[#a69f99] block mb-1">Ad Soyad *</label>
                 <input
@@ -422,19 +410,16 @@ export const ContactsView: React.FC = () => {
                   >
                     <option value="MUSTERI">Müşteri / Alıcı</option>
                     <option value="EKIP">Ekip & Danışman</option>
-                    <option value="ORTAK">İş Ortağı / Noter</option>
+                    <option value="ORTAK">İş Ortağı & Noter</option>
                     <option value="DIGER">Diğer</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[#a69f99] block mb-1">Telefon *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="0532 123 45 67"
+                  <PhoneInput
+                    label="Telefon *"
                     value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full bg-[#34302d] border border-[#4a443f] rounded-full px-4 py-2 text-white focus:outline-none focus:border-[#b99881]"
+                    onChange={(val) => setForm({ ...form, phone: val })}
+                    required
                   />
                 </div>
               </div>
@@ -497,9 +482,7 @@ export const ContactsView: React.FC = () => {
                 </GlassButton>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </GlassModal>
     </div>
   )
 }

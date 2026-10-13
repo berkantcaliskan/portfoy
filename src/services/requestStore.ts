@@ -1,4 +1,7 @@
 import { AppUser } from './userStore'
+import { supabase, isSupabaseConfigured } from './supabaseClient'
+import { syncService } from './syncService'
+import { rowToRequest } from './dbMapper'
 
 export type RequestPriority = 'Düşük' | 'Orta' | 'Yüksek' | 'Acil'
 export type RequestStatus = 'Açık' | 'İşlemde' | 'Çözüldü' | 'İptal'
@@ -19,43 +22,52 @@ export interface CustomerRequest {
 
 const STORAGE_KEY_REQUESTS = 'demirturk_requests_v2'
 
-const INITIAL_REQUESTS: CustomerRequest[] = [
-  {
-    id: 'req-1',
-    customerName: 'Ahmet Ulucak',
-    customerPhone: '+90 542 606 42 58',
-    subject: 'Kat planında teras genişliği revizyonu',
-    category: 'Proje & Kat Planı',
-    priority: 'Yüksek',
-    status: 'İşlemde',
-    assignedToUserName: 'Müşteri Temsilcisi',
-    notes: 'Müşteri D-03 dairesinin teras çıkışı hakkında teknik mimari çizim talep ediyor.',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'req-2',
-    customerName: 'Birgül Anar',
-    customerPhone: '+90 537 878 05 33',
-    subject: 'Banka konut kredisi oranları ve taksit planı',
-    category: 'Ödeme & Finansman',
-    priority: 'Orta',
-    status: 'Açık',
-    assignedToUserName: 'Müşteri Temsilcisi',
-    notes: 'Anlaşmalı bankaların 120 ay konut kredisi faiz oranları tablosu iletilecek.',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
+const INITIAL_REQUESTS: CustomerRequest[] = []
 
 type Listener = () => void
 
 class RequestStore {
   private requests: CustomerRequest[] = []
   private listeners: Set<Listener> = new Set()
+  private realtimeChannel: any = null
 
   constructor() {
     this.loadFromStorage()
+    this.initRealtime()
+  }
+
+  public setLoadedRequests(requests: CustomerRequest[]) {
+    this.requests = requests || []
+    try {
+      localStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(this.requests))
+    } catch {}
+    this.notify()
+  }
+
+  private initRealtime() {
+    if (!isSupabaseConfigured() || this.realtimeChannel) return
+    this.realtimeChannel = supabase
+      .channel('realtime:customer_requests')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_requests' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const incoming = rowToRequest(payload.new)
+          if (!this.requests.some((r) => r.id === incoming.id)) {
+            this.requests = [incoming, ...this.requests]
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const incoming = rowToRequest(payload.new)
+          const idx = this.requests.findIndex((r) => r.id === incoming.id)
+          if (idx !== -1) {
+            this.requests[idx] = incoming
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'DELETE') {
+          this.requests = this.requests.filter((r) => r.id !== (payload.old as any).id)
+          this.saveToStorage()
+        }
+      })
+      .subscribe()
   }
 
   private loadFromStorage() {
@@ -85,6 +97,22 @@ class RequestStore {
     return () => this.listeners.delete(listener)
   }
 
+  public async refreshFromSupabase(): Promise<void> {
+    if (!isSupabaseConfigured()) return
+    try {
+      const { data, error } = await supabase
+        .from('customer_requests')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (!error && data) {
+        this.requests = data.map(rowToRequest)
+        this.saveToStorage()
+      }
+    } catch (e) {
+      console.error('[RequestStore] refreshFromSupabase error:', e)
+    }
+  }
+
   public getAll(): CustomerRequest[] {
     return [...this.requests]
   }
@@ -100,6 +128,7 @@ class RequestStore {
     }
     this.requests = [newReq, ...this.requests]
     this.saveToStorage()
+    syncService.saveRequest(newReq)
     return newReq
   }
 
@@ -112,6 +141,7 @@ class RequestStore {
       updatedAt: new Date().toISOString(),
     }
     this.saveToStorage()
+    syncService.saveRequest(this.requests[index])
     return true
   }
 }

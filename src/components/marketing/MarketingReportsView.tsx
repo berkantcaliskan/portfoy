@@ -41,7 +41,7 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
         <div>
           <div className="flex items-center gap-2.5">
             <BarChart3 className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Pazarlama Raporları
             </h2>
           </div>
@@ -61,30 +61,30 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
         </GlassButton>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Ortalama Lead Maliyeti (CPL)</div>
-          <div className="text-2xl font-bold text-white mt-1">{costPerLead.toLocaleString('tr-TR')} TL</div>
-          <div className="text-[11px] text-emerald-400 mt-1">Sektör ortalamasından %18 tasarruflu</div>
+      {/* KPI Cards (Mobilde 2x2, Masaüstünde 4'lü) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+          <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Ortalama Lead Maliyeti (CPL)</div>
+          <div className="text-lg sm:text-2xl font-bold text-white mt-1 truncate">{costPerLead.toLocaleString('tr-TR')} TL</div>
+          <div className="text-[10px] sm:text-[11px] text-emerald-400 mt-1 truncate">Sektörden %18 tasarruflu</div>
         </GlassCard>
 
-        <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Nitelikli Aday Maliyeti (CPQL)</div>
-          <div className="text-2xl font-bold text-[#b99881] mt-1">{costPerQualified.toLocaleString('tr-TR')} TL</div>
-          <div className="text-[11px] text-[#8c857f] mt-1">Doğrulanmış potansiyel alıcı</div>
+        <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+          <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Nitelikli Maliyeti (CPQL)</div>
+          <div className="text-lg sm:text-2xl font-bold text-[#b99881] mt-1 truncate">{costPerQualified.toLocaleString('tr-TR')} TL</div>
+          <div className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 truncate">Doğrulanmış potansiyel alıcı</div>
         </GlassCard>
 
-        <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Nitelikli Dönüşüm Oranı</div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">%{qualifiedRate}</div>
-          <div className="text-[11px] text-[#8c857f] mt-1">{qualifiedLeads} adet doğrulanmış müşteri</div>
+        <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+          <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Nitelikli Dönüşüm Oranı</div>
+          <div className="text-lg sm:text-2xl font-bold text-emerald-400 mt-1 truncate">%{qualifiedRate}</div>
+          <div className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 truncate">{qualifiedLeads} adet müşteri</div>
         </GlassCard>
 
-        <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Nihai Satış Dönüşümü</div>
-          <div className="text-2xl font-bold text-sky-400 mt-1">%{winRate}</div>
-          <div className="text-[11px] text-[#8c857f] mt-1">Sözleşmeyle tamamlanan</div>
+        <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+          <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Nihai Satış Dönüşümü</div>
+          <div className="text-lg sm:text-2xl font-bold text-sky-400 mt-1 truncate">%{winRate}</div>
+          <div className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 truncate">Sözleşmeyle tamamlanan</div>
         </GlassCard>
       </div>
 

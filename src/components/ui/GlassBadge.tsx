@@ -49,18 +49,18 @@ export const GlassBadge: React.FC<GlassBadgeProps> = ({
 
   const dotStyles: Record<GlassBadgeVariant, string> = {
     neutral: 'bg-slate-400',
-    gold: 'bg-amber-400 shadow-[0_0_8px_#f59e0b]',
-    sky: 'bg-sky-400 shadow-[0_0_8px_#38bdf8]',
-    emerald: 'bg-emerald-400 shadow-[0_0_8px_#34d399]',
-    rose: 'bg-rose-400 shadow-[0_0_8px_#fb7185]',
-    purple: 'bg-purple-400 shadow-[0_0_8px_#c084fc]',
-    amber: 'bg-amber-400 shadow-[0_0_8px_#f59e0b]',
-    success: 'bg-emerald-400 shadow-[0_0_8px_#34d399]',
-    danger: 'bg-rose-400 shadow-[0_0_8px_#fb7185]',
-    warning: 'bg-amber-400 shadow-[0_0_8px_#f59e0b]',
-    primary: 'bg-[#b99881] shadow-[0_0_8px_#b99881]',
+    gold: 'bg-amber-400',
+    sky: 'bg-sky-400',
+    emerald: 'bg-emerald-400',
+    rose: 'bg-rose-400',
+    purple: 'bg-purple-400',
+    amber: 'bg-amber-400',
+    success: 'bg-emerald-400',
+    danger: 'bg-rose-400',
+    warning: 'bg-amber-400',
+    primary: 'bg-[#b99881]',
     default: 'bg-slate-400',
-    info: 'bg-sky-400 shadow-[0_0_8px_#38bdf8]',
+    info: 'bg-sky-400',
   }
 
   const sizeStyles = {

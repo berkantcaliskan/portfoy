@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Eye, EyeOff, Lock, User, CheckCircle2, LogOut, Sparkles, KeyRound, ShieldAlert } from 'lucide-react'
+import { X, Eye, EyeOff, Lock, User, CheckCircle2, LogOut, Sparkles, KeyRound, ShieldAlert, Settings } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { AppUser, Department, generateUsername, userStore } from '@/services/userStore'
 
@@ -150,60 +150,56 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
             {currentUser ? (
               /* Already Logged In View */
-              <div className="space-y-6 py-4">
-                <div className="w-16 h-16 rounded-full bg-[#282522] border border-[#b99881]/40 flex items-center justify-center mx-auto text-xl font-bold text-[#b99881]">
-                  {currentUser.fullName.slice(0, 2).toUpperCase()}
+              <div className="space-y-6 py-3">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#282522] border-2 border-[#b99881]/50 flex items-center justify-center mx-auto text-2xl font-bold text-[#b99881] overflow-hidden shadow-xl ring-2 ring-[#b99881]/20">
+                  {currentUser.avatarUrl ? (
+                    <img
+                      src={currentUser.avatarUrl}
+                      alt={currentUser.fullName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    currentUser.fullName.slice(0, 2).toUpperCase()
+                  )}
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-white tracking-wide">
                     {currentUser.fullName}
                   </h3>
                   <p className="text-xs text-[#a69f99]">
                     @{currentUser.username} • {currentUser.department} Departmanı
                   </p>
-                  <span className="inline-block mt-2 px-3 py-0.5 rounded-full bg-[#b99881]/15 text-[#b99881] border border-[#b99881]/30 text-xs font-bold">
-                    {currentUser.isManager ? 'Şirket Yöneticisi' : 'Ekip Üyesi'}
-                  </span>
                 </div>
 
-                <div className="pt-4 border-t border-[#4a443f] flex flex-col gap-2.5">
+                <div className="pt-4 border-t border-[#4a443f]/60 flex flex-col gap-2.5">
                   {onOpenSettings && (
                     <GlassButton
                       variant="gold"
                       size="md"
+                      icon={<Settings className="w-4 h-4" />}
                       className="w-full rounded-full"
                       onClick={() => {
                         onClose()
                         onOpenSettings()
                       }}
                     >
-                      Ayarlar ve Ekip Yönetimi
+                      Ayarlar
                     </GlassButton>
                   )}
 
-                  <div className="flex gap-2.5">
-                    <GlassButton
-                      variant="subtle"
-                      size="md"
-                      className="flex-1 rounded-full"
-                      onClick={onClose}
-                    >
-                      Kapat
-                    </GlassButton>
-                    <GlassButton
-                      variant="danger"
-                      size="md"
-                      icon={<LogOut className="w-4 h-4" />}
-                      className="flex-1 rounded-full"
-                      onClick={() => {
-                        onLogout()
-                        onClose()
-                      }}
-                    >
-                      Çıkış Yap
-                    </GlassButton>
-                  </div>
+                  <GlassButton
+                    variant="danger"
+                    size="md"
+                    icon={<LogOut className="w-4 h-4" />}
+                    className="w-full rounded-full"
+                    onClick={() => {
+                      onLogout()
+                      onClose()
+                    }}
+                  >
+                    Çıkış Yap
+                  </GlassButton>
                 </div>
               </div>
             ) : view === 'first-login-pwd' ? (
@@ -258,7 +254,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                   <button
                     type="submit"
-                    className="w-full bg-[#b99881] hover:bg-[#d6beae] text-[#1c1a18] font-bold rounded-full py-3 text-sm transition-all shadow-md cursor-pointer"
+                    className="w-full bg-[#b99881] hover:bg-[#d6beae] text-white font-bold rounded-full py-3 text-sm transition-all shadow-md cursor-pointer"
                   >
                     Şifreyi Kaydet ve Devam Et
                   </button>
@@ -352,7 +348,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                   <button
                     type="submit"
-                    className="w-full bg-[#b99881] hover:bg-[#d6beae] text-[#1c1a18] font-bold rounded-full py-3 text-sm transition-all shadow-md cursor-pointer mt-2"
+                    className="w-full bg-[#b99881] hover:bg-[#d6beae] text-white font-bold rounded-full py-3 text-sm transition-all shadow-md cursor-pointer mt-2"
                   >
                     Yönetici Hesabı Oluştur ve Başla
                   </button>

@@ -130,7 +130,7 @@ export const TeamPermissionsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2.5">
             <Shield className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Ekip ve Yetkiler
             </h2>
           </div>

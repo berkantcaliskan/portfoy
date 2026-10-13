@@ -10,7 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-electron
 *.local
+
+# Temporary screenshots & testing
+screenshot_*.png
+test.png
 
 # Editor directories and files
 .vscode/*

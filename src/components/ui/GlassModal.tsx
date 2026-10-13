@@ -52,7 +52,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-6 md:p-8 pt-6 sm:pt-8 md:pt-10 pb-6 sm:pb-8 overflow-y-auto">
           {/* Backdrop Blur Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -60,40 +60,44 @@ export const GlassModal: React.FC<GlassModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/65 backdrop-blur-md"
+            className="fixed inset-0 bg-black/70 backdrop-blur-md"
           />
 
           {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 360 }}
             className={cn(
-              'relative w-full z-10 my-8 rounded-[36px] bg-navy-900/90 backdrop-blur-2xl border border-white/15 p-7 shadow-2xl shadow-black/80',
+              'glass-modal relative w-full z-10 my-auto rounded-[28px] sm:rounded-[32px] bg-[#282522] border border-[#4a443f] p-5 sm:p-6 shadow-2xl flex flex-col max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-3.5rem)]',
               maxWidthStyles[maxWidth],
               className
             )}
+            style={{
+              boxShadow:
+                '0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(185, 152, 129, 0.22)',
+            }}
           >
             {/* Top glass reflection highlight */}
-            <div className="pointer-events-none absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-brand-gold/40 to-transparent" />
+            <div className="pointer-events-none absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#b99881]/50 to-transparent" />
 
             {/* Header */}
             {(title || description) && (
-              <div className="flex items-start justify-between pb-4 border-b border-white/10 mb-5">
-                <div>
+              <div className="flex items-start justify-between pb-3.5 border-b border-[#4a443f]/70 mb-4 shrink-0">
+                <div className="pr-4">
                   {title && (
-                    <h3 className="text-lg font-bold text-white tracking-wide">
+                    <h3 className="text-base sm:text-lg font-bold text-white tracking-wide">
                       {title}
                     </h3>
                   )}
                   {description && (
-                    <p className="text-xs text-slate-400 mt-1">{description}</p>
+                    <p className="text-xs text-[#a69f99] mt-0.5">{description}</p>
                   )}
                 </div>
                 <button
                   onClick={onClose}
-                  className="rounded-full p-2 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  className="rounded-full p-1.5 text-[#a69f99] hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -101,7 +105,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
             )}
 
             {/* Content */}
-            <div className="max-h-[75vh] overflow-y-auto pr-1">
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
               {children}
             </div>
           </motion.div>

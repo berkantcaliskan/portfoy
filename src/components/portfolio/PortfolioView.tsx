@@ -1,55 +1,122 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
-  Building2,
-  Calendar,
-  CheckCircle2,
-  DollarSign,
-  Eye,
   Filter,
   Grid,
-  Layers,
-  Mail,
   MessageCircle,
   Phone,
   Plus,
-  Search,
-  Tag,
-  UserCheck,
   Users,
+  DownloadCloud,
+  Check,
+  RefreshCw,
 } from 'lucide-react'
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
-import { PortfolioItem, PropertyStatus, PropertyType } from '@/types/portfolio'
-import { PropertyCard } from './PropertyCard'
+import { StageDropdown } from '@/components/crm/StageDropdown'
+import { leadStore } from '@/services/leadStore'
+import { PortfolioItem, PropertyStatus } from '@/types/portfolio'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { LuxurySelect } from '@/components/ui/LuxurySelect'
+import { DateRangePicker, DateRange } from '@/components/ui/DateRangePicker'
+import { loadSavedDateRange, saveDateRange, checkDayRollover } from '@/services/dateFilterService'
 import { formatCurrency, formatDate, formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
+import { PaginationBar } from '@/components/common/PaginationBar'
 
 interface PortfolioViewProps {
   leads: Lead[]
-  properties: PortfolioItem[]
+  properties?: PortfolioItem[]
   onSelectLead: (lead: Lead) => void
   onStageChange: (leadId: string, stage: LeadStage) => void
   onOpenAddLead: () => void
-  onPropertyStatusChange: (id: string, status: PropertyStatus) => void
-  onOpenAddProperty: () => void
+  onPropertyStatusChange?: (id: string, status: PropertyStatus) => void
+  onOpenAddProperty?: () => void
   searchQuery?: string
 }
 
 export const PortfolioView: React.FC<PortfolioViewProps> = ({
   leads,
-  properties,
   onSelectLead,
   onStageChange,
   onOpenAddLead,
-  onPropertyStatusChange,
-  onOpenAddProperty,
   searchQuery = '',
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'leads-table' | 'leads-cards' | 'properties'>('leads-table')
+  const [activeSubTab, setActiveSubTab] = useState<'leads-table' | 'leads-cards'>('leads-table')
   const [selectedStage, setSelectedStage] = useState<string>('ALL')
   const [selectedHousingType, setSelectedHousingType] = useState<string>('ALL')
+  
+  // Sayfalama (Pagination) Durumu - Varsayılan 20, Seçenekler 20, 50, 100
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(20)
+  
+  // Persistent date range filter (retains selection even across app closes, dynamically adapts presets to today)
+  const [dateRange, setDateRangeState] = useState<DateRange>(() => loadSavedDateRange())
 
-  // Filter leads based on stage, housing type, and search query
+  const setDateRange = (range: DateRange) => {
+    setDateRangeState(range)
+    saveDateRange(range)
+  }
+
+  // Check if midnight passed while app was running to adapt 'Bugün' dynamically to the new day
+  useEffect(() => {
+    const handleCheckRollover = () => {
+      const rollover = checkDayRollover(dateRange)
+      if (rollover) {
+        setDateRangeState(rollover)
+        saveDateRange(rollover)
+      }
+    }
+    const interval = setInterval(handleCheckRollover, 30000)
+    window.addEventListener('focus', handleCheckRollover)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleCheckRollover)
+    }
+  }, [dateRange])
+
+  // Manuel Verileri Al (Artımlı / Incremental Sync) Durumu
+  const [isPulling, setIsPulling] = useState(false)
+  const [pullFeedback, setPullFeedback] = useState<{ message: string; isNew: boolean } | null>(null)
+
+  const handlePullData = async () => {
+    if (isPulling) return
+    setIsPulling(true)
+    try {
+      const result = await leadStore.pullLatestLeads()
+      if (result.error) {
+        setPullFeedback({
+          message: result.error,
+          isNew: false,
+        })
+      } else if (result.newCount > 0) {
+        setPullFeedback({
+          message: `${result.newCount} yeni müşteri başarıyla alındı!`,
+          isNew: true,
+        })
+      } else if (result.updatedCount > 0) {
+        setPullFeedback({
+          message: `${result.updatedCount} müşteri kaydı güncellendi.`,
+          isNew: true,
+        })
+      } else {
+        setPullFeedback({
+          message: 'Tüm veriler güncel. Yeni veri bulunamadı.',
+          isNew: false,
+        })
+      }
+    } catch {
+      setPullFeedback({
+        message: 'Veri çekilirken bir hata oluştu.',
+        isNew: false,
+      })
+    } finally {
+      setIsPulling(false)
+      setTimeout(() => {
+        setPullFeedback(null)
+      }, 4500)
+    }
+  }
+
+  // Filter leads based on stage, housing type, search query, and date range
   const filteredLeads = leads.filter((lead) => {
     if (selectedStage !== 'ALL' && lead.stage !== selectedStage) return false
     if (selectedHousingType !== 'ALL' && lead.preferredHousingType !== selectedHousingType) return false
@@ -57,44 +124,69 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
       searchQuery &&
       !lead.fullName.toLowerCase().includes(searchQuery.toLowerCase()) &&
       !lead.phone.includes(searchQuery) &&
-      !lead.formName.toLowerCase().includes(searchQuery.toLowerCase())
+      !lead.formName?.toLowerCase().includes(searchQuery.toLowerCase())
     ) {
       return false
     }
-    return true
-  })
 
-  // Filter properties
-  const filteredProperties = properties.filter((p) => {
-    if (
-      searchQuery &&
-      !p.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !p.location.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !p.projectCode.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false
+    // Filter by Date Range
+    if (dateRange.startDate) {
+      const leadTime = new Date(lead.createdAt).getTime()
+      if (!isNaN(leadTime)) {
+        const start = new Date(dateRange.startDate)
+        start.setHours(0, 0, 0, 0)
+        if (leadTime < start.getTime()) return false
+
+        if (dateRange.endDate) {
+          const end = new Date(dateRange.endDate)
+          end.setHours(23, 59, 59, 999)
+          if (leadTime > end.getTime()) return false
+        } else {
+          // Single day selection: exact day
+          const end = new Date(dateRange.startDate)
+          end.setHours(23, 59, 59, 999)
+          if (leadTime > end.getTime()) return false
+        }
+      }
     }
+
     return true
   })
 
-  // Customer metrics calculations
-  const totalLeads = leads.length
-  const hotLeads = leads.filter((l) => l.tags.some((t) => t.includes('Yüksek') || t.includes('Nakit')) || l.stage === 'OFFER' || l.stage === 'APPOINTMENT')
-  const investors = leads.filter((l) => l.tags.some((t) => t.includes('Yatırım')) || (l.budget && l.budget >= 5000000))
-  const inFollowUp = leads.filter((l) => l.stage === 'CONTACTED' || l.stage === 'APPOINTMENT' || l.stage === 'PRESENTATION')
-  const totalBudgetVolume = leads.reduce((acc, l) => acc + (l.budget || 0), 0)
+  // Customer metrics calculations based on active filtered data
+  const totalLeads = filteredLeads.length
+  const hotLeads = filteredLeads.filter(
+    (l) =>
+      l.tags?.some((t) => t.includes('Yüksek') || t.includes('Nakit')) ||
+      l.stage === 'OFFER' ||
+      l.stage === 'APPOINTMENT'
+  )
+  const investors = filteredLeads.filter(
+    (l) => l.tags?.some((t) => t.includes('Yatırım')) || ((l.budget ?? 0) >= 5000000)
+  )
+  const inFollowUp = filteredLeads.filter(
+    (l) => l.stage === 'CONTACTED' || l.stage === 'APPOINTMENT' || l.stage === 'PRESENTATION'
+  )
+  const totalBudgetVolume = filteredLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
+
+  // Filtreler veya arama değiştiğinde 1. sayfaya dön
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedStage, selectedHousingType, dateRange, searchQuery, activeSubTab])
+
+  const paginatedLeads = filteredLeads.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="space-y-6">
-      {/* Header Bar (Katmansız & Çizgisiz) */}
+      {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-1">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-[#b99881]/15 border border-[#b99881]/30 flex items-center justify-center text-[#b99881]">
               <Users className="w-4 h-4" />
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-white">
-              Müşteri Portföyü
+            <h2 className="text-2xl font-bold text-white tracking-wide">
+              Müşteriler
             </h2>
           </div>
           <p className="text-xs text-[#a69f99] mt-1">
@@ -102,135 +194,156 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
           </p>
         </div>
 
-        {/* Top Right Action: 'Yeni Veri' (Başlığın Karşısında / Sağında) */}
-        <div className="flex items-center gap-3">
+        {/* Top Right Action: 'Verileri Al' + 'Yeni Müşteri' */}
+        <div className="flex flex-wrap items-center gap-3">
+          {pullFeedback && (
+            <span
+              className={`text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 shadow-sm ${
+                pullFeedback.isNew
+                  ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300 font-medium'
+                  : 'bg-[#282522] border-[#4a443f] text-[#d6beae]'
+              }`}
+            >
+              {pullFeedback.isNew ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <RefreshCw className="w-3 h-3 text-[#b99881]" />
+              )}
+              <span>{pullFeedback.message}</span>
+            </span>
+          )}
+
+          <button
+            onClick={handlePullData}
+            disabled={isPulling}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm disabled:opacity-50"
+            title="En son çekilen veriden sonraki yeni lead'leri buluttan anında çeker"
+          >
+            <DownloadCloud className={`w-3.5 h-3.5 text-[#b99881] ${isPulling ? 'animate-bounce text-amber-400' : ''}`} />
+            <span>{isPulling ? 'Veriler Alınıyor...' : 'Verileri Al'}</span>
+          </button>
+
           <GlassButton
             variant="gold"
             size="sm"
             icon={<Plus className="w-3.5 h-3.5" />}
-            onClick={activeSubTab === 'properties' ? onOpenAddProperty : onOpenAddLead}
+            onClick={onOpenAddLead}
             className="rounded-full px-5 font-bold shadow-sm"
           >
-            Yeni Veri
+            Yeni Müşteri
           </GlassButton>
         </div>
       </div>
 
-      {/* KPI Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md">
-          <span className="text-xs text-[#a69f99]">Toplam Müşteri Portföyü</span>
-          <p className="text-2xl font-bold text-white mt-1">{totalLeads} Müşteri</p>
-          <span className="text-[11px] text-[#8c857f] mt-1 block">
+      {/* KPI Metrics Row (Mobilde 2x2, Masaüstünde 4'lü) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md">
+          <span className="text-[11px] sm:text-xs text-[#a69f99] truncate block">Toplam Müşteri</span>
+          <p className="text-lg sm:text-2xl font-bold text-white mt-1 truncate">
+            {totalLeads} {leads.length !== totalLeads ? <span className="text-[11px] sm:text-xs text-[#a69f99] font-normal">/ {leads.length}</span> : ''}
+          </p>
+          <span className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 block truncate">
             Hacim: {formatCurrency(totalBudgetVolume)}
           </span>
         </div>
 
-        <div className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md">
-          <span className="text-xs text-[#a69f99]">Sıcak Alıcılar (Hot Leads)</span>
-          <p className="text-2xl font-bold text-amber-400 mt-1">{hotLeads.length} Alıcı</p>
-          <span className="text-[11px] text-[#8c857f] mt-1 block">
-            Nakit & yüksek alım niyeti
+        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md">
+          <span className="text-[11px] sm:text-xs text-[#a69f99] truncate block">Sıcak Alıcılar</span>
+          <p className="text-lg sm:text-2xl font-bold text-amber-400 mt-1 truncate">{hotLeads.length} alıcı</p>
+          <span className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 block truncate">
+            Nakit & yüksek alım
           </span>
         </div>
 
-        <div className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md">
-          <span className="text-xs text-[#a69f99]">Yatırımcı Portföyü</span>
-          <p className="text-2xl font-bold text-[#b99881] mt-1">{investors.length} Yatırımcı</p>
-          <span className="text-[11px] text-[#8c857f] mt-1 block">
-            Geliştirme & proje yatırımı
+        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md">
+          <span className="text-[11px] sm:text-xs text-[#a69f99] truncate block">Yatırımcı Portföyü</span>
+          <p className="text-lg sm:text-2xl font-bold text-[#b99881] mt-1 truncate">{investors.length} yatırımcı</p>
+          <span className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 block truncate">
+            Proje yatırımı
           </span>
         </div>
 
-        <div className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md">
-          <span className="text-xs text-[#a69f99]">Görüşme & Takiptekiler</span>
-          <p className="text-2xl font-bold text-sky-400 mt-1">{inFollowUp.length} Müşteri</p>
-          <span className="text-[11px] text-[#8c857f] mt-1 block">
-            Randevu & sunum sürecinde
+        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md">
+          <span className="text-[11px] sm:text-xs text-[#a69f99] truncate block">Görüşme & Takip</span>
+          <p className="text-lg sm:text-2xl font-bold text-sky-400 mt-1 truncate">{inFollowUp.length} müşteri</p>
+          <span className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 block truncate">
+            Randevu sürecinde
           </span>
         </div>
       </div>
 
-      {/* Sub-Navigation & Filter Bar (Pill Shaped) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2.5 rounded-full bg-[#282522]/70 border border-[#4a443f]">
-        {/* Left: View Mode Pills */}
-        <div className="flex items-center bg-[#24211f] p-1 rounded-full border border-[#4a443f]">
-          <button
-            onClick={() => setActiveSubTab('leads-table')}
-            className={`flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              activeSubTab === 'leads-table'
-                ? 'bg-[#423c38] text-white border border-[#b99881]/40 shadow-sm'
-                : 'text-[#a69f99] hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Müşteri Tablosu</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('leads-cards')}
-            className={`flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              activeSubTab === 'leads-cards'
-                ? 'bg-[#423c38] text-white border border-[#b99881]/40 shadow-sm'
-                : 'text-[#a69f99] hover:text-white'
-            }`}
-          >
-            <Grid className="w-3.5 h-3.5" />
-            <span>Müşteri Kartları</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('properties')}
-            className={`flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              activeSubTab === 'properties'
-                ? 'bg-[#423c38] text-white border border-[#b99881]/40 shadow-sm'
-                : 'text-[#a69f99] hover:text-white'
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Gayrimenkul Portföyü</span>
-          </button>
+      {/* Sub-Navigation & Filter Bar: Solid stacking context */}
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-4 py-1">
+        {/* Left: View Mode Pills (Tablo / Kartlar) */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {[
+            { id: 'leads-table' as const, label: 'Tablo', icon: Users },
+            { id: 'leads-cards' as const, label: 'Kartlar', icon: Grid },
+          ].map((tab) => {
+            const Icon = tab.icon
+            const isSelected = activeSubTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer select-none ${
+                  isSelected
+                    ? 'bg-[#b99881]/25 text-white font-bold border border-[#b99881]/50 shadow-sm'
+                    : 'text-[#a69f99] hover:text-white hover:bg-white/5 border border-transparent'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-[#b99881]' : 'text-[#8c857f]'}`} />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* Right: Filters (When viewing clients) */}
-        {activeSubTab !== 'properties' && (
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <div className="flex items-center gap-2 text-[#a69f99]">
-              <Filter className="w-3.5 h-3.5 text-[#b99881]" />
-              <span className="font-semibold text-white">Durum:</span>
-              <select
-                value={selectedStage}
-                onChange={(e) => setSelectedStage(e.target.value)}
-                className="rounded-full bg-[#34302d] border border-[#4a443f] px-3 py-1 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
-              >
-                <option value="ALL">Tüm Durumlar ({leads.length})</option>
-                {Object.keys(STAGE_CONFIGS).map((k) => (
-                  <option key={k} value={k}>
-                    {STAGE_CONFIGS[k as LeadStage].label}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Right: Filters & Meta-Style Date Range Picker */}
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <LuxurySelect
+            label="Durum:"
+            icon={<Filter className="w-3.5 h-3.5 text-[#b99881]" />}
+            title="Aşama / Durum Filtrele"
+            value={selectedStage}
+            onChange={setSelectedStage}
+            options={[
+              { value: 'ALL', label: `Tüm Durumlar (${leads.length})` },
+              ...Object.keys(STAGE_CONFIGS).map((k) => ({
+                value: k,
+                label: STAGE_CONFIGS[k as LeadStage].label,
+              })),
+            ]}
+            align="right"
+            minWidth="w-56"
+          />
 
-            <div className="flex items-center gap-2 text-[#a69f99]">
-              <span className="font-semibold text-white">Konut:</span>
-              <select
-                value={selectedHousingType}
-                onChange={(e) => setSelectedHousingType(e.target.value)}
-                className="rounded-full bg-[#34302d] border border-[#4a443f] px-3 py-1 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
-              >
-                <option value="ALL">Tüm Tipler</option>
-                <option value="1+1">1+1 Daire</option>
-                <option value="2+1">2+1 Daire</option>
-                <option value="3+1">3+1 Daire</option>
-                <option value="Villa">Villa / Müstakil</option>
-              </select>
-            </div>
-          </div>
-        )}
+          <LuxurySelect
+            label="Konut:"
+            title="Konut Tipi Filtrele"
+            value={selectedHousingType}
+            onChange={setSelectedHousingType}
+            options={[
+              { value: 'ALL', label: 'Tüm Tipler' },
+              { value: '1+1', label: '1+1 Daire' },
+              { value: '2+1', label: '2+1 Daire' },
+              { value: '3+1', label: '3+1 Daire' },
+              { value: 'Villa', label: 'Villa / Müstakil' },
+            ]}
+            align="right"
+            minWidth="w-52"
+          />
+
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            align="right"
+          />
+        </div>
       </div>
 
-      {/* Sub-Tab 1: Müşteri Listesi / Tablosu (Müşteri Yönetimi) */}
+      {/* Sub-Tab 1: Müşteri Listesi / Tablosu */}
       {activeSubTab === 'leads-table' && (
         <div className="rounded-[32px] bg-[#282522]/70 border border-[#4a443f] overflow-hidden shadow-glass">
           <div className="overflow-x-auto">
@@ -241,6 +354,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                   <th className="py-3.5 px-4">İletişim & WhatsApp</th>
                   <th className="py-3.5 px-4">Talep & Bütçe</th>
                   <th className="py-3.5 px-4">Müşteri Durumu</th>
+                  <th className="py-3.5 px-4">Tarih</th>
                   <th className="py-3.5 px-4">Danışman</th>
                   <th className="py-3.5 px-5 text-right">İşlemler</th>
                 </tr>
@@ -248,14 +362,14 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               <tbody className="divide-y divide-[#4a443f]/60">
                 {filteredLeads.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-[#8c857f]">
+                    <td colSpan={7} className="py-12 text-center text-[#8c857f]">
                       {leads.length === 0
-                        ? "Henüz kayıtlı müşteri bulunmuyor. Sağ üstteki 'Yeni Veri' butonuna tıklayarak ilk müşteriyi ekleyebilirsiniz."
-                        : 'Kriterlere uygun müşteri bulunamadı.'}
+                        ? "Henüz kayıtlı müşteri bulunmuyor. Sağ üstteki 'Yeni Müşteri' butonuna tıklayarak ilk müşteriyi ekleyebilirsiniz."
+                        : 'Kriterlere veya seçili tarih aralığına uygun müşteri bulunamadı.'}
                     </td>
                   </tr>
                 ) : (
-                  filteredLeads.map((lead) => {
+                  paginatedLeads.map((lead) => {
                     const stageConfig = STAGE_CONFIGS[lead.stage] || STAGE_CONFIGS.NEW
 
                     return (
@@ -270,7 +384,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                             {lead.fullName}
                           </div>
                           <div className="flex flex-wrap items-center gap-1 mt-1">
-                            {lead.tags.slice(0, 2).map((tag) => (
+                            {lead.tags?.slice(0, 2).map((tag) => (
                               <span
                                 key={tag}
                                 className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[#d6beae] border border-white/5"
@@ -311,43 +425,53 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                           )}
                         </td>
 
-                        {/* Preferred Housing & Budget */}
+                        {/* Demand & Budget */}
                         <td className="py-3.5 px-4">
-                          <span className="font-bold text-[#b99881]">
-                            {lead.budget ? formatCurrency(lead.budget) : 'Belirtilmedi'}
-                          </span>
-                          <span className="text-[11px] text-[#a69f99] block">
-                            {lead.preferredHousingType || 'Genel Portföy'}
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium">
+                              {lead.preferredHousingType || 'Konut Belirtilmedi'}
+                            </span>
+                            {lead.budget && (
+                              <GlassBadge variant="gold" size="sm">
+                                {formatCurrency(lead.budget)}
+                              </GlassBadge>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-[#8c857f] block mt-0.5 truncate max-w-[200px]">
+                            {lead.formName || 'Meta Ads Formu'}
                           </span>
                         </td>
 
-                        {/* Stage Selector */}
+                        {/* Stage Dropdown */}
                         <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                          <select
+                          <StageDropdown
                             value={lead.stage}
-                            onChange={(e) => onStageChange(lead.id, e.target.value as LeadStage)}
-                            className="text-[11px] font-semibold rounded-full px-2.5 py-1 bg-[#34302d] border border-[#4a443f] text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
-                          >
-                            {Object.keys(STAGE_CONFIGS).map((k) => (
-                              <option key={k} value={k}>
-                                {STAGE_CONFIGS[k as LeadStage].label}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(newStage: LeadStage) => onStageChange(lead.id, newStage)}
+                          />
+                        </td>
+
+                        {/* Date */}
+                        <td className="py-3.5 px-4 text-[#a69f99]">
+                          <span className="block font-mono text-[11px]">
+                            {formatDate(lead.createdAt)}
+                          </span>
                         </td>
 
                         {/* Assigned Consultant */}
-                        <td className="py-3.5 px-4 text-[#f3efe9]">
-                          {lead.owner}
+                        <td className="py-3.5 px-4 text-[#a69f99]">
+                          <span className="inline-block py-0.5 px-2 rounded-full bg-[#1e1b18] border border-[#4a443f]/60 text-[11px]">
+                            {lead.assignedToUserName || lead.owner || 'Pazarlama Havuzu'}
+                          </span>
                         </td>
 
-                        {/* Action: Open Detail */}
-                        <td className="py-3.5 px-5 text-right">
+                        {/* Actions */}
+                        <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
                           <button
+                            type="button"
                             onClick={() => onSelectLead(lead)}
-                            className="px-3 py-1 rounded-full bg-[#423c38] hover:bg-[#b99881] hover:text-[#1c1a18] text-xs font-semibold text-[#d6beae] transition-colors cursor-pointer"
+                            className="px-3 py-1 rounded-full text-xs font-medium text-[#b99881] hover:text-white bg-[#b99881]/10 hover:bg-[#b99881]/25 border border-[#b99881]/30 transition-all cursor-pointer"
                           >
-                            Müşteri Profili
+                            Detay
                           </button>
                         </td>
                       </tr>
@@ -357,116 +481,113 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               </tbody>
             </table>
           </div>
+
+          <PaginationBar
+            totalItems={filteredLeads.length}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
-      {/* Sub-Tab 2: Müşteri Kartları Görünümü */}
+      {/* Sub-Tab 2: Müşteri Kartları */}
       {activeSubTab === 'leads-cards' && (
-        filteredLeads.length === 0 ? (
-          <div className="p-16 text-center rounded-[32px] bg-[#282522]/40 border border-dashed border-[#4a443f] flex flex-col items-center justify-center space-y-3">
-            <Users className="w-10 h-10 text-[#8c857f]" />
-            <h4 className="text-sm font-bold text-white">Henüz Kayıtlı Müşteri Bulunmuyor</h4>
-            <p className="text-xs text-[#a69f99]">
-              Sağ üstteki 'Yeni Veri' butonuna tıklayarak portföyünüze ilk müşteriyi ekleyebilirsiniz.
-            </p>
-          </div>
-        ) : (
+        <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredLeads.map((lead) => (
-              <div
-                key={lead.id}
-                onClick={() => onSelectLead(lead)}
-                className="group p-5 rounded-[28px] bg-[#282522]/70 hover:bg-[#282522] border border-[#4a443f] hover:border-[#b99881]/40 transition-all flex flex-col justify-between space-y-4 shadow-glass cursor-pointer"
-              >
-                <div className="space-y-3">
+            {filteredLeads.length === 0 ? (
+            <div className="col-span-full py-16 text-center text-[#8c857f]">
+              Kriterlere veya seçili tarih aralığına uygun müşteri bulunamadı.
+            </div>
+          ) : (
+            paginatedLeads.map((lead) => {
+              const stageConfig = STAGE_CONFIGS[lead.stage] || STAGE_CONFIGS.NEW
+
+              return (
+                <div
+                  key={lead.id}
+                  onClick={() => onSelectLead(lead)}
+                  className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] hover:border-[#b99881]/50 backdrop-blur-md transition-all cursor-pointer group space-y-4"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-bold text-white group-hover:text-[#b99881] transition-colors">
+                      <h4 className="font-bold text-white group-hover:text-[#b99881] transition-colors">
                         {lead.fullName}
-                      </h3>
-                      <p className="text-xs text-[#8c857f] mt-0.5">
-                        {lead.owner} • {formatDate(lead.createdAt)}
+                      </h4>
+                      <p className="text-xs text-[#a69f99] font-mono mt-0.5">
+                        {formatPhoneNumber(lead.phone)}
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-[#b99881]">
-                      {lead.budget ? formatCurrency(lead.budget) : '-'}
+
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${stageConfig.color} ${stageConfig.bgLight} ${stageConfig.borderColor}`}>
+                      {stageConfig.label}
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {lead.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#34302d] border border-[#4a443f] text-[#d6beae]"
+                  <div className="space-y-1.5 text-xs text-[#a69f99]">
+                    <div className="flex justify-between">
+                      <span>Talep Edilen:</span>
+                      <span className="text-white font-medium">{lead.preferredHousingType || 'Belirtilmedi'}</span>
+                    </div>
+                    {lead.budget && (
+                      <div className="flex justify-between">
+                        <span>Bütçe Aralığı:</span>
+                        <span className="text-amber-300 font-bold">{formatCurrency(lead.budget)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Tarih:</span>
+                      <span className="text-[#8c857f] font-mono">{formatDate(lead.createdAt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Kaynak Form:</span>
+                      <span className="text-white truncate max-w-[150px]">{lead.formName || 'Meta Form'}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#4a443f]/50 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={generateWhatsAppUrl(lead.phone, `Merhaba Sayın ${lead.fullName}, Demirtürk Portföy'den yazıyorum.`)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-xs text-emerald-400 transition-colors"
                       >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                        <MessageCircle className="w-3 h-3" />
+                        <span>WhatsApp</span>
+                      </a>
+                      <a
+                        href={`tel:${lead.phone}`}
+                        className="p-1.5 rounded-full bg-[#34302d] hover:bg-white/10 text-[#a69f99] hover:text-white transition-colors"
+                        title="Ara"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
 
-                  {lead.notes && (
-                    <p className="text-xs text-[#a69f99] line-clamp-2 bg-[#34302d]/50 p-2.5 rounded-[18px] border border-[#4a443f]/60">
-                      {lead.notes}
-                    </p>
-                  )}
-                </div>
-
-                {/* Bottom Actions */}
-                <div className="pt-3 border-t border-[#4a443f] flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-1.5">
-                    <a
-                      href={generateWhatsAppUrl(lead.phone, `Merhaba Sayın ${lead.fullName}, Demirtürk Portföy'den yazıyorum.`)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-xs text-emerald-400 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => onSelectLead(lead)}
+                      className="text-xs text-[#d6beae] hover:text-white font-semibold transition-colors cursor-pointer"
                     >
-                      <MessageCircle className="w-3 h-3" />
-                      <span>WhatsApp</span>
-                    </a>
-                    <a
-                      href={`tel:${lead.phone}`}
-                      className="p-1.5 rounded-full bg-[#34302d] hover:bg-white/10 text-[#a69f99] hover:text-white transition-colors"
-                      title="Ara"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                    </a>
+                      Detay & Portföy →
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => onSelectLead(lead)}
-                    className="text-xs text-[#d6beae] hover:text-white font-semibold transition-colors"
-                  >
-                    Detay & Portföy →
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        )
-      )}
-
-      {/* Sub-Tab 3: Gayrimenkul Portföyü (Mülk Envanteri) */}
-      {activeSubTab === 'properties' && (
-        <div className="space-y-6">
-          {filteredProperties.length === 0 ? (
-            <div className="p-16 text-center rounded-[32px] bg-[#282522]/40 border border-dashed border-[#4a443f] flex flex-col items-center justify-center space-y-3">
-              <Building2 className="w-10 h-10 text-[#8c857f]" />
-              <h4 className="text-sm font-bold text-white">Henüz Portföyde Gayrimenkul Bulunmuyor</h4>
-              <p className="text-xs text-[#a69f99]">
-                Sağ üstteki 'Yeni Veri' butonuna tıklayarak ilk portföy mülkünü ekleyebilirsiniz.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProperties.map((property) => (
-                <PropertyCard
-                  key={property.id}
-                  property={property}
-                  onStatusChange={onPropertyStatusChange}
-                />
-              ))}
-            </div>
+              )
+            })
           )}
+        </div>
+
+          {/* Müşteri Kartları Sayfalama Çubuğu */}
+          <PaginationBar
+            totalItems={filteredLeads.length}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
     </div>

@@ -40,7 +40,7 @@ export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ lead
         <div>
           <div className="flex items-center gap-2.5">
             <Trophy className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Satış Performansı
             </h2>
           </div>
@@ -50,32 +50,32 @@ export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ lead
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Aylık Gerçekleşen Ciro</div>
-          <div className="text-xl font-bold text-white mt-1">{formatCurrency(totalVolume)}</div>
-          <div className="text-[11px] text-[#8c857f] mt-1">{soldUnits.length} daire sözleşmesi</div>
+      {/* KPI Cards (Mobilde 2x2, Masaüstünde 4'lü) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+          <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Gerçekleşen Ciro</div>
+          <div className="text-lg sm:text-xl font-bold text-white mt-1 truncate">{formatCurrency(totalVolume)}</div>
+          <div className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 truncate">{soldUnits.length} daire sözleşmesi</div>
         </GlassCard>
 
-        <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Hedef Kota Gerçekleşmesi</div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">%{achievementRate}</div>
-          <div className="text-[11px] text-[#8c857f] mt-1">Hedef: {formatCurrency(quota)}</div>
+        <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+          <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Kota Gerçekleşmesi</div>
+          <div className="text-lg sm:text-2xl font-bold text-emerald-400 mt-1 truncate">%{achievementRate}</div>
+          <div className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 truncate">Hedef: {formatCurrency(quota)}</div>
         </GlassCard>
 
-        <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Tahakkuk Eden Komisyon</div>
-          <div className="text-xl font-bold text-[#b99881] mt-1">
+        <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+          <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Tahakkuk Eden Prim</div>
+          <div className="text-lg sm:text-xl font-bold text-[#b99881] mt-1 truncate">
             {formatCurrency(Math.round(totalVolume * 0.02))}
           </div>
-          <div className="text-[11px] text-[#8c857f] mt-1">%2 Standart danışman primi</div>
+          <div className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 truncate">%2 Danışman primi</div>
         </GlassCard>
 
-        <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Aktif Danışman Sayısı</div>
-          <div className="text-2xl font-bold text-sky-400 mt-1">{salesUsers.length}</div>
-          <div className="text-[11px] text-[#8c857f] mt-1">Satış kadrosu</div>
+        <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
+          <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Aktif Danışman</div>
+          <div className="text-lg sm:text-2xl font-bold text-sky-400 mt-1 truncate">{salesUsers.length}</div>
+          <div className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 truncate">Satış kadrosu</div>
         </GlassCard>
       </div>
 

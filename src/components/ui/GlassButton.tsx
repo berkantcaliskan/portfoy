@@ -19,11 +19,11 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   ...props
 }) => {
   const variantStyles = {
-    gold: 'glass-button-gold text-slate-950 font-semibold',
-    subtle: 'glass-button-subtle hover:text-white',
-    outline: 'border border-brand-gold/40 text-brand-goldLight hover:bg-brand-gold/10 hover:border-brand-gold',
-    emerald: 'bg-emerald-600/90 hover:bg-emerald-500 text-white shadow-[0_4px_20px_rgba(16,185,129,0.3)] border border-emerald-400/30 font-medium',
-    danger: 'bg-rose-600/80 hover:bg-rose-500 text-white shadow-[0_4px_20px_rgba(244,63,94,0.3)] border border-rose-400/30 font-medium',
+    gold: 'glass-button-gold text-[#f3efe9] font-medium shadow-none',
+    subtle: 'glass-button-subtle text-[#d6beae] hover:text-white shadow-none',
+    outline: 'border border-[#b99881]/30 text-[#d6beae] hover:bg-[#b99881]/10 hover:border-[#b99881]/50 shadow-none',
+    emerald: 'bg-emerald-950/70 hover:bg-emerald-900/80 text-emerald-200 border border-emerald-500/30 font-medium shadow-none',
+    danger: 'bg-rose-950/70 hover:bg-rose-900/80 text-rose-200 border border-rose-500/30 font-medium shadow-none',
   }
 
   const sizeStyles = {

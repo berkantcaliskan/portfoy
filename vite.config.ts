@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {
@@ -13,6 +14,9 @@ export default defineConfig({
   server: {
     port: 9001,
     strictPort: true,
-    host: true
+    host: true,
+    watch: {
+      ignored: ['**/dist-electron/**', '**/release/**']
+    }
   }
 })

@@ -1,6 +1,9 @@
 import { AppUser } from './userStore'
 import { Department } from '@/types/department'
 import { permissionService } from './permissionService'
+import { supabase, isSupabaseConfigured } from './supabaseClient'
+import { syncService } from './syncService'
+import { rowToApproval } from './dbMapper'
 
 export type ApprovalType = 'İskonto / İndirim' | 'Kapora İadesi' | 'Rezervasyon Uzatma' | 'Özel Ödeme Planı'
 export type ApprovalStatus = 'BEKLEMEDE' | 'ONAYLANDI' | 'REDDEDILDI'
@@ -27,46 +30,49 @@ export interface ApprovalRequest {
 
 const STORAGE_KEY_APPROVALS = 'demirturk_approvals_v2'
 
-const INITIAL_APPROVALS: ApprovalRequest[] = [
-  {
-    id: 'app-1',
-    type: 'İskonto / İndirim',
-    title: 'D-03 Peşin Alım İçin %3 İlave İskonto',
-    customerName: 'Ahmet Ulucak',
-    projectName: 'Demirtürk Panorama Rezidans',
-    unitNumber: 'D-03',
-    amount: 145000,
-    reason: 'Müşteri toplam tutarı 3 iş günü içinde tek seferde peşin ödemeyi taahhüt ediyor.',
-    requestedByUserId: 'usr-sales-1',
-    requestedByUserName: 'Satış Danışmanı',
-    requestedDepartment: 'Satış',
-    status: 'BEKLEMEDE',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: 'app-2',
-    type: 'Rezervasyon Uzatma',
-    title: 'D-14 Rezervasyonunun 5 Gün Uzatılması',
-    customerName: 'Canan Güneş',
-    projectName: 'Demirtürk Panorama Rezidans',
-    unitNumber: 'D-14',
-    reason: 'Müşteri yurt dışı transfer onayını bekliyor, kapora ödemesi 5 gün içinde tamamlanacak.',
-    requestedByUserId: 'usr-sales-2',
-    requestedByUserName: 'Satış Temsilcisi',
-    requestedDepartment: 'Satış',
-    status: 'BEKLEMEDE',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-]
+const INITIAL_APPROVALS: ApprovalRequest[] = []
 
 type Listener = () => void
 
 class ApprovalStore {
   private approvals: ApprovalRequest[] = []
   private listeners: Set<Listener> = new Set()
+  private realtimeChannel: any = null
 
   constructor() {
     this.loadFromStorage()
+    this.initRealtime()
+  }
+
+  public setLoadedApprovals(approvals: ApprovalRequest[]) {
+    this.approvals = approvals || []
+    try {
+      localStorage.setItem(STORAGE_KEY_APPROVALS, JSON.stringify(this.approvals))
+    } catch {}
+    this.notify()
+  }
+
+  private initRealtime() {
+    if (!isSupabaseConfigured() || this.realtimeChannel) return
+    this.realtimeChannel = supabase
+      .channel('realtime:approvals')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'approvals' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const incoming = rowToApproval(payload.new)
+          if (!this.approvals.some((a) => a.id === incoming.id)) {
+            this.approvals = [incoming, ...this.approvals]
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const incoming = rowToApproval(payload.new)
+          const idx = this.approvals.findIndex((a) => a.id === incoming.id)
+          if (idx !== -1) {
+            this.approvals[idx] = incoming
+            this.saveToStorage()
+          }
+        }
+      })
+      .subscribe()
   }
 
   private loadFromStorage() {
@@ -115,6 +121,7 @@ class ApprovalStore {
     }
     this.approvals = [newReq, ...this.approvals]
     this.saveToStorage()
+    syncService.saveApproval(newReq)
     return newReq
   }
 
@@ -144,6 +151,7 @@ class ApprovalStore {
     }
 
     this.saveToStorage()
+    syncService.saveApproval(this.approvals[index])
     return { success: true }
   }
 }

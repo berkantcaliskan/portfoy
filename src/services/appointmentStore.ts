@@ -1,5 +1,8 @@
 import { AppUser } from './userStore'
 import { Department } from '@/types/department'
+import { supabase, isSupabaseConfigured } from './supabaseClient'
+import { syncService } from './syncService'
+import { rowToAppointment } from './dbMapper'
 
 export type AppointmentType = 'ONLINE' | 'OFFICE' | 'ON_SITE'
 export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'
@@ -26,54 +29,52 @@ export interface Appointment {
 
 const STORAGE_KEY_APPOINTMENTS = 'demirturk_appointments_v2'
 
-function getTodayString(): string {
-  const d = new Date()
-  return d.toISOString().split('T')[0]
-}
-
-const INITIAL_APPOINTMENTS: Appointment[] = [
-  {
-    id: 'apt-1',
-    customerName: 'Ahmet Ulucak',
-    customerPhone: '+90 542 606 42 58',
-    date: getTodayString(),
-    time: '14:30',
-    location: 'Demirtürk Panorama Satış Ofisi',
-    type: 'ON_SITE',
-    status: 'SCHEDULED',
-    assignedToUserName: 'Satış Danışmanı',
-    createdByUserId: 'usr-rel-1',
-    createdByDepartment: 'Müşteri İlişkileri',
-    projectName: 'Demirtürk Panorama Rezidans',
-    notes: '2+1 deniz manzaralı daire sunumu ve ödeme planı görüşmesi.',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: 'apt-2',
-    customerName: 'Birgül Anar',
-    customerPhone: '+90 537 878 05 33',
-    date: getTodayString(),
-    time: '16:00',
-    location: 'Google Meet (Online Sunum)',
-    type: 'ONLINE',
-    status: 'SCHEDULED',
-    assignedToUserName: 'Satış Danışmanı',
-    createdByUserId: 'usr-rel-1',
-    createdByDepartment: 'Müşteri İlişkileri',
-    projectName: 'Demirtürk Ege Vadi Villaları',
-    notes: 'Yatırım amaçlı villa portföyü online katalog sunumu.',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-]
+const INITIAL_APPOINTMENTS: Appointment[] = []
 
 type Listener = () => void
 
 class AppointmentStore {
   private appointments: Appointment[] = []
   private listeners: Set<Listener> = new Set()
+  private realtimeChannel: any = null
 
   constructor() {
     this.loadFromStorage()
+    this.initRealtime()
+  }
+
+  public setLoadedAppointments(appointments: Appointment[]) {
+    this.appointments = appointments || []
+    try {
+      localStorage.setItem(STORAGE_KEY_APPOINTMENTS, JSON.stringify(this.appointments))
+    } catch {}
+    this.notify()
+  }
+
+  private initRealtime() {
+    if (!isSupabaseConfigured() || this.realtimeChannel) return
+    this.realtimeChannel = supabase
+      .channel('realtime:appointments')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const incoming = rowToAppointment(payload.new)
+          if (!this.appointments.some((a) => a.id === incoming.id)) {
+            this.appointments = [incoming, ...this.appointments]
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const incoming = rowToAppointment(payload.new)
+          const idx = this.appointments.findIndex((a) => a.id === incoming.id)
+          if (idx !== -1) {
+            this.appointments[idx] = incoming
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'DELETE') {
+          this.appointments = this.appointments.filter((a) => a.id !== (payload.old as any).id)
+          this.saveToStorage()
+        }
+      })
+      .subscribe()
   }
 
   private loadFromStorage() {
@@ -157,6 +158,7 @@ class AppointmentStore {
 
     this.appointments = [newApt, ...this.appointments]
     this.saveToStorage()
+    syncService.saveAppointment(newApt)
     return newApt
   }
 
@@ -176,6 +178,7 @@ class AppointmentStore {
 
     this.appointments[index] = updated
     this.saveToStorage()
+    syncService.saveAppointment(updated)
     return updated
   }
 
@@ -183,6 +186,7 @@ class AppointmentStore {
     const before = this.appointments.length
     this.appointments = this.appointments.filter((a) => a.id !== id)
     this.saveToStorage()
+    syncService.deleteAppointment(id)
     return this.appointments.length < before
   }
 }

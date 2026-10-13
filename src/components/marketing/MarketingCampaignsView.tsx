@@ -25,8 +25,10 @@ export const MarketingCampaignsView: React.FC = () => {
   const [newLeadName, setNewLeadName] = useState('')
   const [newLeadPhone, setNewLeadPhone] = useState('')
   const [selectedFormName, setSelectedFormName] = useState(forms[0]?.name || '')
-  const [leadBudget, setLeadBudget] = useState<number>(4500000)
+  const [leadBudget, setLeadBudget] = useState<number>(6500000)
   const [housingType, setHousingType] = useState('2+1 Rezidans')
+  const [investmentPurpose, setInvestmentPurpose] = useState('Yatırım & Kira Getirisi')
+  const [moveInTiming, setMoveInTiming] = useState('Hemen (1-3 Ay İçinde)')
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   const handleSimulateSubmit = (e: React.FormEvent) => {
@@ -39,13 +41,15 @@ export const MarketingCampaignsView: React.FC = () => {
       formName: selectedFormName,
       budget: leadBudget,
       preferredHousingType: housingType,
+      investmentPurpose,
+      moveInTiming,
     })
 
     setForms(metaStore.getForms())
     setIsSimulateOpen(false)
     setNewLeadName('')
     setNewLeadPhone('')
-    setSuccessMsg('Canlı Meta Webhook başarıyla simüle edildi ve ortak müşteri havuzuna işlendi.')
+    setSuccessMsg('Canlı Meta Webhook başarıyla simüle edildi ve müşteri form cevaplarıyla CRM havuzuna işlendi.')
     setTimeout(() => setSuccessMsg(null), 3500)
   }
 
@@ -59,7 +63,7 @@ export const MarketingCampaignsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2.5">
             <Megaphone className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Kampanyalar
             </h2>
           </div>
@@ -229,6 +233,41 @@ export const MarketingCampaignsView: React.FC = () => {
                 onChange={(e) => setLeadBudget(Number(e.target.value))}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
+            </div>
+          </div>
+
+          {/* Meta Reklamı Özel Form Soruları */}
+          <div className="grid grid-cols-2 gap-3 pt-1 border-t border-[#4a443f]/40">
+            <div>
+              <label className="block text-xs font-semibold text-amber-300/90 mb-1">
+                Form Sorusu: Alım Amacı
+              </label>
+              <select
+                value={investmentPurpose}
+                onChange={(e) => setInvestmentPurpose(e.target.value)}
+                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              >
+                <option value="Yatırım & Kira Getirisi">Yatırım & Kira Getirisi</option>
+                <option value="Kendi Oturumum İçin">Kendi Oturumum İçin</option>
+                <option value="Çocuklarım İçin Geleceğe Yatırım">Çocuklarım İçin Geleceğe Yatırım</option>
+                <option value="Ticari / Ofis Kullanımı">Ticari / Ofis Kullanımı</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-amber-300/90 mb-1">
+                Form Sorusu: Satın Alma Süresi
+              </label>
+              <select
+                value={moveInTiming}
+                onChange={(e) => setMoveInTiming(e.target.value)}
+                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              >
+                <option value="Hemen (1-3 Ay İçinde)">Hemen (1-3 Ay İçinde)</option>
+                <option value="3 - 6 Ay İçinde">3 - 6 Ay İçinde</option>
+                <option value="6 - 12 Ay (Proje Teslimine Kadar)">6 - 12 Ay (Proje Teslimine Kadar)</option>
+                <option value="Sadece Piyasa Araştırması">Sadece Piyasa Araştırması</option>
+              </select>
             </div>
           </div>
 

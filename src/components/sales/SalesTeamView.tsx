@@ -22,6 +22,7 @@ import {
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { LuxurySelect } from '@/components/ui/LuxurySelect'
 import { CommissionCalculatorModal } from './CommissionCalculatorModal'
 import { formatCurrency, formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
 
@@ -112,7 +113,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
             <div className="w-8 h-8 rounded-full bg-[#b99881]/15 border border-[#b99881]/30 flex items-center justify-center text-[#b99881]">
               <Trophy className="w-4 h-4" />
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Satış
             </h2>
           </div>
@@ -123,22 +124,20 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
 
         {/* Rep Selector & Action Controls */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Sales Rep Selector */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#24211f] border border-[#4a443f]">
-            <Users className="w-3.5 h-3.5 text-[#b99881]" />
-            <span className="text-xs text-[#a69f99] font-medium">Satışçı:</span>
-            <select
-              value={selectedRep}
-              onChange={(e) => setSelectedRep(e.target.value)}
-              className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"
-            >
-              {salesReps.map((rep) => (
-                <option key={rep.id} value={rep.id} className="bg-[#24211f] text-white">
-                  {rep.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Sales Rep Selector - Departman Açılır Menüsü Stiliyle Birebir Eşitlendi */}
+          <LuxurySelect
+            label="Satışçı:"
+            icon={<Users className="w-3.5 h-3.5 text-[#b99881]" />}
+            title="Yetkili Satış Danışmanı Seç"
+            value={selectedRep}
+            onChange={setSelectedRep}
+            options={salesReps.map((rep) => ({
+              value: rep.id,
+              label: rep.name,
+            }))}
+            align="right"
+            minWidth="w-64"
+          />
 
           {/* Commission Calculator Button */}
           <GlassButton
@@ -167,24 +166,24 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
         </div>
       </div>
 
-      {/* Sales Representative KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Sales Representative KPI Cards (Mobilde 2x2, Masaüstünde 4'lü) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Card 1: Quota Progress */}
-        <div className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-3">
+        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#a69f99]">Aylık Satış Hedefi</span>
+            <span className="text-[11px] sm:text-xs text-[#a69f99] truncate">Aylık Satış Hedefi</span>
             <span className="text-xs font-mono font-bold text-[#b99881]">%{quotaAchievement}</span>
           </div>
           <div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-lg sm:text-2xl font-bold text-white truncate">
               {formatCurrency(totalClosedRevenue)}
             </div>
-            <span className="text-[11px] text-[#8c857f]">
+            <span className="text-[10px] sm:text-[11px] text-[#8c857f] truncate block">
               Hedef: {formatCurrency(monthlyQuota)}
             </span>
           </div>
           {/* Progress bar */}
-          <div className="w-full h-2 rounded-full bg-[#1c1a18] overflow-hidden">
+          <div className="w-full h-1.5 sm:h-2 rounded-full bg-[#1c1a18] overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#98755f] to-[#b99881] rounded-full transition-all duration-500"
               style={{ width: `${quotaAchievement}%` }}
@@ -193,50 +192,50 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
         </div>
 
         {/* Card 2: Earned Commission */}
-        <div className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#a69f99]">Kazanılan Satış Primi</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold">
-              %2 Standart
+            <span className="text-[11px] sm:text-xs text-[#a69f99] truncate">Kazanılan Prim</span>
+            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold shrink-0">
+              %2
             </span>
           </div>
-          <div className="text-2xl font-bold text-emerald-400">
+          <div className="text-lg sm:text-2xl font-bold text-emerald-400 truncate">
             {formatCurrency(totalEarnedCommission)}
           </div>
-          <p className="text-[11px] text-[#8c857f]">
-            {closedLeads.length} satıştan hak edilen toplam prim
+          <p className="text-[10px] sm:text-[11px] text-[#8c857f] truncate">
+            {closedLeads.length} satıştan hak edilen
           </p>
         </div>
 
         {/* Card 3: Active Deals in Offer */}
-        <div className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#a69f99]">Sıcak Teklif & Pazarlık</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#b99881]/15 text-[#b99881] font-bold">
-              Sıcak Fırsat
+            <span className="text-[11px] sm:text-xs text-[#a69f99] truncate">Sıcak Teklif</span>
+            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-[#b99881]/15 text-[#b99881] font-bold shrink-0">
+              Sıcak
             </span>
           </div>
-          <div className="text-2xl font-bold text-[#b99881]">
-            {activeOfferCount} Aday
+          <div className="text-lg sm:text-2xl font-bold text-[#b99881] truncate">
+            {activeOfferCount} aday
           </div>
-          <p className="text-[11px] text-[#8c857f]">
-            Teklif ve portföy sunum aşamasındaki müşteriler
+          <p className="text-[10px] sm:text-[11px] text-[#8c857f] truncate">
+            Teklif & sunum aşamasında
           </p>
         </div>
 
         {/* Card 4: Deals Closed Count */}
-        <div className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#a69f99]">Kapanan Satış / Tapu</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 font-bold">
+            <span className="text-[11px] sm:text-xs text-[#a69f99] truncate">Kapanan Satış</span>
+            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 font-bold shrink-0">
               Kazanıldı
             </span>
           </div>
-          <div className="text-2xl font-bold text-sky-400">
-            {closedLeads.length} Sözleşme
+          <div className="text-lg sm:text-2xl font-bold text-sky-400 truncate">
+            {closedLeads.length} sözleşme
           </div>
-          <p className="text-[11px] text-[#8c857f]">
-            Kapora ve tapu devri tamamlanan işlemler
+          <p className="text-[10px] sm:text-[11px] text-[#8c857f] truncate">
+            Kapora & tapu devri tamam
           </p>
         </div>
       </div>
@@ -280,7 +279,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
 
       {/* View 1: Deal Pipeline Kanban */}
       {viewMode === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-2">
+        <div className="flex md:grid md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-2 no-scrollbar">
           {salesDealStages.map((stageKey) => {
             const stageLeads = filteredLeads.filter((l) => l.stage === stageKey)
             const stageConfig = STAGE_CONFIGS[stageKey]

@@ -22,37 +22,103 @@
 
 @layer base {
   :root {
-    --bg-base: #34302d;
+    --bg-base: #383830;
     --accent-color: #b99881;
     --accent-light: #d6beae;
-    --primary-anthracite: #282522;
+    --primary-anthracite: #2a2a24;
     --tertiary-white: #f3efe9;
     --glass-border: rgba(185, 152, 129, 0.2);
   }
 
   [data-theme-contrast="deep"] {
-    --bg-base: #181615;
-    --primary-anthracite: #221f1d;
+    --bg-base: #383830;
+    --primary-anthracite: #2a2a24;
   }
 
+  [data-theme-accent="gold"],
   [data-theme-accent="#b99881"] {
     --accent-color: #b99881;
     --accent-light: #d6beae;
   }
 
+  [data-theme-accent="amber"],
   [data-theme-accent="#d97706"] {
     --accent-color: #d97706;
     --accent-light: #f59e0b;
   }
 
+  [data-theme-accent="emerald"],
+  [data-theme-accent="#10b981"] {
+    --accent-color: #10b981;
+    --accent-light: #34d399;
+  }
+
+  [data-theme-accent="sapphire"],
+  [data-theme-accent="#38bdf8"] {
+    --accent-color: #38bdf8;
+    --accent-light: #7dd3fc;
+  }
+
+  [data-theme-accent="platinum"],
   [data-theme-accent="#94a3b8"] {
     --accent-color: #94a3b8;
     --accent-light: #cbd5e1;
   }
 
-  [data-theme-accent="#38bdf8"] {
-    --accent-color: #38bdf8;
-    --accent-light: #7dd3fc;
+  /* Native Select & Option Styling - Matte Dark & Elegant */
+  select {
+    color-scheme: dark !important;
+    background-color: #1e1b18 !important;
+    color: #f3efe9 !important;
+    border-color: #4a443f !important;
+  }
+
+  option, optgroup {
+    color-scheme: dark !important;
+    background-color: #1e1b18 !important;
+    color: #f3efe9 !important;
+  }
+
+  option:checked, option:hover {
+    background-color: #34302d !important;
+    color: #ffffff !important;
+  }
+
+  html {
+    font-size: 17.5px;
+  }
+  html[data-font-size="small"] {
+    font-size: 16px;
+  }
+  html[data-font-size="standard"] {
+    font-size: 17.5px;
+  }
+  html[data-font-size="large"] {
+    font-size: 20px;
+  }
+
+  /* Arbitrary small font utilities scaling */
+  html[data-font-size="small"] .text-\[10px\] {
+    font-size: 10px;
+  }
+  html[data-font-size="small"] .text-\[11px\] {
+    font-size: 11px;
+  }
+
+  html .text-\[10px\],
+  html[data-font-size="standard"] .text-\[10px\] {
+    font-size: 11.5px;
+  }
+  html .text-\[11px\],
+  html[data-font-size="standard"] .text-\[11px\] {
+    font-size: 12.5px;
+  }
+
+  html[data-font-size="large"] .text-\[10px\] {
+    font-size: 13px;
+  }
+  html[data-font-size="large"] .text-\[11px\] {
+    font-size: 14px;
   }
 
   /* Portföy Platformu: Başlık ve Gövde Tüm Metinler Kesinlikle Karla */
@@ -82,48 +148,227 @@
 }
 
 .font-mono, code, kbd, samp, pre {
-  font-family: 'JetBrains Mono', monospace !important;
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.01em;
 }
 
-/* Glassmorphism Primitives: Demirtürk Portföy Altın & Sıcak Antrasit Paleti */
-.glass-panel {
-  background: rgba(40, 37, 34, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(185, 152, 129, 0.2);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+/* ==========================================================================
+   CARDS & PANELS:
+   - Düz renk arka planda KESİNLİKLE ŞEFFAF (transparent), metalik/camsı efekt YOK.
+   - Yalnızca arka plan fotoğrafı/görseli olduğunda (.has-bg-image) bulanık (frosted) olur.
+   - Vurgu rengi (#b99881) olması gereken butonlar bu kuralın dışındadır.
+   ========================================================================== */
+
+/* DÜZ RENK ARKA PLAN: SADECE sayfa içi kutucuklar / kartlar şeffaf, temiz minimalist kontür */
+main .glass-panel,
+main .glass-panel-elevated,
+main .glass-card,
+main .glass-card-static,
+main [class*="bg-[#282522]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-[#24211f]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-[#24211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-[#25211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-[#1e1c1a]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-[#221f1d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-[#2a2622]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-[#34302d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+main [class*="bg-navy-"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-.glass-panel-elevated {
-  background: rgba(40, 37, 34, 0.95);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(185, 152, 129, 0.3);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+/* Hover: Sade, çok hafif şeffaf aydınlanma */
+main .glass-card:hover,
+main .glass-panel:hover,
+main [class*="hover:bg-[#282522]"]:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(185, 152, 129, 0.35) !important;
 }
 
-.glass-card {
-  background: rgba(40, 37, 34, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(185, 152, 129, 0.15);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+/* ==========================================================================
+   KRİTİK TASARIM STANDARDI (KORUMALI / ASLA DEĞİŞTİRİLEMEZ)
+   Kullanıcı Onaylı Referans: GlassModal Arka Plan Bluru (media_1790583830364.png)
+   
+   1. AÇILIR PENCERE (MODAL) ARKA PLAN OVERLAY FORMÜLÜ:
+      - CSS / Tailwind: "fixed inset-0 bg-black/65 backdrop-blur-md"
+      - Efekt: %65 siyah karartma + blur(12px) derinlemesine sayfa bulanıklaştırma.
+      - Tüm modallar (GlassModal, QuickToolsModal, LoginModal vb.) bu standardı kullanır.
+   
+   2. AÇILIR PENCERE (MODAL) GÖVDESİ FORMÜLÜ:
+      - CSS / Tailwind: "glass-modal relative w-full z-10 rounded-[36px] bg-navy-900/90 backdrop-blur-2xl border border-white/15 p-7 shadow-2xl shadow-black/80"
+      - Üst parlama çizgisi: "h-px bg-gradient-to-r from-transparent via-brand-gold/40 to-transparent"
+   
+   3. AÇILIR MENÜLER, BAŞLAT VE BAĞLAM MENÜLERİ (SABİT KOYU RENK MAT UI):
+      - Zemin: #1e1b18 (Koyu mat lüks zemin)
+      - Blur & Gölge: blur(28px) ve derin karanlık gölge (0 24px 60px -10px rgba(0, 0, 0, 0.85))
+      - Kontür: 1px solid #4a443f
+      - Seçili öge: rgba(185, 152, 129, 0.22) ile altın vurgu
+   ========================================================================== */
+.dropdown-panel,
+.dropdown-menu,
+.popover-panel,
+.context-menu,
+[role="menu"],
+[role="listbox"],
+header .dropdown-panel,
+div.dropdown-panel {
+  background: #1e1b18 !important;
+  background-color: #1e1b18 !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  border: 1px solid #4a443f !important;
+  color: #f3efe9 !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.28), 0 3px 8px -2px rgba(0, 0, 0, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 0.06) !important;
 }
 
-.glass-card:hover {
-  background: rgba(52, 48, 45, 0.9);
-  border-color: rgba(185, 152, 129, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+/* ==========================================================================
+   AÇILIR MENÜ SMOOTH SLIDE ANİMASYONLARI:
+   Bağlam yukarıdaysa (aşağı açılan): Yukarıdan aşağıya slide (slide-down)
+   Bağlam aşağıdaysa (yukarı açılan): Aşağıdan yukarıya slide (slide-up)
+   ========================================================================== */
+@keyframes dropdownSlideDown {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -14px, 0) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
-.glass-card-static {
-  background: rgba(40, 37, 34, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(185, 152, 129, 0.15);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+@keyframes dropdownSlideUp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Varsayılan: Bağlam yukarıdaysa yukarıdan aşağıya kayarak açılır */
+.dropdown-panel,
+.dropdown-panel-down {
+  animation: dropdownSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+}
+
+/* Bağlam aşağıdaysa (örn. Başlat menüsü, yukarı açılan açılır kutular): Aşağıdan yukarıya kayarak açılır */
+.dropdown-panel-up,
+.dropdown-panel[class*="bottom-full"],
+.dropdown-panel[class*="bottom-"] {
+  animation: dropdownSlideUp 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom center;
+}
+
+.dropdown-panel::before,
+.dropdown-menu::before,
+.context-menu::before,
+[role="menu"]::before {
+  display: none !important;
+}
+
+/* Açılır menü içi butonlar ve hover efektleri */
+header div[class*="absolute"] button:hover,
+.dropdown-panel button:hover,
+.context-menu button:hover,
+[role="menu"] button:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+/* Açılır menüde aktif/seçili öge */
+header div[class*="absolute"] button[class*="bg-[#b99881]/20"],
+header div[class*="absolute"] button[class*="bg-[#b99881]/25"],
+.dropdown-panel button[class*="bg-[#b99881]/20"],
+.dropdown-panel button[class*="bg-[#b99881]/25"],
+.context-menu button[class*="bg-[#b99881]/20"],
+[role="menu"] button[class*="bg-[#b99881]/20"] {
+  background: rgba(185, 152, 129, 0.22) !important;
+  background-color: rgba(185, 152, 129, 0.22) !important;
+  color: #ffffff !important;
+}
+
+/* SADECE ARKA PLAN FOTOĞRAFI VARSA (.has-bg-image): Bulanık (frosted) efekt devreye girer */
+.has-bg-image main .glass-panel,
+.has-bg-image main .glass-panel-elevated,
+.has-bg-image main .glass-card,
+.has-bg-image main .glass-card-static,
+.has-bg-image main [class*="bg-[#282522]"],
+.has-bg-image main [class*="bg-[#24211f]"],
+.has-bg-image main [class*="bg-[#24211e]"],
+.has-bg-image main [class*="bg-[#25211e]"],
+.has-bg-image main [class*="bg-[#1e1c1a]"],
+.has-bg-image main [class*="bg-[#221f1d]"],
+.has-bg-image main [class*="bg-[#2a2622]"] {
+  background: rgba(56, 56, 48, 0.45) !important;
+  backdrop-filter: blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+/* BUTONLAR: PARLAMA (GLOW / SHINE) KALDIRILDI - MAT, ASİL, KOYU LÜKS */
+button,
+button:hover,
+button:focus,
+button:active {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.btn-primary,
+.glass-button-gold {
+  background: #6a5547 !important;
+  background-color: #6a5547 !important;
+  color: #f3efe9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  font-weight: 600 !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease !important;
+}
+
+.btn-primary:hover,
+.glass-button-gold:hover {
+  background: #796253 !important;
+  background-color: #796253 !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+button.bg-\[\#b99881\],
+.bg-\[\#b99881\] {
+  background: #6a5547 !important;
+  background-color: #6a5547 !important;
+  color: #f3efe9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+}
+
+button.bg-\[\#b99881\]:hover,
+.bg-\[\#b99881\]:hover {
+  background: #796253 !important;
+  background-color: #796253 !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: none !important;
+}
+
+/* Çamurlu #4a443f sınırlarını temiz minimalist beyaz/kontürle değiştir */
+[class*="border-[#4a443f]"],
+.border-\[\#4a443f\] {
+  border-color: rgba(255, 255, 255, 0.10) !important;
 }
 
 .glass-input {
@@ -138,38 +383,23 @@
 .glass-input:focus {
   outline: none;
   background: rgba(40, 37, 34, 0.98);
-  border-color: rgba(185, 152, 129, 0.8);
-  box-shadow: 0 0 12px rgba(185, 152, 129, 0.3);
-}
-
-.glass-button-gold {
-  background: linear-gradient(135deg, var(--accent-color, #b99881), #96745f);
-  border: 1px solid rgba(243, 239, 233, 0.25);
-  box-shadow: 0 4px 16px rgba(185, 152, 129, 0.35);
-  color: #1c1a18;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-
-.glass-button-gold:hover {
-  background: linear-gradient(135deg, #c4a58f, #a8846e);
-  box-shadow: 0 6px 20px rgba(185, 152, 129, 0.5);
-  transform: translateY(-1px);
+  border-color: rgba(185, 152, 129, 0.6);
+  box-shadow: none !important;
 }
 
 .glass-button-subtle {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(185, 152, 129, 0.25);
-  color: #e2ddd5;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: #d6beae;
+  box-shadow: none !important;
   transition: all 0.2s ease;
 }
 
 .glass-button-subtle:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: var(--accent-color, #b99881);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.20);
   color: #ffffff;
+  box-shadow: none !important;
 }
 
 /* Demirtürk Signature Architectural Glass Blur */
@@ -326,3 +556,130 @@
 .animate-scroll-dot {
   animation: scrollDot 1.8s ease-in-out infinite;
 }
+
+/* ==========================================================================
+   DYNAMIC THEME ACCENT SYSTEM
+   Cascades --accent-color and --accent-light over all hardcoded Tailwind classes
+   ========================================================================== */
+[data-theme-accent="amber"] {
+  --accent-color: #d97706 !important;
+  --accent-light: #f59e0b !important;
+}
+[data-theme-accent="emerald"] {
+  --accent-color: #10b981 !important;
+  --accent-light: #34d399 !important;
+}
+[data-theme-accent="sapphire"] {
+  --accent-color: #0ea5e9 !important;
+  --accent-light: #38bdf8 !important;
+}
+[data-theme-accent="platinum"] {
+  --accent-color: #94a3b8 !important;
+  --accent-light: #cbd5e1 !important;
+}
+
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="text-[#b99881]"],
+[data-theme-accent]:not([data-theme-accent="gold"]) .text-\[\#b99881\] {
+  color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="bg-[#b99881]"],
+[data-theme-accent]:not([data-theme-accent="gold"]) .bg-\[\#b99881\] {
+  background-color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="border-[#b99881]"],
+[data-theme-accent]:not([data-theme-accent="gold"]) .border-\[\#b99881\] {
+  border-color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="text-[#d6beae]"],
+[data-theme-accent]:not([data-theme-accent="gold"]) .text-\[\#d6beae\] {
+  color: var(--accent-light) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="bg-[#d6beae]"],
+[data-theme-accent]:not([data-theme-accent="gold"]) .bg-\[\#d6beae\] {
+  background-color: var(--accent-light) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="hover:text-[#b99881]"]:hover {
+  color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="hover:bg-[#b99881]"]:hover {
+  background-color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="hover:border-[#b99881]"]:hover {
+  border-color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) [class*="focus:border-[#b99881]"]:focus {
+  border-color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) .text-brand-gold,
+[data-theme-accent]:not([data-theme-accent="gold"]) .text-brand-goldLight {
+  color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) .bg-brand-gold,
+[data-theme-accent]:not([data-theme-accent="gold"]) .bg-brand-goldLight {
+  background-color: var(--accent-color) !important;
+}
+[data-theme-accent]:not([data-theme-accent="gold"]) .border-brand-gold,
+[data-theme-accent]:not([data-theme-accent="gold"]) .border-brand-goldLight {
+  border-color: var(--accent-color) !important;
+}
+
+/* ==========================================================================
+   MEKSİKA DALGASI (SAYFA GEÇİŞLERİ VE İÇERİK DALGA ANİMASYONU)
+   ========================================================================== */
+@keyframes mexicanWaveSlide {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  60% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.page-mexican-wave > * > *:nth-child(1),
+.page-mexican-wave > *:nth-child(1) {
+  animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.02s;
+}
+
+.page-mexican-wave > * > *:nth-child(2),
+.page-mexican-wave > *:nth-child(2) {
+  animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.07s;
+}
+
+.page-mexican-wave > * > *:nth-child(3),
+.page-mexican-wave > *:nth-child(3) {
+  animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.12s;
+}
+
+.page-mexican-wave > * > *:nth-child(4),
+.page-mexican-wave > *:nth-child(4) {
+  animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.17s;
+}
+
+.page-mexican-wave > * > *:nth-child(5),
+.page-mexican-wave > *:nth-child(5) {
+  animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.22s;
+}
+
+.page-mexican-wave > * > *:nth-child(6),
+.page-mexican-wave > *:nth-child(6) {
+  animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.27s;
+}
+
+.page-mexican-wave > * > *:nth-child(n+7),
+.page-mexican-wave > *:nth-child(n+7) {
+  animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.32s;
+}
+
+

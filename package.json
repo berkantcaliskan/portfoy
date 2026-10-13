@@ -1,15 +1,40 @@
 {
-  "name": "frontend",
+  "name": "demirturk-portfoy",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Demirtürk Gayrimenkul Portföy Yönetim Sistemi",
+  "author": "Demirtürk Gayrimenkul",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "electron .",
+    "electron:build": "npm run build && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.demirturk.portfoy",
+    "productName": "Demirturk Portfoy",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": "portable",
+      "artifactName": "portföyapp.${ext}"
+    },
+    "portable": {
+      "artifactName": "portföyapp.${ext}"
+    }
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "clsx": "^2.1.1",
     "framer-motion": "^13.4.0",
     "lucide-react": "^1.47.0",
@@ -24,6 +49,8 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
     "oxlint": "^1.81.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.17",

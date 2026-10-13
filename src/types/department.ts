@@ -69,7 +69,7 @@ export interface DepartmentPageConfig {
 export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> = {
   'Pazarlama': [
     { id: 'dashboard', label: 'Başlangıç' },
-    { id: 'portfolio', label: 'Portföy Yönetimi' },
+    { id: 'portfolio', label: 'Müşteriler' },
     { id: 'marketing-campaigns', label: 'Kampanyalar' },
     { id: 'marketing-reports', label: 'Raporlar' },
     { id: 'shared', label: 'Paylaşılanlar' },
@@ -79,6 +79,7 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'dashboard', label: 'Başlangıç' },
     { id: 'crm', label: 'Satış' },
     { id: 'appointments', label: 'Randevular' },
+    { id: 'requests', label: 'Talepler' },
     { id: 'sales-performance', label: 'Performans' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
@@ -121,3 +122,59 @@ export function normalizeDepartmentName(dept: string): Department {
   if (clean.includes('yönetim') || clean.includes('yonetim') || clean.includes('operasyon')) return 'Yönetim'
   return 'Yönetim'
 }
+
+export const PAGE_TO_DEPARTMENT_MAP: Record<NavPageId, Department | 'ALL'> = {
+  dashboard: 'ALL',
+  shared: 'ALL',
+  projects: 'ALL',
+  contacts: 'ALL',
+  requests: 'ALL', // Ortak Talepler (Satış & Müşteri İlişkileri)
+
+  // Pazarlama
+  portfolio: 'Pazarlama',
+  'marketing-campaigns': 'Pazarlama',
+  'marketing-reports': 'Pazarlama',
+
+  // Satış
+  crm: 'Satış',
+  appointments: 'Satış',
+  'sales-performance': 'Satış',
+
+  // Müşteri İlişkileri
+  customers: 'Müşteri İlişkileri',
+  'followups-appointments': 'Müşteri İlişkileri',
+
+  // Muhasebe
+  collections: 'Muhasebe',
+  payments: 'Muhasebe',
+  'financial-reports': 'Muhasebe',
+
+  // Yönetim
+  'team-permissions': 'Yönetim',
+  'executive-reports': 'Yönetim',
+  approvals: 'Yönetim',
+}
+
+export function getDepartmentForPage(pageId: NavPageId): Department | null {
+  const dept = PAGE_TO_DEPARTMENT_MAP[pageId]
+  if (!dept || dept === 'ALL') return null
+  return dept
+}
+
+export function getPrimaryPageForDepartment(dept: Department): NavPageId {
+  switch (dept) {
+    case 'Pazarlama':
+      return 'portfolio'
+    case 'Satış':
+      return 'crm'
+    case 'Müşteri İlişkileri':
+      return 'customers'
+    case 'Muhasebe':
+      return 'collections'
+    case 'Yönetim':
+      return 'team-permissions'
+    default:
+      return 'dashboard'
+  }
+}
+

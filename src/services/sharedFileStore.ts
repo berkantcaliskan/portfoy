@@ -1,6 +1,8 @@
 import { AppUser } from './userStore'
 import { Department } from '@/types/department'
 import { permissionService } from './permissionService'
+import { supabase, isSupabaseConfigured } from './supabaseClient'
+import { sharedFileToRow, rowToSharedFile } from './dbMapper'
 
 export type ShareTarget = 'ALL_TEAM' | 'DEPARTMENTS' | 'MEMBERS' | 'MANAGEMENT'
 export type FileCategory = 'Proje Katalogları' | 'Satış Sözleşmeleri' | 'Mimari Çizimler' | 'Lansman Videoları' | 'Finans & Muhasebe'
@@ -35,95 +37,55 @@ export interface SharedFile {
 
 const STORAGE_KEY_FILES = 'demirturk_shared_files_v2'
 
-const INITIAL_FILES: SharedFile[] = [
-  {
-    id: 'f-1',
-    name: 'Demirturk_Panorama_Satis_Katalogu_2026.pdf',
-    folder: 'Proje Katalogları',
-    size: '18.4 MB',
-    type: 'pdf',
-    uploadedByUserId: 'usr-admin',
-    uploadedByUserName: 'Sistem Yöneticisi',
-    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-    shareTarget: 'ALL_TEAM',
-    permissions: {
-      canView: true,
-      canEdit: false,
-      canReshare: true,
-    },
-    downloadCount: 14,
-    downloadsAudit: [],
-  },
-  {
-    id: 'f-2',
-    name: 'Standart_Gayrimenkul_Satis_Vaadi_Sozlesmesi_v3.docx',
-    folder: 'Satış Sözleşmeleri',
-    size: '2.1 MB',
-    type: 'doc',
-    uploadedByUserId: 'usr-admin',
-    uploadedByUserName: 'Hukuk & Yönetim',
-    createdAt: new Date(Date.now() - 86400000 * 10).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
-    shareTarget: 'DEPARTMENTS',
-    targetDepartments: ['Satış', 'Müşteri İlişkileri', 'Yönetim'],
-    permissions: {
-      canView: true,
-      canEdit: true,
-      canReshare: false,
-    },
-    downloadCount: 9,
-    downloadsAudit: [],
-  },
-  {
-    id: 'f-3',
-    name: 'Ege_Vadi_Mimari_Kat_Planlari_DWG_Detay.zip',
-    folder: 'Mimari Çizimler',
-    size: '45.2 MB',
-    type: 'archive',
-    uploadedByUserId: 'usr-admin',
-    uploadedByUserName: 'Proje Koordinatörü',
-    createdAt: new Date(Date.now() - 86400000 * 15).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 15).toISOString(),
-    shareTarget: 'DEPARTMENTS',
-    targetDepartments: ['Satış', 'Pazarlama'],
-    permissions: {
-      canView: true,
-      canEdit: false,
-      canReshare: true,
-    },
-    downloadCount: 6,
-    downloadsAudit: [],
-  },
-  {
-    id: 'f-4',
-    name: '2026_Q3_Yonetim_Kurulu_Finansal_Ciro_Raporu.xlsx',
-    folder: 'Finans & Muhasebe',
-    size: '4.8 MB',
-    type: 'excel',
-    uploadedByUserId: 'usr-admin',
-    uploadedByUserName: 'Finans Direktörü',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    shareTarget: 'MANAGEMENT',
-    permissions: {
-      canView: true,
-      canEdit: true,
-      canReshare: false,
-    },
-    downloadCount: 3,
-    downloadsAudit: [],
-  },
-]
+const INITIAL_FILES: SharedFile[] = []
 
 type Listener = () => void
 
 class SharedFileStore {
   private files: SharedFile[] = []
   private listeners: Set<Listener> = new Set()
+  private realtimeChannel: any = null
 
   constructor() {
     this.loadFromStorage()
+    this.initRealtime()
+  }
+
+  public setLoadedFiles(files: SharedFile[]) {
+    this.files = files || []
+    try {
+      localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(this.files))
+    } catch {}
+    this.notify()
+  }
+
+  private initRealtime() {
+    if (!isSupabaseConfigured() || this.realtimeChannel) return
+    this.realtimeChannel = supabase
+      .channel('realtime:shared_files')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_files' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const incoming = rowToSharedFile(payload.new)
+          if (!this.files.some((f) => f.id === incoming.id)) {
+            this.files = [incoming, ...this.files]
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const incoming = rowToSharedFile(payload.new)
+          const idx = this.files.findIndex((f) => f.id === incoming.id)
+          if (idx !== -1) {
+            this.files[idx] = incoming
+            this.saveToStorage()
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const deletedId = (payload.old as any)?.id
+          if (deletedId) {
+            this.files = this.files.filter((f) => f.id !== deletedId)
+            this.saveToStorage()
+          }
+        }
+      })
+      .subscribe()
   }
 
   private loadFromStorage() {
@@ -131,12 +93,12 @@ class SharedFileStore {
       const saved = localStorage.getItem(STORAGE_KEY_FILES)
       if (saved) {
         const parsed = JSON.parse(saved)
-        this.files = Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_FILES
+        this.files = Array.isArray(parsed) ? parsed : []
       } else {
-        this.files = INITIAL_FILES
+        this.files = []
       }
     } catch {
-      this.files = INITIAL_FILES
+      this.files = []
     }
   }
 
@@ -217,6 +179,7 @@ class SharedFileStore {
 
     this.files = [newFile, ...this.files]
     this.saveToStorage()
+    this.persistCloudFile(newFile)
     return newFile
   }
 
@@ -247,6 +210,7 @@ class SharedFileStore {
     })
 
     this.saveToStorage()
+    this.persistCloudFile(file)
     return { success: true, file }
   }
 
@@ -265,7 +229,22 @@ class SharedFileStore {
 
     this.files = this.files.filter((f) => f.id !== fileId)
     this.saveToStorage()
+    this.deleteCloudFile(fileId)
     return { success: true }
+  }
+
+  private async persistCloudFile(file: SharedFile) {
+    if (!isSupabaseConfigured()) return
+    try {
+      await supabase.from('shared_files').upsert(sharedFileToRow(file))
+    } catch {}
+  }
+
+  private async deleteCloudFile(fileId: string) {
+    if (!isSupabaseConfigured()) return
+    try {
+      await supabase.from('shared_files').delete().eq('id', fileId)
+    } catch {}
   }
 }
 
