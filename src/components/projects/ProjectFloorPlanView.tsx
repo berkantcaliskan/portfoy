@@ -17,7 +17,6 @@ import {
   Sparkles,
   FileSpreadsheet,
   Sliders,
-  Box,
   Eye,
 } from 'lucide-react'
 import {
@@ -196,9 +195,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
   const defaultFloorPlan = project.floorPlans?.['DEFAULT'] || project.blueprintUrl
   const activeFloorPlanUrl = specificFloorPlan || defaultFloorPlan || null
 
-  // Light 3D Mode & Manual Kroki Settings State
-  const [is3DEnabled, setIs3DEnabled] = useState<boolean>(true)
-  const [tiltAngle, setTiltAngle] = useState<number>(14)
+  // Manual Kroki Settings State
   const [showManualSettings, setShowManualSettings] = useState<boolean>(true)
   const [isParsingDoc, setIsParsingDoc] = useState<boolean>(false)
   const [docFeedback, setDocFeedback] = useState<string | null>(
@@ -511,21 +508,6 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
             </button>
           )}
 
-          {/* Hafif 3D Görünüm Anahtarı */}
-          <button
-            type="button"
-            onClick={() => setIs3DEnabled(!is3DEnabled)}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              is3DEnabled
-                ? 'bg-[#b99881] text-white'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white'
-            }`}
-            title="Hafif 3D Mimari Perspektif Etkisini Aç / Kapat"
-          >
-            <Box className="w-3.5 h-3.5" />
-            <span>{is3DEnabled ? '3D Kroki Aktif' : '2D Görünüm'}</span>
-          </button>
-
           {/* Otomatik & Manuel Kroki Ayarları Paneli Aç/Kapa */}
           <button
             type="button"
@@ -599,9 +581,9 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
         </div>
       )}
 
-      {/* OTOMATİK & MANUEL KROKİ AYARLARI ÇUBUĞU (Kat Sayısı Maks 3: Zemin, Birinci, İkinci + Kat Başına Daire + Oda Tipi + 3D Açı) */}
+      {/* OTOMATİK & MANUEL KROKİ AYARLARI ÇUBUĞU (Kat Sayısı Maks 3: Zemin, Birinci, İkinci + Kat Başına Daire + Blok + Oda Tipi) */}
       {showManualSettings && (
-        <div className="p-4 rounded-[24px] bg-[#282522] border border-[#4a443f] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
+        <div className="p-4 rounded-[24px] bg-[#282522] border border-[#4a443f] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center">
           {/* 1. Kat Sayısı (Maks 3: Zemin, 1. Kat, 2. Kat) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px]">
@@ -725,51 +707,23 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
               })}
             </div>
           </div>
-
-          {/* 5. Hafif 3D Perspektif Derinliği */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-white">3D Perspektif Eğimi</span>
-              <span className="font-mono text-[#b99881] font-bold">
-                {is3DEnabled ? `${tiltAngle}°` : 'Kapalı'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#34302d]">
-              <input
-                type="range"
-                min={0}
-                max={24}
-                value={is3DEnabled ? tiltAngle : 0}
-                onChange={(e) => {
-                  const v = Number(e.target.value)
-                  if (v === 0) {
-                    setIs3DEnabled(false)
-                  } else {
-                    setIs3DEnabled(true)
-                    setTiltAngle(v)
-                  }
-                }}
-                className="w-full cursor-pointer"
-              />
-            </div>
-          </div>
         </div>
       )}
 
-      {/* ANA ETKİLEŞİMLİ ALAN: Sol 3-Katlı 3D Katman Seçici + Orta Hafif 3D Kroki + Sağ Seçili Daire Denetçisi */}
+      {/* ANA ETKİLEŞİMLİ ALAN: Sol 3-Katlı Kat Seçici + Orta Kroki Planı + Sağ Seçili Daire Denetçisi */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* SOL SÜTUN (2 Kolon): MAKS 3 KATLI 3D KATMAN SEÇİCİ (İkinci Kat, Birinci Kat, Zemin Kat) */}
+        {/* SOL SÜTUN (2 Kolon): MAKS 3 KATLI KAT SEÇİCİ (İkinci Kat, Birinci Kat, Zemin Kat) */}
         <div className="lg:col-span-2 p-3.5 rounded-[24px] bg-[#282522] border border-[#4a443f] space-y-3">
           <div className="flex items-center justify-between px-1.5">
             <span className="text-xs font-bold text-white flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-[#b99881]" />
-              <span>Kat Plakaları</span>
+              <span>Katlar</span>
             </span>
             <span className="text-[10px] font-mono text-[#8c857f]">Maks {configuredMaxFloors} Kat</span>
           </div>
 
-          {/* Yukarıdan aşağıya: 2. Kat -> 1. Kat -> Zemin Kat (İzometrik 3D Katman Görünümlü Pill Seçici) */}
-          <div className="flex lg:flex-col gap-2.5 overflow-x-auto lg:overflow-x-visible py-1">
+          {/* Yukarıdan aşağıya: 2. Kat -> 1. Kat -> Zemin Kat */}
+          <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible py-1">
             {[...floors].reverse().map((fl) => {
               const isSelected = fl === selectedFloor
               const unitsOnFl = blockUnits.filter(
@@ -789,17 +743,9 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   key={fl}
                   type="button"
                   onClick={() => setSelectedFloor(fl)}
-                  style={{
-                    transform: isSelected
-                      ? 'translateY(-2px) scale(1.02)'
-                      : 'translateY(0px) scale(1)',
-                    boxShadow: isSelected
-                      ? '0 8px 18px -4px rgba(41, 45, 43, 0.22), 0 4px 0 0 rgba(41, 45, 43, 0.18)'
-                      : '0 3px 0 0 rgba(41, 45, 43, 0.10)',
-                  }}
                   className={`w-full min-w-[140px] lg:min-w-0 px-3.5 py-2.5 rounded-full text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     isSelected
-                      ? 'bg-[#b99881] text-white'
+                      ? 'bg-[#b99881] text-white shadow-sm'
                       : 'bg-[#34302d] text-[#f3efe9] hover:opacity-95'
                   }`}
                 >
@@ -849,7 +795,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
             })}
           </div>
 
-          {/* 3D Katman Özeti */}
+          {/* Kat Özeti */}
           <div className="pt-1 px-1.5 text-[10.5px] text-[#8c857f] space-y-1">
             <div className="flex justify-between">
               <span>Aktif Kat:</span>
@@ -862,7 +808,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
           </div>
         </div>
 
-        {/* ORTA SÜTUN (7 Kolon): HAFİF 3D ETKİLİ ETKİLEŞİMLİ MİMARİ KAT KROKİSİ */}
+        {/* ORTA SÜTUN (7 Kolon): ETKİLEŞİMLİ MİMARİ KAT KROKİSİ */}
         <div className="lg:col-span-7 p-4 rounded-[24px] bg-[#282522] border border-[#4a443f] space-y-3">
           {/* Kroki Üst Başlık ve Durum Lejantı */}
           <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
@@ -875,8 +821,8 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
               </div>
               <p className="text-[11px] text-[#a69f99] mt-0.5">
                 {isLayoutEditMode
-                  ? 'Sürükleme modu aktif: Daireleri kat plakası üzerinde istediğiniz konuma taşıyabilirsiniz.'
-                  : 'Hafif 3D kat plakası üzerindeki daireye tıklayarak detaylarını inceleyebilir, rezerve veya satış yapabilirsiniz.'}
+                  ? 'Sürükleme modu aktif: Daireleri kat planı üzerinde istediğiniz konuma taşıyabilirsiniz.'
+                  : 'Kat krokisi üzerindeki daireye tıklayarak detaylarını inceleyebilir, rezerve veya satış yapabilirsiniz.'}
               </p>
             </div>
 
@@ -922,45 +868,16 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
             </div>
           )}
 
-          {/* HAFİF 3D MİMARİ KAT PLAKASI SAHNESİ (Light 3D Isometric / Perspective Stage) */}
-          <div
-            className="relative py-3 px-1 sm:px-3"
-            style={{
-              perspective: is3DEnabled ? '1350px' : 'none',
-            }}
-          >
-            {/* Alt Katların Hafif 3D Gölge Katmanları (3D Maket Plaka Hissi) */}
-            {is3DEnabled && selectedFloor > 0 && (
-              <div
-                className="pointer-events-none absolute inset-x-5 bottom-0 h-[92%] rounded-[24px] border border-black/15 bg-black/5 transition-all duration-300"
-                style={{
-                  transform: `rotateX(${tiltAngle}deg) rotateZ(-1.2deg) translateY(16px) translateZ(-28px) scale(0.97)`,
-                }}
-              />
-            )}
-            {is3DEnabled && selectedFloor > 1 && (
-              <div
-                className="pointer-events-none absolute inset-x-8 bottom-0 h-[90%] rounded-[24px] border border-black/10 bg-black/[0.03] transition-all duration-300"
-                style={{
-                  transform: `rotateX(${tiltAngle}deg) rotateZ(-1.2deg) translateY(30px) translateZ(-54px) scale(0.94)`,
-                }}
-              />
-            )}
-
-            {/* ANA 3D KAT PLAKASI (Architectural Blueprint Slab) */}
+          {/* MİMARİ KAT KROKİSİ KANVASI (Düz, kolay okunur, hafif 3D blok kalınlığı hissiyatlı) */}
+          <div className="relative py-1">
             <div
               ref={canvasRef}
-              className="relative w-full min-h-[520px] rounded-[24px] bg-[#34302d] border-2 border-[#4a443f] overflow-hidden select-none transition-transform duration-300"
+              className="relative w-full min-h-[520px] rounded-[24px] bg-[#34302d] border-2 border-[#4a443f] overflow-hidden select-none"
               style={{
-                transform: is3DEnabled
-                  ? `rotateX(${tiltAngle}deg) rotateZ(-1.2deg)`
-                  : 'none',
-                transformStyle: 'preserve-3d',
-                boxShadow: is3DEnabled
-                  ? '0 18px 0 -2px rgba(41, 45, 43, 0.16), 0 28px 44px -10px rgba(41, 45, 43, 0.24)'
-                  : '0 4px 16px -4px rgba(41, 45, 43, 0.08)',
+                boxShadow:
+                  '0 8px 0 0 rgba(41, 45, 43, 0.12), 0 14px 28px -8px rgba(41, 45, 43, 0.14)',
                 backgroundImage:
-                  'radial-gradient(rgba(92, 106, 196, 0.18) 1px, transparent 1px), linear-gradient(to right, rgba(92, 106, 196, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(92, 106, 196, 0.06) 1px, transparent 1px)',
+                  'radial-gradient(rgba(92, 106, 196, 0.16) 1px, transparent 1px), linear-gradient(to right, rgba(92, 106, 196, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(92, 106, 196, 0.05) 1px, transparent 1px)',
                 backgroundSize: '20px 20px, 60px 60px, 60px 60px',
               }}
             >
@@ -999,7 +916,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                 </div>
               )}
 
-              {/* KATTAKİ DAİRELERİN HAFİF 3D KROKİ KUTULARI */}
+              {/* KATTAKİ DAİRELERİN KROKİ KUTULARI */}
               <AnimatePresence mode="popLayout">
                 {floorUnits.map((unit, idx) => {
                   const box =
@@ -1008,7 +925,6 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   const isAvailable = unit.status === 'SATISTA'
                   const isReserved = unit.status === 'REZERVE'
 
-                  // Satış durumuna göre temiz, ferah 3D katman renkleri
                   const statusColorClasses = isAvailable
                     ? 'bg-emerald-500/16 hover:bg-emerald-500/24 border-emerald-600/75 text-emerald-950'
                     : isReserved
@@ -1021,29 +937,23 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     ? 'bg-amber-500 !text-white'
                     : 'bg-rose-600 !text-white'
 
-                  // 3D Extruded room block shadow
-                  const box3DShadow = isSelected
-                    ? '0 10px 0 0 rgba(41, 45, 43, 0.22), 0 20px 32px -6px rgba(41, 45, 43, 0.28)'
-                    : '0 6px 0 0 rgba(41, 45, 43, 0.14), 0 10px 18px -4px rgba(41, 45, 43, 0.14)'
+                  const boxShadowStyle = isSelected
+                    ? '0 5px 0 0 rgba(41, 45, 43, 0.18), 0 10px 20px -4px rgba(41, 45, 43, 0.16)'
+                    : '0 4px 0 0 rgba(41, 45, 43, 0.10), 0 6px 12px -4px rgba(41, 45, 43, 0.08)'
 
                   return (
                     <motion.div
                       key={unit.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{
-                        opacity: 1,
-                        scale: isSelected ? 1.02 : 1,
-                        y: isSelected ? -5 : 0,
-                      }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      whileHover={{ y: -4, scale: 1.015 }}
-                      transition={{ duration: 0.2 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.18 }}
                       style={{
                         left: `${box.x}%`,
                         top: `${box.y}%`,
                         width: `${box.w}%`,
                         height: `${box.h}%`,
-                        boxShadow: is3DEnabled ? box3DShadow : undefined,
+                        boxShadow: boxShadowStyle,
                       }}
                       onMouseDown={(e) => {
                         setActiveUnitId(unit.id)
