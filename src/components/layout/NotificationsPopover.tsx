@@ -66,14 +66,14 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className="dropdown-panel fixed md:absolute right-3.5 md:right-0 bottom-24 md:bottom-auto md:mt-2 w-[calc(100vw-28px)] md:w-96 max-w-sm rounded-[26px] bg-[#282522] border border-[#4a443f] shadow-2xl p-4 z-[70] animate-in fade-in zoom-in-95 duration-150 backdrop-blur-2xl space-y-3"
+      className="dropdown-panel fixed md:absolute right-3.5 md:right-0 bottom-24 md:bottom-auto md:top-full md:mt-2.5 w-[calc(100vw-28px)] md:w-96 max-w-sm rounded-[26px] bg-[#282522] border border-[#4a443f] shadow-2xl p-4 z-[70] animate-in fade-in zoom-in-95 duration-150 backdrop-blur-2xl space-y-3"
       style={{
         boxShadow:
           '0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(185, 152, 129, 0.35)',
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#4a443f]">
+      <div className="flex items-center justify-between pb-1">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-xl bg-[#b99881]/20 border border-[#b99881]/40 flex items-center justify-center text-[#dfb76c]">
             <Bell className="w-3.5 h-3.5" />
@@ -158,7 +158,7 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
                     {n.subtitle}
                   </p>
 
-                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-[#4a443f]/40">
+                  <div className="flex items-center justify-between mt-2">
                     <span className="text-[10px] text-[#dfb76c] font-semibold flex items-center gap-0.5">
                       {n.targetTab === 'requests' ? 'Talepleri Aç' : 'Müşterileri Aç'}
                       <ChevronRight className="w-3 h-3" />

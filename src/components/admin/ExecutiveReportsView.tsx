@@ -140,7 +140,7 @@ export const ExecutiveReportsView: React.FC<ExecutiveReportsViewProps> = ({ lead
             <span>5. Departman</span>
             <span className="text-purple-400 font-semibold">Genel Yönetim</span>
           </div>
-          <div className="text-lg font-bold text-white">5 / 5 Entegre</div>
+          <div className="text-lg font-bold text-white">{projects.length} Aktif Proje</div>
           <p className="text-[11px] text-[#a69f99]">
             Çift rezervasyonu engelleyen kilitler ve hedefli güvenli dosya paylaşımı devrede.
           </p>

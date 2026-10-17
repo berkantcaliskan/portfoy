@@ -112,7 +112,7 @@ export const FinancialReportsView: React.FC = () => {
                 <span className="font-bold">{formatCurrency(totalInflow)}</span>
               </div>
               <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-emerald-400" style={{ width: '100%' }} />
+                <div className="h-full bg-emerald-400" style={{ width: totalInflow > 0 ? '100%' : '0%' }} />
               </div>
             </div>
 
@@ -139,10 +139,10 @@ export const FinancialReportsView: React.FC = () => {
           </h3>
           <div className="space-y-3">
             {[
-              { label: 'Şantiye ve İnşaat Hakedişleri', pct: 68, color: 'bg-[#b99881]' },
-              { label: 'Satış Başarı Komisyonları', pct: 18, color: 'bg-emerald-400' },
-              { label: 'Meta & Dijital Reklam Bütçesi', pct: 10, color: 'bg-sky-400' },
-              { label: 'Ofis ve Genel Yönetim', pct: 4, color: 'bg-amber-400' },
+              { label: 'Şantiye ve İnşaat Hakedişleri', pct: payments.length > 0 ? 68 : 0, color: 'bg-[#b99881]' },
+              { label: 'Satış Başarı Komisyonları', pct: payments.length > 0 ? 18 : 0, color: 'bg-emerald-400' },
+              { label: 'Meta & Dijital Reklam Bütçesi', pct: payments.length > 0 ? 10 : 0, color: 'bg-sky-400' },
+              { label: 'Ofis ve Genel Yönetim', pct: payments.length > 0 ? 4 : 0, color: 'bg-amber-400' },
             ].map((item) => (
               <div key={item.label} className="space-y-1">
                 <div className="flex justify-between text-xs text-[#f3efe9]">

@@ -95,7 +95,7 @@ export const MarketingCampaignsView: React.FC = () => {
         <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
           <div className="text-xs text-[#a69f99]">Toplam Kampanya Lead'i</div>
           <div className="text-2xl font-bold text-white mt-1">{totalLeads}</div>
-          <div className="text-[11px] text-[#8c857f] mt-1">3 Aktif Meta Reklam Formu</div>
+          <div className="text-[11px] text-[#8c857f] mt-1">{forms.length} Aktif Meta Reklam Formu</div>
         </GlassCard>
 
         <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
@@ -107,48 +107,54 @@ export const MarketingCampaignsView: React.FC = () => {
         <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
           <div className="text-xs text-sky-400">Entegrasyon Durumu</div>
           <div className="text-sm font-semibold text-white mt-2 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            Meta Webhook Dinleniyor
+            <span className={`w-2.5 h-2.5 rounded-full ${forms.length > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-[#8c857f]'}`} />
+            {forms.length > 0 ? 'Meta Webhook Dinleniyor' : 'Henüz Kampanya Yok'}
           </div>
           <div className="text-[11px] text-[#8c857f] mt-1">SSL Şifreli Uç Nokta</div>
         </GlassCard>
       </div>
 
       {/* Kampanya ve Form Kartları */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {forms.map((form) => (
-          <GlassCard key={form.id} className="p-5 bg-[#282522] border-[#4a443f] space-y-3">
-            <div className="flex items-start justify-between">
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 font-semibold">
-                Instagram & Facebook
-              </span>
-              <GlassBadge size="sm" variant={form.status === 'ACTIVE' ? 'success' : 'default'}>
-                {form.status === 'ACTIVE' ? 'Aktif' : 'Durduruldu'}
-              </GlassBadge>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-bold text-white">{form.name}</h3>
-              <p className="text-xs text-[#a69f99] mt-0.5">{form.campaignName}</p>
-            </div>
-
-            <div className="pt-3 border-t border-[#4a443f] flex items-center justify-between text-xs">
-              <div>
-                <span className="text-[#8c857f]">Toplam Lead:</span>
-                <span className="text-white font-bold ml-1.5">{form.leadCount}</span>
+      {forms.length === 0 ? (
+        <GlassCard className="p-10 text-center text-[#a69f99] text-sm">
+          Henüz tanımlanmış bir reklam kampanyası veya Meta formu bulunmuyor.
+        </GlassCard>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {forms.map((form) => (
+            <GlassCard key={form.id} className="p-5 bg-[#282522] border-[#4a443f] space-y-3">
+              <div className="flex items-start justify-between">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 font-semibold">
+                  Instagram & Facebook
+                </span>
+                <GlassBadge size="sm" variant={form.status === 'ACTIVE' ? 'success' : 'default'}>
+                  {form.status === 'ACTIVE' ? 'Aktif' : 'Durduruldu'}
+                </GlassBadge>
               </div>
-              <div>
-                <span className="text-[#8c857f]">Dönüşüm:</span>
-                <span className="text-emerald-400 font-bold ml-1.5">%{form.conversionRate}</span>
-              </div>
-            </div>
 
-            <div className="text-[10px] text-[#8c857f]">
-              Son Aday: {form.lastLeadAt ? new Date(form.lastLeadAt).toLocaleString('tr-TR') : 'Kayıt yok'}
-            </div>
-          </GlassCard>
-        ))}
-      </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">{form.name}</h3>
+                <p className="text-xs text-[#a69f99] mt-0.5">{form.campaignName}</p>
+              </div>
+
+              <div className="pt-1 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[#8c857f]">Toplam Lead:</span>
+                  <span className="text-white font-bold ml-1.5">{form.leadCount}</span>
+                </div>
+                <div>
+                  <span className="text-[#8c857f]">Dönüşüm:</span>
+                  <span className="text-emerald-400 font-bold ml-1.5">%{form.conversionRate}</span>
+                </div>
+              </div>
+
+              <div className="text-[10px] text-[#8c857f]">
+                Son Aday: {form.lastLeadAt ? new Date(form.lastLeadAt).toLocaleString('tr-TR') : 'Kayıt yok'}
+              </div>
+            </GlassCard>
+          ))}
+        </div>
+      )}
 
       {/* WEBHOOK SIMULATE MODAL */}
       <GlassModal

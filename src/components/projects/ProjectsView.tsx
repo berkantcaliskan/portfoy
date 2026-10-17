@@ -25,6 +25,8 @@ import {
   Settings,
   RotateCcw,
   Trash2,
+  FileSpreadsheet,
+  Sparkles,
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
@@ -37,9 +39,12 @@ import {
   FlatUnit,
   FlatStatus,
   RoomType,
+  BlueprintLayoutTemplate,
 } from '@/services/projectStore'
 import { userStore, AppUser } from '@/services/userStore'
 import { permissionService } from '@/services/permissionService'
+import { ProjectFloorPlanView, FLOOR_LABELS } from './ProjectFloorPlanView'
+import { parseProjectDocumentFile, ParsedUnitDraft } from '@/utils/projectDocumentParser'
 
 interface ProjectsViewProps {
   onNavigateToPortfolio: () => void
@@ -51,6 +56,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || '')
   const [selectedCity, setSelectedCity] = useState<string>('ALL')
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid')
+  const [detailDisplayMode, setDetailDisplayMode] = useState<'blueprint' | 'cards'>('blueprint')
 
   // Modals
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
@@ -63,7 +69,16 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
   // Edit Unit Modal State
   const [isEditUnitModalOpen, setIsEditUnitModalOpen] = useState(false)
   const [editingUnit, setEditingUnit] = useState<FlatUnit | null>(null)
-  const [editUnitForm, setEditUnitForm] = useState({
+  const [editUnitForm, setEditUnitForm] = useState<{
+    price: number | string
+    facade: string
+    description: string
+    roomType: RoomType
+    block: string
+    floor: number | string
+    grossSqm: number | string
+    netSqm: number | string
+  }>({
     price: 0,
     facade: '',
     description: '',
@@ -76,32 +91,71 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
 
   // Form states
   const [customerName, setCustomerName] = useState('')
-  const [reserveDays, setReserveDays] = useState(5)
-  const [depositAmount, setDepositAmount] = useState(100000)
+  const [reserveDays, setReserveDays] = useState<number | string>(5)
+  const [depositAmount, setDepositAmount] = useState<number | string>(100000)
   const [reserveNote, setReserveNote] = useState('')
-  const [salePrice, setSalePrice] = useState(0)
+  const [salePrice, setSalePrice] = useState<number | string>(0)
   const [paymentPlan, setPaymentPlan] = useState('%50 Peşin + 24 Ay Taksit')
-  const [editPrice, setEditPrice] = useState(0)
+  const [editPrice, setEditPrice] = useState<number | string>(0)
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
 
-  // New project form
-  const [newProject, setNewProject] = useState({
+  // New project form (with automatic & manual kroki settings, max 3 floors)
+  const [isParsingNewProjectDoc, setIsParsingNewProjectDoc] = useState(false)
+  const [newProject, setNewProject] = useState<{
+    name: string
+    city: string
+    district: string
+    mevki: string
+    type: string
+    totalUnits: number | string
+    deliveryDate: string
+    description: string
+    layoutTemplate: BlueprintLayoutTemplate
+    blueprintUrl: string
+    maxFloors: 1 | 2 | 3
+    unitsPerFloor: number
+    blockCount: 1 | 2
+    defaultRoomType: RoomType | 'MIXED'
+    sourceDocumentName: string
+    sourceDocumentSummary: string
+    parsedUnits: ParsedUnitDraft[]
+  }>({
     name: '',
-    city: 'İstanbul',
+    city: 'Sakarya',
     district: '',
     mevki: '',
     type: 'Konut & Rezidans',
-    totalUnits: 24,
+    totalUnits: 12,
     deliveryDate: 'Aralık 2027',
     description: '',
+    layoutTemplate: 'quad' as BlueprintLayoutTemplate,
+    blueprintUrl: '',
+    maxFloors: 3,
+    unitsPerFloor: 4,
+    blockCount: 1,
+    defaultRoomType: 'MIXED',
+    sourceDocumentName: '',
+    sourceDocumentSummary: '',
+    parsedUnits: [],
   })
 
   // Project Settings state
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false)
-  const [projectSettingsForm, setProjectSettingsForm] = useState({
+  const [projectSettingsForm, setProjectSettingsForm] = useState<{
+    name: string
+    city: string
+    district: string
+    mevki: string
+    type: string
+    deliveryDate: string
+    status: 'SATISTA' | 'YAKINDA' | 'TAMAMLANDI'
+    startingPrice: number | string
+    description: string
+    imageUrl: string
+  }>({
     name: '',
-    city: 'İstanbul',
+    city: 'Sakarya',
     district: '',
     mevki: '',
     type: 'Konut & Rezidans',
@@ -162,7 +216,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       return
     }
 
-    const expiresAt = new Date(Date.now() + 86400000 * reserveDays).toISOString()
+    const expiresAt = new Date(Date.now() + 86400000 * (Number(reserveDays) || 5)).toISOString()
     const res = projectStore.reserveUnit(currentProject.id, selectedUnit.id, currentUser, {
       customerName: customerName.trim(),
       expiresAt,
@@ -262,7 +316,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       description: unit.description || '',
       roomType: unit.roomType || '2+1',
       block: unit.block || 'A Blok',
-      floor: unit.floor || 1,
+      floor: Math.max(0, Math.min(2, unit.floor ?? 0)),
       grossSqm: unit.grossSqm || 100,
       netSqm: unit.netSqm || 80,
     })
@@ -274,6 +328,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     e.preventDefault()
     if (!editingUnit || !currentProject) return
 
+    const parsedFloor = Math.max(0, Math.min(2, Number(editUnitForm.floor) || 0))
     const res = projectStore.updateUnitDetails(
       currentProject.id,
       editingUnit.id,
@@ -283,7 +338,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
         description: editUnitForm.description.trim(),
         roomType: editUnitForm.roomType,
         block: editUnitForm.block.trim(),
-        floor: Number(editUnitForm.floor) || 1,
+        floor: parsedFloor,
         grossSqm: Number(editUnitForm.grossSqm) || 0,
         netSqm: Number(editUnitForm.netSqm) || 0,
       },
@@ -313,6 +368,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       .filter(Boolean)
       .join(' ')
 
+    const computedTotalUnits =
+      newProject.parsedUnits.length > 0
+        ? newProject.parsedUnits.length
+        : newProject.maxFloors * newProject.unitsPerFloor * newProject.blockCount
+
     const created = projectStore.addProject({
       name: newProject.name.trim(),
       code: `PRJ-${Math.floor(100 + Math.random() * 900)}`,
@@ -321,28 +381,48 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       district: newProject.district.trim(),
       mevki: newProject.mevki.trim(),
       type: newProject.type,
-      totalUnits: Number(newProject.totalUnits) || 24,
+      totalUnits: computedTotalUnits,
       deliveryDate: newProject.deliveryDate,
       startingPrice: 0,
       imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
+      blueprintUrl: newProject.blueprintUrl || undefined,
+      floorPlans: newProject.blueprintUrl ? { DEFAULT: newProject.blueprintUrl } : {},
+      layoutTemplate: newProject.layoutTemplate || 'quad',
+      maxFloors: newProject.maxFloors,
+      unitsPerFloor: newProject.unitsPerFloor,
+      blockCount: newProject.blockCount,
+      defaultRoomType: newProject.defaultRoomType,
+      sourceDocumentName: newProject.sourceDocumentName || undefined,
+      sourceDocumentSummary: newProject.sourceDocumentSummary || undefined,
+      parsedUnits: newProject.parsedUnits.length > 0 ? newProject.parsedUnits : undefined,
       status: 'SATISTA',
       description: newProject.description.trim(),
     })
 
     setSelectedProjectId(created.id)
     setViewMode('detail')
+    setDetailDisplayMode('blueprint')
     setIsAddProjectOpen(false)
-    setActionSuccess(`"${newProject.name.trim()}" projesi başarıyla eklendi.`)
+    setActionSuccess(`"${newProject.name.trim()}" projesi ve 3D etkileşimli kat krokisi oluşturuldu.`)
     setTimeout(() => setActionSuccess(null), 3000)
     setNewProject({
       name: '',
-      city: 'İstanbul',
+      city: 'Sakarya',
       district: '',
       mevki: '',
       type: 'Konut & Rezidans',
-      totalUnits: 24,
+      totalUnits: 12,
       deliveryDate: 'Aralık 2027',
       description: '',
+      layoutTemplate: 'quad',
+      blueprintUrl: '',
+      maxFloors: 3,
+      unitsPerFloor: 4,
+      blockCount: 1,
+      defaultRoomType: 'MIXED',
+      sourceDocumentName: '',
+      sourceDocumentSummary: '',
+      parsedUnits: [],
     })
   }
 
@@ -350,7 +430,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     if (!currentProject) return
     setProjectSettingsForm({
       name: currentProject.name || '',
-      city: currentProject.city || 'İstanbul',
+      city: currentProject.city || 'Sakarya',
       district: currentProject.district || '',
       mevki: currentProject.mevki || '',
       type: currentProject.type || 'Konut & Rezidans',
@@ -638,14 +718,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
 
                       {/* Proje Açıklaması */}
                       {p.description && (
-                        <p className="text-xs text-[#c4bcb5] line-clamp-2 mb-4 bg-[#1e1b19]/60 p-3 rounded-[14px] border border-[#3d3733]/60 italic">
+                        <p className="text-xs text-[#c4bcb5] line-clamp-2 mb-4 italic">
                           "{p.description}"
                         </p>
                       )}
                     </div>
 
                     {/* Alt Kısım: İlerleme Çubuğu & Daireleri İncele */}
-                    <div className="pt-4 border-t border-[#4a443f]/60 space-y-3">
+                    <div className="pt-2 space-y-3">
                       <div>
                         <div className="flex justify-between items-center text-[11px] mb-1.5">
                           <span className="text-[#8c857f]">Envanter Durumu</span>
@@ -792,28 +872,38 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                     )}
                   </div>
 
-                  {/* Sağ Taraf: Durum Renk Lejantı ve Proje Ayarları */}
-                  <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex items-center gap-3 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/20 border border-emerald-500" />
-                        <span className="text-[#a69f99]">Satışta</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500/20 border border-amber-500" />
-                        <span className="text-[#a69f99]">Rezerve (Opsiyonlu)</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500/20 border border-rose-500" />
-                        <span className="text-[#a69f99]">Satıldı</span>
-                      </div>
-                    </div>
+                  {/* Sağ Taraf: Görünüm Seçici (Etkileşimli Kat Planı Krokisi / Kart Matrisi) ve Proje Ayarları */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDetailDisplayMode('blueprint')}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        detailDisplayMode === 'blueprint'
+                          ? 'bg-[#b99881] text-white'
+                          : 'bg-[#34302d] text-[#a69f99] hover:text-white'
+                      }`}
+                    >
+                      <Compass className="w-3.5 h-3.5" />
+                      <span>Etkileşimli Kat Planı (Kroki)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDetailDisplayMode('cards')}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        detailDisplayMode === 'cards'
+                          ? 'bg-[#b99881] text-white'
+                          : 'bg-[#34302d] text-[#a69f99] hover:text-white'
+                      }`}
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Liste / Kart Matrisi</span>
+                    </button>
 
                     {(currentUser?.role === 'ADMIN' || currentUser?.isManager) && (
                       <button
                         type="button"
                         onClick={handleOpenProjectSettings}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#c4bcb5] hover:text-white bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881] transition-all cursor-pointer shadow-sm ml-1"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#c4bcb5] hover:text-white bg-[#34302d] hover:bg-[#3d3733] transition-all cursor-pointer"
                         title="Proje Bilgileri ve Yönetim Ayarları"
                       >
                         <Settings className="w-3.5 h-3.5 text-[#b99881]" />
@@ -823,7 +913,21 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                   </div>
                 </div>
 
-                {/* Daireler Grid Matrisi */}
+                {detailDisplayMode === 'blueprint' ? (
+                  <ProjectFloorPlanView
+                    project={currentProject}
+                    canEditPrice={canEditPrice}
+                    isManagerOrAdmin={Boolean(currentUser?.role === 'ADMIN' || currentUser?.isManager)}
+                    onReserveUnit={handleOpenReserve}
+                    onSellUnit={handleOpenSell}
+                    onCancelReserve={handleCancelReserve}
+                    onEditPrice={handleOpenPrice}
+                    onEditUnit={handleOpenEditUnit}
+                    onOpenHistory={handleOpenHistory}
+                    onProjectUpdated={() => setProjects(projectStore.getAll())}
+                  />
+                ) : (
+                /* Daireler Grid Matrisi */
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {currentUnits.map((unit) => {
                     const isAvailable = unit.status === 'SATISTA'
@@ -833,7 +937,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                     return (
                       <div
                         key={unit.id}
-                        className={`p-4 rounded-[20px] border transition-all duration-200 ${
+                        className={`p-4 rounded-[22px] border transition-all duration-200 ${
                           isAvailable
                             ? 'bg-[#282522] border-[#4a443f] hover:border-[#b99881]'
                             : isReserved
@@ -845,8 +949,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm font-bold text-white">{unit.unitNumber}</span>
-                            <span className="text-[10px] text-[#8c857f] px-1.5 py-0.5 rounded bg-[#34302d]">
-                              {unit.block || 'A Blok'} • {unit.floor}. Kat
+                            <span className="text-[10px] text-[#8c857f] px-2 py-0.5 rounded-full bg-[#34302d]">
+                              {unit.block || 'A Blok'} • {FLOOR_LABELS[Math.max(0, Math.min(2, unit.floor))]?.short || `${unit.floor}. Kat`}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
@@ -859,7 +963,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                             <button
                               type="button"
                               onClick={() => handleOpenEditUnit(unit)}
-                              className="p-1 rounded-[8px] bg-[#34302d] hover:bg-[#b99881] text-[#a69f99] hover:text-[#282522] border border-[#4a443f] hover:border-[#b99881] transition-all cursor-pointer"
+                              className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#a69f99] hover:text-[#282522] transition-all cursor-pointer"
                               title="Daire Bilgilerini Düzenle (Fiyat, Cephe, Açıklama vb.)"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -892,7 +996,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                                 <button
                                   type="button"
                                   onClick={() => handleOpenPrice(unit)}
-                                  className="text-[#b99881] hover:text-white p-0.5 cursor-pointer"
+                                  className="text-[#b99881] hover:text-white p-1 rounded-full cursor-pointer"
                                   title="Fiyatı Belirle / Düzenle"
                                 >
                                   <TurkishLira className="w-3 h-3" />
@@ -902,14 +1006,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                           </div>
 
                           {unit.description && (
-                            <p className="mt-1.5 text-[11px] text-[#c4bcb5] bg-[#1e1b19]/70 px-2.5 py-1.5 rounded-[10px] border border-[#3d3733]/60 italic line-clamp-2">
+                            <p className="mt-1.5 text-[11px] text-[#c4bcb5] italic line-clamp-2">
                               "{unit.description}"
                             </p>
                           )}
 
                           {/* Rezervasyon Ayrıntısı (Varsa) */}
                           {isReserved && unit.reservation && (
-                            <div className="mt-2 pt-2 border-t border-amber-500/20 text-[11px] text-amber-300/90 space-y-0.5">
+                            <div className="mt-2 pt-1 text-[11px] text-amber-300/90 space-y-0.5">
                               <div className="flex items-center gap-1">
                                 <User className="w-3 h-3" />
                                 <span>{unit.reservation.customerName}</span>
@@ -926,7 +1030,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
 
                           {/* Satış Ayrıntısı (Varsa) */}
                           {isSold && unit.sale && (
-                            <div className="mt-2 pt-2 border-t border-rose-500/20 text-[11px] text-rose-300/90 space-y-0.5">
+                            <div className="mt-2 pt-1 text-[11px] text-rose-300/90 space-y-0.5">
                               <div className="flex items-center gap-1">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                                 <span>Müşteri: {unit.sale.customerName}</span>
@@ -939,20 +1043,20 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                         </div>
 
                         {/* Eylemler */}
-                        <div className="flex items-center gap-1.5 pt-2 border-t border-[#4a443f]/50">
+                        <div className="flex items-center gap-1.5 pt-2">
                           {isAvailable && (
                             <>
                               <button
                                 type="button"
                                 onClick={() => handleOpenReserve(unit)}
-                                className="flex-1 py-1.5 px-2 text-xs font-semibold rounded-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
+                                className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition-colors cursor-pointer"
                               >
                                 Rezerve Et
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleOpenSell(unit)}
-                                className="flex-1 py-1.5 px-2 text-xs font-semibold rounded-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+                                className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 transition-colors cursor-pointer"
                               >
                                 Satış Yap
                               </button>
@@ -964,14 +1068,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                               <button
                                 type="button"
                                 onClick={() => handleOpenSell(unit)}
-                                className="flex-1 py-1.5 px-2 text-xs font-semibold rounded-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+                                className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 transition-colors cursor-pointer"
                               >
                                 Satışa Çevir
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleCancelReserve(unit)}
-                                className="py-1.5 px-2 text-xs font-medium rounded-[10px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors cursor-pointer"
+                                className="py-1.5 px-3 text-xs font-medium rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
                                 title="Rezervasyonu İptal Et"
                               >
                                 İptal
@@ -983,7 +1087,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                             <button
                               type="button"
                               onClick={() => handleOpenEditUnit(unit)}
-                              className="flex-1 py-1.5 px-2 text-xs font-semibold rounded-[10px] bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                              className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                               title="Satışı Geri Al veya Daireyi Düzenle"
                             >
                               <RotateCcw className="w-3 h-3" />
@@ -994,7 +1098,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                           <button
                             type="button"
                             onClick={() => handleOpenHistory(unit)}
-                            className="p-1.5 text-xs rounded-[10px] bg-[#34302d] hover:bg-[#3d3733] text-[#a69f99] hover:text-white border border-[#4a443f] transition-colors cursor-pointer"
+                            className="p-2 text-xs rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#a69f99] hover:text-white transition-colors cursor-pointer"
                             title="Durum Değişiklik Geçmişi (Audit Log)"
                           >
                             <History className="w-3.5 h-3.5" />
@@ -1004,6 +1108,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                     )
                   })}
                 </div>
+                )}
               </div>
             )}
           </motion.div>
@@ -1023,7 +1128,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <span>{formatCurrency(selectedUnit?.price || 0)}</span>
             </div>
             <div className="mt-1">
-              Tip: {selectedUnit?.roomType} • {selectedUnit?.grossSqm} m² • {selectedUnit?.floor}. Kat
+              Tip: {selectedUnit?.roomType} • {selectedUnit?.grossSqm} m² • {FLOOR_LABELS[Math.max(0, Math.min(2, selectedUnit?.floor ?? 0))]?.short || 'Zemin Kat'}
             </div>
           </div>
 
@@ -1072,7 +1177,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <input
                 type="number"
                 value={depositAmount}
-                onChange={(e) => setDepositAmount(Number(e.target.value))}
+                onChange={(e) => setDepositAmount(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
@@ -1149,7 +1254,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 type="number"
                 required
                 value={salePrice}
-                onChange={(e) => setSalePrice(Number(e.target.value))}
+                onChange={(e) => setSalePrice(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
@@ -1235,7 +1340,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               type="number"
               required
               value={editPrice}
-              onChange={(e) => setEditPrice(Number(e.target.value))}
+              onChange={(e) => setEditPrice(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
             />
           </div>
@@ -1300,8 +1405,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 onChange={(e) => setNewProject({ ...newProject, city: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] transition-colors cursor-pointer"
               >
-                <option value="İstanbul">İstanbul</option>
                 <option value="Sakarya">Sakarya</option>
+                <option value="İstanbul">İstanbul</option>
                 <option value="İzmir">İzmir</option>
                 <option value="Antalya">Antalya</option>
                 <option value="Muğla">Muğla</option>
@@ -1333,6 +1438,198 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
             </p>
           </div>
 
+          {/* EVRENSEL BELGE OKUYUCU: Word, PDF, PPTX, Excel, Görsel Yükle -> Otomatik Kroki Ayarla */}
+          <div className="p-3.5 rounded-[18px] bg-[#24211f] border border-[#4a443f] space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-bold text-[#f3efe9] flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-[#b99881]" />
+                <span>Dosyadan Otomatik Kroki Oluştur (Word, PDF, PPTX, Excel, Görsel)</span>
+              </label>
+              {isParsingNewProjectDoc && (
+                <span className="text-[11px] font-semibold text-[#b99881]">Okunuyor...</span>
+              )}
+            </div>
+
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                setIsParsingNewProjectDoc(true)
+                try {
+                  const parsed = await parseProjectDocumentFile(file)
+                  setNewProject((prev) => ({
+                    ...prev,
+                    name: prev.name.trim() ? prev.name : parsed.detectedProjectName || prev.name,
+                    maxFloors: parsed.floorCount,
+                    unitsPerFloor: parsed.unitsPerFloor,
+                    blockCount: parsed.blockCount,
+                    defaultRoomType: parsed.defaultRoomType,
+                    layoutTemplate: parsed.layoutTemplate,
+                    totalUnits: parsed.totalUnits,
+                    blueprintUrl: parsed.extractedBlueprintDataUrl || prev.blueprintUrl,
+                    sourceDocumentName: parsed.fileName,
+                    sourceDocumentSummary: parsed.summary,
+                    parsedUnits: parsed.parsedUnits,
+                  }))
+                } catch (err) {
+                  console.error('Proje belgesi okunamadı:', err)
+                } finally {
+                  setIsParsingNewProjectDoc(false)
+                }
+              }}
+              className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#b99881] file:text-white cursor-pointer"
+            />
+
+            {newProject.sourceDocumentSummary && (
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-[11px] font-medium flex items-start gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-[#b99881] shrink-0 mt-0.5" />
+                <span>{newProject.sourceDocumentSummary}</span>
+              </div>
+            )}
+          </div>
+
+          {/* OTOMATİK & MANUEL KROKİ AYARLARI: Kat Sayısı (Maks 3: Zemin, 1. Kat, 2. Kat), Kat Başına Daire, Blok, Oda Tipi */}
+          <div className="p-3.5 rounded-[18px] bg-[#24211f] border border-[#4a443f] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white">
+                3D Kroki Kat & Daire Ayarları (Otomatik / Manuel)
+              </span>
+              <span className="text-[11px] font-mono font-bold text-[#b99881]">
+                Toplam:{' '}
+                {newProject.parsedUnits.length > 0
+                  ? newProject.parsedUnits.length
+                  : newProject.maxFloors * newProject.unitsPerFloor * newProject.blockCount}{' '}
+                Ünite
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Kat Sayısı (Maks 3: Zemin, Birinci, İkinci) */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
+                  Kat Sayısı (Maks 3 Kat)
+                </label>
+                <select
+                  value={newProject.maxFloors}
+                  onChange={(e) => {
+                    const mf = Number(e.target.value) as 1 | 2 | 3
+                    setNewProject({
+                      ...newProject,
+                      maxFloors: mf,
+                      parsedUnits: [],
+                      totalUnits: mf * newProject.unitsPerFloor * newProject.blockCount,
+                    })
+                  }}
+                  className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
+                >
+                  <option value={1}>1 Kat (Sadece Zemin Kat)</option>
+                  <option value={2}>2 Kat (Zemin + 1. Kat)</option>
+                  <option value={3}>3 Kat (Zemin + 1. Kat + 2. Kat)</option>
+                </select>
+              </div>
+
+              {/* Kat Başına Daire Sayısı */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
+                  Kat Başına Daire Sayısı
+                </label>
+                <select
+                  value={newProject.unitsPerFloor}
+                  onChange={(e) => {
+                    const upf = Number(e.target.value)
+                    setNewProject({
+                      ...newProject,
+                      unitsPerFloor: upf,
+                      parsedUnits: [],
+                      totalUnits: newProject.maxFloors * upf * newProject.blockCount,
+                    })
+                  }}
+                  className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
+                >
+                  <option value={1}>Kat Başına 1 Bağımsız Bölüm</option>
+                  <option value={2}>Kat Başına 2 Daire</option>
+                  <option value={3}>Kat Başına 3 Daire</option>
+                  <option value={4}>Kat Başına 4 Daire</option>
+                  <option value={6}>Kat Başına 6 Daire</option>
+                  <option value={8}>Kat Başına 8 Daire</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2.5">
+              {/* Blok Sayısı */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
+                  Blok Sayısı
+                </label>
+                <select
+                  value={newProject.blockCount}
+                  onChange={(e) => {
+                    const bc = Number(e.target.value) as 1 | 2
+                    setNewProject({
+                      ...newProject,
+                      blockCount: bc,
+                      parsedUnits: [],
+                      totalUnits: newProject.maxFloors * newProject.unitsPerFloor * bc,
+                    })
+                  }}
+                  className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
+                >
+                  <option value={1}>Tek Blok (A)</option>
+                  <option value={2}>2 Blok (A & B)</option>
+                </select>
+              </div>
+
+              {/* Ağırlıklı Oda Tipi */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
+                  Oda Tipi
+                </label>
+                <select
+                  value={newProject.defaultRoomType}
+                  onChange={(e) =>
+                    setNewProject({
+                      ...newProject,
+                      defaultRoomType: e.target.value as RoomType | 'MIXED',
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
+                >
+                  <option value="MIXED">Karma (1+1 / 2+1 / 3+1)</option>
+                  <option value="1+1">1+1 Daireler</option>
+                  <option value="2+1">2+1 Daireler</option>
+                  <option value="3+1">3+1 Daireler</option>
+                  <option value="4+1">4+1 Daireler</option>
+                  <option value="Villa">Müstakil Villa</option>
+                </select>
+              </div>
+
+              {/* Mimari Kat Planı Dizilimi */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
+                  Kroki Dizilimi
+                </label>
+                <select
+                  value={newProject.layoutTemplate}
+                  onChange={(e) =>
+                    setNewProject({
+                      ...newProject,
+                      layoutTemplate: e.target.value as BlueprintLayoutTemplate,
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
+                >
+                  <option value="quad">Çekirdek (4 Aks)</option>
+                  <option value="corridor">Koridor Tipi</option>
+                  <option value="wing">Panoramik Kanat</option>
+                  <option value="villa">Villa / Parsel</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
@@ -1354,35 +1651,21 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                Toplam Ünite Sayısı
+                Tahmini Teslim / Durum
               </label>
-              <input
-                type="number"
-                min="1"
-                max="120"
-                value={newProject.totalUnits}
-                onChange={(e) => setNewProject({ ...newProject, totalUnits: Math.max(1, Number(e.target.value)) })}
-                className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] transition-colors"
-              />
+              <select
+                value={newProject.deliveryDate}
+                onChange={(e) => setNewProject({ ...newProject, deliveryDate: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] transition-colors cursor-pointer"
+              >
+                <option value="Hemen Teslim (Hazır)">Hemen Teslim (Hazır)</option>
+                <option value="2026 Sonu">2026 Sonu</option>
+                <option value="Haziran 2027">Haziran 2027</option>
+                <option value="Aralık 2027">Aralık 2027</option>
+                <option value="2028">2028</option>
+                <option value="Proje Aşamasında (Yakında)">Proje Aşamasında (Yakında)</option>
+              </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-              Tahmini Teslim / Durum
-            </label>
-            <select
-              value={newProject.deliveryDate}
-              onChange={(e) => setNewProject({ ...newProject, deliveryDate: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] transition-colors cursor-pointer"
-            >
-              <option value="Hemen Teslim (Hazır)">Hemen Teslim (Hazır)</option>
-              <option value="2026 Sonu">2026 Sonu</option>
-              <option value="Haziran 2027">Haziran 2027</option>
-              <option value="Aralık 2027">Aralık 2027</option>
-              <option value="2028">2028</option>
-              <option value="Proje Aşamasında (Yakında)">Proje Aşamasında (Yakında)</option>
-            </select>
           </div>
 
           <div>
@@ -1524,14 +1807,22 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                Bulunduğu Kat
+                Bulunduğu Kat (Maks 3 Kat)
               </label>
-              <input
-                type="number"
-                value={editUnitForm.floor}
-                onChange={(e) => setEditUnitForm({ ...editUnitForm, floor: Number(e.target.value) })}
-                className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
-              />
+              <select
+                value={Number(editUnitForm.floor) || 0}
+                onChange={(e) =>
+                  setEditUnitForm({
+                    ...editUnitForm,
+                    floor: Number(e.target.value),
+                  })
+                }
+                className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
+              >
+                <option value={0}>{FLOOR_LABELS[0].full}</option>
+                <option value={1}>{FLOOR_LABELS[1].full}</option>
+                <option value={2}>{FLOOR_LABELS[2].full}</option>
+              </select>
             </div>
           </div>
 
@@ -1543,7 +1834,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <input
                 type="number"
                 value={editUnitForm.grossSqm}
-                onChange={(e) => setEditUnitForm({ ...editUnitForm, grossSqm: Number(e.target.value) })}
+                onChange={(e) =>
+                  setEditUnitForm({
+                    ...editUnitForm,
+                    grossSqm: e.target.value === '' ? '' : Number(e.target.value),
+                  })
+                }
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
@@ -1555,7 +1851,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <input
                 type="number"
                 value={editUnitForm.netSqm}
-                onChange={(e) => setEditUnitForm({ ...editUnitForm, netSqm: Number(e.target.value) })}
+                onChange={(e) =>
+                  setEditUnitForm({
+                    ...editUnitForm,
+                    netSqm: e.target.value === '' ? '' : Number(e.target.value),
+                  })
+                }
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
@@ -1582,7 +1883,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <input
                 type="number"
                 value={editUnitForm.price}
-                onChange={(e) => setEditUnitForm({ ...editUnitForm, price: Number(e.target.value) })}
+                onChange={(e) =>
+                  setEditUnitForm({
+                    ...editUnitForm,
+                    price: e.target.value === '' ? '' : Number(e.target.value),
+                  })
+                }
                 placeholder="0 ise Belirlenmedi görünür"
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
@@ -1681,8 +1987,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 onChange={(e) => setProjectSettingsForm({ ...projectSettingsForm, city: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
               >
-                <option value="İstanbul">İstanbul</option>
                 <option value="Sakarya">Sakarya</option>
+                <option value="İstanbul">İstanbul</option>
                 <option value="İzmir">İzmir</option>
                 <option value="Antalya">Antalya</option>
                 <option value="Muğla">Muğla</option>
@@ -1768,7 +2074,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <input
                 type="number"
                 value={projectSettingsForm.startingPrice}
-                onChange={(e) => setProjectSettingsForm({ ...projectSettingsForm, startingPrice: Number(e.target.value) })}
+                onChange={(e) =>
+                  setProjectSettingsForm({
+                    ...projectSettingsForm,
+                    startingPrice: e.target.value === '' ? '' : Number(e.target.value),
+                  })
+                }
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>

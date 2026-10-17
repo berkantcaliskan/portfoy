@@ -66,9 +66,12 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
 
   // Subscribe to store updates
   useEffect(() => {
-    if (!currentUser) return
     const update = () => {
-      setConversations(messageStore.getConversations(currentUser.id))
+      setMode(messageStore.getDisplayMode())
+      setSidebarWidth(messageStore.getSidebarWidth())
+      if (currentUser) {
+        setConversations(messageStore.getConversations(currentUser.id))
+      }
       if (activeConversation) {
         setMessages(messageStore.getMessages(activeConversation.id))
       }
@@ -660,10 +663,8 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
       <div
         style={{
           width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100%' : `${sidebarWidth}px`,
-          backgroundColor: '#383830',
-          background: '#383830',
         }}
-        className="fixed top-0 md:top-[88px] right-0 bottom-0 z-50 md:z-40 bg-[#383830] border-l border-[#4a443f] flex flex-col w-full md:w-auto animate-in slide-in-from-right duration-250 select-none"
+        className="dropdown-panel fixed top-0 right-0 bottom-0 z-50 md:z-40 bg-[#383830] border-l border-[#4a443f] flex flex-col w-full md:w-auto animate-in slide-in-from-right duration-250 select-none !rounded-none"
       >
         {/* Sürüklenebilir Sol Kenarlık (Draggable Resize Handle - Masaüstünde aktif) */}
         <div
@@ -696,11 +697,10 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
     )
   }
 
-  // POPUP MODE: %10 daha geniş (~370px), sabit temiz yükseklik (520px) ile alttaki butonlar asla yukarı kaymaz
+  // POPUP MODE: Sol alttaki mesaj ikonunun hemen yanında açılır
   return (
     <div
-      className="dropdown-panel !bg-[#282522] fixed md:absolute inset-x-0 bottom-0 top-16 md:top-auto md:right-0 md:left-auto md:bottom-auto md:mt-2 w-full md:w-[370px] h-[calc(100vh-64px)] md:h-[520px] rounded-t-[28px] md:rounded-[24px] shadow-2xl z-50 md:z-40 animate-in slide-in-from-bottom md:zoom-in-95 duration-150 backdrop-blur-2xl flex flex-col overflow-hidden border border-[#4a443f]"
-      style={{ backgroundColor: '#282522', background: '#282522' }}
+      className="dropdown-panel fixed inset-x-0 md:inset-x-auto bottom-0 md:bottom-3 top-16 md:top-auto md:left-[214px] w-full md:w-[370px] h-[calc(100vh-64px)] md:h-[520px] rounded-t-[28px] md:rounded-[26px] shadow-2xl z-[60] animate-in slide-in-from-bottom md:zoom-in-95 duration-150 backdrop-blur-2xl flex flex-col overflow-hidden border border-[#4a443f]"
     >
       {view === 'contacts' && renderContactsView()}
       {view === 'chat' && renderChatView()}

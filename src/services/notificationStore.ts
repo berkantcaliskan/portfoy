@@ -19,11 +19,16 @@ const STORAGE_KEY_LAST_VIEWED = 'demirturk_tabs_last_viewed_v1'
 const STORAGE_KEY_READ_NOTIFS = 'demirturk_read_notification_ids_v1'
 
 type Listener = () => void
+type IncomingListener = (notif: AppNotification) => void
 
 class NotificationStore {
   private lastViewedTabs: Record<string, number> = {}
   private readNotifIds: Set<string> = new Set()
   private listeners: Set<Listener> = new Set()
+  private incomingListeners: Set<IncomingListener> = new Set()
+  private customNotifications: AppNotification[] = []
+  private knownNotifIds: Set<string> = new Set()
+  private initializedKnown = false
 
   constructor() {
     this.loadFromStorage()
@@ -71,12 +76,63 @@ class NotificationStore {
   }
 
   private notify() {
+    this.checkAndEmitNewNotifications()
     this.listeners.forEach((cb) => cb())
+  }
+
+  private checkAndEmitNewNotifications() {
+    const all = this.getAllNotifications()
+    if (!this.initializedKnown) {
+      all.forEach((n) => this.knownNotifIds.add(n.id))
+      this.initializedKnown = true
+      return
+    }
+    for (const n of all) {
+      if (!this.knownNotifIds.has(n.id)) {
+        this.knownNotifIds.add(n.id)
+        if (!n.isRead) {
+          this.emitIncoming(n)
+        }
+      }
+    }
+  }
+
+  private emitIncoming(notif: AppNotification) {
+    this.incomingListeners.forEach((cb) => cb(notif))
   }
 
   public subscribe(listener: Listener): () => void {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
+  }
+
+  public subscribeIncoming(listener: IncomingListener): () => void {
+    this.incomingListeners.add(listener)
+    return () => this.incomingListeners.delete(listener)
+  }
+
+  public pushNotification(
+    item: Omit<AppNotification, 'id' | 'isRead' | 'createdAt'> & { id?: string }
+  ): AppNotification {
+    const id = item.id || `notif-sys-${Date.now()}`
+    const notif: AppNotification = {
+      id,
+      type: item.type,
+      title: item.title,
+      subtitle: item.subtitle,
+      targetTab: item.targetTab,
+      referenceId: item.referenceId,
+      isRead: this.readNotifIds.has(id),
+      createdAt: new Date().toISOString(),
+    }
+    this.customNotifications = [
+      notif,
+      ...this.customNotifications.filter((c) => c.id !== id),
+    ]
+    this.knownNotifIds.add(id)
+    this.notify()
+    this.emitIncoming(notif)
+    return notif
   }
 
   private initSubscriptions() {
@@ -85,7 +141,7 @@ class NotificationStore {
     requestStore.subscribe(() => this.notify())
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('demirturk:new-lead', (e: any) => {
+      window.addEventListener('demirturk:new-lead', () => {
         this.notify()
       })
     }
@@ -207,7 +263,10 @@ class NotificationStore {
    * Returns all dynamic notifications sorted newest first
    */
   public getAllNotifications(): AppNotification[] {
-    const list: AppNotification[] = []
+    const list: AppNotification[] = this.customNotifications.map((c) => ({
+      ...c,
+      isRead: this.readNotifIds.has(c.id),
+    }))
     const allLeads = leadStore.getAllRaw()
     const allReqs = requestStore.getAll()
 

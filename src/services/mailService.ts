@@ -13,41 +13,7 @@ import {
 const STORAGE_KEY_ACCOUNTS = 'demirturk_mail_accounts_v2'
 const STORAGE_KEY_MESSAGES = 'demirturk_mail_messages_v2'
 
-const DEFAULT_ACCOUNTS: MailAccount[] = [
-  {
-    id: 'acc-berkant',
-    email: 'berkant@demirturkinsaat.com',
-    displayName: 'Berkant Demirtürk',
-    type: 'PERSONAL',
-    department: 'Yönetim',
-    quotaMb: 20480,
-    usedMb: 3420,
-    isActive: true,
-    aliases: ['yonetim@demirturkinsaat.com'],
-  },
-  {
-    id: 'acc-satis',
-    email: 'satis@demirturkinsaat.com',
-    displayName: 'Demirtürk Satış Departmanı',
-    type: 'SHARED_DEPARTMENT',
-    department: 'Satış',
-    quotaMb: 51200,
-    usedMb: 12450,
-    isActive: true,
-    aliases: ['sales@demirturkinsaat.com'],
-  },
-  {
-    id: 'acc-pazarlama',
-    email: 'pazarlama@demirturkinsaat.com',
-    displayName: 'Demirtürk Pazarlama Departmanı',
-    type: 'SHARED_DEPARTMENT',
-    department: 'Pazarlama',
-    quotaMb: 30720,
-    usedMb: 6180,
-    isActive: true,
-    aliases: ['marketing@demirturkinsaat.com'],
-  },
-]
+const DEFAULT_ACCOUNTS: MailAccount[] = []
 
 function createDefaultFolders(accountId: string): MailFolder[] {
   return [

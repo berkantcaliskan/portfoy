@@ -90,7 +90,10 @@ export const GlassSelect: React.FC<GlassSelectProps> = ({
       }
     }
 
-    const handleScrollOrResize = () => {
+    const handleScrollOrResize = (e: Event) => {
+      if (menuRef.current && e.target instanceof Node && menuRef.current.contains(e.target)) {
+        return
+      }
       setIsOpen(false)
     }
 
@@ -118,7 +121,7 @@ export const GlassSelect: React.FC<GlassSelectProps> = ({
         type="button"
         disabled={disabled}
         onClick={handleToggle}
-        className={`w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] hover:bg-[#2c2825] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-medium text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
+        className={`w-full px-3.5 py-2.5 rounded-full bg-[#24211f] hover:bg-[#2c2825] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-medium text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
           isOpen ? 'border-[#b99881] ring-1 ring-[#b99881]/40' : ''
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
       >

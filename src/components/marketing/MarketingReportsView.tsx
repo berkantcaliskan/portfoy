@@ -29,8 +29,8 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
   const qualifiedRate = totalLeads > 0 ? Math.round((qualifiedLeads / totalLeads) * 100) : 0
   const winRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0
 
-  // Estimated ad spend (sample metric for digital marketing reporting)
-  const estimatedAdSpend = 145000 // TL
+  // Estimated ad spend (0 when no leads/campaigns exist)
+  const estimatedAdSpend = 0
   const costPerLead = totalLeads > 0 ? Math.round(estimatedAdSpend / totalLeads) : 0
   const costPerQualified = qualifiedLeads > 0 ? Math.round(estimatedAdSpend / qualifiedLeads) : 0
 
@@ -66,7 +66,7 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
         <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
           <div className="text-[11px] sm:text-xs text-[#a69f99] truncate">Ortalama Lead Maliyeti (CPL)</div>
           <div className="text-lg sm:text-2xl font-bold text-white mt-1 truncate">{costPerLead.toLocaleString('tr-TR')} TL</div>
-          <div className="text-[10px] sm:text-[11px] text-emerald-400 mt-1 truncate">Sektörden %18 tasarruflu</div>
+          <div className="text-[10px] sm:text-[11px] text-[#8c857f] mt-1 truncate">{totalLeads} toplam lead</div>
         </GlassCard>
 
         <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
@@ -102,7 +102,7 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
                 <span className="font-bold">%{totalLeads > 0 ? 62 : 0} ({Math.round(totalLeads * 0.62)} Lead)</span>
               </div>
               <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#b99881] to-[#dfb76c]" style={{ width: '62%' }} />
+                <div className="h-full bg-gradient-to-r from-[#b99881] to-[#dfb76c]" style={{ width: totalLeads > 0 ? '62%' : '0%' }} />
               </div>
             </div>
 
@@ -112,7 +112,7 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
                 <span className="font-bold">%{totalLeads > 0 ? 24 : 0} ({Math.round(totalLeads * 0.24)} Lead)</span>
               </div>
               <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-sky-400" style={{ width: '24%' }} />
+                <div className="h-full bg-sky-400" style={{ width: totalLeads > 0 ? '24%' : '0%' }} />
               </div>
             </div>
 
@@ -122,7 +122,7 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
                 <span className="font-bold">%{totalLeads > 0 ? 10 : 0} ({Math.round(totalLeads * 0.1)} Lead)</span>
               </div>
               <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-emerald-400" style={{ width: '10%' }} />
+                <div className="h-full bg-emerald-400" style={{ width: totalLeads > 0 ? '10%' : '0%' }} />
               </div>
             </div>
 
@@ -132,7 +132,7 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
                 <span className="font-bold">%{totalLeads > 0 ? 4 : 0} ({Math.round(totalLeads * 0.04)} Lead)</span>
               </div>
               <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-purple-400" style={{ width: '4%' }} />
+                <div className="h-full bg-purple-400" style={{ width: totalLeads > 0 ? '4%' : '0%' }} />
               </div>
             </div>
           </div>
@@ -145,10 +145,10 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
           </h3>
           <div className="space-y-3">
             {[
-              { type: '2+1 Rezidans Daireler', pct: 45, color: 'bg-emerald-400' },
-              { type: '1+1 Yatırımlık Konutlar', pct: 28, color: 'bg-sky-400' },
-              { type: 'Müstakil Villalar', pct: 18, color: 'bg-[#b99881]' },
-              { type: '3+1 ve Üzeri Aile Daireleri', pct: 9, color: 'bg-amber-400' },
+              { type: '2+1 Rezidans Daireler', pct: totalLeads > 0 ? 45 : 0, color: 'bg-emerald-400' },
+              { type: '1+1 Yatırımlık Konutlar', pct: totalLeads > 0 ? 28 : 0, color: 'bg-sky-400' },
+              { type: 'Müstakil Villalar', pct: totalLeads > 0 ? 18 : 0, color: 'bg-[#b99881]' },
+              { type: '3+1 ve Üzeri Aile Daireleri', pct: totalLeads > 0 ? 9 : 0, color: 'bg-amber-400' },
             ].map((item) => (
               <div key={item.type} className="space-y-1">
                 <div className="flex justify-between text-xs text-[#f3efe9]">

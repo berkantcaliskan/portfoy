@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -28,6 +29,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
     }
     if (isOpen) {
       document.body.style.overflow = 'hidden'
+      window.addEventListener('keydown', handleKeyDown)
     }
     return () => {
       document.body.style.overflow = 'unset'
@@ -49,10 +51,12 @@ export const GlassModal: React.FC<GlassModalProps> = ({
     full: 'max-w-full',
   }
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-6 md:p-8 pt-6 sm:pt-8 md:pt-10 pb-6 sm:pb-8 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-y-auto">
           {/* Backdrop Blur Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -60,7 +64,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/70 backdrop-blur-md"
+            className="fixed inset-0 bg-black/65 backdrop-blur-md"
           />
 
           {/* Modal Container */}
@@ -74,17 +78,10 @@ export const GlassModal: React.FC<GlassModalProps> = ({
               maxWidthStyles[maxWidth],
               className
             )}
-            style={{
-              boxShadow:
-                '0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(185, 152, 129, 0.22)',
-            }}
           >
-            {/* Top glass reflection highlight */}
-            <div className="pointer-events-none absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#b99881]/50 to-transparent" />
-
             {/* Header */}
             {(title || description) && (
-              <div className="flex items-start justify-between pb-3.5 border-b border-[#4a443f]/70 mb-4 shrink-0">
+              <div className="flex items-start justify-between pb-3 mb-2 shrink-0">
                 <div className="pr-4">
                   {title && (
                     <h3 className="text-base sm:text-lg font-bold text-white tracking-wide">
@@ -97,7 +94,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
                 </div>
                 <button
                   onClick={onClose}
-                  className="rounded-full p-1.5 text-[#a69f99] hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                  className="rounded-full p-1.5 text-[#a69f99] hover:text-white hover:bg-black/5 transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -111,6 +108,8 @@ export const GlassModal: React.FC<GlassModalProps> = ({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
+

@@ -39,9 +39,13 @@ class MessageStore {
   private messages: Record<string, ChatMessage[]> = {}
   private listeners: Set<Listener> = new Set()
   private isOpen: boolean = false
+  private displayMode: 'popup' | 'sidebar' = 'popup'
 
   constructor() {
     this.loadFromStorage()
+    try {
+      localStorage.setItem(STORAGE_KEY_MODE, 'popup')
+    } catch {}
   }
 
   private loadFromStorage() {
@@ -81,23 +85,32 @@ class MessageStore {
 
   public setPanelOpen(open: boolean) {
     this.isOpen = open
+    if (open) {
+      this.displayMode = 'popup'
+      try {
+        localStorage.setItem(STORAGE_KEY_MODE, 'popup')
+      } catch {}
+    }
     this.notify()
   }
 
   public togglePanel() {
     this.isOpen = !this.isOpen
+    if (this.isOpen) {
+      this.displayMode = 'popup'
+      try {
+        localStorage.setItem(STORAGE_KEY_MODE, 'popup')
+      } catch {}
+    }
     this.notify()
   }
 
   public getDisplayMode(): 'popup' | 'sidebar' {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_MODE)
-      if (saved === 'sidebar' || saved === 'popup') return saved
-    } catch {}
-    return 'popup'
+    return this.displayMode
   }
 
   public setDisplayMode(mode: 'popup' | 'sidebar') {
+    this.displayMode = mode
     try {
       localStorage.setItem(STORAGE_KEY_MODE, mode)
     } catch {}

@@ -170,9 +170,7 @@ export const ContactsView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 pb-1">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#b99881]/15 border border-[#b99881]/30 flex items-center justify-center text-[#b99881]">
-              <UserCheck className="w-4 h-4" />
-            </div>
+            <UserCheck className="w-5 h-5 text-[#b99881]" />
             <h2 className="text-2xl font-bold text-white tracking-wide">
               Kişiler
             </h2>
@@ -196,8 +194,8 @@ export const ContactsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter and Search Bar (Pill Shaped) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2.5 rounded-full bg-[#282522]/70 border border-[#4a443f]">
+      {/* Filter and Search Bar (Katmansız, Pill Shaped) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Category Pills */}
         <div className="flex flex-wrap items-center gap-2">
           {[
@@ -211,14 +209,14 @@ export const ContactsView: React.FC = () => {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#423c38] text-white border border-[#b99881]/50 font-bold'
-                    : 'text-[#a69f99] hover:text-white hover:bg-white/5'
+                    ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
+                    : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
                 }`}
               >
                 <span>{cat.label}</span>
-                <span className="text-[10px] opacity-70">({cat.count})</span>
+                <span className="text-[10px] opacity-80">({cat.count})</span>
               </button>
             )
           })}
@@ -232,7 +230,7 @@ export const ContactsView: React.FC = () => {
             placeholder="Kişilerde ara (ad, tel, kurum)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#34302d] border border-[#4a443f] rounded-full pl-9 pr-3.5 py-1 text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
+            className="w-full bg-[#34302d] border border-[#4a443f] rounded-full pl-9 pr-3.5 py-1.5 text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
           />
         </div>
       </div>
@@ -240,9 +238,7 @@ export const ContactsView: React.FC = () => {
       {/* Contacts Grid */}
       {filteredContacts.length === 0 ? (
         <div className="p-16 text-center rounded-[32px] bg-[#282522]/40 border border-dashed border-[#4a443f] flex flex-col items-center justify-center space-y-3">
-          <div className="w-14 h-14 rounded-full bg-[#34302d] border border-[#4a443f] flex items-center justify-center text-[#b99881]">
-            <Users className="w-6 h-6" />
-          </div>
+          <Users className="w-8 h-8 text-[#b99881]" />
           <div>
             <h4 className="text-base font-bold text-white">Rehberde Kayıtlı Kişi Bulunmuyor</h4>
             <p className="text-xs text-[#a69f99] mt-1">
@@ -284,7 +280,7 @@ export const ContactsView: React.FC = () => {
                       {initials}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-[#d6beae] transition-colors">
+                      <h4 className="text-sm font-bold text-white group-hover:text-[#d6beae] transition-colors select-text">
                         {contact.fullName}
                       </h4>
                       {contact.title && (
@@ -313,13 +309,13 @@ export const ContactsView: React.FC = () => {
 
                 {/* Notes if any */}
                 {contact.notes && (
-                  <p className="text-xs text-[#a69f99] bg-[#34302d]/40 p-2.5 rounded-[18px] border border-[#4a443f]/60 line-clamp-2">
+                  <p className="text-xs text-[#a69f99] italic line-clamp-2 select-text">
                     {contact.notes}
                   </p>
                 )}
 
                 {/* Bottom Actions Row */}
-                <div className="pt-3 border-t border-[#4a443f] flex items-center justify-between gap-2">
+                <div className="pt-2 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     {/* WhatsApp */}
                     <a

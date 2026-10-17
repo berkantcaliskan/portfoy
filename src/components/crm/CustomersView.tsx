@@ -415,8 +415,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </div>
       </div>
 
-      {/* Tabs & Search Bar */}
-      <div className="relative z-30 flex flex-wrap items-center justify-between gap-4 p-3 rounded-[20px] bg-[#282522] border border-[#4a443f]">
+      {/* Tabs & Search Bar (Katmansız, Pill Shape) */}
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-4">
         {/* Tab Listesi: İletişimde (Varsayılan) -> Nitelikli -> Satışa Atanan -> Tümü -> Custom Tabs -> [+] */}
         <div className="flex items-center gap-1.5 overflow-x-auto py-1">
           {/* 1. Sekme: İletişimde (Yalnızca iletişim kurulmamış olanlar - NEW) */}
@@ -425,7 +425,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
               filterStage === 'UNCONTACTED'
                 ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'text-[#a69f99] hover:text-white font-medium hover:bg-white/5'
+                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
             }`}
           >
             İletişimde ({uncontactedCount})
@@ -437,7 +437,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
               filterStage === 'QUALIFIED'
                 ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'text-[#a69f99] hover:text-white font-medium hover:bg-white/5'
+                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
             }`}
           >
             Nitelikli ({qualifiedCount})
@@ -449,7 +449,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
               filterStage === 'ASSIGNED'
                 ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'text-[#a69f99] hover:text-white font-medium hover:bg-white/5'
+                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
             }`}
           >
             Satışa Atanan ({assignedCount})
@@ -461,7 +461,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
               filterStage === 'ALL'
                 ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'text-[#a69f99] hover:text-white font-medium hover:bg-white/5'
+                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
             }`}
           >
             Tümü ({dateFilteredLeads.length})
@@ -575,7 +575,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                       <td className="py-3 px-3">
                         <div
                           onClick={() => onSelectLead(lead)}
-                          className="font-bold text-white hover:text-[#b99881] cursor-pointer transition-colors text-xs"
+                          className="font-bold text-white hover:text-[#b99881] cursor-pointer transition-colors text-xs select-text"
                           title="Detayları Görüntüle"
                         >
                           {lead.fullName}
@@ -646,7 +646,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                             className="group flex items-center gap-2 cursor-pointer max-w-[200px]"
                             title="Açıklamayı düzenlemek için tıklayın"
                           >
-                            <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] truncate transition-colors">
+                            <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] truncate transition-colors select-text">
                               {lead.notes}
                             </span>
                             <Edit3 className="w-3 h-3 text-[#8c857f] group-hover:text-[#b99881] opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -766,7 +766,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               placeholder="Örn: Arananlar, Villa İlgilenenler, Kararsızlar"
               value={newTabName}
               onChange={(e) => setNewTabName(e.target.value)}
-              className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
+              className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
             />
           </div>
 
@@ -778,7 +778,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               <button
                 type="button"
                 onClick={() => setNewTabCriteriaType('STAGE')}
-                className={`px-3 py-2 rounded-[12px] text-xs font-semibold border text-center cursor-pointer transition-all ${
+                className={`px-3 py-2 rounded-full text-xs font-semibold border text-center cursor-pointer transition-all ${
                   newTabCriteriaType === 'STAGE'
                     ? 'bg-[#b99881] text-white border-[#b99881]'
                     : 'bg-[#24211f] text-[#a69f99] border-[#4a443f]'
@@ -789,7 +789,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               <button
                 type="button"
                 onClick={() => setNewTabCriteriaType('KEYWORD')}
-                className={`px-3 py-2 rounded-[12px] text-xs font-semibold border text-center cursor-pointer transition-all ${
+                className={`px-3 py-2 rounded-full text-xs font-semibold border text-center cursor-pointer transition-all ${
                   newTabCriteriaType === 'KEYWORD'
                     ? 'bg-[#b99881] text-white border-[#b99881]'
                     : 'bg-[#24211f] text-[#a69f99] border-[#4a443f]'
@@ -822,7 +822,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                 placeholder="Örn: Villa, 2+1, Peşin, Rezidans"
                 value={newTabCriteriaValue}
                 onChange={(e) => setNewTabCriteriaValue(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
               />
             </div>
           )}

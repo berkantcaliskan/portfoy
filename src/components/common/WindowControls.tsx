@@ -1,41 +1,13 @@
-import React, { useState, useEffect } from 'react'
-import { Minus, Square, Copy, X } from 'lucide-react'
+import React from 'react'
 
-// Window Controls (Ultra-compact, frameless window control buttons)
+// Window Controls (Sağ alt köşede dikey konumlanan minimal sarı & kırmızı daire pencere kontrolleri)
 export const WindowControls: React.FC = () => {
-  const [isMaximized, setIsMaximized] = useState(false)
-
-  useEffect(() => {
-    const api = (window as any).electronAPI
-    if (api) {
-      api.isMaximized?.().then?.((max: boolean) => setIsMaximized(Boolean(max)))
-      const cleanup = api.onMaximizeChange?.((max: boolean) => setIsMaximized(Boolean(max)))
-      return () => {
-        if (typeof cleanup === 'function') cleanup()
-      }
-    }
-  }, [])
-
   const handleMinimize = () => {
     const api = (window as any).electronAPI
     if (api?.minimize) {
       api.minimize()
-    }
-  }
-
-  const handleMaximize = () => {
-    const api = (window as any).electronAPI
-    if (api?.maximize) {
-      api.maximize()
-    } else {
-      // Fallback for browser testing: Toggle fullscreen
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.()
-        setIsMaximized(true)
-      } else {
-        document.exitFullscreen?.()
-        setIsMaximized(false)
-      }
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen?.()
     }
   }
 
@@ -53,42 +25,25 @@ export const WindowControls: React.FC = () => {
 
   return (
     <div
-      className="flex items-center select-none [app-region:no-drag] shrink-0 h-full"
+      className="fixed bottom-2.5 right-1.5 z-50 flex flex-col items-center gap-1.5 p-1 rounded-full bg-[#e3e5e1]/90 border border-[#292d2b]/12 shadow-sm select-none [app-region:no-drag]"
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
-      {/* 1. Soldaki: Küçült */}
+      {/* 1. Üstteki: Sarı Daire — Pencereyi Aşağı İndir (Küçült) */}
       <button
         type="button"
         onClick={handleMinimize}
-        title="Küçült"
-        className="w-11 h-full flex items-center justify-center text-[#a69f99] hover:text-white hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
-      >
-        <Minus className="w-3 h-3 stroke-[2]" />
-      </button>
+        title="Pencereyi Aşağı İndir"
+        className="w-3 h-3 rounded-full bg-[#f5b427] hover:bg-[#e09f15] border border-black/10 transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+      />
 
-      {/* 2. Ortadaki: Büyüt / Önceki Boyut */}
-      <button
-        type="button"
-        onClick={handleMaximize}
-        title={isMaximized ? 'Önceki Boyut' : 'Tam Ekran'}
-        className="w-11 h-full flex items-center justify-center text-[#a69f99] hover:text-white hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
-      >
-        {isMaximized ? (
-          <Copy className="w-3 h-3 stroke-[2]" />
-        ) : (
-          <Square className="w-3 h-3 stroke-[2]" />
-        )}
-      </button>
-
-      {/* 3. Sağdaki: Kapat */}
+      {/* 2. Alttaki: Kırmızı Daire — Kapat */}
       <button
         type="button"
         onClick={handleClose}
         title="Kapat"
-        className="w-12 h-full flex items-center justify-center text-[#a69f99] hover:text-white hover:bg-[#e81123] active:bg-[#c4101e] transition-colors cursor-pointer"
-      >
-        <X className="w-3.5 h-3.5 stroke-[2]" />
-      </button>
+        className="w-3 h-3 rounded-full bg-[#ff5f57] hover:bg-[#e04840] border border-black/10 transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+      />
     </div>
   )
 }
+

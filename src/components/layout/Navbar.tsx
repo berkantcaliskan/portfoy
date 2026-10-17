@@ -31,6 +31,8 @@ import {
   FileText,
   CheckSquare,
   BookUser,
+  UserCheck,
+  LogOut,
 } from 'lucide-react'
 import { AppUser, userStore } from '@/services/userStore'
 import {
@@ -40,13 +42,19 @@ import {
   NavPageId,
   getPrimaryPageForDepartment,
 } from '@/types/department'
-import { BookLogo } from '@/components/common/BookLogo'
+import { BookLogo, BrandLogoLockup } from '@/components/common/BookLogo'
 import { ToolType } from '@/components/tools/QuickToolsModal'
 import { WindowControls } from '@/components/common/WindowControls'
 import { MessagingPanel, IosChatBubbleIcon } from '@/components/chat/MessagingPanel'
 import { messageStore } from '@/services/messageStore'
-import { notificationStore } from '@/services/notificationStore'
+import { notificationStore, AppNotification } from '@/services/notificationStore'
 import { NotificationsPopover } from './NotificationsPopover'
+import {
+  teamOperationsStore,
+  getPresenceMeta,
+  PRESENCE_STATUS_OPTIONS,
+  PresenceStatusType,
+} from '@/services/teamOperationsStore'
 
 export type NavTab = NavPageId
 
@@ -57,6 +65,8 @@ export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?:
     case 'portfolio':
     case 'customers':
       return Users
+    case 'teams':
+      return UserCheck
     case 'marketing-campaigns':
       return Megaphone
     case 'marketing-reports':
@@ -120,12 +130,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(searchQuery))
   const [isMessagesOpen, setIsMessagesOpen] = useState(messageStore.isPanelOpen())
+  const [messagingMode, setMessagingMode] = useState(messageStore.getDisplayMode())
+  const [messagingSidebarWidth, setMessagingSidebarWidth] = useState(messageStore.getSidebarWidth())
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false)
   const [isAppMenuOpen, setIsAppMenuOpen] = useState(false)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
 
   useEffect(() => {
     const unsub = messageStore.subscribe(() => {
       setIsMessagesOpen(messageStore.isPanelOpen())
+      setMessagingMode(messageStore.getDisplayMode())
+      setMessagingSidebarWidth(messageStore.getSidebarWidth())
     })
     return unsub
   }, [])
@@ -156,6 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const notificationsRef = useRef<HTMLDivElement>(null)
   const workspaceRef = useRef<HTMLDivElement>(null)
   const appMenuRef = useRef<HTMLDivElement>(null)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
 
   // Notifications State & Subscriptions
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
@@ -164,13 +180,95 @@ export const Navbar: React.FC<NavbarProps> = ({
   )
   const [, setNotifTick] = useState(0)
 
+  // Canlı Bildirim Önizlemesi -> 4.5 sn durur -> Bildirim ikonuna kayarak uçar
+  const notifPreviewRef = useRef<HTMLDivElement>(null)
+  const previewHoldTimerRef = useRef<number | null>(null)
+  const previewFlyTimerRef = useRef<number | null>(null)
+  const [previewNotif, setPreviewNotif] = useState<AppNotification | null>(null)
+  const [previewPhase, setPreviewPhase] = useState<'visible' | 'flying'>('visible')
+  const [flyOffset, setFlyOffset] = useState<{ x: number; y: number }>({ x: 320, y: 0 })
+  const [isBellPulsing, setIsBellPulsing] = useState(false)
+
+  const triggerFlyToBell = () => {
+    if (previewHoldTimerRef.current) {
+      window.clearTimeout(previewHoldTimerRef.current)
+      previewHoldTimerRef.current = null
+    }
+    if (notifPreviewRef.current && notificationsRef.current) {
+      const fromRect = notifPreviewRef.current.getBoundingClientRect()
+      const toRect = notificationsRef.current.getBoundingClientRect()
+      const dx = toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2)
+      const dy = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2)
+      setFlyOffset({ x: dx, y: dy })
+    }
+    setPreviewPhase('flying')
+    if (previewFlyTimerRef.current) {
+      window.clearTimeout(previewFlyTimerRef.current)
+    }
+    previewFlyTimerRef.current = window.setTimeout(() => {
+      setPreviewNotif(null)
+      setPreviewPhase('visible')
+      setIsBellPulsing(true)
+      window.setTimeout(() => setIsBellPulsing(false), 650)
+    }, 460)
+  }
+
+  const showNotificationPreview = (notif: AppNotification) => {
+    if (previewHoldTimerRef.current) window.clearTimeout(previewHoldTimerRef.current)
+    if (previewFlyTimerRef.current) window.clearTimeout(previewFlyTimerRef.current)
+    setPreviewPhase('visible')
+    setPreviewNotif(notif)
+
+    previewHoldTimerRef.current = window.setTimeout(() => {
+      triggerFlyToBell()
+    }, 4500)
+  }
+
   useEffect(() => {
     const unsub = notificationStore.subscribe(() => {
       setTotalUnreadNotifications(notificationStore.getTotalUnreadCount())
       setNotifTick((t) => t + 1)
     })
-    return unsub
+    const unsubIncoming = notificationStore.subscribeIncoming((incoming) => {
+      showNotificationPreview(incoming)
+    })
+    const unsubOps = teamOperationsStore.subscribe(() => {
+      setNotifTick((t) => t + 1)
+    })
+
+    // İlk açılışta okunmamış bildirim varsa veya sistem aktif bildirimini göstermek için
+    const initTimer = window.setTimeout(() => {
+      try {
+        if (!sessionStorage.getItem('demirturk_initial_notif_preview_v1')) {
+          sessionStorage.setItem('demirturk_initial_notif_preview_v1', '1')
+          const unreadList = notificationStore.getAllNotifications().filter((n) => !n.isRead)
+          if (unreadList.length > 0) {
+            showNotificationPreview(unreadList[0])
+          } else {
+            notificationStore.pushNotification({
+              id: 'notif-sys-welcome',
+              type: 'SYSTEM',
+              title: 'Bildirim Merkezi Aktif',
+              subtitle: 'Yeni müşteri, talep ve dosya bildirimleri burada görünür.',
+              targetTab: 'requests',
+            })
+          }
+        }
+      } catch {}
+    }, 700)
+
+    return () => {
+      unsub()
+      unsubIncoming()
+      unsubOps()
+      window.clearTimeout(initTimer)
+      if (previewHoldTimerRef.current) window.clearTimeout(previewHoldTimerRef.current)
+      if (previewFlyTimerRef.current) window.clearTimeout(previewFlyTimerRef.current)
+    }
   }, [])
+
+  const myPresence = currentUser ? teamOperationsStore.getUserPresence(currentUser.id) : null
+  const myPresenceMeta = getPresenceMeta(myPresence?.status)
 
   // Current active department workspace
   const activeDept: Department = currentUser?.department || 'Pazarlama'
@@ -228,6 +326,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         !appMenuRef.current.contains(event.target as Node)
       ) {
         setIsAppMenuOpen(false)
+      }
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileMenuOpen(false)
       }
       if (
         overflowMenuRef.current &&
@@ -357,79 +461,666 @@ export const Navbar: React.FC<NavbarProps> = ({
   const recentMessages: { id: number; sender: string; text: string; time: string }[] = []
 
   return (
-    <header
-      className="w-full border-b border-[#b99881]/20 bg-[#34302c] sticky top-0 z-40 transition-colors shadow-sm select-none"
-    >
-      {/* 1. Üst İnce Bar (Sağ En Üst: Pencere Kontrolleri & Drag Alanı) */}
+    <>
+      {/* ==========================================================================
+          MASAÜSTÜ SAĞ ÜST AKSİYON & PROFİL GRUBU (Top-Right Floating Pill Cluster)
+          Görsel referanstaki gibi: Yuvarlak Beyaz İkon Butonları + Sağda Profil Hapı
+         ========================================================================== */}
       <div
-        className="w-full flex items-center justify-end h-[24px] select-none"
-        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        className="hidden md:flex items-center justify-between gap-3 w-full md:pl-[236px] pr-6 lg:pr-10 2xl:pr-14 pt-4 pb-1 relative z-40 select-none"
+        style={
+          {
+            width:
+              isMessagesOpen && messagingMode === 'sidebar'
+                ? `calc(100% - ${messagingSidebarWidth}px)`
+                : '100%',
+            transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            WebkitAppRegion: 'no-drag',
+          } as React.CSSProperties
+        }
       >
-        <WindowControls />
-      </div>
+        {/* SOL: Sayfa İkonuyla Aynı Hizadan Başlayan Canlı Bildirim Önizlemesi */}
+        <div className="flex items-center min-w-0">
+          <AnimatePresence mode="wait">
+            {previewNotif && (
+              <motion.div
+                key={previewNotif.id}
+                ref={notifPreviewRef}
+                initial={{ opacity: 0, y: 18, scale: 0.96 }}
+                animate={
+                  previewPhase === 'flying'
+                    ? {
+                        x: flyOffset.x,
+                        y: flyOffset.y,
+                        scale: 0.16,
+                        opacity: 0,
+                      }
+                    : {
+                        x: 0,
+                        y: 0,
+                        scale: 1,
+                        opacity: 1,
+                      }
+                }
+                exit={{ opacity: 0, y: -8, scale: 0.92 }}
+                transition={
+                  previewPhase === 'flying'
+                    ? { duration: 0.46, ease: [0.32, 0, 0.15, 1] }
+                    : { duration: 0.24, ease: [0.16, 1, 0.3, 1] }
+                }
+                onClick={() => {
+                  notificationStore.markNotificationAsRead(previewNotif.id)
+                  onTabChange(previewNotif.targetTab)
+                  triggerFlyToBell()
+                }}
+                className="top-utility-pill h-10 max-w-[360px] lg:max-w-[420px] pl-2 pr-3 rounded-full border border-[#4a443f]/60 bg-white flex items-center gap-2.5 cursor-pointer shadow-md hover:border-[#b99881]/60 transition-colors pointer-events-auto"
+              >
+                <div className="w-7 h-7 rounded-full bg-[#b99881]/15 flex items-center justify-center shrink-0">
+                  <Bell className="w-3.5 h-3.5 text-[#b99881]" strokeWidth={2.2} />
+                </div>
+                <div className="min-w-0 flex-1 leading-tight">
+                  <div className="text-[11.5px] font-bold text-white truncate">
+                    {previewNotif.title}
+                  </div>
+                  <div className="text-[10.5px] text-[#8c857f] truncate">
+                    {previewNotif.subtitle}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    triggerFlyToBell()
+                  }}
+                  className="p-1 rounded-full text-[#8c857f] hover:text-white transition-colors shrink-0 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-      {/* 2. Ana Navbar: Logo, Tablar, Arama, Mesaj, Mail, Profil */}
-      <div className="w-full pl-4 sm:pl-6 lg:pl-10 2xl:pl-14 pr-4 sm:pr-6 lg:pr-10 2xl:pr-14 pb-1.5">
-        <div className="flex items-center justify-between h-[54px] sm:h-[58px] gap-3 sm:gap-6">
-          
-          {/* Sol Kısım: Logo + Portföy + Çalışma Alanı (Workspace Switcher) */}
-          <div className="flex items-center gap-4" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-            <div
-              className="flex items-center gap-2 shrink-0 cursor-pointer select-none group"
-              onClick={() => onTabChange('dashboard')}
-            >
-              {/* 45 Derece Sağa Açık Kitap Logosu */}
-              <div className="flex items-center justify-center text-[#b99881] transition-transform group-hover:scale-105">
-                <BookLogo size={24} className="text-[#b99881]" />
-              </div>
-
-              {/* Marka Adı (Uygulamada SADECE burada The Seasons kullanılır) */}
-              <span className="font-the-seasons text-xl tracking-wide font-normal text-white group-hover:text-[#d6beae] transition-colors">
-                Portföy
-              </span>
+        {/* SAĞ: Aksiyon İkonları ve Profil Hapı */}
+        <div className="ml-auto flex items-center gap-2.5 shrink-0">
+        {/* 1. Arama (Yuvarlak beyaz kapsül buton; tıklandığında sola doğru genişler) */}
+        <div ref={searchContainerRef} className="relative flex items-center justify-end">
+          <motion.div
+            initial={false}
+            animate={{
+              width: isSearchOpen ? 260 : 40,
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 340,
+              damping: 28,
+              mass: 0.8,
+            }}
+            className={`top-utility-pill h-10 rounded-full border border-[#4a443f]/60 bg-white flex items-center overflow-hidden select-none transition-colors ${
+              isSearchOpen
+                ? 'px-3.5'
+                : 'justify-center cursor-pointer hover:border-[#b99881]/50'
+            }`}
+            onClick={() => {
+              if (!isSearchOpen) {
+                setIsSearchOpen(true)
+                setTimeout(() => searchInputRef.current?.focus(), 80)
+              }
+            }}
+            title={!isSearchOpen ? 'Arama Yap' : undefined}
+          >
+            <div className={`shrink-0 flex items-center justify-center ${isSearchOpen ? 'mr-2' : ''}`}>
+              <Search className="w-[18px] h-[18px] text-[#b99881]" strokeWidth={2} />
             </div>
 
-            {/* Çalışma Alanı: Yöneticiler için Açılır Menü Seçicisi, Yönetici Olmayanlar için Sabit Departman Bilgisi */}
+            <AnimatePresence>
+              {isSearchOpen && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex items-center flex-1 min-w-0"
+                >
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Kayıtlarda ara..."
+                    value={searchQuery}
+                    onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        if (!searchQuery) setIsSearchOpen(false)
+                        else onSearchChange && onSearchChange('')
+                      }
+                    }}
+                    className="w-full !bg-transparent !border-none text-xs text-[#f3efe9] placeholder-[#a69f99] focus:outline-none font-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (searchQuery) {
+                        onSearchChange && onSearchChange('')
+                      } else {
+                        setIsSearchOpen(false)
+                      }
+                    }}
+                    className="text-[#a69f99] hover:text-white transition-colors p-1 ml-1 shrink-0 cursor-pointer rounded-full"
+                    title="Kapat"
+                  >
+                    <X className="w-3.5 h-3.5" strokeWidth={2} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </div>
+
+        {/* 2. Hızlı Araçlar / Uygulama Menüsü (Yuvarlak Beyaz Buton) */}
+        <div ref={appMenuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setIsAppMenuOpen(!isAppMenuOpen)}
+            className="top-utility-pill w-10 h-10 rounded-full border border-[#4a443f]/60 bg-white hover:border-[#b99881]/50 transition-all cursor-pointer flex items-center justify-center"
+            title="Hızlı Araçlar & Uygulama Menüsü"
+          >
+            <svg
+              className="w-[18px] h-[18px] text-[#b99881]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </button>
+
+          {isAppMenuOpen && (
+            <div className="dropdown-panel absolute right-0 top-full mt-2.5 w-80 rounded-[26px] shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-2xl space-y-3 border border-[#4a443f]">
+              <div className="flex items-center justify-between pb-1">
+                <div className="flex items-center gap-2">
+                  <BookLogo className="w-5 h-5 text-[#b99881]" />
+                  <span className="text-sm font-bold text-white">Hızlı Araçlar</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAppMenuOpen(false)
+                    onOpenSettings()
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white transition-colors cursor-pointer"
+                  title="Sistem ve Kişiselleştirme Ayarları"
+                >
+                  <Settings className="w-3.5 h-3.5 text-[#b99881]" />
+                  <span>Ayarlar</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAppMenuOpen(false)
+                    onOpenMail?.()
+                  }}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f]/60 text-left transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-[#282522] border border-[#b99881]/40 flex items-center justify-center text-[#b99881] group-hover:scale-105 transition-transform">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-white block">E-Posta</span>
+                    <span className="text-[10px] text-[#8c857f] block truncate">Kurumsal Posta</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAppMenuOpen(false)
+                    onTabChange('contacts')
+                  }}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f]/60 text-left transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-[#282522] border border-[#b99881]/40 flex items-center justify-center text-[#b99881] group-hover:scale-105 transition-transform">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-white block">Kişiler</span>
+                    <span className="text-[10px] text-[#8c857f] block truncate">Telefon Rehberi</span>
+                  </div>
+                </button>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-semibold uppercase text-[#8c857f] tracking-wider block mb-1.5 px-1">
+                  Hesaplama & Araçlar
+                </span>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { id: 'notepad' as ToolType, label: 'Not Defteri' },
+                    { id: 'calculator' as ToolType, label: 'Hesap Mak.' },
+                    { id: 'commission' as ToolType, label: 'Satış Primi' },
+                    { id: 'currency' as ToolType, label: 'Döviz & Kur' },
+                    { id: 'mortgage' as ToolType, label: 'Konut Kredisi' },
+                    { id: 'deedFee' as ToolType, label: 'Tapu Harcı' },
+                    { id: 'sqmPrice' as ToolType, label: 'm² Fiyat' },
+                    { id: 'whatsapp' as ToolType, label: 'WhatsApp' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setIsAppMenuOpen(false)
+                        onOpenTool?.(t.id)
+                      }}
+                      className="p-2 rounded-xl bg-[#34302d]/70 hover:bg-[#3d3733] border border-[#4a443f]/50 text-center transition-colors cursor-pointer group"
+                    >
+                      <span className="text-[11px] font-semibold text-[#c4bcb5] group-hover:text-white block truncate">
+                        {t.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Bildirimler (Yuvarlak Beyaz Buton + Kırmızı/Vurgu Bildirim Noktası) */}
+        <div ref={notificationsRef} className={`relative ${isNotificationsOpen ? 'z-[60]' : 'z-20'}`}>
+          <button
+            type="button"
+            onClick={() => {
+              const willOpen = !isNotificationsOpen
+              setIsNotificationsOpen(willOpen)
+              if (willOpen && messageStore.getDisplayMode() === 'popup') {
+                messageStore.setPanelOpen(false)
+              }
+            }}
+            className={`top-utility-pill relative w-10 h-10 rounded-full border bg-white hover:border-[#b99881]/50 transition-all duration-300 cursor-pointer flex items-center justify-center ${
+              isBellPulsing
+                ? 'scale-115 border-[#b99881] ring-4 ring-[#b99881]/30'
+                : 'border-[#4a443f]/60 scale-100'
+            }`}
+            title="Bildirimler"
+          >
+            <Bell
+              className={`w-[18px] h-[18px] text-[#b99881] transition-transform duration-300 ${
+                isBellPulsing ? 'rotate-12 scale-110' : ''
+              }`}
+              strokeWidth={2}
+            />
+            {totalUnreadNotifications > 0 && (
+              <span className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
+            )}
+          </button>
+
+          <NotificationsPopover
+            isOpen={isNotificationsOpen}
+            onClose={() => setIsNotificationsOpen(false)}
+            onNavigate={(targetTab) => {
+              notificationStore.markTabAsViewed(targetTab)
+              onTabChange(targetTab)
+            }}
+          />
+        </div>
+
+        {/* 5. Kullanıcı Profil Hapı & Kompakt Açılır Menü (Popup) */}
+        <div ref={profileMenuRef} className={`relative ${isProfileMenuOpen ? 'z-[60]' : 'z-20'}`}>
+          <button
+            type="button"
+            onClick={() => {
+              if (!currentUser) {
+                onOpenProfile()
+                return
+              }
+              const nextState = !isProfileMenuOpen
+              setIsProfileMenuOpen(nextState)
+              if (nextState) {
+                setIsNotificationsOpen(false)
+                setIsAppMenuOpen(false)
+                if (messageStore.getDisplayMode() === 'popup') {
+                  messageStore.setPanelOpen(false)
+                }
+              }
+            }}
+            className="top-utility-pill group h-10 flex items-center gap-2.5 pl-1.5 pr-3.5 rounded-full bg-white border border-[#4a443f]/60 hover:border-[#b99881]/50 transition-all cursor-pointer active:scale-[0.98]"
+            title={
+              currentUser
+                ? `${currentUser.fullName} (@${currentUser.username}) • ${myPresenceMeta.label}${
+                    myPresence?.locationNote ? ` — ${myPresence.locationNote}` : ''
+                  }`
+                : 'Giriş Yap'
+            }
+          >
+            {/* Sol: Yuvarlak Avatar + Durum Noktası */}
+            <div className="relative w-7 h-7 rounded-full bg-[#282522] border border-[#b99881]/50 flex items-center justify-center shrink-0">
+              <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                {currentUser?.avatarUrl ? (
+                  <img
+                    src={currentUser.avatarUrl}
+                    alt={currentUser.fullName}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="text-[10px] font-bold text-[#b99881] font-sans tracking-wide">
+                    {currentUser?.fullName
+                      ? currentUser.fullName
+                          .trim()
+                          .split(/\s+/)
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)
+                          .toUpperCase()
+                      : 'DP'}
+                  </span>
+                )}
+              </div>
+              {currentUser && (
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white ${myPresenceMeta.dotClass}`}
+                />
+              )}
+            </div>
+
+            {/* Orta: Kullanıcı Adı */}
+            <span className="text-[13px] font-medium text-[#f3efe9] truncate max-w-[130px]">
+              {currentUser?.fullName || 'Giriş Yap'}
+            </span>
+
+            {/* Sağ: Küçük Aşağı Ok */}
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-[#a69f99] shrink-0 transition-transform duration-200 ${
+                isProfileMenuOpen ? 'rotate-180' : ''
+              }`}
+              strokeWidth={2.2}
+            />
+          </button>
+
+          {/* Kompakt Profil & Hızlı Durum Açılır Menüsü (Popup) */}
+          <AnimatePresence>
+            {isProfileMenuOpen && currentUser && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                className="dropdown-panel absolute right-0 top-full mt-2.5 w-72 rounded-[24px] shadow-2xl p-3.5 z-50 backdrop-blur-2xl border border-[#4a443f] space-y-3"
+              >
+                {/* 1. Kullanıcı Kimlik Özeti */}
+                <div className="flex items-center gap-3 px-1 pb-2.5 border-b border-[#4a443f]/60">
+                  <div className="relative w-10 h-10 rounded-full bg-[#282522] border border-[#b99881]/50 flex items-center justify-center shrink-0">
+                    {currentUser.avatarUrl ? (
+                      <img
+                        src={currentUser.avatarUrl}
+                        alt={currentUser.fullName}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-[#b99881]">
+                        {currentUser.fullName
+                          .trim()
+                          .split(/\s+/)
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </span>
+                    )}
+                    <span
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-white ${myPresenceMeta.dotClass}`}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-white truncate">
+                      {currentUser.fullName}
+                    </div>
+                    <div className="text-[11px] text-[#8c857f] truncate">
+                      @{currentUser.username} • {currentUser.department}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Tek Tıkla Hızlı Durum Seçimi */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8c857f]">
+                      Durumum
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#b99881]">
+                      {myPresenceMeta.shortLabel}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {PRESENCE_STATUS_OPTIONS.slice(0, 6).map((opt) => {
+                      const isSelected = (myPresence?.status || 'OFISTE') === opt.id
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            teamOperationsStore.updateUserPresence(currentUser.id, {
+                              status: opt.id as PresenceStatusType,
+                              locationNote: opt.id === 'OFISTE' ? '' : myPresence?.locationNote || '',
+                              returnTime: opt.id === 'OFISTE' ? '' : myPresence?.returnTime || '',
+                              updatedBy: currentUser.id,
+                            })
+                          }}
+                          className={`flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#b99881] text-white font-semibold'
+                              : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                isSelected ? 'bg-white' : opt.dotClass
+                              }`}
+                            />
+                            <span className="truncate">{opt.shortLabel}</span>
+                          </div>
+                          {isSelected && <Check className="w-3 h-3 shrink-0" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Ofis dışındayken tek satır hızlı not */}
+                  {myPresence?.status && myPresence.status !== 'OFISTE' && (
+                    <input
+                      type="text"
+                      placeholder="Kısa konum / not ekle..."
+                      value={myPresence.locationNote || ''}
+                      onChange={(e) => {
+                        teamOperationsStore.updateUserPresence(currentUser.id, {
+                          status: myPresence.status,
+                          locationNote: e.target.value,
+                          returnTime: myPresence.returnTime || '',
+                          updatedBy: currentUser.id,
+                        })
+                      }}
+                      className="w-full mt-1 px-3 py-1.5 rounded-full text-xs border border-[#4a443f] focus:outline-none"
+                    />
+                  )}
+                </div>
+
+                {/* 3. Kompakt Menü Aksiyonları */}
+                <div className="pt-2 border-t border-[#4a443f]/60 space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false)
+                      onTabChange('teams')
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-medium text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                  >
+                    <Users className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                    <span>Ekipler & Durum Panosu</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false)
+                      onOpenSettings()
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-medium text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                    <span>Sistem Ayarları</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false)
+                      userStore.logout()
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span>Çıkış Yap</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        </div>
+      </div>
+
+      <header
+        className="w-full md:w-[216px] md:fixed md:inset-y-0 md:left-0 border-b md:border-b-0 md:border-r border-[#b99881]/20 bg-[#34302c] sticky top-0 z-40 transition-colors shadow-sm select-none"
+      >
+        {/* Sağ Alt Köşe Pencere Kontrolleri */}
+        <WindowControls />
+
+        {/* ==========================================================================
+            MASAÜSTÜ SOL DİKEY NAV BAR (Desktop Vertical Sidebar)
+           ========================================================================== */}
+        <div className="hidden md:flex flex-col justify-between h-full w-full p-3">
+          {/* Üst Alan: Logo */}
+          <div className="px-3.5 pt-1 pb-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            <BrandLogoLockup
+              logoSize={22}
+              gapClassName="gap-2"
+              slideDistance={20}
+              onClick={() => onTabChange('dashboard')}
+            />
+          </div>
+
+          {/* Orta Alan: Dikey Sayfa Listesi */}
+          <div
+            className="flex-1 flex flex-col justify-center overflow-y-auto no-scrollbar py-2 my-1"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <motion.nav
+              key={activeDept}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col gap-1"
+            >
+              {navItems.map((item) => {
+                const isActive = activeTab === item.id
+                const unread = notificationStore.getUnreadCountForTab(item.id)
+                const Icon = getNavPageIcon(item.id)
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      notificationStore.markTabAsViewed(item.id)
+                      onTabChange(item.id)
+                    }}
+                    className={`sidebar-pill-item relative w-full flex items-center justify-between px-3.5 py-2 rounded-full text-[13px] font-medium transition-all cursor-pointer select-none group ${
+                      isActive
+                        ? 'bg-[#b99881] text-white font-semibold'
+                        : 'text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Icon
+                        className={`w-4 h-4 transition-colors shrink-0 ${
+                          isActive ? 'text-white' : 'text-[#a69f99] group-hover:text-white'
+                        }`}
+                        strokeWidth={isActive ? 2.2 : 1.9}
+                      />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {unread > 0 && (
+                      <span
+                        className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                          isActive
+                            ? 'bg-white/25 text-white'
+                            : 'bg-[#b99881]/25 text-[#dfb76c] border border-[#b99881]/40'
+                        }`}
+                      >
+                        {unread > 99 ? '99+' : unread}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </motion.nav>
+          </div>
+
+          {/* Alt Alan: Departman Seçici + E-Posta & Ayarlar Kısayolu */}
+          <div
+            className="space-y-2.5"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            {/* Çalışma Alanı / Departman Seçicisi (Alttaki ikonların hemen üstünde) */}
             {isManagement && authorizedDepts.length > 1 ? (
-              <div ref={workspaceRef} className="relative hidden sm:block">
+              <div ref={workspaceRef} className="relative">
                 <button
                   type="button"
                   onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#3d3733] border border-[#4a443f] text-sm text-[#d6beae] hover:text-white transition-all cursor-pointer select-none"
+                  className="w-full flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-full bg-[#282522] hover:bg-[#3d3733] border border-[#4a443f] text-xs text-[#d6beae] hover:text-white transition-all cursor-pointer select-none"
                   title="Departman / Çalışma Alanı Değiştir"
                 >
-                  <Layers className="w-4 h-4 text-[#b99881]" />
-                  <span className="font-semibold text-white">{activeDept}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-[#a69f99] transition-transform duration-200 ${isWorkspaceMenuOpen ? 'rotate-180' : ''}`} />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Layers className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                    <span className="font-semibold text-white truncate">{activeDept}</span>
+                  </div>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-[#a69f99] shrink-0 transition-transform duration-200 ${
+                      isWorkspaceMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  />
                 </button>
 
                 <AnimatePresence>
                   {isWorkspaceMenuOpen && (
                     <motion.div
-                      initial={{ opacity: 0, y: -14, scale: 0.96 }}
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.97 }}
-                      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                      className="dropdown-panel absolute left-0 mt-2 w-56 rounded-[20px] p-2.5 z-50 backdrop-blur-2xl border border-[#4a443f]"
+                      exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                      className="dropdown-panel dropdown-panel-up absolute left-0 right-0 bottom-full mb-1.5 rounded-[22px] p-2 z-50 backdrop-blur-2xl border border-[#4a443f]"
                     >
-                      <div className="px-3 py-1.5 text-xs font-semibold text-[#8c857f] uppercase tracking-wider">
+                      <div className="px-2.5 py-1 text-[10px] font-semibold text-[#8c857f] uppercase tracking-wider">
                         Yetkili Çalışma Alanları
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1 mt-0.5">
                         {authorizedDepts.map((dept) => {
                           const isCurrent = dept === activeDept
                           return (
                             <button
                               key={dept}
                               onClick={() => handleSwitchWorkspace(dept)}
-                              className={`w-full flex items-center justify-between px-3 py-2 rounded-[14px] text-sm transition-colors cursor-pointer text-left ${
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                                 isCurrent
                                   ? 'bg-[#b99881]/20 text-white font-semibold'
                                   : 'text-[#a69f99] hover:bg-[#34302d] hover:text-[#f3efe9]'
                               }`}
                             >
-                              <span>{dept}</span>
-                              {isCurrent && <Check className="w-4 h-4 text-[#b99881]" />}
+                              <span className="truncate">{dept}</span>
+                              {isCurrent && <Check className="w-3.5 h-3.5 text-[#b99881] shrink-0" />}
                             </button>
                           )
                         })}
@@ -440,498 +1131,78 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <div
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#282522]/60 border border-[#4a443f]/60 text-sm select-none"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#282522]/60 border border-[#4a443f]/60 text-xs select-none"
                 title={`Çalışma Alanı: ${activeDept}`}
               >
-                <Layers className="w-4 h-4 text-[#b99881]" />
-                <span className="font-semibold text-white">{activeDept}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Ortadaki Sayfalar: Sığmayanlar Dinamik Olarak "..." Menüsüne Geçer */}
-          <div
-            ref={navContainerRef}
-            className="hidden md:flex flex-1 min-w-0 items-center justify-center px-2"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
-            <motion.nav
-              key={activeDept}
-              variants={{
-                initial: {},
-                animate: {
-                  transition: {
-                    staggerChildren: 0.05,
-                    delayChildren: 0.02,
-                  },
-                },
-              }}
-              initial="initial"
-              animate="animate"
-              className="flex items-center gap-5 lg:gap-7"
-            >
-              {visibleItems.map((item) => {
-                const isActive = activeTab === item.id
-                const unread = notificationStore.getUnreadCountForTab(item.id)
-                const Icon = getNavPageIcon(item.id)
-                return (
-                  <motion.button
-                    key={item.id}
-                    variants={{
-                      initial: {
-                        opacity: 0,
-                        y: 18,
-                      },
-                      animate: {
-                        opacity: 1,
-                        y: 0,
-                        transition: {
-                          type: 'spring',
-                          stiffness: 320,
-                          damping: 24,
-                          mass: 0.6,
-                        },
-                      },
-                    }}
-                    onClick={() => {
-                      notificationStore.markTabAsViewed(item.id)
-                      onTabChange(item.id)
-                    }}
-                    className={`relative text-[15px] font-medium transition-colors cursor-pointer py-1 select-none whitespace-nowrap inline-flex items-center gap-1.5 group ${
-                      isActive
-                        ? 'text-white font-semibold'
-                        : 'text-[#a69f99] hover:text-[#f3efe9]'
-                    }`}
-                  >
-                    <Icon
-                      className={`w-4 h-4 transition-colors shrink-0 ${
-                        isActive ? 'text-[#b99881]' : 'text-[#a69f99] group-hover:text-white'
-                      }`}
-                      strokeWidth={isActive ? 2.2 : 1.9}
-                    />
-                    <span>{item.label}</span>
-                    {unread > 0 && (
-                      <span
-                        className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold transition-all ${
-                          isActive
-                            ? 'bg-[#b99881] text-[#282522]'
-                            : 'bg-[#b99881]/25 text-[#dfb76c] border border-[#b99881]/40'
-                        }`}
-                      >
-                        {unread > 99 ? '99+' : unread}
-                      </span>
-                    )}
-                    {isActive && (
-                      <motion.span
-                        layoutId="activeNavIndicator"
-                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[#b99881] rounded-full"
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                  </motion.button>
-                )
-              })}
-
-              {/* Sığmayan Sayfalar için Üç Nokta (...) Butonu ve Açılır Menü */}
-              {hasOverflow && (
-                <div ref={overflowMenuRef} className="relative shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsOverflowMenuOpen(!isOverflowMenuOpen)}
-                    title={`Diğer Sayfalar (${overflowItems.map((i) => i.label).join(', ')})`}
-                    className={`relative flex items-center justify-center px-2 py-1 rounded-[12px] transition-colors cursor-pointer select-none ${
-                      isOverflowActive || isOverflowMenuOpen
-                        ? 'text-white font-semibold bg-white/10'
-                        : 'text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/5'
-                    }`}
-                  >
-                    <MoreHorizontal className="w-5 h-5" />
-                    {overflowItems.some((i) => notificationStore.getUnreadCountForTab(i.id) > 0) && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#dfb76c] shadow-[0_0_6px_rgba(223,183,108,0.8)]" />
-                    )}
-                    {isOverflowActive && (
-                      <motion.span
-                        layoutId="activeNavIndicator"
-                        className="absolute -bottom-1 left-1 right-1 h-0.5 bg-[#b99881] rounded-full"
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                  </button>
-
-                  <AnimatePresence>
-                    {isOverflowMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                        className="dropdown-panel absolute right-0 mt-2 min-w-[210px] rounded-[20px] p-2 z-50 backdrop-blur-2xl bg-[#282522]/95 border border-[#4a443f] shadow-2xl space-y-1"
-                        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                      >
-                        <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8c857f] uppercase tracking-wider flex items-center justify-between border-b border-[#4a443f]/50 mb-1 pb-2">
-                          <span>Diğer Sayfalar</span>
-                          <span className="text-[10px] text-[#b99881] font-mono font-bold bg-[#b99881]/15 px-1.5 py-0.5 rounded-full">
-                            {overflowItems.length}
-                          </span>
-                        </div>
-
-                        {overflowItems.map((item) => {
-                          const isActive = activeTab === item.id
-                          const unread = notificationStore.getUnreadCountForTab(item.id)
-                          const Icon = getNavPageIcon(item.id)
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => {
-                                notificationStore.markTabAsViewed(item.id)
-                                onTabChange(item.id)
-                                setIsOverflowMenuOpen(false)
-                              }}
-                              className={`w-full flex items-center justify-between px-3.5 py-2 rounded-[14px] text-sm transition-all cursor-pointer text-left ${
-                                isActive
-                                  ? 'bg-[#b99881]/20 text-white font-semibold border border-[#b99881]/40'
-                                  : 'text-[#d6beae] hover:bg-[#34302d] hover:text-white'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#b99881]' : 'text-[#a69f99]'}`} />
-                                <span className="truncate">{item.label}</span>
-                                {unread > 0 && (
-                                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#b99881]/25 text-[#dfb76c] border border-[#b99881]/40 shrink-0">
-                                    {unread > 99 ? '99+' : unread}
-                                  </span>
-                                )}
-                              </div>
-                              {isActive && <Check className="w-4 h-4 text-[#b99881] shrink-0 ml-1" />}
-                            </button>
-                          )
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
-            </motion.nav>
-          </div>
-
-          {/* Sağ Alan: [9-Noktalı Menü (Dock kapalıysa)] -> Arama -> Mesajlar -> Mail -> Profil (Yalnızca Profil Yuvarlak) */}
-          <div className="hidden md:flex items-center gap-1 sm:gap-2 shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-            {/* 1. 9-Noktalı Uygulama Menüsü (Yalnızca Dock Kapalı / Off İse Görünür - Yuvarlak Değil) */}
-            {!dockEnabled && (
-              <div ref={appMenuRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsAppMenuOpen(!isAppMenuOpen)}
-                  className={`p-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center ${
-                    isAppMenuOpen
-                      ? 'text-[#b99881] bg-white/10'
-                      : 'text-[#d6beae] hover:text-white hover:bg-white/5'
-                  }`}
-                  title="Uygulama Menüsü & Araçlar"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="5" cy="5" r="2" />
-                    <circle cx="12" cy="5" r="2" />
-                    <circle cx="19" cy="5" r="2" />
-                    <circle cx="5" cy="12" r="2" />
-                    <circle cx="12" cy="12" r="2" />
-                    <circle cx="19" cy="12" r="2" />
-                    <circle cx="5" cy="19" r="2" />
-                    <circle cx="12" cy="19" r="2" />
-                    <circle cx="19" cy="19" r="2" />
-                  </svg>
-                </button>
-
-                {isAppMenuOpen && (
-                  <div className="dropdown-panel absolute right-0 mt-2 w-80 rounded-[28px] shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-2xl space-y-3">
-                    <div className="flex items-center justify-between pb-3 border-b border-[#4a443f]">
-                      <div className="flex items-center gap-2">
-                        <BookLogo className="w-5 h-5 text-[#b99881]" />
-                        <span className="text-sm font-bold text-white">Uygulama Menüsü</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAppMenuOpen(false)
-                          onOpenSettings()
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white transition-colors cursor-pointer"
-                        title="Sistem ve Kişiselleştirme Ayarları"
-                      >
-                        <Settings className="w-3.5 h-3.5 text-[#b99881]" />
-                        <span>Ayarlar</span>
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAppMenuOpen(false)
-                          onOpenMail?.()
-                        }}
-                        className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f]/60 text-left transition-colors cursor-pointer group"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-[#282522] border border-[#b99881]/40 flex items-center justify-center text-[#b99881] group-hover:scale-105 transition-transform">
-                          <Mail className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-xs font-bold text-white block">E-Posta</span>
-                          <span className="text-[10px] text-[#8c857f] block truncate">Kurumsal Posta</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAppMenuOpen(false)
-                          onTabChange('contacts')
-                        }}
-                        className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f]/60 text-left transition-colors cursor-pointer group"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-[#282522] border border-[#b99881]/40 flex items-center justify-center text-[#b99881] group-hover:scale-105 transition-transform">
-                          <User className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-xs font-bold text-white block">Kişiler</span>
-                          <span className="text-[10px] text-[#8c857f] block truncate">Telefon Rehberi</span>
-                        </div>
-                      </button>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] font-semibold uppercase text-[#8c857f] tracking-wider block mb-1.5 px-1">
-                        Hızlı Araçlar
-                      </span>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {[
-                          { id: 'notepad' as ToolType, label: 'Not Defteri' },
-                          { id: 'calculator' as ToolType, label: 'Hesap Mak.' },
-                          { id: 'commission' as ToolType, label: 'Satış Primi' },
-                          { id: 'currency' as ToolType, label: 'Döviz & Kur' },
-                          { id: 'mortgage' as ToolType, label: 'Konut Kredisi' },
-                          { id: 'deedFee' as ToolType, label: 'Tapu Harcı' },
-                          { id: 'sqmPrice' as ToolType, label: 'm² Fiyat' },
-                          { id: 'whatsapp' as ToolType, label: 'WhatsApp' },
-                        ].map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => {
-                              setIsAppMenuOpen(false)
-                              onOpenTool?.(t.id)
-                            }}
-                            className="p-2 rounded-xl bg-[#34302d]/70 hover:bg-[#3d3733] border border-[#4a443f]/50 text-center transition-colors cursor-pointer group"
-                          >
-                            <span className="text-[11px] font-semibold text-[#c4bcb5] group-hover:text-white block truncate">
-                              {t.label}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <Layers className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                <span className="font-semibold text-white truncate">{activeDept}</span>
               </div>
             )}
 
-            {/* 2. Arama Barı (Sola Doğru Akıcı Kayarak Açılan Smooth Arama) */}
-            <div ref={searchContainerRef} className="relative flex items-center justify-end">
-              <motion.div
-                initial={false}
-                animate={{
-                  width: isSearchOpen ? (typeof window !== 'undefined' && window.innerWidth < 640 ? 210 : 270) : 38,
-                  borderRadius: isSearchOpen ? 9999 : 8,
-                  backgroundColor: isSearchOpen ? 'rgba(42, 40, 36, 0.95)' : 'rgba(255, 255, 255, 0)',
-                  borderColor: isSearchOpen ? 'rgba(185, 152, 129, 0.5)' : 'transparent',
-                  boxShadow: isSearchOpen
-                    ? '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(185, 152, 129, 0.2)'
-                    : 'none',
-                }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 340,
-                  damping: 28,
-                  mass: 0.8,
-                }}
-                className={`h-[38px] border flex items-center overflow-hidden select-none ${
-                  isSearchOpen
-                    ? 'px-3 backdrop-blur-xl'
-                    : 'justify-center hover:bg-white/5 cursor-pointer text-[#d6beae] hover:text-white'
-                }`}
-                onClick={() => {
-                  if (!isSearchOpen) {
-                    setIsSearchOpen(true)
-                    setTimeout(() => searchInputRef.current?.focus(), 80)
-                  }
-                }}
-                title={!isSearchOpen ? 'Arama Yap' : undefined}
-              >
-                <div className={`shrink-0 flex items-center justify-center w-5 h-5 ${isSearchOpen ? 'mr-2' : ''}`}>
-                  <Search
-                    className={`transition-colors ${
-                      isSearchOpen ? 'w-4 h-4 text-[#b99881]' : 'w-5 h-5 text-[#d6beae]'
-                    }`}
-                    strokeWidth={isSearchOpen ? 2 : 1.9}
-                  />
-                </div>
-
-                <AnimatePresence>
-                  {isSearchOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -14 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                      className="flex items-center flex-1 min-w-0"
-                    >
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder="Kayıtlarda ara..."
-                        value={searchQuery}
-                        onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') {
-                            if (!searchQuery) setIsSearchOpen(false)
-                            else onSearchChange && onSearchChange('')
-                          }
-                        }}
-                        className="w-full bg-transparent border-none text-xs text-[#f3efe9] placeholder-[#a69f99] focus:outline-none font-sans"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (searchQuery) {
-                            onSearchChange && onSearchChange('')
-                          } else {
-                            setIsSearchOpen(false)
-                          }
-                        }}
-                        className="text-[#a69f99] hover:text-white transition-colors p-1 ml-1 shrink-0 cursor-pointer rounded-full hover:bg-white/10"
-                        title="Kapat"
-                      >
-                        <X className="w-3.5 h-3.5" strokeWidth={2} />
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            </div>
-
-            {/* 3. Bildirimler İkonu (Zil ve Canlı Bildirim Popover Menüsü) */}
-            <div ref={notificationsRef} className={`relative ${isNotificationsOpen ? 'z-[60]' : 'z-20'}`}>
+            <div className="flex items-center justify-around pt-1">
+              {/* 1. Ayarlar */}
               <button
                 type="button"
-                onClick={() => {
-                  const willOpen = !isNotificationsOpen
-                  setIsNotificationsOpen(willOpen)
-                  if (willOpen && messageStore.getDisplayMode() === 'popup') {
-                    messageStore.setPanelOpen(false)
-                  }
-                }}
-                className={`relative p-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center ${
-                  isNotificationsOpen
-                    ? 'text-[#b99881] bg-white/10'
-                    : 'text-[#d6beae] hover:text-white hover:bg-white/5'
-                }`}
-                title="Bildirimler"
+                onClick={onOpenSettings}
+                className="sidebar-pill-item relative w-10 h-10 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
               >
-                <Bell className="w-5 h-5" strokeWidth={1.9} />
-                {totalUnreadNotifications > 0 && (
-                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#b99881] text-[#1c1a18] text-[9px] font-extrabold flex items-center justify-center shadow-xs">
-                    {totalUnreadNotifications > 99 ? '99+' : totalUnreadNotifications}
+                <Settings className="w-[18px] h-[18px] text-[#b99881] shrink-0" strokeWidth={1.9} />
+              </button>
+
+              {/* 2. Mail */}
+              <button
+                type="button"
+                onClick={onOpenMail}
+                className="sidebar-pill-item relative w-10 h-10 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Mail className="w-[18px] h-[18px] text-[#b99881] shrink-0" strokeWidth={1.9} />
+                {unreadMailCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#b99881] text-white text-[9px] font-bold flex items-center justify-center">
+                    {unreadMailCount > 99 ? '99+' : unreadMailCount}
                   </span>
                 )}
               </button>
 
-              <NotificationsPopover
-                isOpen={isNotificationsOpen}
-                onClose={() => setIsNotificationsOpen(false)}
-                onNavigate={(targetTab) => {
-                  notificationStore.markTabAsViewed(targetTab)
-                  onTabChange(targetTab)
-                }}
-              />
-            </div>
+              {/* 3. Mesajlar */}
+              <div ref={messagesRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNotificationsOpen(false)
+                    messageStore.togglePanel()
+                  }}
+                  className="sidebar-pill-item relative w-10 h-10 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <IosChatBubbleIcon className="w-[18px] h-[18px] shrink-0" />
+                  {currentUser && messageStore.getTotalUnreadCount(currentUser.id) > 0 && (
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#34302c]" />
+                  )}
+                </button>
 
-            {/* 4. Mesajlar İkonu (iOS Stili Çizgisel Konuşma Balonu) */}
-            <div ref={messagesRef} className={`relative ${isMessagesOpen ? 'z-30' : 'z-20'}`}>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsNotificationsOpen(false)
-                  messageStore.togglePanel()
-                }}
-                className={`relative p-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center ${
-                  isMessagesOpen
-                    ? 'text-[#b99881] bg-white/10'
-                    : 'text-[#d6beae] hover:text-white hover:bg-white/5'
-                }`}
-                title="Yazışmalar"
-              >
-                <IosChatBubbleIcon className="w-5 h-5" />
-                {currentUser && messageStore.getTotalUnreadCount(currentUser.id) > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#b99881]" />
-                )}
-              </button>
-
-              {/* Mesajlaşma Paneli (Açılır Menü veya Genişletilmiş Yan Panel) */}
-              <MessagingPanel
-                currentUser={currentUser}
-                isOpen={isMessagesOpen}
-                onClose={() => messageStore.setPanelOpen(false)}
-              />
-            </div>
-
-            {/* 4. E-Posta İkonu (Yuvarlak Değil) */}
-            <button
-              type="button"
-              onClick={onOpenMail}
-              className="relative p-2 rounded-lg text-[#d6beae] hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-center"
-              title="Kurumsal E-Posta Kutusu"
-            >
-              <Mail className="w-5 h-5" strokeWidth={1.9} />
-              {unreadMailCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#b99881] text-[#1c1a18] text-[9px] font-extrabold flex items-center justify-center shadow-xs">
-                  {unreadMailCount > 99 ? '99+' : unreadMailCount}
-                </span>
-              )}
-            </button>
-
-            {/* 5. Profil Simgesi (YALNIZCA BU DÜĞME YUVARLAK: 38px Avatar Çemberi) */}
-            <button
-              type="button"
-              onClick={onOpenProfile}
-              className="w-[38px] h-[38px] rounded-full bg-[#282522] border-2 border-[#b99881] shadow-md flex items-center justify-center transition-all cursor-pointer overflow-hidden shrink-0 hover:scale-105 active:scale-95 ml-1 ring-2 ring-[#b99881]/25 hover:ring-[#b99881]/50"
-              title={
-                currentUser
-                  ? `${currentUser.fullName} (@${currentUser.username}) - ${activeDept}`
-                  : 'Giriş Yap'
-              }
-            >
-              {currentUser?.avatarUrl ? (
-                <img
-                  src={currentUser.avatarUrl}
-                  alt={currentUser.fullName}
-                  className="w-full h-full object-cover rounded-full"
+                <MessagingPanel
+                  currentUser={currentUser}
+                  isOpen={isMessagesOpen}
+                  onClose={() => messageStore.setPanelOpen(false)}
                 />
-              ) : (
-                <span className="text-xs font-bold text-[#b99881] font-sans tracking-wide">
-                  {currentUser?.fullName
-                    ? currentUser.fullName
-                        .trim()
-                        .split(/\s+/)
-                        .map((n) => n[0])
-                        .join('')
-                        .slice(0, 2)
-                        .toUpperCase()
-                    : 'DP'}
-                </span>
-              )}
-            </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      {/* ==========================================================================
+          MOBİL ÜST BAR (Mobile Top Header & Icon Strip)
+         ========================================================================== */}
+      <div className="md:hidden w-full">
+        <div className="flex items-center justify-between h-[54px] px-4">
+          <BrandLogoLockup
+            logoSize={22}
+            gapClassName="gap-2"
+            slideDistance={20}
+            onClick={() => onTabChange('dashboard')}
+          />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#282522] border border-[#4a443f] text-xs">
+            <Layers className="w-3.5 h-3.5 text-[#b99881]" />
+            <span className="font-semibold text-white">{activeDept}</span>
           </div>
         </div>
 
@@ -972,7 +1243,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onTabChange(item.id)
                 }}
                 title={item.label}
-                className={`relative p-2.5 rounded-xl transition-all shrink-0 flex items-center justify-center cursor-pointer ${
+                className={`relative p-2.5 rounded-full transition-all shrink-0 flex items-center justify-center cursor-pointer ${
                   isActive
                     ? 'text-[#b99881] bg-[#b99881]/15 border border-[#b99881]/40 shadow-sm scale-105'
                     : 'text-[#a69f99] hover:text-[#d6beae] hover:bg-white/5 border border-transparent'
@@ -989,7 +1260,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           })}
         </motion.div>
 
-        {/* Mobil Arama Barı (Sağ alttaki arama ikonuna tıklandığında açılır) */}
+        {/* Mobil Arama Barı */}
         <AnimatePresence>
           {isSearchOpen && (
             <motion.div
@@ -1001,7 +1272,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#34302d] border border-[#b99881]/40 shadow-inner">
                 <Search className="w-4 h-4 text-[#b99881] shrink-0" />
                 <input
-                  ref={searchInputRef}
                   type="text"
                   placeholder="Kayıtlarda ara..."
                   value={searchQuery}
@@ -1344,5 +1614,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
     </header>
+    </>
   )
 }

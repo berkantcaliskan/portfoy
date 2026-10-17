@@ -228,8 +228,8 @@ export const SharedFilesView: React.FC = () => {
         </div>
       )}
 
-      {/* Kategori ve Filtre Çubuğu */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-[20px] bg-[#282522] border border-[#4a443f]">
+      {/* Kategori ve Filtre Çubuğu (Katmansız, Pill Shape) */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
             onClick={() => setSelectedFolder('ALL')}
@@ -295,10 +295,8 @@ export const SharedFilesView: React.FC = () => {
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-[14px] bg-[#34302d] border border-[#4a443f]">
-                        {getFileIcon(file.type)}
-                      </div>
+                    <div className="flex items-center gap-2.5">
+                      {getFileIcon(file.type)}
                       <div>
                         <h4 className="text-xs font-bold text-white line-clamp-1" title={file.name}>
                           {file.name}
@@ -319,12 +317,12 @@ export const SharedFilesView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-[#4a443f]/60 flex items-center justify-between text-[11px] text-[#8c857f]">
+                <div className="pt-2 flex items-center justify-between text-[11px] text-[#8c857f]">
                   <span>Yükleyen: {file.uploadedByUserName}</span>
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleDownload(file)}
-                      className="p-1.5 rounded-[10px] bg-[#34302d] hover:bg-[#b99881] text-[#b99881] hover:text-[#282522] transition-colors cursor-pointer"
+                      className="p-2 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#b99881] hover:text-[#282522] transition-colors cursor-pointer"
                       title="Güvenli İndir (Audit Trail)"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -332,7 +330,7 @@ export const SharedFilesView: React.FC = () => {
                     {isOwner && (
                       <button
                         onClick={() => handleDelete(file)}
-                        className="p-1.5 rounded-[10px] bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                        className="p-2 rounded-full bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
                         title="Dosyayı Sil"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

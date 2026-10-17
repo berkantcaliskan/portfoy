@@ -184,7 +184,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             <select
               value={formData.sourceIndex}
               onChange={(e) => setFormData({ ...formData, sourceIndex: Number(e.target.value) })}
-              className="w-full rounded-[14px] bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+              className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
             >
               {SOURCES.map((s, idx) => (
                 <option key={idx} value={idx} className="bg-[#24211f] text-white">
@@ -201,7 +201,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             <select
               value={formData.stage}
               onChange={(e) => setFormData({ ...formData, stage: e.target.value as LeadStage })}
-              className="w-full rounded-[14px] bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+              className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
             >
               {STAGES.map((s) => (
                 <option key={s.stage} value={s.stage} className="bg-[#24211f] text-white">
@@ -221,7 +221,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             <select
               value={formData.assignedUserId}
               onChange={(e) => setFormData({ ...formData, assignedUserId: e.target.value })}
-              className="w-full rounded-[14px] bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+              className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
             >
               <option value="" className="bg-[#24211f] text-white">
                 Otomatik Eşit Dağıtım (Round-Robin)
@@ -243,7 +243,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
               onChange={(e) =>
                 setFormData({ ...formData, preferredHousingType: e.target.value })
               }
-              className="w-full rounded-[14px] bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+              className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
             >
               {HOUSING_TYPES.map((type) => (
                 <option key={type} value={type} className="bg-[#24211f] text-white">
@@ -288,7 +288,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
         </div>
 
         {/* Butonlar */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+        <div className="flex items-center justify-end gap-3 pt-2">
           <GlassButton variant="subtle" size="sm" type="button" onClick={handleClose}>
             İptal
           </GlassButton>

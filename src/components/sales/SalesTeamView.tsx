@@ -46,16 +46,18 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
   const [selectedRep, setSelectedRep] = useState<string>('ALL')
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban')
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
-  const [calcAmount, setCalcAmount] = useState<number>(5000000)
+  const [calcAmount, setCalcAmount] = useState<number>(0)
 
   // Real users from store
   const allUsers: AppUser[] = getAllUsers()
   const salesReps = [
     { id: 'ALL', name: 'Tüm Satış Ekibi' },
-    ...allUsers.map((u: AppUser) => ({
-      id: u.fullName,
-      name: `${u.fullName} (${u.department})`,
-    })),
+    ...allUsers
+      .filter((u: AppUser) => u.id !== 'usr-berkant' || leads.length > 0)
+      .map((u: AppUser) => ({
+        id: u.fullName,
+        name: `${u.fullName} (${u.department})`,
+      })),
   ]
 
   // Filter leads based on sales rep
@@ -72,18 +74,22 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
     'OFFER',
     'WON',
   ]
+  const [activeStageCard, setActiveStageCard] = useState<LeadStage | null>(null)
+  const [hoveredStageCard, setHoveredStageCard] = useState<LeadStage | null>(null)
+  const focusedStage = hoveredStageCard ?? activeStageCard
+  const focusedStageIndex = focusedStage ? salesDealStages.indexOf(focusedStage) : -1
 
   // Calculations for KPI
   const closedLeads = filteredLeads.filter((l) => l.stage === 'WON')
   const totalClosedRevenue = closedLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
   const totalEarnedCommission = Math.round(totalClosedRevenue * 0.02) // 2% standard rep commission
   const activeOfferCount = filteredLeads.filter((l) => l.stage === 'OFFER' || l.stage === 'PRESENTATION').length
-  const monthlyQuota = 25000000
+  const monthlyQuota = 0
   const quotaAchievement = monthlyQuota > 0 ? Math.min(100, Math.round((totalClosedRevenue / monthlyQuota) * 100)) : 0
 
   // Rep leaderboard data dynamically calculated
   const leaderboardData = allUsers
-    .filter((u: AppUser) => u.department === 'Satış' || u.department === 'Yönetim' || u.isManager || u.role === 'ADMIN')
+    .filter((u: AppUser) => (u.id !== 'usr-berkant' || leads.length > 0) && (u.department === 'Satış' || u.department === 'Yönetim' || u.isManager || u.role === 'ADMIN'))
     .map((rep: AppUser) => {
       const repLeads = leads.filter((l) => l.owner === rep.fullName && l.stage === 'WON')
       const closedVolume = repLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
@@ -100,7 +106,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
 
   const handleOpenCalcForLead = (lead: Lead, e: React.MouseEvent) => {
     e.stopPropagation()
-    setCalcAmount(lead.budget || 5000000)
+    setCalcAmount(lead.budget || 0)
     setIsCalculatorOpen(true)
   }
 
@@ -110,9 +116,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4 pb-1">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#b99881]/15 border border-[#b99881]/30 flex items-center justify-center text-[#b99881]">
-              <Trophy className="w-4 h-4" />
-            </div>
+            <Trophy className="w-5 h-5 text-[#b99881]" />
             <h2 className="text-2xl font-bold text-white tracking-wide">
               Satış
             </h2>
@@ -240,8 +244,8 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
         </div>
       </div>
 
-      {/* View Toggle Bar (Pill Shaped) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2.5 rounded-full bg-[#282522]/70 border border-[#4a443f]">
+      {/* View Toggle Bar (Katmansız, Pill Shaped) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-white">Satış Kapanış Hattı (Deal Flow)</span>
           <span className="text-[11px] text-[#8c857f]">
@@ -250,13 +254,13 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
         </div>
 
         {/* Kanban vs Table Mode Toggle */}
-        <div className="flex items-center bg-[#24211f] p-1 rounded-full border border-[#4a443f]">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setViewMode('kanban')}
-            className={`flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'kanban'
-                ? 'bg-[#423c38] text-white border border-[#b99881]/40 shadow-sm'
-                : 'text-[#a69f99] hover:text-white'
+                ? 'bg-[#b99881] text-white font-bold shadow-sm'
+                : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
             }`}
           >
             <Kanban className="w-3.5 h-3.5" />
@@ -265,10 +269,10 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
 
           <button
             onClick={() => setViewMode('table')}
-            className={`flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'table'
-                ? 'bg-[#423c38] text-white border border-[#b99881]/40 shadow-sm'
-                : 'text-[#a69f99] hover:text-white'
+                ? 'bg-[#b99881] text-white font-bold shadow-sm'
+                : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
             }`}
           >
             <TableIcon className="w-3.5 h-3.5" />
@@ -277,31 +281,64 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
         </div>
       </div>
 
-      {/* View 1: Deal Pipeline Kanban */}
+      {/* View 1: Deal Pipeline Kanban (İç İçe Geçmeli & Sağa Dönük 3D Perspektif Kartlar) */}
       {viewMode === 'kanban' && (
-        <div className="flex md:grid md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-2 no-scrollbar">
-          {salesDealStages.map((stageKey) => {
+        <div
+          className="flex items-stretch overflow-x-auto lg:overflow-visible pt-4 pb-6 px-3 no-scrollbar select-none"
+          style={{ perspective: '1300px' }}
+        >
+          {salesDealStages.map((stageKey, idx) => {
             const stageLeads = filteredLeads.filter((l) => l.stage === stageKey)
             const stageConfig = STAGE_CONFIGS[stageKey]
             const stageTotalBudget = stageLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
+            const isFocused = focusedStage === stageKey
+
+            let cardTransform = 'rotateY(14deg) rotateZ(-0.5deg) scale(0.94)'
+            if (isFocused) {
+              cardTransform = 'translateY(-12px) translateZ(34px) rotateY(0deg) rotateZ(0deg) scale(1.03)'
+            } else if (focusedStageIndex !== -1) {
+              if (idx > focusedStageIndex) {
+                cardTransform = 'translateX(26px) rotateY(14deg) rotateZ(-0.4deg) scale(0.93)'
+              } else {
+                cardTransform = 'translateX(-8px) rotateY(16deg) rotateZ(-0.6deg) scale(0.93)'
+              }
+            }
 
             return (
               <div
                 key={stageKey}
-                className="flex flex-col rounded-[28px] bg-[#282522]/50 border border-[#4a443f] p-3.5 min-w-[240px] space-y-3"
+                onMouseEnter={() => setHoveredStageCard(stageKey)}
+                onMouseLeave={() => setHoveredStageCard(null)}
+                onClick={() =>
+                  setActiveStageCard((prev) => (prev === stageKey ? null : stageKey))
+                }
+                onTouchStart={() => setActiveStageCard(stageKey)}
+                style={{
+                  transform: cardTransform,
+                  transformOrigin: 'left center',
+                  transformStyle: 'preserve-3d',
+                  zIndex: isFocused ? 50 : 10 + idx,
+                  transition:
+                    'transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.38s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease',
+                }}
+                className={`perspective-deck-card ${
+                  isFocused ? 'is-focused' : ''
+                } relative flex-1 min-w-[185px] sm:min-w-[200px] max-w-[240px] flex flex-col rounded-[24px] bg-[#282522] border border-[#4a443f] p-3 space-y-2.5 cursor-pointer ${
+                  idx > 0 ? '-ml-5 sm:-ml-6 lg:-ml-7' : ''
+                }`}
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <span
-                      className="w-2 h-2 rounded-full"
+                      className="w-2 h-2 rounded-full shrink-0"
                       style={{ backgroundColor: stageConfig.accentColor }}
                     />
-                    <span className="text-xs font-bold text-white">
+                    <span className="text-[11.5px] font-bold text-white truncate">
                       {stageConfig.label}
                     </span>
                   </div>
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/5 text-[#d6beae]">
+                  <span className="text-[10.5px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/5 text-[#d6beae] shrink-0">
                     {stageLeads.length}
                   </span>
                 </div>
@@ -314,9 +351,9 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                 )}
 
                 {/* Cards List */}
-                <div className="space-y-2.5 flex-1 min-h-[300px]">
+                <div className="space-y-2 flex-1 min-h-[220px]">
                   {stageLeads.length === 0 ? (
-                    <div className="h-24 rounded-[20px] border border-dashed border-[#4a443f] flex items-center justify-center text-[11px] text-[#8c857f]">
+                    <div className="h-20 rounded-[18px] border border-dashed border-[#4a443f] flex items-center justify-center text-[11px] text-[#8c857f]">
                       Fırsat yok
                     </div>
                   ) : (
@@ -326,25 +363,28 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                       return (
                         <div
                           key={lead.id}
-                          onClick={() => onSelectLead(lead)}
-                          className="group p-4 rounded-[22px] bg-[#34302d] hover:bg-[#3b3633] border border-[#4a443f] hover:border-[#b99881]/50 transition-all cursor-pointer shadow-sm space-y-3"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onSelectLead(lead)
+                          }}
+                          className="group p-3 rounded-[18px] bg-[#34302d] hover:bg-[#3b3633] border border-[#4a443f] hover:border-[#b99881]/50 transition-all cursor-pointer shadow-sm space-y-2"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <h4 className="text-xs font-bold text-white group-hover:text-[#b99881] transition-colors">
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-white group-hover:text-[#b99881] transition-colors select-text truncate">
                                 {lead.fullName}
                               </h4>
-                              <p className="text-[11px] text-[#8c857f] mt-0.5">
+                              <p className="text-[10px] text-[#8c857f] mt-0.5 truncate">
                                 {lead.preferredHousingType || 'Konut'} • {lead.owner}
                               </p>
                             </div>
-                            <span className="text-[11px] font-bold text-[#b99881]">
-                              {lead.budget ? formatCurrency(lead.budget) : 'Fiyat Belirlenmedi'}
+                            <span className="text-[10.5px] font-bold text-[#b99881] shrink-0">
+                              {lead.budget ? formatCurrency(lead.budget) : 'Belirsiz'}
                             </span>
                           </div>
 
                           {/* Commission Tag */}
-                          <div className="flex items-center justify-between text-[10px] pt-2 border-t border-[#4a443f]">
+                          <div className="flex items-center justify-between text-[10px] pt-0.5">
                             <span className="text-[#a69f99]">Tahmini Prim:</span>
                             <span className="font-bold text-emerald-400">
                               {formatCurrency(estimatedCommission)}
@@ -352,7 +392,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                           </div>
 
                           {/* Quick Action Buttons */}
-                          <div className="flex items-center justify-between gap-1 pt-1">
+                          <div className="flex items-center justify-between gap-1 pt-0.5">
                             <div className="flex items-center gap-1">
                               <a
                                 href={generateWhatsAppUrl(lead.phone, `Merhaba ${lead.fullName}, Demirtürk Portföy satış ofisinden teklif detaylarınızla ilgili yazıyorum.`)}
@@ -385,7 +425,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                                     onStageChange(lead.id, salesDealStages[nextIndex])
                                   }
                                 }}
-                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#423c38] hover:bg-[#b99881] hover:text-[#1c1a18] text-[10px] font-bold text-[#d6beae] transition-colors"
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#423c38] hover:bg-[#b99881] hover:text-white text-[10px] font-bold text-[#d6beae] transition-colors"
                               >
                                 <span>İlerlet</span>
                                 <ChevronRight className="w-3 h-3" />
@@ -432,9 +472,9 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                       onClick={() => onSelectLead(lead)}
                       className="hover:bg-white/[0.02] transition-colors cursor-pointer"
                     >
-                      <td className="py-3 px-5 font-bold text-white">
+                      <td className="py-3 px-5 font-bold text-white select-text">
                         {lead.fullName}
-                        <span className="block text-[11px] font-normal text-[#8c857f]">
+                        <span className="block text-[11px] font-normal text-[#8c857f] select-all">
                           {lead.phone}
                         </span>
                       </td>

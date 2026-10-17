@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, Lock, User, Mail, Building2, ShieldCheck, Sparkles, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
-import { BookLogo } from '@/components/common/BookLogo'
+import { BookLogo, BrandLogoLockup } from '@/components/common/BookLogo'
 import { WindowControls } from '@/components/common/WindowControls'
-import { AppUser, Department, generateUsername, userStore, PERMANENT_GOD_USER } from '@/services/userStore'
+import { AppUser, Department, generateUsername, userStore } from '@/services/userStore'
 
 interface AuthScreenProps {
   onLoginSuccess: (user: AppUser) => void
@@ -90,25 +90,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#1e1b19] flex flex-col justify-between text-[#f3efe9] select-none relative overflow-x-hidden font-sans">
-      {/* Background Ambience (Warm Glow) */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[#b99881]/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[300px] bg-[#b99881]/5 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen w-full bg-[#f5f5f2] flex flex-col justify-between text-[#292d2b] select-none relative overflow-x-hidden font-sans">
+      {/* Background Ambience */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[#657a72]/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[300px] bg-[#657a72]/5 rounded-full blur-[120px] pointer-events-none" />
 
       {/* 1. Header Bar (Frameless Drag + Window Controls) */}
       <header
-        className="w-full h-14 px-6 flex items-center justify-between border-b border-[#3d3733]/60 bg-[#24201e]/80 backdrop-blur-md sticky top-0 z-50"
+        className="w-full h-14 px-6 flex items-center justify-between border-b border-[#292d2b]/10 bg-[#e3e5e1] sticky top-0 z-50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         {/* Brand Logo & Name */}
         <div
-          className="flex items-center gap-3 select-none"
+          className="flex items-center select-none"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <div className="text-[#b99881] flex items-center justify-center">
-            <BookLogo size={22} className="text-[#b99881]" />
-          </div>
-          <span className="font-the-seasons text-lg tracking-wide text-white">Portföy</span>
+          <BrandLogoLockup
+            logoSize={22}
+            gapClassName="gap-2.5"
+            slideDistance={22}
+            textClassName="font-the-seasons text-lg tracking-wide text-[#292d2b]"
+          />
         </div>
 
         {/* Desktop Frameless Window Controls */}
@@ -126,14 +128,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
           initial={{ opacity: 0, y: 16, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="w-full max-w-[460px] rounded-[32px] bg-[#292522]/95 border border-[#443d37] p-8 sm:p-10 shadow-2xl shadow-black/80 backdrop-blur-2xl"
+          className="glass-card w-full max-w-[460px] rounded-[32px] bg-white border border-[#292d2b]/12 p-8 sm:p-10 shadow-xl"
         >
           {/* Logo & Headline */}
           <div className="text-center space-y-2 mb-7">
-            <div className="w-14 h-14 rounded-2xl bg-[#342f2b] border border-[#b99881]/40 mx-auto flex items-center justify-center text-[#b99881] shadow-lg mb-3">
-              <BookLogo size={28} className="text-[#b99881]" />
+            <div className="w-14 h-14 rounded-2xl bg-[#ebece9] border border-[#657a72]/30 mx-auto flex items-center justify-center text-[#657a72] shadow-xs mb-3">
+              <BookLogo size={28} className="text-[#657a72]" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#292d2b]">
               Demirtürk Portföy
             </h1>
             <p className="text-xs text-[#a69f99]">
@@ -142,7 +144,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
           </div>
 
           {/* Segmented Tab Switcher (Giriş Yap | Yönetici Kaydı) */}
-          <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-[#1d1a18] border border-[#3d3733] mb-6">
+          <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-[#ebece9] border border-[#292d2b]/10 mb-6">
             <button
               type="button"
               onClick={() => {
@@ -195,7 +197,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   <input
                     type="text"
                     required
-                    placeholder="demirturkberkant@gmail.com veya berkant"
+                    placeholder="E-posta veya kullanıcı adı"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     className="w-full bg-[#1e1b19] border border-[#443d37] focus:border-[#b99881] rounded-2xl pl-11 pr-4 py-3 text-sm text-[#f3efe9] placeholder-[#7d756f] focus:outline-none transition-colors"
@@ -213,7 +215,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     type="button"
                     onClick={() =>
                       alert(
-                        'Şifrenizi unuttuysanız lütfen şirket yöneticinizle iletişime geçiniz. Daimi yönetici şifreniz Berkant26. olarak tanımlıdır.'
+                        'Şifrenizi unuttuysanız lütfen şirket yöneticinizle iletişime geçiniz.'
                       )
                     }
                     className="text-[11px] text-[#b99881] hover:underline cursor-pointer"
@@ -323,7 +325,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 <input
                   type="text"
                   required
-                  placeholder="Örn: Berkant Demirtürk"
+                  placeholder="Adınız ve Soyadınız"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full bg-[#1e1b19] border border-[#443d37] focus:border-[#b99881] rounded-2xl px-4 py-2.5 text-sm text-[#f3efe9] placeholder-[#7d756f] focus:outline-none transition-colors"

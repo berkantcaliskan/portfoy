@@ -176,13 +176,13 @@ export const CollectionsView: React.FC = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-2 p-4 rounded-[20px] bg-[#282522] border border-[#4a443f]">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-[#8c857f] mr-1">Filtre:</span>
         {['ALL', 'COLLECTED', 'PENDING', 'OVERDUE', 'REFUNDED'].map((s) => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
               filterStatus === s
                 ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
                 : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
@@ -242,7 +242,7 @@ export const CollectionsView: React.FC = () => {
                       {col.status !== 'COLLECTED' && col.status !== 'REFUNDED' && (
                         <button
                           onClick={() => handleMarkCollected(col.id)}
-                          className="px-2.5 py-1 rounded-[8px] bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer"
+                          className="px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer"
                         >
                           Tahsil Et
                         </button>
@@ -251,7 +251,7 @@ export const CollectionsView: React.FC = () => {
                       {col.type === 'DEPOSIT' && col.status === 'COLLECTED' && canRefund && (
                         <button
                           onClick={() => handleOpenRefund(col)}
-                          className="px-2.5 py-1 rounded-[8px] bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold cursor-pointer"
+                          className="px-3 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold cursor-pointer"
                           title="Kapora İadesi Gerçekleştir"
                         >
                           İade
@@ -273,7 +273,7 @@ export const CollectionsView: React.FC = () => {
         title={`Kapora İadesi - ${selectedRefundCol?.customerName}`}
       >
         <form onSubmit={handleExecuteRefund} className="space-y-4">
-          <div className="p-3 rounded-[14px] bg-[#34302d] border border-[#4a443f] text-xs text-[#a69f99]">
+          <div className="text-xs text-[#a69f99]">
             <div className="text-white font-semibold flex justify-between">
               <span>{selectedRefundCol?.projectName} ({selectedRefundCol?.unitNumber})</span>
               <span>{formatCurrency(selectedRefundCol?.amount || 0)}</span>
@@ -336,7 +336,7 @@ export const CollectionsView: React.FC = () => {
               placeholder="Örn: Murat Şahin"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
             />
           </div>
 
@@ -349,7 +349,7 @@ export const CollectionsView: React.FC = () => {
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -361,7 +361,7 @@ export const CollectionsView: React.FC = () => {
                 type="text"
                 value={unitNumber}
                 onChange={(e) => setUnitNumber(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
           </div>
@@ -374,7 +374,7 @@ export const CollectionsView: React.FC = () => {
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as CollectionType)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
                 <option value="DEPOSIT">Ön Kapora</option>
                 <option value="DOWN_PAYMENT">Peşinat</option>
@@ -390,9 +390,9 @@ export const CollectionsView: React.FC = () => {
               <input
                 type="number"
                 required
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                value={amount === 0 ? '' : amount}
+                onChange={(e) => setAmount(e.target.value === '' ? 0 : Number(e.target.value))}
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
           </div>
@@ -407,7 +407,7 @@ export const CollectionsView: React.FC = () => {
                 required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -419,7 +419,7 @@ export const CollectionsView: React.FC = () => {
                 type="text"
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
           </div>

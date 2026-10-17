@@ -19,7 +19,7 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
     title: '',
     projectCode: 'DMT-NEW-01',
     type: '2+1' as PropertyType,
-    location: 'İstanbul',
+    location: 'Karasu, Sakarya',
     price: '',
     currency: 'TRY' as 'TRY' | 'USD' | 'EUR',
     netM2: '',
@@ -85,7 +85,7 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
             <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value as PropertyType })}
-              className="w-full rounded-xl bg-navy-950 border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-gold/60"
+              className="w-full rounded-full bg-navy-950 border border-white/10 px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-gold/60"
             >
               <option value="1+1">1+1 Rezidans</option>
               <option value="2+1">2+1 Daire</option>
@@ -101,7 +101,7 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
 
           <GlassInput
             label="Konum"
-            placeholder="Örn: Kadıköy, İstanbul"
+            placeholder="Örn: Karasu, Sakarya"
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
           />
@@ -159,7 +159,7 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+        <div className="flex items-center justify-end gap-3 pt-2">
           <GlassButton variant="subtle" size="sm" type="button" onClick={onClose}>
             İptal
           </GlassButton>

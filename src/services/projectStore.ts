@@ -39,6 +39,15 @@ export interface FlatSale {
   paymentPlan?: string
 }
 
+export type BlueprintLayoutTemplate = 'quad' | 'corridor' | 'wing' | 'villa'
+
+export interface UnitPlanBox {
+  x: number // percentage 0..100
+  y: number // percentage 0..100
+  w: number // percentage 5..100
+  h: number // percentage 5..100
+}
+
 export interface FlatUnit {
   id: string
   projectId: string
@@ -52,6 +61,7 @@ export interface FlatUnit {
   status: FlatStatus
   facade?: string
   description?: string
+  planBox?: UnitPlanBox
   reservation?: FlatReservation
   sale?: FlatSale
   history: FlatAuditEntry[]
@@ -70,6 +80,15 @@ export interface SharedProject {
   deliveryDate: string
   startingPrice?: number
   imageUrl: string
+  blueprintUrl?: string
+  floorPlans?: Record<string, string>
+  layoutTemplate?: BlueprintLayoutTemplate
+  maxFloors?: 1 | 2 | 3
+  unitsPerFloor?: number
+  blockCount?: 1 | 2
+  defaultRoomType?: RoomType | 'MIXED'
+  sourceDocumentName?: string
+  sourceDocumentSummary?: string
   status: 'SATISTA' | 'YAKINDA' | 'TAMAMLANDI'
   description?: string
   units: FlatUnit[]
@@ -77,35 +96,35 @@ export interface SharedProject {
 
 const STORAGE_KEY_PROJECTS = 'demirturk_projects_v2'
 
-function generateInitialFlats(projectId: string, _code: string): FlatUnit[] {
-  const types: RoomType[] = ['1+1', '2+1', '3+1', '4+1', 'Penthouse']
-  const flats: FlatUnit[] = []
+/**
+ * Ensure every project's units use strictly 0 (Zemin), 1 (1. Kat), or 2 (2. Kat) (Max 3 floors)
+ */
+function normalizeProjectFloors(project: SharedProject): SharedProject {
+  const maxFl: 1 | 2 | 3 =
+    project.maxFloors === 1 || project.maxFloors === 2 || project.maxFloors === 3
+      ? project.maxFloors
+      : 3
+  const units = Array.isArray(project.units) ? project.units : []
+  const needsRemap = units.some((u) => u.floor < 0 || u.floor >= maxFl || u.floor > 2)
+  if (!needsRemap && project.maxFloors) return project
 
-  for (let i = 1; i <= 24; i++) {
-    const floor = Math.floor((i - 1) / 4) + 1
-    const rType = types[(i - 1) % types.length]
-    const baseSqm = rType === '1+1' ? 65 : rType === '2+1' ? 95 : rType === '3+1' ? 140 : rType === '4+1' ? 190 : 260
-    const basePrice = (baseSqm * 48000) + (floor * 50000)
+  const remappedUnits = units.map((u, idx) => {
+    let fl = u.floor
+    if (typeof fl !== 'number' || isNaN(fl) || fl < 0 || fl > 2 || fl >= maxFl) {
+      fl = idx % maxFl
+    }
+    return {
+      ...u,
+      floor: fl,
+    }
+  })
 
-    flats.push({
-      id: `${projectId}-u${i}`,
-      projectId,
-      unitNumber: `D-${i.toString().padStart(2, '0')}`,
-      block: i <= 12 ? 'A Blok' : 'B Blok',
-      floor,
-      roomType: rType,
-      grossSqm: baseSqm,
-      netSqm: Math.round(baseSqm * 0.78),
-      price: basePrice,
-      status: 'SATISTA',
-      history: [],
-    })
+  return {
+    ...project,
+    maxFloors: maxFl,
+    units: remappedUnits,
   }
-
-  return flats
 }
-
-const INITIAL_PROJECTS: SharedProject[] = []
 
 type Listener = () => void
 
@@ -120,7 +139,7 @@ class ProjectStore {
   }
 
   public setLoadedProjects(projects: SharedProject[]) {
-    this.projects = projects || []
+    this.projects = (projects || []).map(normalizeProjectFloors)
     try {
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(this.projects))
     } catch {}
@@ -184,7 +203,7 @@ class ProjectStore {
       const saved = localStorage.getItem(STORAGE_KEY_PROJECTS)
       if (saved) {
         const parsed = JSON.parse(saved)
-        this.projects = Array.isArray(parsed) ? parsed : []
+        this.projects = Array.isArray(parsed) ? parsed.map(normalizeProjectFloors) : []
       } else {
         this.projects = []
       }
@@ -516,42 +535,254 @@ class ProjectStore {
     return { success: true, unit }
   }
 
-  public addProject(data: Omit<SharedProject, 'id' | 'units'>): SharedProject {
+  public addProject(
+    data: Omit<SharedProject, 'id' | 'units'> & {
+      parsedUnits?: {
+        unitNumber: string
+        block: string
+        floor: number
+        roomType: RoomType
+        grossSqm: number
+        netSqm: number
+        price: number
+        status: FlatStatus
+        facade?: string
+        description?: string
+      }[]
+    }
+  ): SharedProject {
+    const maxFl: 1 | 2 | 3 =
+      data.maxFloors === 1 || data.maxFloors === 2 || data.maxFloors === 3 ? data.maxFloors : 3
+    const blkCount: 1 | 2 = data.blockCount === 2 ? 2 : 1
+    const upf = Math.max(1, Math.min(8, data.unitsPerFloor || 4))
+    const defaultRm = data.defaultRoomType || 'MIXED'
+
+    const { parsedUnits, ...restData } = data
     const newPrj: SharedProject = {
-      ...data,
+      ...restData,
       id: 'prj-' + Date.now(),
+      maxFloors: maxFl,
+      unitsPerFloor: upf,
+      blockCount: blkCount,
+      defaultRoomType: defaultRm,
       units: [],
     }
-    const unitCount = Math.max(1, Math.min(data.totalUnits || 24, 120))
-    const types: RoomType[] = ['1+1', '2+1', '3+1', '4+1', 'Penthouse']
+
+    const types: RoomType[] = ['1+1', '2+1', '3+1', '4+1']
     const flats: FlatUnit[] = []
 
-    for (let i = 1; i <= unitCount; i++) {
-      const floor = Math.floor((i - 1) / 4) + 1
-      const rType = types[(i - 1) % types.length]
-      const baseSqm = rType === '1+1' ? 65 : rType === '2+1' ? 95 : rType === '3+1' ? 140 : rType === '4+1' ? 190 : 260
-      const basePrice = data.startingPrice && data.startingPrice > 0 ? (data.startingPrice + (floor * 50000)) : 0
-
-      flats.push({
-        id: `${newPrj.id}-u${i}`,
-        projectId: newPrj.id,
-        unitNumber: `D-${i.toString().padStart(2, '0')}`,
-        block: i <= Math.ceil(unitCount / 2) ? 'A Blok' : 'B Blok',
-        floor,
-        roomType: rType,
-        grossSqm: baseSqm,
-        netSqm: Math.round(baseSqm * 0.78),
-        price: basePrice,
-        status: 'SATISTA',
-        history: [],
+    if (parsedUnits && parsedUnits.length > 0) {
+      parsedUnits.forEach((pu, idx) => {
+        const clampedFl = Math.max(0, Math.min(maxFl - 1, Math.min(2, pu.floor ?? idx % maxFl)))
+        flats.push({
+          id: `${newPrj.id}-u${idx + 1}`,
+          projectId: newPrj.id,
+          unitNumber: pu.unitNumber || `D-${(idx + 1).toString().padStart(2, '0')}`,
+          block: pu.block || 'A Blok',
+          floor: clampedFl,
+          roomType: pu.roomType || '2+1',
+          grossSqm: pu.grossSqm || 100,
+          netSqm: pu.netSqm || 80,
+          price: pu.price || 0,
+          status: pu.status || 'SATISTA',
+          facade: pu.facade || (clampedFl === 0 ? 'Bahçe / Peyzaj Cephe' : 'Güney / Ön Cephe'),
+          description: pu.description,
+          history: [],
+        })
       })
+    } else {
+      const blocks = blkCount === 2 ? ['A Blok', 'B Blok'] : ['A Blok']
+      let unitSeq = 1
+      for (const blk of blocks) {
+        for (let fl = 0; fl < maxFl; fl++) {
+          for (let u = 0; u < upf; u++) {
+            const rType: RoomType =
+              defaultRm !== 'MIXED' ? defaultRm : types[(unitSeq - 1) % types.length]
+            const baseSqm =
+              rType === '1+1'
+                ? 68
+                : rType === '2+1'
+                ? 98
+                : rType === '3+1'
+                ? 142
+                : rType === '4+1'
+                ? 185
+                : 230
+            const basePrice =
+              data.startingPrice && data.startingPrice > 0
+                ? data.startingPrice + fl * 75000
+                : baseSqm * 46000 + fl * 75000
+
+            flats.push({
+              id: `${newPrj.id}-u${unitSeq}`,
+              projectId: newPrj.id,
+              unitNumber: `D-${unitSeq.toString().padStart(2, '0')}`,
+              block: blk,
+              floor: fl, // 0 = Zemin, 1 = 1. Kat, 2 = 2. Kat
+              roomType: rType,
+              grossSqm: baseSqm,
+              netSqm: Math.round(baseSqm * 0.8),
+              price: basePrice,
+              status: 'SATISTA',
+              facade: fl === 0 ? 'Bahçe / Peyzaj Cephe' : u % 2 === 0 ? 'Güney / Ön Cephe' : 'Doğu / Köşe Cephe',
+              history: [],
+            })
+            unitSeq++
+          }
+        }
+      }
     }
 
+    newPrj.totalUnits = flats.length
     newPrj.units = flats
     this.projects = [newPrj, ...this.projects]
     this.saveToStorage()
     syncService.saveProject(newPrj)
     return newPrj
+  }
+
+  /**
+   * Reconfigure an existing project's 3-floor Kroki layout (automatically from uploaded doc or manually via controls)
+   */
+  public reconfigureProjectKroki(
+    projectId: string,
+    config: {
+      maxFloors: 1 | 2 | 3
+      unitsPerFloor: number
+      blockCount?: 1 | 2
+      defaultRoomType?: RoomType | 'MIXED'
+      layoutTemplate?: BlueprintLayoutTemplate
+      blueprintDataUrl?: string
+      sourceDocumentName?: string
+      sourceDocumentSummary?: string
+      parsedUnits?: {
+        unitNumber: string
+        block: string
+        floor: number
+        roomType: RoomType
+        grossSqm: number
+        netSqm: number
+        price: number
+        status: FlatStatus
+        facade?: string
+      }[]
+    }
+  ): { success: boolean; project?: SharedProject; error?: string } {
+    const idx = this.projects.findIndex((p) => p.id === projectId)
+    if (idx === -1) return { success: false, error: 'Proje bulunamadı.' }
+
+    const current = this.projects[idx]
+    const maxFl: 1 | 2 | 3 =
+      config.maxFloors === 1 || config.maxFloors === 2 || config.maxFloors === 3
+        ? config.maxFloors
+        : 3
+    const upf = Math.max(1, Math.min(8, config.unitsPerFloor || 4))
+    const blkCount: 1 | 2 = config.blockCount || current.blockCount || 1
+    const defaultRm: RoomType | 'MIXED' =
+      config.defaultRoomType || current.defaultRoomType || 'MIXED'
+
+    const existingUnits = current.units || []
+    const types: RoomType[] = ['1+1', '2+1', '3+1', '4+1']
+    const nextUnits: FlatUnit[] = []
+
+    if (config.parsedUnits && config.parsedUnits.length > 0) {
+      config.parsedUnits.forEach((pu, i) => {
+        const clampedFl = Math.max(0, Math.min(maxFl - 1, Math.min(2, pu.floor ?? i % maxFl)))
+        const existingMatch = existingUnits[i]
+        nextUnits.push({
+          id: existingMatch?.id || `${current.id}-u${i + 1}-${Date.now()}`,
+          projectId: current.id,
+          unitNumber: pu.unitNumber || `D-${(i + 1).toString().padStart(2, '0')}`,
+          block: pu.block || 'A Blok',
+          floor: clampedFl,
+          roomType: pu.roomType || '2+1',
+          grossSqm: pu.grossSqm || 100,
+          netSqm: pu.netSqm || 80,
+          price: pu.price || existingMatch?.price || 4600000,
+          status: existingMatch?.status !== 'SATISTA' && existingMatch ? existingMatch.status : pu.status || 'SATISTA',
+          facade: pu.facade || (clampedFl === 0 ? 'Bahçe / Peyzaj Cephe' : 'Güney / Ön Cephe'),
+          reservation: existingMatch?.reservation,
+          sale: existingMatch?.sale,
+          history: existingMatch?.history || [],
+        })
+      })
+    } else {
+      const blocks = blkCount === 2 ? ['A Blok', 'B Blok'] : ['A Blok']
+      let seq = 0
+      for (const blk of blocks) {
+        for (let fl = 0; fl < maxFl; fl++) {
+          for (let u = 0; u < upf; u++) {
+            const existing = existingUnits[seq]
+            const rType: RoomType =
+              defaultRm !== 'MIXED'
+                ? defaultRm
+                : existing?.roomType || types[seq % types.length]
+            const baseSqm =
+              rType === '1+1'
+                ? 68
+                : rType === '2+1'
+                ? 98
+                : rType === '3+1'
+                ? 142
+                : rType === '4+1'
+                ? 185
+                : 230
+            const gross = defaultRm !== 'MIXED' ? baseSqm : existing?.grossSqm || baseSqm
+            const net = Math.round(gross * 0.8)
+            const price =
+              existing && existing.price > 0
+                ? existing.price
+                : gross * 46000 + fl * 75000
+
+            nextUnits.push({
+              id: existing?.id || `${current.id}-u${seq + 1}-${Date.now()}`,
+              projectId: current.id,
+              unitNumber: `D-${(seq + 1).toString().padStart(2, '0')}`,
+              block: blk,
+              floor: fl, // 0: Zemin, 1: 1. Kat, 2: 2. Kat
+              roomType: rType,
+              grossSqm: gross,
+              netSqm: net,
+              price,
+              status: existing?.status || 'SATISTA',
+              facade:
+                existing?.facade ||
+                (fl === 0 ? 'Bahçe / Peyzaj Cephe' : u % 2 === 0 ? 'Güney / Ön Cephe' : 'Doğu / Köşe Cephe'),
+              description: existing?.description,
+              reservation: existing?.reservation,
+              sale: existing?.sale,
+              history: existing?.history || [],
+            })
+            seq++
+          }
+        }
+      }
+    }
+
+    const nextFloorPlans = { ...(current.floorPlans || {}) }
+    if (config.blueprintDataUrl) {
+      nextFloorPlans['DEFAULT'] = config.blueprintDataUrl
+    }
+
+    const updated: SharedProject = {
+      ...current,
+      maxFloors: maxFl,
+      unitsPerFloor: upf,
+      blockCount: blkCount,
+      defaultRoomType: defaultRm,
+      layoutTemplate: config.layoutTemplate || current.layoutTemplate || 'quad',
+      blueprintUrl: config.blueprintDataUrl || current.blueprintUrl,
+      floorPlans: nextFloorPlans,
+      sourceDocumentName: config.sourceDocumentName ?? current.sourceDocumentName,
+      sourceDocumentSummary: config.sourceDocumentSummary ?? current.sourceDocumentSummary,
+      totalUnits: nextUnits.length,
+      units: nextUnits,
+    }
+
+    this.projects[idx] = updated
+    this.saveToStorage()
+    syncService.saveProject(updated)
+    return { success: true, project: updated }
   }
 
   public updateProject(
@@ -621,6 +852,48 @@ class ProjectStore {
     this.saveToStorage()
     syncService.saveUnit(unit)
     return { success: true, unit }
+  }
+
+  public updateFloorPlan(
+    projectId: string,
+    floorKey: string,
+    dataUrl: string | null
+  ): { success: boolean; error?: string } {
+    const idx = this.projects.findIndex((p) => p.id === projectId)
+    if (idx === -1) return { success: false, error: 'Proje bulunamadı.' }
+
+    const current = this.projects[idx]
+    const nextFloorPlans = { ...(current.floorPlans || {}) }
+    if (dataUrl) {
+      nextFloorPlans[floorKey] = dataUrl
+    } else {
+      delete nextFloorPlans[floorKey]
+    }
+
+    const updated: SharedProject = {
+      ...current,
+      floorPlans: nextFloorPlans,
+      blueprintUrl: floorKey === 'DEFAULT' ? (dataUrl || undefined) : current.blueprintUrl,
+    }
+    this.projects[idx] = updated
+    this.saveToStorage()
+    syncService.saveProject(updated)
+    return { success: true }
+  }
+
+  public updateUnitPlanBox(
+    projectId: string,
+    unitId: string,
+    planBox?: UnitPlanBox
+  ): { success: boolean; error?: string } {
+    const project = this.getById(projectId)
+    const unit = project?.units.find((u) => u.id === unitId)
+    if (!unit) return { success: false, error: 'Daire bulunamadı.' }
+
+    unit.planBox = planBox
+    this.saveToStorage()
+    syncService.saveUnit(unit)
+    return { success: true }
   }
 }
 

@@ -1,8 +1,35 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Eye, EyeOff, Lock, User, CheckCircle2, LogOut, Sparkles, KeyRound, ShieldAlert, Settings } from 'lucide-react'
+import {
+  X,
+  Eye,
+  EyeOff,
+  Lock,
+  User,
+  CheckCircle2,
+  LogOut,
+  Sparkles,
+  KeyRound,
+  ShieldAlert,
+  Settings,
+  MapPin,
+  Clock,
+  Car,
+  Key,
+  Users,
+  Check,
+  RotateCcw,
+} from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { AppUser, Department, generateUsername, userStore } from '@/services/userStore'
+import {
+  teamOperationsStore,
+  PRESENCE_STATUS_OPTIONS,
+  PresenceStatusType,
+  getPresenceMeta,
+  SharedAssetItem,
+} from '@/services/teamOperationsStore'
 
 interface LoginModalProps {
   isOpen: boolean
@@ -11,6 +38,7 @@ interface LoginModalProps {
   onLoginSuccess: (user: AppUser) => void
   onLogout: () => void
   onOpenSettings?: () => void
+  onOpenTeams?: () => void
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({
@@ -20,6 +48,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onLoginSuccess,
   onLogout,
   onOpenSettings,
+  onOpenTeams,
 }) => {
   const hasAdmin = userStore.hasAdmin()
 
@@ -43,6 +72,51 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [pendingUser, setPendingUser] = useState<AppUser | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+
+  // Profile Card Live Presence State
+  const [presenceStatus, setPresenceStatus] = useState<PresenceStatusType>('OFISTE')
+  const [locationNote, setLocationNote] = useState('')
+  const [returnTime, setReturnTime] = useState('')
+  const [heldAssets, setHeldAssets] = useState<SharedAssetItem[]>([])
+  const [availableAssets, setAvailableAssets] = useState<SharedAssetItem[]>([])
+  const [selectedQuickAssetId, setSelectedQuickAssetId] = useState('')
+  const [statusSavedToast, setStatusSavedToast] = useState(false)
+
+  useEffect(() => {
+    if (!currentUser || !isOpen) return
+    const syncPresence = () => {
+      const rec = teamOperationsStore.getUserPresence(currentUser.id)
+      setPresenceStatus(rec.status)
+      setLocationNote(rec.locationNote || '')
+      setReturnTime(rec.returnTime || '')
+      const allAssets = teamOperationsStore.getAssets()
+      setHeldAssets(allAssets.filter((a) => a.holderUserId === currentUser.id))
+      setAvailableAssets(allAssets.filter((a) => !a.holderUserId))
+    }
+    syncPresence()
+    const unsub = teamOperationsStore.subscribe(syncPresence)
+    return unsub
+  }, [currentUser, isOpen])
+
+  const handleSavePresence = (overrideStatus?: PresenceStatusType) => {
+    if (!currentUser) return
+    const targetStatus = overrideStatus || presenceStatus
+    teamOperationsStore.updateUserPresence(currentUser.id, {
+      status: targetStatus,
+      locationNote: targetStatus === 'OFISTE' ? '' : locationNote,
+      returnTime: targetStatus === 'OFISTE' ? '' : returnTime,
+      updatedBy: currentUser.id,
+    })
+    if (selectedQuickAssetId) {
+      teamOperationsStore.checkoutAsset(selectedQuickAssetId, currentUser, {
+        destinationNote: locationNote,
+        expectedReturnTime: returnTime,
+      })
+      setSelectedQuickAssetId('')
+    }
+    setStatusSavedToast(true)
+    setTimeout(() => setStatusSavedToast(false), 2200)
+  }
 
   // Auto-switch to register-admin if no admin exists in the system
   useEffect(() => {
@@ -120,25 +194,31 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     onClose()
   }
 
-  return (
+  const activeMeta = getPresenceMeta(presenceStatus)
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
           {/* Backdrop Blur Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/75 backdrop-blur-md"
+            className="fixed inset-0 bg-black/65 backdrop-blur-md"
           />
 
-          {/* Modal Box - Reelms Theme Styling */}
+          {/* Modal Box - Expanded when logged in for Live Status & Custody Controls */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            className="relative w-full max-w-md z-10 rounded-[36px] bg-[#34302d] border border-[#4a443f] p-8 sm:p-10 shadow-2xl shadow-black/80 font-sans text-center select-none"
+            className={`glass-modal relative w-full ${
+              currentUser ? 'max-w-xl' : 'max-w-md'
+            } z-10 rounded-[36px] bg-[#34302d] border border-[#4a443f] p-6 sm:p-8 shadow-2xl shadow-black/80 font-sans select-none`}
           >
             {/* Close button */}
             <button
@@ -149,50 +229,228 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </button>
 
             {currentUser ? (
-              /* Already Logged In View */
-              <div className="space-y-6 py-3">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#282522] border-2 border-[#b99881]/50 flex items-center justify-center mx-auto text-2xl font-bold text-[#b99881] overflow-hidden shadow-xl ring-2 ring-[#b99881]/20">
-                  {currentUser.avatarUrl ? (
-                    <img
-                      src={currentUser.avatarUrl}
-                      alt={currentUser.fullName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    currentUser.fullName.slice(0, 2).toUpperCase()
+              /* Expanded Logged In Profile & Live Status Card */
+              <div className="space-y-5 text-left">
+                {/* Header: Avatar + User Info + Active Presence Badge */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1 pr-8">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="relative shrink-0">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#282522] border-2 border-[#b99881]/50 flex items-center justify-center text-xl font-bold text-[#b99881] overflow-hidden shadow-xl ring-2 ring-[#b99881]/20">
+                        {currentUser.avatarUrl ? (
+                          <img
+                            src={currentUser.avatarUrl}
+                            alt={currentUser.fullName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          currentUser.fullName.slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <span
+                        className={`absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full border-2 border-[#34302d] ${activeMeta.dotClass}`}
+                        title={activeMeta.label}
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="text-lg sm:text-xl font-bold text-white tracking-wide truncate">
+                        {currentUser.fullName}
+                      </h3>
+                      <p className="text-xs text-[#a69f99] truncate">
+                        @{currentUser.username} • {currentUser.department} Departmanı
+                      </p>
+                      <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold bg-[#282522] border-[#4a443f]">
+                        <span className={`w-2 h-2 rounded-full ${activeMeta.dotClass}`} />
+                        <span className={activeMeta.colorClass}>{activeMeta.label}</span>
+                        {returnTime && presenceStatus !== 'OFISTE' && (
+                          <span className="text-[#a69f99] font-normal">• Dönüş: {returnTime}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Status Selector ("Şu An Neredeyim?") */}
+                <div className="space-y-3 bg-[#282522]/90 border border-[#4a443f]/70 rounded-2xl p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#d6beae] flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#b99881]" />
+                      <span>Canlı Durumum (Şu An Neredeyim?)</span>
+                    </span>
+                    {statusSavedToast && (
+                      <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" />
+                        Güncellendi
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 8 Status Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {PRESENCE_STATUS_OPTIONS.map((opt) => {
+                      const isSelected = presenceStatus === opt.id
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setPresenceStatus(opt.id)
+                            if (opt.id === 'OFISTE') {
+                              setLocationNote('')
+                              setReturnTime('')
+                              handleSavePresence('OFISTE')
+                            }
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer text-left ${
+                            isSelected
+                              ? `${opt.bgClass} ${opt.borderClass} ${opt.colorClass} shadow-sm`
+                              : 'bg-[#1f1d1b]/80 border-[#4a443f]/50 text-[#c4bcb5] hover:text-white hover:border-[#b99881]/40'
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} />
+                          <span className="truncate">{opt.shortLabel}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Location Note & Expected Return Time */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-1">
+                    <div className="sm:col-span-8">
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Konum / Görev Açıklaması (Opsiyonel)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Örn: Vadi Konakları gösterimi, Kadıköy Tapu..."
+                        value={locationNote}
+                        onChange={(e) => setLocationNote(e.target.value)}
+                        className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3.5 py-2 text-xs text-white placeholder-[#8c857f] focus:outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-4">
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Tahmini Dönüş Saati
+                      </label>
+                      <input
+                        type="time"
+                        value={returnTime}
+                        onChange={(e) => setReturnTime(e.target.value)}
+                        className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Asset / Key Selection or Held Assets */}
+                  {(heldAssets.length > 0 || availableAssets.length > 0) && (
+                    <div className="pt-1 space-y-2">
+                      {heldAssets.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-semibold text-[#d6beae] block">
+                            Üzerimdeki Araç & Anahtarlar ({heldAssets.length})
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {heldAssets.map((asset) => (
+                              <div
+                                key={asset.id}
+                                className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#b99881]/15 border border-[#b99881]/35 text-xs text-[#f3efe9]"
+                              >
+                                {asset.category === 'ARAC' ? (
+                                  <Car className="w-3.5 h-3.5 text-[#dfb76c]" />
+                                ) : (
+                                  <Key className="w-3.5 h-3.5 text-[#dfb76c]" />
+                                )}
+                                <span className="font-semibold">{asset.name}</span>
+                                <span className="text-[10px] text-[#d6beae]">({asset.codeOrPlate})</span>
+                                <button
+                                  type="button"
+                                  onClick={() => teamOperationsStore.returnAsset(asset.id, currentUser)}
+                                  className="ml-1 px-1.5 py-0.5 rounded-md bg-white/10 hover:bg-emerald-500/20 text-[10px] text-[#dfb76c] hover:text-emerald-300 transition-colors cursor-pointer"
+                                  title="Ofise / Dolaba Teslim Et"
+                                >
+                                  Bırak
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {availableAssets.length > 0 && (
+                        <div>
+                          <label className="text-[11px] text-[#a69f99] block mb-1">
+                            Çıkarken Araç / Anahtar Al (Opsiyonel)
+                          </label>
+                          <select
+                            value={selectedQuickAssetId}
+                            onChange={(e) => setSelectedQuickAssetId(e.target.value)}
+                            className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                          >
+                            <option value="">— Araç veya anahtar seçilmedi —</option>
+                            {availableAssets.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.category === 'ARAC' ? '🚗 ' : a.category === 'PORTFOY_ANAHTARI' ? '🔑 ' : '🧰 '}
+                                {a.name} ({a.codeOrPlate})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </div>
 
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-white tracking-wide">
-                    {currentUser.fullName}
-                  </h3>
-                  <p className="text-xs text-[#a69f99]">
-                    @{currentUser.username} • {currentUser.department} Departmanı
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-[#4a443f]/60 flex flex-col gap-2.5">
-                  {onOpenSettings && (
+                  <div className="flex justify-end pt-1">
                     <GlassButton
                       variant="gold"
-                      size="md"
-                      icon={<Settings className="w-4 h-4" />}
-                      className="w-full rounded-full"
-                      onClick={() => {
-                        onClose()
-                        onOpenSettings()
-                      }}
+                      size="sm"
+                      icon={<CheckCircle2 className="w-4 h-4" />}
+                      className="rounded-full px-5"
+                      onClick={() => handleSavePresence()}
                     >
-                      Ayarlar
+                      Durumumu Güncelle
                     </GlassButton>
-                  )}
+                  </div>
+                </div>
+
+                {/* Bottom Action Buttons */}
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    {onOpenTeams && (
+                      <GlassButton
+                        variant="outline"
+                        size="sm"
+                        icon={<Users className="w-4 h-4" />}
+                        className="rounded-full"
+                        onClick={() => {
+                          onClose()
+                          onOpenTeams()
+                        }}
+                      >
+                        Ekipler Panosu
+                      </GlassButton>
+                    )}
+
+                    {onOpenSettings && (
+                      <GlassButton
+                        variant="outline"
+                        size="sm"
+                        icon={<Settings className="w-4 h-4" />}
+                        className="rounded-full"
+                        onClick={() => {
+                          onClose()
+                          onOpenSettings()
+                        }}
+                      >
+                        Ayarlar
+                      </GlassButton>
+                    )}
+                  </div>
 
                   <GlassButton
                     variant="danger"
-                    size="md"
+                    size="sm"
                     icon={<LogOut className="w-4 h-4" />}
-                    className="w-full rounded-full"
+                    className="rounded-full"
                     onClick={() => {
                       onLogout()
                       onClose()
@@ -490,6 +748,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

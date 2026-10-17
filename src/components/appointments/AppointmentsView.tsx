@@ -171,14 +171,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-[20px] bg-[#282522] border border-[#4a443f]">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto">
           <span className="text-xs text-[#8c857f] mr-1">Filtre:</span>
           {['ALL', 'ON_SITE', 'ONLINE', 'OFFICE'].map((t) => (
             <button
               key={t}
               onClick={() => setFilterType(t)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 filterType === t
                   ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
                   : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
@@ -194,10 +194,10 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 filterStatus === s
-                  ? 'bg-white/10 text-white font-bold border border-white/20'
-                  : 'text-[#8c857f] hover:text-white'
+                  ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
               }`}
             >
               {s === 'ALL' ? 'Tümü' : s === 'SCHEDULED' ? 'Planlanan' : s === 'COMPLETED' ? 'Tamamlanan' : 'İptal'}
@@ -266,32 +266,32 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       </div>
                     )}
                     {apt.notes && (
-                      <div className="p-2 rounded-[10px] bg-[#34302d] text-[11px] text-[#d6beae] mt-2">
-                        {apt.notes}
-                      </div>
+                      <p className="text-[11px] text-[#d6beae] mt-2 italic">
+                        "{apt.notes}"
+                      </p>
                     )}
                     {apt.outcomeNote && (
-                      <div className="p-2 rounded-[10px] bg-[#24211f] border border-[#4a443f] text-[11px] text-white mt-1">
+                      <p className="text-[11px] text-white mt-1 font-medium">
                         Sonuç: {apt.outcomeNote}
-                      </div>
+                      </p>
                     )}
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-[#4a443f]/60 flex items-center justify-between text-xs">
+                <div className="pt-2 flex items-center justify-between text-xs">
                   <span className="text-[#8c857f] text-[11px]">Sorumlu: {apt.assignedToUserName}</span>
                   {apt.status === 'SCHEDULED' && (
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleOpenOutcome(apt, 'COMPLETED')}
-                        className="p-1.5 rounded-[10px] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors cursor-pointer"
                         title="Randevuyu Tamamlandı Olarak İşaretle"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleOpenOutcome(apt, 'CANCELLED')}
-                        className="p-1.5 rounded-[10px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
                         title="Randevuyu İptal Et"
                       >
                         <XCircle className="w-4 h-4" />
@@ -323,7 +323,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 placeholder="Örn: Ahmet Ulucak"
                 value={customerName}
                 onChange={(e) => setCustomerName(toTitleCase(e.target.value))}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -349,7 +349,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -362,7 +362,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 required
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -373,7 +373,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as AppointmentType)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
                 <option value="ON_SITE">Şantiye / Proje</option>
                 <option value="OFFICE">Satış Ofisi</option>
@@ -391,7 +391,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(toTitleCase(e.target.value))}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -402,7 +402,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <select
                 value={assignedToUserName}
                 onChange={(e) => setAssignedToUserName(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
                 {allUsers.map((u) => (
                   <option key={u.id} value={u.fullName}>
@@ -421,7 +421,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               type="text"
               value={location}
               onChange={(e) => setLocation(toTitleCase(e.target.value))}
-              className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
             />
           </div>
 
@@ -468,7 +468,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setOutcomeStatus('COMPLETED')}
-                className={`flex-1 py-2 rounded-[12px] border font-semibold ${
+                className={`flex-1 py-2 rounded-full border font-semibold cursor-pointer ${
                   outcomeStatus === 'COMPLETED'
                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
                     : 'bg-[#24211f] border-[#4a443f] text-[#a69f99]'
@@ -479,7 +479,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setOutcomeStatus('CANCELLED')}
-                className={`flex-1 py-2 rounded-[12px] border font-semibold ${
+                className={`flex-1 py-2 rounded-full border font-semibold cursor-pointer ${
                   outcomeStatus === 'CANCELLED'
                     ? 'bg-rose-500/20 border-rose-500 text-rose-300'
                     : 'bg-[#24211f] border-[#4a443f] text-[#a69f99]'

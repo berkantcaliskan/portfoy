@@ -380,7 +380,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                       >
                         {/* Name & Tags */}
                         <td className="py-3.5 px-5">
-                          <div className="font-bold text-white group-hover:text-[#b99881] transition-colors">
+                          <div className="font-bold text-white group-hover:text-[#b99881] transition-colors select-text">
                             {lead.fullName}
                           </div>
                           <div className="flex flex-wrap items-center gap-1 mt-1">
@@ -398,7 +398,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                         {/* Phone & Direct WhatsApp Link */}
                         <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-white">
+                            <span className="font-mono text-white select-all">
                               {formatPhoneNumber(lead.phone)}
                             </span>
                             <a
@@ -419,7 +419,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                             </a>
                           </div>
                           {lead.email && (
-                            <span className="text-[11px] text-[#8c857f] block truncate max-w-[180px]">
+                            <span className="text-[11px] text-[#8c857f] block truncate max-w-[180px] select-all">
                               {lead.email}
                             </span>
                           )}
@@ -512,10 +512,10 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h4 className="font-bold text-white group-hover:text-[#b99881] transition-colors">
+                      <h4 className="font-bold text-white group-hover:text-[#b99881] transition-colors select-text">
                         {lead.fullName}
                       </h4>
-                      <p className="text-xs text-[#a69f99] font-mono mt-0.5">
+                      <p className="text-xs text-[#a69f99] font-mono mt-0.5 select-all">
                         {formatPhoneNumber(lead.phone)}
                       </p>
                     </div>

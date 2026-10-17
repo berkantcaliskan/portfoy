@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Building2,
   Check,
@@ -106,6 +107,35 @@ function compressAvatarImage(file: File): Promise<string> {
   })
 }
 
+export interface AccentColorOption {
+  id: string
+  name: string
+  color: string
+  hover: string
+  badge?: string
+}
+
+export const ACCENT_COLOR_OPTIONS: AccentColorOption[] = [
+  { id: 'indigo', name: 'İndigo', color: '#5c6ac4', hover: '#4c59b0', badge: 'Varsayılan' },
+  { id: 'beige', name: 'Bej', color: '#b99881', hover: '#a6856e' },
+  { id: 'sage', name: 'Vurgu Yeşili', color: '#657a72', hover: '#556860' },
+  { id: 'burgundy', name: 'Burgonya', color: '#8b3a4a', hover: '#752e3c' },
+  { id: 'pastel-yellow', name: 'Pastel Sarı', color: '#d4a359', hover: '#bf8f47' },
+  { id: 'pastel-purple', name: 'Pastel Mor', color: '#8b6bb1', hover: '#78599d' },
+  { id: 'lavender', name: 'Lavanta', color: '#9381ff', hover: '#7f6ce6' },
+  { id: 'pastel-rose', name: 'Pastel Gül', color: '#c97a8b', hover: '#b56677' },
+  { id: 'pastel-sky', name: 'Pastel Mavi', color: '#6b9ac4', hover: '#5987b0' },
+  { id: 'pastel-mint', name: 'Pastel Mint', color: '#68a691', hover: '#56927e' },
+]
+
+export function applyAccentColorChoice(accentId: string) {
+  if (typeof document === 'undefined') return
+  const found = ACCENT_COLOR_OPTIONS.find((item) => item.id === accentId) || ACCENT_COLOR_OPTIONS[0]
+  document.documentElement.style.setProperty('--accent-color', found.color)
+  document.documentElement.style.setProperty('--accent-light', found.color)
+  document.documentElement.style.setProperty('--accent-hover', found.hover)
+}
+
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
@@ -132,9 +162,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     window.dispatchEvent(new Event('demirturk_dock_config_updated'))
   }
 
-  // 5 Luxury Themes (Primary big circle + Secondary small badge)
+  // Custom Accent Color state ('indigo' default)
+  const [accentColorId, setAccentColorId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('demirturk_accent_color')
+      if (saved && ACCENT_COLOR_OPTIONS.some((o) => o.id === saved)) {
+        return saved
+      }
+    } catch {}
+    return 'indigo'
+  })
+
+  const activeAccentObj = ACCENT_COLOR_OPTIONS.find((o) => o.id === accentColorId) || ACCENT_COLOR_OPTIONS[0]
+
+  const handleSelectAccentColor = (id: string) => {
+    setAccentColorId(id)
+    localStorage.setItem('demirturk_accent_color', id)
+    applyAccentColorChoice(id)
+  }
+
+  // 6 Luxury Themes (Primary big circle + Secondary small badge)
   const THEMES: {
-    id: 'gold' | 'amber' | 'emerald' | 'sapphire' | 'platinum'
+    id: 'gold' | 'light' | 'amber' | 'emerald' | 'sapphire' | 'platinum'
     name: string
     desc: string
     primary: string
@@ -142,10 +191,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }[] = [
     {
       id: 'gold',
-      name: 'Reelms Bronz & Altın',
-      desc: 'Koyu bronz zemin & mat şampanya altını',
-      primary: '#282522',
-      secondary: '#b99881',
+      name: 'Reelms Ana Tema (Varsayılan)',
+      desc: `Kırık beyaz (#f5f5f2), kart (#ffffff), nav (#e3e5e1) & vurgu (${activeAccentObj.name})`,
+      primary: '#F4F0E7',
+      secondary: activeAccentObj.color,
+    },
+    {
+      id: 'light',
+      name: 'Reelms Açık Ton',
+      desc: `Kırık beyaz (#f5f5f2), kart (#ffffff), ikincil (#ebece9) & vurgu (${activeAccentObj.name})`,
+      primary: '#ffffff',
+      secondary: activeAccentObj.color,
     },
     {
       id: 'amber',
@@ -178,23 +234,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   ]
 
   // Theme Accent state
-  const [themeAccent, setThemeAccent] = useState<'gold' | 'amber' | 'emerald' | 'sapphire' | 'platinum'>(() => {
+  const [themeAccent, setThemeAccent] = useState<'gold' | 'light' | 'amber' | 'emerald' | 'sapphire' | 'platinum'>(() => {
     try {
       const saved = localStorage.getItem('demirturk_theme_accent')
-      if (saved === 'amber' || saved === 'emerald' || saved === 'sapphire' || saved === 'platinum') {
+      if (saved === 'light' || saved === 'amber' || saved === 'emerald' || saved === 'sapphire' || saved === 'platinum') {
         return saved
       }
     } catch {}
     return 'gold'
   })
 
-  const handleSetAccent = (acc: 'gold' | 'amber' | 'emerald' | 'sapphire' | 'platinum') => {
+  const handleSetAccent = (acc: 'gold' | 'light' | 'amber' | 'emerald' | 'sapphire' | 'platinum') => {
     setThemeAccent(acc)
     localStorage.setItem('demirturk_theme_accent', acc)
     if (acc === 'gold') {
       document.documentElement.removeAttribute('data-theme-accent')
+      applyAccentColorChoice(accentColorId)
+    } else if (acc === 'light') {
+      document.documentElement.setAttribute('data-theme-accent', acc)
+      applyAccentColorChoice(accentColorId)
     } else {
       document.documentElement.setAttribute('data-theme-accent', acc)
+      document.documentElement.style.removeProperty('--accent-color')
+      document.documentElement.style.removeProperty('--accent-light')
+      document.documentElement.style.removeProperty('--accent-hover')
     }
   }
 
@@ -408,86 +471,69 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const deptTabs = getDepartmentTabs(currentDept)
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
       {/* Backdrop Blur Overlay */}
       <div
         onClick={onClose}
         className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity"
       />
 
-      {/* 
-        SETTINGS MODAL WRAPPER (Menü Pencere Dışında, Pencere Genişletilmiş & Uzatılmış)
-        - Sol menü hiçbir katmana dahil olmadan doğrudan arka plan üzerinde (yalnızca yazı ve ikonlar)
-        - Sağ pencere: dikey olarak uzatıldı (680px), yatay olarak genişletildi (820px)
-        - Pencere boyutu sabittir, içeriğe göre boyut değiştirmez
-      */}
-      <div className="relative z-10 flex items-stretch gap-7 max-w-[96vw] h-[680px] max-h-[90vh]">
-        
-        {/* 
-          SOL MENÜ:
-          - Pencereye dahil değil (dışarıda)
-          - Hiçbir katmana veya kutuya dahil olmadan, sadece yazı ve ikonlar
-        */}
-        <aside className="w-[210px] shrink-0 flex flex-col justify-between py-3 text-[#f3efe9] select-none">
+      {/* SETTINGS MODAL WRAPPER */}
+      <div className="relative z-10 flex items-stretch gap-5 max-w-[96vw] h-[680px] max-h-[90vh]">
+        {/* SOL MENÜ */}
+        <aside className="glass-modal w-[222px] shrink-0 flex flex-col justify-between p-4 rounded-[28px] bg-[#282522] border border-[#4a443f] text-[#f3efe9] select-none">
           <div className="space-y-6">
             
             {/* Section 1: Genel Ayarlar */}
             <div>
-              <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-1 mb-2.5">
+              <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-2 mb-2">
                 Genel Ayarlar
               </div>
               <nav className="space-y-1">
                 <button
                   onClick={() => setActiveTab('account')}
-                  className={`w-full flex items-center gap-3 px-1.5 py-2 text-xs transition-colors cursor-pointer text-left ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'account'
-                      ? 'text-[#b99881] font-bold'
+                      ? 'bg-[#b99881] text-white font-bold'
                       : 'text-[#a69f99] hover:text-white font-medium'
                   }`}
                 >
-                  <User className={`w-4 h-4 shrink-0 ${activeTab === 'account' ? 'text-[#b99881]' : 'text-[#8c857f]'}`} />
+                  <User className={`w-4 h-4 shrink-0 ${activeTab === 'account' ? 'text-white' : 'text-[#8c857f]'}`} />
                   <span className="truncate">Hesap ve profil</span>
-                  {activeTab === 'account' && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#b99881] shrink-0" />
-                  )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('appearance')}
-                  className={`w-full flex items-center gap-3 px-1.5 py-2 text-xs transition-colors cursor-pointer text-left ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'appearance'
-                      ? 'text-[#b99881] font-bold'
+                      ? 'bg-[#b99881] text-white font-bold'
                       : 'text-[#a69f99] hover:text-white font-medium'
                   }`}
                 >
-                  <Palette className={`w-4 h-4 shrink-0 ${activeTab === 'appearance' ? 'text-[#b99881]' : 'text-[#8c857f]'}`} />
+                  <Palette className={`w-4 h-4 shrink-0 ${activeTab === 'appearance' ? 'text-white' : 'text-[#8c857f]'}`} />
                   <span className="truncate">Kişiselleştir</span>
-                  {activeTab === 'appearance' && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#b99881] shrink-0" />
-                  )}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('company')}
-                  className={`w-full flex items-center gap-3 px-1.5 py-2 text-xs transition-colors cursor-pointer text-left ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'company'
-                      ? 'text-[#b99881] font-bold'
+                      ? 'bg-[#b99881] text-white font-bold'
                       : 'text-[#a69f99] hover:text-white font-medium'
                   }`}
                 >
-                  <Building2 className={`w-4 h-4 shrink-0 ${activeTab === 'company' ? 'text-[#b99881]' : 'text-[#8c857f]'}`} />
+                  <Building2 className={`w-4 h-4 shrink-0 ${activeTab === 'company' ? 'text-white' : 'text-[#8c857f]'}`} />
                   <span className="truncate">Şirket ve departman</span>
-                  {activeTab === 'company' && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#b99881] shrink-0" />
-                  )}
                 </button>
               </nav>
             </div>
 
             {/* Section 2: Departman Ayarları */}
             <div>
-              <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-1 mb-2.5">
+              <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-2 mb-2">
                 {currentDept} Ayarları
               </div>
               <nav className="space-y-1">
@@ -498,17 +544,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-1.5 py-2 text-xs transition-colors cursor-pointer text-left ${
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                         isActive
-                          ? 'text-[#b99881] font-bold'
+                          ? 'bg-[#b99881] text-white font-bold'
                           : 'text-[#a69f99] hover:text-white font-medium'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#b99881]' : 'text-[#8c857f]'}`} />
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#8c857f]'}`} />
                       <span className="truncate">{tab.label}</span>
-                      {isActive && (
-                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#b99881] shrink-0" />
-                      )}
                     </button>
                   )
                 })}
@@ -517,31 +560,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Menü Altı Kullanıcı Künyesi */}
-          <div className="px-1 text-[11px] text-[#8c857f] truncate">
+          <div className="px-2 text-[11px] text-[#8c857f] truncate">
             @{currentUser?.username || 'berkant'} • {currentDept}
           </div>
         </aside>
 
-        {/* 
-          SAĞ PENCERE:
-          - Dikey olarak uzatıldı (680px)
-          - Menüler dışarı alındıktan sonra yatay olarak genişletildi (820px)
-          - Sabit boyutlu, içeriğe göre boyut değiştirmez
-        */}
-        <div className="w-[820px] max-w-[calc(96vw-240px)] h-full rounded-[32px] bg-[#2b2724]/95 backdrop-blur-2xl border border-[#4a443f] shadow-2xl shadow-black/80 flex flex-col overflow-hidden text-[#f3efe9] select-none font-sans relative">
-          
-          {/* Top subtle highlight */}
-          <div className="pointer-events-none absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#b99881]/40 to-transparent" />
-
+        {/* SAĞ PENCERE */}
+        <div className="glass-modal w-[820px] max-w-[calc(96vw-242px)] h-full rounded-[32px] bg-[#282522] border border-[#4a443f] shadow-2xl flex flex-col overflow-hidden text-[#f3efe9] select-none font-sans relative">
           {/* Modal Header */}
-          <div className="px-7 py-4 border-b border-[#4a443f]/60 flex items-center justify-between shrink-0">
+          <div className="px-7 pt-5 pb-2 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
               <Settings className="w-4.5 h-4.5 text-[#b99881]" />
               <h2 className="text-sm font-bold text-white tracking-wide">Ayarlar</h2>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-[#a69f99] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-1.5 rounded-full text-[#a69f99] hover:text-white hover:bg-black/5 transition-colors cursor-pointer"
               title="Kapat"
             >
               <X className="w-4.5 h-4.5" />
@@ -549,7 +583,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Fixed Scrollable Content */}
-          <main className="flex-1 p-7 overflow-y-auto space-y-6">
+          <div className="flex-1 p-7 pt-4 overflow-y-auto space-y-6">
 
             {/* TAB 1: HESAP VE PROFİL */}
             {activeTab === 'account' && (
@@ -738,7 +772,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                       <Palette className="w-3.5 h-3.5 text-[#b99881]" />
-                      <span>Renk Temaları (5 Seçenek)</span>
+                      <span>Renk Temaları (6 Seçenek)</span>
                     </h4>
                     <span className="text-[11px] text-[#8c857f]">Büyük daire: Zemin • Küçük rozet: Vurgu</span>
                   </div>
@@ -775,6 +809,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               {isSelected && <Check className="w-3.5 h-3.5 text-[#b99881]" />}
                             </div>
                             <div className="text-[10px] text-[#8c857f] truncate mt-0.5">{t.desc}</div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* VURGU RENGİ (ACCENT COLOR) SEÇİCİ */}
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#b99881]" />
+                      <span>Vurgu Rengi</span>
+                    </h4>
+                    <span className="text-[11px] text-[#8c857f]">
+                      Seçili: <strong className="text-white">{activeAccentObj.name}</strong> ({activeAccentObj.color})
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {ACCENT_COLOR_OPTIONS.map((opt, idx) => {
+                      const isSelected = accentColorId === opt.id
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => handleSelectAccentColor(opt.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-full border text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-[#b99881] bg-[#b99881]/15 shadow-sm'
+                              : 'border-[#4a443f]/60 hover:border-[#b99881]/40 bg-[#1e1c1a]/50'
+                          }`}
+                          title={`${idx + 1}. ${opt.name} (${opt.color})`}
+                        >
+                          <span
+                            className="w-4 h-4 rounded-full shrink-0 border border-black/15 shadow-sm flex items-center justify-center"
+                            style={{ backgroundColor: opt.color }}
+                          >
+                            {isSelected && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[11px] font-bold text-white truncate">
+                              {opt.name}
+                            </div>
+                            <div className="text-[9px] text-[#8c857f] truncate font-mono">
+                              {opt.badge ? opt.badge : opt.color}
+                            </div>
                           </div>
                         </button>
                       )
@@ -1322,9 +1405,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-          </main>
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

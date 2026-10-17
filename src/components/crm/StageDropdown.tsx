@@ -88,7 +88,10 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
       }
     }
 
-    const handleScrollOrResize = () => {
+    const handleScrollOrResize = (e: Event) => {
+      if (menuRef.current && e.target instanceof Node && menuRef.current.contains(e.target)) {
+        return
+      }
       setIsOpen(false)
     }
 
@@ -110,7 +113,7 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
         type="button"
         disabled={disabled}
         onClick={handleToggle}
-        className={`px-3 py-1.5 rounded-[12px] bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
+        className={`px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
           isOpen ? 'border-[#b99881] ring-1 ring-[#b99881]/40' : ''
         } ${className}`}
         title="Aşama Seç"

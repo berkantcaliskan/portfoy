@@ -48,6 +48,7 @@ export type NavPageId =
   | 'executive-reports'
   | 'approvals'
   // Ortak sabitler
+  | 'teams'
   | 'shared'
   | 'projects'
   // Dock / Başlat menüsü öğeleri
@@ -60,11 +61,12 @@ export interface DepartmentPageConfig {
 }
 
 /**
- * EXACT 6 PAGES PER DEPARTMENT:
+ * DEFAULT PAGES PER DEPARTMENT:
  * 1. Başlangıç (dashboard)
- * 2, 3, 4: Department-specific
- * 5. Paylaşılanlar (shared)
- * 6. Projeler (projects)
+ * Department-specific pages
+ * Ekipler (teams) -> Paylaşılanlar'dan hemen önce
+ * Paylaşılanlar (shared)
+ * Projeler (projects)
  */
 export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> = {
   'Pazarlama': [
@@ -72,6 +74,7 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'portfolio', label: 'Müşteriler' },
     { id: 'marketing-campaigns', label: 'Kampanyalar' },
     { id: 'marketing-reports', label: 'Raporlar' },
+    { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
   ],
@@ -81,6 +84,7 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'appointments', label: 'Randevular' },
     { id: 'requests', label: 'Talepler' },
     { id: 'sales-performance', label: 'Performans' },
+    { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
   ],
@@ -89,6 +93,7 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'customers', label: 'Müşteriler' },
     { id: 'followups-appointments', label: 'Takip ve Randevular' },
     { id: 'requests', label: 'Talepler' },
+    { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
   ],
@@ -97,6 +102,7 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'collections', label: 'Tahsilatlar' },
     { id: 'payments', label: 'Ödemeler' },
     { id: 'financial-reports', label: 'Finansal Raporlar' },
+    { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
   ],
@@ -105,6 +111,7 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'team-permissions', label: 'Ekip ve Yetkiler' },
     { id: 'executive-reports', label: 'Raporlar' },
     { id: 'approvals', label: 'Onaylar' },
+    { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
   ],
@@ -125,6 +132,7 @@ export function normalizeDepartmentName(dept: string): Department {
 
 export const PAGE_TO_DEPARTMENT_MAP: Record<NavPageId, Department | 'ALL'> = {
   dashboard: 'ALL',
+  teams: 'ALL',
   shared: 'ALL',
   projects: 'ALL',
   contacts: 'ALL',

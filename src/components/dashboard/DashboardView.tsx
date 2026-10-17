@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
   Target,
   Clock,
-  Sparkles,
   Home,
   CheckCircle2,
   AlertCircle,
   Share2,
   PhoneCall,
-  MessageSquare,
   TrendingUp,
   TurkishLira,
   Briefcase,
@@ -19,12 +17,17 @@ import {
   Building2,
   ArrowRight,
   ShieldCheck,
+  BarChart3,
+  Filter,
+  Inbox,
+  Megaphone,
+  Layers,
 } from 'lucide-react'
 import { Lead, STAGE_CONFIGS } from '@/types/lead'
 import { PortfolioItem } from '@/types/portfolio'
 import { AppUser } from '@/services/userStore'
 import { Department } from '@/types/department'
-import { formatCurrency, formatDate, generateWhatsAppUrl } from '@/utils/formatters'
+import { formatCurrency, formatDate } from '@/utils/formatters'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { appointmentStore } from '@/services/appointmentStore'
@@ -44,7 +47,7 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   leads,
-  properties,
+  properties: _properties,
   onSelectLead,
   onNavigateToTab,
   currentUser,
@@ -59,6 +62,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const approvals = approvalStore.getAll()
   const requests = requestStore.getAll()
   const metaForms = metaStore.getForms()
+
+  // Focal chart & filter states
+  const [chartRange, setChartRange] = useState<'7d' | '30d' | 'month'>('7d')
+  const [leadFilter, setLeadFilter] = useState<'ALL' | 'NEW' | 'QUALIFIED'>('ALL')
 
   // Live computer time and interactive seconds state
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date())
@@ -90,32 +97,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     day: 'numeric',
   })
 
-  // Common title header adhering to strict guidelines:
-  // "Başlık her zaman Başlangıç'tır. Asla katman içinde değildir. Yanında bir ikon olabilir. Altındaki çizgi kaldırıldı."
+  // Son 7 günün tarih etiketleri ve aday sayıları (Odak Noktası Analitik Grafiği için)
+  const last7DaysData = useMemo(() => {
+    const days: { label: string; dateStr: string; total: number; qualified: number }[] = []
+    const now = new Date()
+    const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt']
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(now.getDate() - i)
+      const isoDay = d.toISOString().split('T')[0]
+      const dayLeads = leads.filter((l) => (l.createdAt || '').startsWith(isoDay))
+      const dayQualified = dayLeads.filter((l) => l.stage === 'QUALIFIED' || l.stage === 'WON')
+      days.push({
+        label: dayNames[d.getDay()],
+        dateStr: `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`,
+        total: dayLeads.length,
+        qualified: dayQualified.length,
+      })
+    }
+    return days
+  }, [leads])
+
+  // Sayfa Başlığı: 26 px, semibold (Tipografi Hiyerarşisi Standardı)
   const renderHeader = () => (
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-3">
-        <Home className="w-5 h-5 text-[#b99881]" />
-        <h1 className="text-2xl font-bold text-white tracking-wide">
+    <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center gap-2.5">
+        <Home className="w-5 h-5 text-[#b99881]" strokeWidth={2.1} />
+        <h1 className="text-[26px] font-semibold text-white tracking-tight leading-tight">
           Başlangıç
         </h1>
       </div>
 
-      {/* Tarih ve Bilgisayar Saati (Saate tıklandığında hafif sola kayma ve saniye animasyonu) */}
+      {/* Tarih ve Bilgisayar Saati */}
       <motion.div
         animate={{ x: showSeconds ? -10 : 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-        className="flex items-center gap-3 text-sm font-medium text-[#d6beae] select-none"
+        className="flex items-center gap-3 text-[12px] font-normal text-[#a69f99] select-none"
       >
-        <span className="whitespace-nowrap">{formattedDate}</span>
+        <span className="whitespace-nowrap hidden sm:inline">{formattedDate}</span>
         <button
           type="button"
           onClick={() => setShowSeconds((prev) => !prev)}
           title={showSeconds ? 'Saniyeyi gizlemek için tıklayın' : 'Saniyeyi görmek için tıklayın'}
-          className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#282522]/70 hover:bg-[#282522]/90 border border-white/10 hover:border-white/25 text-[#d6beae] hover:text-white transition-all duration-200 cursor-pointer shadow-sm backdrop-blur-md"
+          className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#282522]/70 hover:bg-[#282522]/90 border border-[#4a443f] text-[#d6beae] hover:text-white transition-all duration-200 cursor-pointer"
         >
-          <Clock className="w-3.5 h-3.5 text-[#b99881] group-hover:text-[#e4c9b3] transition-colors" />
-          <span className="font-mono tracking-tight text-xs sm:text-sm font-semibold text-white/90">
+          <Clock className="w-3.5 h-3.5 text-[#b99881] transition-colors" />
+          <span className="font-mono tracking-tight text-[12px] font-semibold text-white">
             {hours}:{minutes}
           </span>
           <AnimatePresence>
@@ -126,7 +154,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 animate={{ opacity: 1, width: 'auto', marginLeft: 2 }}
                 exit={{ opacity: 0, width: 0, marginLeft: 0 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
-                className="font-mono text-xs sm:text-sm font-semibold text-[#b99881] overflow-hidden whitespace-nowrap"
+                className="font-mono text-[12px] font-semibold text-[#b99881] overflow-hidden whitespace-nowrap"
               >
                 :{seconds}
               </motion.span>
@@ -137,111 +165,520 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     </div>
   )
 
+  // Ortak Odak Noktası Analitik Grafik Bileşeni (Sol Ana İçerik Alanı)
+  const renderLeadFlowChart = () => {
+    const maxVal = Math.max(4, ...last7DaysData.map((d) => d.total))
+    const width = 620
+    const height = 165
+    const padX = 24
+    const padY = 20
+    const usableW = width - padX * 2
+    const usableH = height - padY * 2
+
+    const points = last7DaysData.map((d, idx) => {
+      const x = padX + (idx / Math.max(1, last7DaysData.length - 1)) * usableW
+      // Veri 0 olduğunda bile tabanda zarif ve okunabilir analitik iz çizgisi oluştur
+      const normalized = d.total === 0 ? 0.06 : d.total / maxVal
+      const y = padY + usableH - normalized * usableH
+      return { x, y, ...d }
+    })
+
+    // Smooth cubic bezier SVG path
+    const buildSmoothPath = (pts: { x: number; y: number }[]) => {
+      if (pts.length === 0) return ''
+      if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`
+      let path = `M ${pts[0].x} ${pts[0].y}`
+      for (let i = 0; i < pts.length - 1; i++) {
+        const curr = pts[i]
+        const next = pts[i + 1]
+        const cpx1 = curr.x + (next.x - curr.x) * 0.45
+        const cpy1 = curr.y
+        const cpx2 = curr.x + (next.x - curr.x) * 0.55
+        const cpy2 = next.y
+        path += ` C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${next.x} ${next.y}`
+      }
+      return path
+    }
+
+    const linePath = buildSmoothPath(points)
+    const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - padY} L ${points[0].x} ${height - padY} Z`
+
+    const totalPeriodLeads = last7DaysData.reduce((s, d) => s + d.total, 0)
+    const qualifiedPeriodLeads = last7DaysData.reduce((s, d) => s + d.qualified, 0)
+    const dailyAvg = (totalPeriodLeads / 7).toFixed(1)
+
+    return (
+      <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-[#b99881]" />
+              <h3 className="text-[14px] font-medium text-white">Aday Başvuru ve Etkileşim Akışı</h3>
+            </div>
+            <p className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+              Günlük gelen müşteri adayı hacmi ve nitelikli dönüşüm eğrisi
+            </p>
+          </div>
+
+          {/* Dönem Seçici Filtre Sekmeleri (Pill Shape, Katmansız) */}
+          <div className="inline-flex items-center gap-1.5 self-start sm:self-auto">
+            {[
+              { id: '7d' as const, label: 'Son 7 Gün' },
+              { id: '30d' as const, label: 'Son 30 Gün' },
+              { id: 'month' as const, label: 'Bu Ay' },
+            ].map((tab) => {
+              const active = chartRange === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setChartRange(tab.id)}
+                  className={`px-3 py-1 rounded-full text-[11.5px] font-medium transition-colors cursor-pointer ${
+                    active
+                      ? 'bg-[#b99881] text-[#282522] font-semibold'
+                      : 'bg-[#34302d] text-[#a69f99] hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Grafik Üstü Mini Analitik Özet Şeridi */}
+        <div className="grid grid-cols-3 gap-3 py-3">
+          <div>
+            <div className="text-[11.5px] font-normal text-[#a69f99]">Dönemlik Başvuru</div>
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <span className="text-[22px] font-semibold font-mono text-white leading-none">
+                {totalPeriodLeads}
+              </span>
+              <span className="text-[11px] font-normal text-[#a69f99]">kayıt</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[11.5px] font-normal text-[#a69f99]">Nitelikli Aday</div>
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <span className="text-[22px] font-semibold font-mono text-white leading-none">
+                {qualifiedPeriodLeads}
+              </span>
+              <span className="text-[11px] font-normal text-[#a69f99]">onaylı</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[11.5px] font-normal text-[#a69f99]">Günlük Ortalama</div>
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <span className="text-[22px] font-semibold font-mono text-white leading-none">
+                {dailyAvg}
+              </span>
+              <span className="text-[11px] font-normal text-[#a69f99]">aday/gün</span>
+            </div>
+          </div>
+        </div>
+
+        {/* SVG Eğrisel Grafik Alanı */}
+        <div className="pt-2">
+          <svg
+            viewBox={`0 0 ${width} ${height + 18}`}
+            className="w-full h-[165px] overflow-visible"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="leadFlowFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--accent-color, #b99881)" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="var(--accent-color, #b99881)" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+
+            {/* Yatay Kılavuz Çizgileri */}
+            {[0, 0.33, 0.66, 1].map((ratio, idx) => {
+              const y = padY + ratio * usableH
+              const labelVal = Math.round(maxVal * (1 - ratio))
+              return (
+                <g key={idx}>
+                  <line
+                    x1={padX}
+                    y1={y}
+                    x2={width - padX}
+                    y2={y}
+                    stroke="currentColor"
+                    strokeOpacity="0.1"
+                    strokeDasharray={ratio < 1 ? '3 3' : undefined}
+                  />
+                  <text
+                    x={4}
+                    y={y + 3}
+                    fontSize="10"
+                    fill="currentColor"
+                    opacity="0.5"
+                    className="font-mono"
+                  >
+                    {labelVal}
+                  </text>
+                </g>
+              )
+            })}
+
+            {/* Dolgu Alanı */}
+            <path d={areaPath} fill="url(#leadFlowFill)" />
+
+            {/* Ana Eğri Çizgisi */}
+            <path
+              d={linePath}
+              fill="none"
+              stroke="var(--accent-color, #b99881)"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            />
+
+            {/* Günlük Veri Noktaları ve Etiketleri */}
+            {points.map((pt, i) => (
+              <g key={i}>
+                <circle
+                  cx={pt.x}
+                  cy={pt.y}
+                  r="3.5"
+                  fill="var(--bg-base, #282522)"
+                  stroke="var(--accent-color, #b99881)"
+                  strokeWidth="2"
+                />
+                <text
+                  x={pt.x}
+                  y={height + 10}
+                  textAnchor="middle"
+                  fontSize="10.5"
+                  fill="currentColor"
+                  opacity="0.68"
+                >
+                  {pt.label} ({pt.dateStr})
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+      </GlassCard>
+    )
+  }
+
+  // Sağ Sütun: Dönüşüm Hunisi (Sales Funnel — İlerleme Çubuklu Analitik Kart)
+  const renderConversionFunnelCard = () => {
+    const total = leads.length
+    const contacted = leads.filter((l) => l.stage !== 'NEW').length
+    const qualified = leads.filter((l) =>
+      ['QUALIFIED', 'APPOINTMENT', 'PRESENTATION', 'OFFER', 'WON'].includes(l.stage)
+    ).length
+    const offerStage = leads.filter((l) =>
+      ['PRESENTATION', 'OFFER', 'WON'].includes(l.stage)
+    ).length
+    const won = leads.filter((l) => l.stage === 'WON').length
+    const convRate = total > 0 ? Math.round((won / total) * 100) : 0
+
+    const stages = [
+      { label: 'Toplam Başvuru', count: total, pct: total > 0 ? 100 : 0 },
+      {
+        label: 'İletişime Geçilen',
+        count: contacted,
+        pct: total > 0 ? Math.round((contacted / total) * 100) : 0,
+      },
+      {
+        label: 'Nitelikli Aday',
+        count: qualified,
+        pct: total > 0 ? Math.round((qualified / total) * 100) : 0,
+      },
+      {
+        label: 'Sunum & Teklif',
+        count: offerStage,
+        pct: total > 0 ? Math.round((offerStage / total) * 100) : 0,
+      },
+      {
+        label: 'Kazanılan Satış',
+        count: won,
+        pct: total > 0 ? Math.round((won / total) * 100) : 0,
+      },
+    ]
+
+    return (
+      <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-[14px] font-medium text-white">Dönüşüm Hunisi</h3>
+          <span className="text-[11.5px] font-normal text-[#a69f99]">Aşama bazlı akış</span>
+        </div>
+        <p className="text-[11.5px] font-normal text-[#a69f99] mb-4">
+          Adayların ilk başvurudan satışa ilerleme oranı
+        </p>
+
+        <div className="space-y-3.5">
+          {stages.map((st, idx) => (
+            <div key={idx} className="space-y-1.5">
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span className="font-medium text-white">{st.label}</span>
+                <div className="flex items-center gap-1.5 font-mono">
+                  <span className="font-semibold text-white">{st.count}</span>
+                  <span className="text-[11px] font-normal text-[#a69f99]">(%{st.pct})</span>
+                </div>
+              </div>
+              <div className="w-full h-2 rounded-full bg-[#34302d] border border-[#4a443f] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#b99881] transition-all duration-500"
+                  style={{ width: `${Math.max(st.count > 0 ? st.pct : 4, 4)}%`, opacity: st.count > 0 ? 1 : 0.25 }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 pt-2 flex items-center justify-between">
+          <span className="text-[12.5px] font-medium text-[#d6beae]">Net Dönüşüm Oranı</span>
+          <span className="text-[18px] font-semibold font-mono text-white">%{convRate}</span>
+        </div>
+      </GlassCard>
+    )
+  }
+
   // 1. DİJİTAL PAZARLAMA BAŞLANGIÇ
   const renderMarketingDashboard = () => {
     const metaLeads = leads.filter((l) => l.source === 'META_ADS')
     const qualifiedCount = leads.filter((l) => l.stage === 'QUALIFIED' || l.stage === 'WON').length
     const qualifiedRate = leads.length > 0 ? Math.round((qualifiedCount / leads.length) * 100) : 0
 
+    const filteredLeads = leads.filter((l) => {
+      if (leadFilter === 'NEW') return l.stage === 'NEW'
+      if (leadFilter === 'QUALIFIED') return l.stage === 'QUALIFIED' || l.stage === 'WON'
+      return true
+    })
+
     return (
-      <div className="space-y-6">
-        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Toplam Aday Havuzu</span>
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-[#b99881] shrink-0" />
+      <div className="space-y-5">
+        {/* Üst KPI Kartları: İnceltilmiş, Başlık (13-14px medium) -> Değer (32-36px semibold) -> Açıklama (11-12px regular) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Toplam Aday Havuzu
+              </span>
+              <Users className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{leads.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Aktif veri tabanı</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {leads.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Aktif veri tabanı
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Meta Ads Leadleri</span>
-              <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#38bdf8] shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Meta Ads Leadleri
+              </span>
+              <Share2 className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{metaLeads.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Instagram & Facebook</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {metaLeads.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Instagram & Facebook
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Nitelikli Aday Oranı</span>
-              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-[#34d399] shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Nitelikli Aday Oranı
+              </span>
+              <Target className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">%{qualifiedRate}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">{qualifiedCount} nitelikli aday</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                %{qualifiedRate}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                {qualifiedCount} nitelikli aday
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Meta Entegrasyon</span>
-              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Meta Entegrasyon
+              </span>
+              <CheckCircle2 className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-sm sm:text-base font-bold text-emerald-400 mt-1.5 sm:mt-2 flex items-center gap-1.5 truncate">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="truncate">Webhook Canlı</span>
+            <div className="flex items-baseline justify-between mt-2">
+              <div className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-white truncate">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="truncate">Webhook Canlı</span>
+              </div>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Graph API v19.0
+              </span>
             </div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Graph API v19.0 Hazır</div>
           </GlassCard>
         </div>
 
-        {/* Son Gelen Meta Başvuruları & Kampanya Performansı */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Son Müşteri Başvuruları</h3>
-              <span className="text-sm font-semibold text-[#b99881]">{leads.length} Kayıt</span>
-            </div>
-            {leads.length === 0 ? (
-              <div className="text-center py-8 text-sm text-[#a69f99]">
-                Henüz kayıtlı müşteri adayı bulunmuyor.
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {leads.slice(0, 5).map((l) => (
-                  <div
-                    key={l.id}
-                    onClick={() => onSelectLead(l)}
-                    className="p-3 rounded-[16px] bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] cursor-pointer transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="text-sm font-bold text-white">{l.fullName}</div>
-                      <div className="text-xs sm:text-sm text-[#a69f99] mt-0.5">{l.formName}</div>
-                    </div>
-                    <div className="text-right">
-                      <GlassBadge size="sm" variant={l.stage === 'NEW' ? 'warning' : 'primary'}>
-                        {STAGE_CONFIGS[l.stage]?.label || l.stage}
-                      </GlassBadge>
-                      <div className="text-xs text-[#8c857f] mt-1">{formatDate(l.createdAt)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
+        {/* ANA ODAK NOKTASI DÜZENİ: Sol Ana Sütun (8/12) + Sağ Destekleyici Sütun (4/12) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Sol Ana İçerik Alanı (8/12): Grafik Paneli + Son Müşteri Başvuruları */}
+          <div className="lg:col-span-8 space-y-5">
+            {renderLeadFlowChart()}
 
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Aktif Meta Formları</h3>
-              <span className="text-sm font-medium text-[#8c857f]">{metaForms.length} Form</span>
-            </div>
-            <div className="space-y-2.5">
-              {metaForms.map((f) => (
-                <div key={f.id} className="p-3 rounded-[16px] bg-[#34302d] border border-[#4a443f]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-white truncate max-w-[340px] sm:max-w-[420px]">{f.name}</span>
-                    <span className="text-sm font-bold font-mono text-[#b99881]">{f.leadCount} Lead</span>
+            <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-[14px] font-medium text-white">Son Müşteri Başvuruları</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-[#34302d] text-white">
+                      {filteredLeads.length} Kayıt
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm text-[#8c857f] mt-1.5">
-                    <span>{f.campaignName}</span>
-                    <span className="text-emerald-400 font-semibold font-mono text-xs sm:text-sm">%{f.conversionRate} Dönüşüm</span>
-                  </div>
+                  <p className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+                    Reklam formları ve manuel kanallardan sisteme düşen son adaylar
+                  </p>
                 </div>
-              ))}
-            </div>
-          </GlassCard>
+
+                {/* Durum Filtresi (Pill Shape, Katmansız) */}
+                <div className="inline-flex items-center gap-1.5 self-start sm:self-auto">
+                  {[
+                    { id: 'ALL' as const, label: 'Tümü' },
+                    { id: 'NEW' as const, label: 'Yeni' },
+                    { id: 'QUALIFIED' as const, label: 'Nitelikli' },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setLeadFilter(f.id)}
+                      className={`px-3 py-1 rounded-full text-[11.5px] font-medium transition-colors cursor-pointer ${
+                        leadFilter === f.id
+                          ? 'bg-[#b99881] text-[#282522] font-semibold'
+                          : 'bg-[#34302d] text-[#a69f99] hover:text-white'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {filteredLeads.length === 0 ? (
+                <div className="pt-3 pb-1 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 text-left">
+                    <Inbox className="w-5 h-5 text-[#b99881] shrink-0" />
+                    <div>
+                      <div className="text-[13.5px] font-medium text-white">
+                        Henüz kayıtlı müşteri başvurusu bulunmuyor
+                      </div>
+                      <div className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+                        Meta Lead Ads webhook bağlantısı aktif; yeni form başvuruları anlık olarak burada listelenir.
+                      </div>
+                    </div>
+                  </div>
+                  {onNavigateToTab && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToTab('customers')}
+                      className="btn-primary shrink-0 px-4 py-2 rounded-full text-[12px] font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Müşteri Yönetimi</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2.5 mt-3">
+                  {filteredLeads.slice(0, 5).map((l) => (
+                    <div
+                      key={l.id}
+                      onClick={() => onSelectLead(l)}
+                      className="p-3 rounded-2xl bg-[#34302d] hover:bg-[#3d3733] cursor-pointer transition-colors flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="text-[13.5px] font-medium text-white">{l.fullName}</div>
+                        <div className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">{l.formName}</div>
+                      </div>
+                      <div className="text-right">
+                        <GlassBadge size="sm" variant={l.stage === 'NEW' ? 'warning' : 'primary'}>
+                          {STAGE_CONFIGS[l.stage]?.label || l.stage}
+                        </GlassBadge>
+                        <div className="text-[11px] font-normal text-[#8c857f] mt-1">
+                          {formatDate(l.createdAt)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </GlassCard>
+          </div>
+
+          {/* Sağ Destekleyici Sütun (4/12): Dönüşüm Hunisi + Aktif Meta Formları */}
+          <div className="lg:col-span-4 space-y-5">
+            {renderConversionFunnelCard()}
+
+            <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-[14px] font-medium text-white">Aktif Meta Formları</h3>
+                <span className="text-[11.5px] font-mono font-medium text-[#a69f99]">
+                  {metaForms.length} Form
+                </span>
+              </div>
+              <p className="text-[11.5px] font-normal text-[#a69f99] mb-3.5">
+                Reklam kampanyalarına bağlı veri toplama formları
+              </p>
+
+              {metaForms.length === 0 ? (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-start gap-2.5">
+                    <Megaphone className="w-4 h-4 text-[#b99881] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-[13px] font-medium text-white">
+                        Tanımlı kampanya formu yok
+                      </div>
+                      <div className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+                        Instagram ve Facebook reklam formlarınızı bağlayarak otomatik aday akışını başlatın.
+                      </div>
+                    </div>
+                  </div>
+                  {onNavigateToTab && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToTab('marketing-campaigns')}
+                      className="w-full py-2 px-4 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[12px] font-medium text-white flex items-center justify-between cursor-pointer transition-colors"
+                    >
+                      <span>Kampanyalar & Formlar</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#b99881]" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {metaForms.map((f) => (
+                    <div key={f.id} className="p-3 rounded-2xl bg-[#34302d]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-medium text-white truncate max-w-[210px]">
+                          {f.name}
+                        </span>
+                        <span className="text-[12px] font-semibold font-mono text-[#b99881]">
+                          {f.leadCount} Lead
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11.5px] font-normal text-[#a69f99] mt-1">
+                        <span className="truncate">{f.campaignName}</span>
+                        <span className="font-mono font-medium text-white">
+                          %{f.conversionRate} Dönüşüm
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </GlassCard>
+          </div>
         </div>
       </div>
     )
@@ -249,10 +686,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // 2. SATIŞ BAŞLANGIÇ
   const renderSalesDashboard = () => {
-    // Leads assigned to current sales rep (or all if scope ALL)
-    const myLeads = currentUser?.scope === 'ASSIGNED_ONLY'
-      ? leads.filter((l) => l.assignedToUserId === currentUser.id || l.owner === currentUser.fullName)
-      : leads
+    const myLeads =
+      currentUser?.scope === 'ASSIGNED_ONLY'
+        ? leads.filter(
+            (l) => l.assignedToUserId === currentUser.id || l.owner === currentUser.fullName
+          )
+        : leads
 
     const todayStr = new Date().toISOString().split('T')[0]
     const todayAppointments = appointments.filter((a) => a.date === todayStr)
@@ -261,103 +700,128 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const reservedUnits = allUnits.filter((u) => u.status === 'REZERVE')
 
     return (
-      <div className="space-y-6">
-        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Portföyümdeki Müşteriler</span>
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-[#b99881] shrink-0" />
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Portföyümdeki Müşteriler
+              </span>
+              <Users className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{myLeads.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Atanan aktif portföy</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {myLeads.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Atanan aktif portföy
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Bugünkü Randevular</span>
-              <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Bugünkü Randevular
+              </span>
+              <CalendarCheck className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{todayAppointments.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Görüşme ve sunumlar</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {todayAppointments.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Görüşme ve sunumlar
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Sıcak Teklifler</span>
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Sıcak Teklifler
+              </span>
+              <TrendingUp className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{hotOffers.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Sunum & Teklif aşamasında</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {hotOffers.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Sunum & Teklif aşaması
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Rezerve Daireler</span>
-              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Rezerve Daireler
+              </span>
+              <Building2 className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{reservedUnits.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Opsiyonlu ünite</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {reservedUnits.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Opsiyonlu ünite
+              </span>
+            </div>
           </GlassCard>
         </div>
 
-        {/* Randevular & Müşteri Listesi */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Bugünkü ve Yaklaşan Randevular</h3>
-              <span className="text-sm font-semibold text-[#b99881]">{appointments.length} Randevu</span>
-            </div>
-            {appointments.length === 0 ? (
-              <div className="text-center py-8 text-sm text-[#a69f99]">
-                Planlanmış aktif randevunuz bulunmuyor.
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {appointments.slice(0, 4).map((a) => (
-                  <div key={a.id} className="p-3 rounded-[16px] bg-[#34302d] border border-[#4a443f] flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-bold text-white">{a.customerName}</div>
-                      <div className="text-xs sm:text-sm text-[#a69f99] mt-0.5">{a.location} • {a.date} {a.time}</div>
-                    </div>
-                    <GlassBadge size="sm" variant={a.type === 'ON_SITE' ? 'success' : 'info'}>
-                      {a.type === 'ON_SITE' ? 'Ofis / Şantiye' : 'Online'}
-                    </GlassBadge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-8 space-y-5">
+            {renderLeadFlowChart()}
 
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">İletişim Bekleyen Sıcak Adaylar</h3>
-              <span className="text-sm font-medium text-[#8c857f]">{myLeads.length} Aday</span>
-            </div>
-            {myLeads.length === 0 ? (
-              <div className="text-center py-8 text-sm text-[#a69f99]">
-                Size atanmış yeni müşteri adayı bulunmuyor.
+            <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[14px] font-medium text-white">Bugünkü ve Yaklaşan Randevular</h3>
+                <span className="text-[12px] font-mono font-semibold text-[#b99881]">
+                  {appointments.length} Randevu
+                </span>
               </div>
-            ) : (
-              <div className="space-y-2.5">
-                {myLeads.slice(0, 4).map((l) => (
-                  <div
-                    key={l.id}
-                    onClick={() => onSelectLead(l)}
-                    className="p-3 rounded-[16px] bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] cursor-pointer transition-colors flex items-center justify-between"
-                  >
+              {appointments.length === 0 ? (
+                <div className="pt-1 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <CalendarCheck className="w-5 h-5 text-[#b99881] shrink-0" />
                     <div>
-                      <div className="text-sm font-bold text-white">{l.fullName}</div>
-                      <div className="text-xs sm:text-sm text-[#a69f99] mt-0.5">{l.phone}</div>
+                      <div className="text-[13px] font-medium text-white">
+                        Planlanmış aktif randevunuz bulunmuyor
+                      </div>
+                      <div className="text-[11.5px] font-normal text-[#a69f99]">
+                        Yeni saha veya ofis görüşmesi planlamak için Randevular sekmesini kullanın.
+                      </div>
                     </div>
-                    <GlassBadge size="sm" variant={l.stage === 'WON' ? 'success' : 'primary'}>
-                      {STAGE_CONFIGS[l.stage]?.label || l.stage}
-                    </GlassBadge>
                   </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {appointments.slice(0, 4).map((a) => (
+                    <div
+                      key={a.id}
+                      className="p-3 rounded-2xl bg-[#34302d] flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="text-[13.5px] font-medium text-white">{a.customerName}</div>
+                        <div className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+                          {a.location} • {a.date} {a.time}
+                        </div>
+                      </div>
+                      <GlassBadge size="sm" variant={a.type === 'ON_SITE' ? 'success' : 'info'}>
+                        {a.type === 'ON_SITE' ? 'Ofis / Şantiye' : 'Online'}
+                      </GlassBadge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </GlassCard>
+          </div>
+
+          <div className="lg:col-span-4 space-y-5">
+            {renderConversionFunnelCard()}
+          </div>
         </div>
       </div>
     )
@@ -366,108 +830,85 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // 3. MÜŞTERİ İLİŞKİLERİ BAŞLANGIÇ
   const renderCustomerRelationsDashboard = () => {
     const oct3Start = new Date('2026-10-02T21:00:00.000Z').getTime()
-    const uncontactedLeads = leads.filter((l) => l.stage === 'NEW' && new Date(l.createdAt).getTime() >= oct3Start)
+    const uncontactedLeads = leads.filter(
+      (l) => l.stage === 'NEW' && new Date(l.createdAt).getTime() >= oct3Start
+    )
     const qualifiedLeads = leads.filter((l) => l.stage === 'QUALIFIED')
     const openRequests = requests.filter((r) => r.status === 'Açık' || r.status === 'İşlemde')
 
     return (
-      <div className="space-y-6">
-        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">İletişim Bekleyen Başvurular</span>
-              <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                İletişim Bekleyenler
+              </span>
+              <PhoneCall className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{uncontactedLeads.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">İlk arama bekleyen</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {uncontactedLeads.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                İlk arama bekleyen
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Nitelikli Belirlenenler</span>
-              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Nitelikli Belirlenenler
+              </span>
+              <CheckCircle2 className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{qualifiedLeads.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Satışa devredilmeye hazır</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {qualifiedLeads.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Satışa devredilecek
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Açık Talepler</span>
-              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">Açık Talepler</span>
+              <AlertCircle className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{openRequests.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Müşteri destek & bilgi talebi</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {openRequests.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Müşteri destek talebi
+              </span>
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Organize Edilen Randevular</span>
-              <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#b99881] shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Organize Randevular
+              </span>
+              <CalendarCheck className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{appointments.length}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Satış ekibine yönlendirilen</div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {appointments.length}
+              </span>
+              <span className="text-[11.5px] font-normal text-[#a69f99] truncate ml-2">
+                Satışa yönlendirilen
+              </span>
+            </div>
           </GlassCard>
         </div>
 
-        {/* İletişim Bekleyen Adaylar & Talepler */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">İlk Arama Bekleyen Başvurular</h3>
-              <span className="text-sm font-semibold text-amber-400">{uncontactedLeads.length} Aday</span>
-            </div>
-            {uncontactedLeads.length === 0 ? (
-              <div className="text-center py-8 text-sm text-[#a69f99]">
-                Tüm başvurularla iletişime geçildi.
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {uncontactedLeads.slice(0, 4).map((l) => (
-                  <div
-                    key={l.id}
-                    onClick={() => onSelectLead(l)}
-                    className="p-3 rounded-[16px] bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] cursor-pointer transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="text-sm font-bold text-white">{l.fullName}</div>
-                      <div className="text-xs sm:text-sm text-[#a69f99] mt-0.5">{l.phone} • {l.formName}</div>
-                    </div>
-                    <GlassBadge size="sm" variant="warning">
-                      Giriş (Yeni)
-                    </GlassBadge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
-
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Müşteri Destek & Bilgi Talepleri</h3>
-              <span className="text-sm font-medium text-[#8c857f]">{requests.length} Talep</span>
-            </div>
-            {requests.length === 0 ? (
-              <div className="text-center py-8 text-sm text-[#a69f99]">
-                Açık müşteri talebi bulunmuyor.
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {requests.slice(0, 4).map((r) => (
-                  <div key={r.id} className="p-3 rounded-[16px] bg-[#34302d] border border-[#4a443f] flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-bold text-white">{r.subject}</div>
-                      <div className="text-xs sm:text-sm text-[#a69f99] mt-0.5">{r.customerName} • {r.category}</div>
-                    </div>
-                    <GlassBadge size="sm" variant={r.priority === 'Yüksek' ? 'danger' : 'default'}>
-                      {r.status}
-                    </GlassBadge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-8 space-y-5">{renderLeadFlowChart()}</div>
+          <div className="lg:col-span-4 space-y-5">{renderConversionFunnelCard()}</div>
         </div>
       </div>
     )
@@ -485,92 +926,144 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const pendingPaymentsTotal = pendingPayments.reduce((acc, p) => acc + p.amount, 0)
 
     return (
-      <div className="space-y-6">
-        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Tahsil Edilen Tutar</span>
-              <TurkishLira className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Tahsil Edilen Tutar
+              </span>
+              <TurkishLira className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{formatCurrency(collectedTotal)}</div>
-            <div className="text-[10px] sm:text-xs text-emerald-400 font-medium mt-1 sm:mt-1.5 truncate">Kasaya giren nakit</div>
+            <div className="text-[28px] sm:text-[32px] font-semibold text-white mt-1.5 font-mono leading-none tracking-tight truncate">
+              {formatCurrency(collectedTotal)}
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              Kasaya giren nakit
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Bekleyen Tahsilatlar</span>
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Bekleyen Tahsilatlar
+              </span>
+              <Clock className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{formatCurrency(pendingTotal)}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">{pendingCollections.length} adet vadesi gelen</div>
+            <div className="text-[28px] sm:text-[32px] font-semibold text-white mt-1.5 font-mono leading-none tracking-tight truncate">
+              {formatCurrency(pendingTotal)}
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              {pendingCollections.length} adet vadesi gelen
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Geciken Tahsilat</span>
-              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Geciken Tahsilat
+              </span>
+              <AlertCircle className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-xl sm:text-3xl font-bold text-rose-400 mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{overdueCollections.length} adet</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Takip gerektiren</div>
+            <div className="text-[28px] sm:text-[32px] font-semibold text-white mt-1.5 font-mono leading-none tracking-tight truncate">
+              {overdueCollections.length}
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              Takip gerektiren işlem
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Planlanan Ödemeler</span>
-              <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Planlanan Ödemeler
+              </span>
+              <Briefcase className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{formatCurrency(pendingPaymentsTotal)}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Komisyon & Şantiye</div>
+            <div className="text-[28px] sm:text-[32px] font-semibold text-white mt-1.5 font-mono leading-none tracking-tight truncate">
+              {formatCurrency(pendingPaymentsTotal)}
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              Komisyon & Şantiye
+            </div>
           </GlassCard>
         </div>
 
-        {/* Tahsilatlar & Ödemeler Tablosu */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Bekleyen & Vadesi Gelen Tahsilatlar</h3>
-              <span className="text-sm font-semibold text-[#b99881]">{collections.length} İşlem</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[14px] font-medium text-white">
+                Bekleyen & Vadesi Gelen Tahsilatlar
+              </h3>
+              <span className="text-[12px] font-mono font-semibold text-[#b99881]">
+                {collections.length} İşlem
+              </span>
             </div>
-            <div className="space-y-2.5">
-              {collections.slice(0, 4).map((c) => (
-                <div key={c.id} className="p-3 rounded-[16px] bg-[#34302d] border border-[#4a443f] flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-bold text-white">{c.customerName} ({c.unitNumber})</div>
-                    <div className="text-xs sm:text-sm text-[#a69f99] mt-0.5">{c.projectName} • Vade: {c.dueDate}</div>
+            {collections.length === 0 ? (
+              <div className="text-[12.5px] text-[#a69f99]">
+                Kayıtlı tahsilat işlemi bulunmuyor.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {collections.slice(0, 4).map((c) => (
+                  <div
+                    key={c.id}
+                    className="p-3 rounded-2xl bg-[#34302d] flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="text-[13.5px] font-medium text-white">
+                        {c.customerName} ({c.unitNumber})
+                      </div>
+                      <div className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+                        {c.projectName} • Vade: {c.dueDate}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[13.5px] font-semibold font-mono text-white">
+                        {formatCurrency(c.amount)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-white">{formatCurrency(c.amount)}</div>
-                    <GlassBadge size="sm" variant={c.status === 'COLLECTED' ? 'success' : c.status === 'OVERDUE' ? 'danger' : 'warning'}>
-                      {c.status === 'COLLECTED' ? 'Tahsil Edildi' : c.status === 'OVERDUE' ? 'Gecikmede' : 'Bekliyor'}
-                    </GlassBadge>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </GlassCard>
 
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Planlanan Şantiye & Komisyon Ödemeleri</h3>
-              <span className="text-sm font-medium text-[#8c857f]">{payments.length} Ödeme</span>
+          <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[14px] font-medium text-white">
+                Planlanan Şantiye & Komisyon Ödemeleri
+              </h3>
+              <span className="text-[12px] font-mono font-medium text-[#a69f99]">
+                {payments.length} Ödeme
+              </span>
             </div>
-            <div className="space-y-2.5">
-              {payments.slice(0, 4).map((p) => (
-                <div key={p.id} className="p-3 rounded-[16px] bg-[#34302d] border border-[#4a443f] flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-bold text-white">{p.title}</div>
-                    <div className="text-xs sm:text-sm text-[#a69f99] mt-0.5">{p.payee} • {p.dueDate}</div>
+            {payments.length === 0 ? (
+              <div className="text-[12.5px] text-[#a69f99]">
+                Planlanmış ödeme kaydı bulunmuyor.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {payments.slice(0, 4).map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-3 rounded-2xl bg-[#34302d] flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="text-[13.5px] font-medium text-white">{p.title}</div>
+                      <div className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+                        {p.payee} • {p.dueDate}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[13.5px] font-semibold font-mono text-white">
+                        {formatCurrency(p.amount)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-white">{formatCurrency(p.amount)}</div>
-                    <GlassBadge size="sm" variant={p.status === 'PAID' ? 'success' : 'default'}>
-                      {p.status === 'PAID' ? 'Ödendi' : 'Bekliyor'}
-                    </GlassBadge>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </GlassCard>
         </div>
       </div>
@@ -585,98 +1078,72 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const totalSalesVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
 
     return (
-      <div className="space-y-6">
-        {/* KPI Row: Mobilde ikişerli iki sıra (2x2), masaüstünde 4 tane yan yana (4x1) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Toplam Satış Hacmi</span>
-              <TurkishLira className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Toplam Satış Hacmi
+              </span>
+              <TurkishLira className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{formatCurrency(totalSalesVolume)}</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">{soldUnits.length} daire sözleşmesi</div>
+            <div className="text-[28px] sm:text-[32px] font-semibold text-white mt-1.5 font-mono leading-none tracking-tight truncate">
+              {formatCurrency(totalSalesVolume)}
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              {soldUnits.length} daire sözleşmesi
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Bekleyen Onaylar</span>
-              <FileCheck2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Bekleyen Onaylar
+              </span>
+              <FileCheck2 className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{pendingApprovals.length}</div>
-            <div className="text-[10px] sm:text-xs text-amber-400 font-medium mt-1 sm:mt-1.5 truncate">İskonto & Rezervasyon</div>
+            <div className="text-[32px] sm:text-[34px] font-semibold text-white mt-1.5 font-mono leading-none tracking-tight truncate">
+              {pendingApprovals.length}
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              İskonto & Rezervasyon
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Proje Envanteri</span>
-              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Proje Envanteri
+              </span>
+              <Building2 className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-xl sm:text-3xl font-bold text-white mt-1.5 sm:mt-2 font-mono tracking-tight truncate">{projects.length} proje</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">{allUnits.length} bağımsız bölüm</div>
+            <div className="text-[32px] sm:text-[34px] font-semibold text-white mt-1.5 font-mono leading-none tracking-tight truncate">
+              {projects.length}
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              {allUnits.length} bağımsız bölüm
+            </div>
           </GlassCard>
 
-          <GlassCard className="p-3 sm:p-4 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between text-[#d6beae] text-xs sm:text-sm font-medium gap-1">
-              <span className="truncate">Sistem Durumu</span>
-              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400 shrink-0" />
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Sistem Durumu
+              </span>
+              <ShieldCheck className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
-            <div className="text-sm sm:text-base font-semibold text-white mt-1.5 sm:mt-2 truncate">5 Departman Aktif</div>
-            <div className="text-[10px] sm:text-xs text-[#a69f99] mt-1 sm:mt-1.5 truncate">Yetki modeli devrede</div>
+            <div className="text-[20px] sm:text-[22px] font-semibold text-white mt-2 leading-none truncate">
+              5 Departman Aktif
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1.5 truncate">
+              Yetki modeli devrede
+            </div>
           </GlassCard>
         </div>
 
-        {/* Onay Bekleyen Talepler & Uçtan Uca Huni */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Yönetici Onayı Bekleyen Talepler</h3>
-              <span className="text-sm font-semibold text-amber-400">{pendingApprovals.length} Bekleyen</span>
-            </div>
-            {pendingApprovals.length === 0 ? (
-              <div className="text-center py-8 text-sm text-[#a69f99]">
-                Onay bekleyen talep bulunmuyor.
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {pendingApprovals.slice(0, 4).map((app) => (
-                  <div key={app.id} className="p-3 rounded-[16px] bg-[#34302d] border border-[#4a443f] flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-bold text-white">{app.title}</div>
-                      <div className="text-xs sm:text-sm text-[#a69f99] mt-0.5">{app.customerName} • {app.requestedByUserName} ({app.requestedDepartment})</div>
-                    </div>
-                    <GlassBadge size="sm" variant="warning">
-                      {app.type}
-                    </GlassBadge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
-
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Uçtan Uca Departman Akış Özeti</h3>
-              <span className="text-sm font-medium text-[#8c857f]">Canlı Huni</span>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-2.5 rounded-[12px] bg-[#34302d] border border-[#4a443f]/60">
-                <span className="text-sm font-medium text-[#d6beae]">1. Pazarlama (Toplam Lead)</span>
-                <span className="text-sm font-bold font-mono text-white">{leads.length}</span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-[12px] bg-[#34302d] border border-[#4a443f]/60">
-                <span className="text-sm font-medium text-[#d6beae]">2. Müşteri İlişkileri (Nitelikli Aday)</span>
-                <span className="text-sm font-bold font-mono text-white">{leads.filter((l) => l.stage === 'QUALIFIED' || l.stage === 'WON').length}</span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-[12px] bg-[#34302d] border border-[#4a443f]/60">
-                <span className="text-sm font-medium text-[#d6beae]">3. Satış (Teklif & Rezervasyon)</span>
-                <span className="text-sm font-bold font-mono text-white">{leads.filter((l) => ['APPOINTMENT', 'PRESENTATION', 'OFFER'].includes(l.stage)).length}</span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-[12px] bg-[#34302d] border border-[#4a443f]/60">
-                <span className="text-sm font-medium text-[#d6beae]">4. Muhasebe (Tamamlanan Satış)</span>
-                <span className="text-sm font-bold font-mono text-emerald-400">{soldUnits.length} Daire</span>
-              </div>
-            </div>
-          </GlassCard>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-8 space-y-5">{renderLeadFlowChart()}</div>
+          <div className="lg:col-span-4 space-y-5">{renderConversionFunnelCard()}</div>
         </div>
       </div>
     )

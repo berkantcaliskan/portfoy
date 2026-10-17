@@ -98,14 +98,14 @@ export const ApprovalsView: React.FC = () => {
       )}
 
       {/* Filter Bar */}
-      <div className="flex items-center justify-between gap-4 p-4 rounded-[20px] bg-[#282522] border border-[#4a443f]">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto">
           <span className="text-xs text-[#8c857f] mr-1">Filtre:</span>
           {['ALL', 'BEKLEMEDE', 'ONAYLANDI', 'REDDEDILDI'].map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 filterStatus === s
                   ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
                   : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
@@ -171,32 +171,32 @@ export const ApprovalsView: React.FC = () => {
                       Talep Eden: {req.requestedByUserName} ({req.requestedDepartment}) • {new Date(req.createdAt).toLocaleDateString('tr-TR')}
                     </div>
 
-                    <div className="p-2.5 rounded-[12px] bg-[#34302d] text-[11px] text-[#d6beae] mt-2">
+                    <p className="text-[11px] text-[#d6beae] mt-2">
                       Gerekçe: {req.reason}
-                    </div>
+                    </p>
 
                     {req.reviewNotes && (
-                      <div className="p-2.5 rounded-[12px] bg-[#24211f] border border-[#4a443f] text-[11px] text-white mt-1">
+                      <p className="text-[11px] text-white mt-1 font-medium">
                         Yönetici Notu: {req.reviewNotes} ({req.reviewedByUserName})
-                      </div>
+                      </p>
                     )}
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-[#4a443f]/60 flex items-center justify-between text-xs">
+                <div className="pt-2 flex items-center justify-between text-xs">
                   <span className="text-[10px] text-[#8c857f]">{req.type}</span>
 
                   {isPending && canApprove && (
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleOpenDecision(req, 'ONAYLANDI')}
-                        className="px-3 py-1 rounded-[8px] bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-semibold cursor-pointer"
+                        className="px-3.5 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-semibold cursor-pointer"
                       >
                         Onayla
                       </button>
                       <button
                         onClick={() => handleOpenDecision(req, 'REDDEDILDI')}
-                        className="px-3 py-1 rounded-[8px] bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold cursor-pointer"
+                        className="px-3.5 py-1 rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold cursor-pointer"
                       >
                         Reddet
                       </button>
@@ -216,7 +216,7 @@ export const ApprovalsView: React.FC = () => {
         title={`Yönetici Kararı - ${selectedReq?.title}`}
       >
         <form onSubmit={handleExecuteDecision} className="space-y-4">
-          <div className="p-3 rounded-[14px] bg-[#34302d] border border-[#4a443f] text-xs text-[#a69f99]">
+          <div className="text-xs text-[#a69f99]">
             <div className="text-white font-bold">{selectedReq?.customerName}</div>
             <div className="mt-1">Gerekçe: {selectedReq?.reason}</div>
           </div>

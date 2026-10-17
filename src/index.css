@@ -22,23 +22,36 @@
 
 @layer base {
   :root {
-    --bg-base: #383830;
-    --accent-color: #b99881;
-    --accent-light: #d6beae;
-    --primary-anthracite: #2a2a24;
-    --tertiary-white: #f3efe9;
-    --glass-border: rgba(185, 152, 129, 0.2);
+    --bg-base: #f5f5f2;
+    --card-surface: #ffffff;
+    --secondary-surface: #ebece9;
+    --nav-surface: #e3e5e1;
+    --accent-color: #5c6ac4;
+    --accent-light: #5c6ac4;
+    --accent-hover: #4c59b0;
+    --primary-anthracite: #ebece9;
+    --tertiary-white: #292d2b;
+    --glass-border: rgba(41, 45, 43, 0.14);
   }
 
   [data-theme-contrast="deep"] {
-    --bg-base: #383830;
-    --primary-anthracite: #2a2a24;
+    --bg-base: #f5f5f2;
+    --primary-anthracite: #ebece9;
   }
 
+  [data-theme-accent="light"],
   [data-theme-accent="gold"],
   [data-theme-accent="#b99881"] {
-    --accent-color: #b99881;
-    --accent-light: #d6beae;
+    --bg-base: #f5f5f2;
+    --card-surface: #ffffff;
+    --secondary-surface: #ebece9;
+    --nav-surface: #e3e5e1;
+    --accent-color: #5c6ac4;
+    --accent-light: #5c6ac4;
+    --accent-hover: #4c59b0;
+    --primary-anthracite: #ebece9;
+    --tertiary-white: #292d2b;
+    --glass-border: rgba(41, 45, 43, 0.14);
   }
 
   [data-theme-accent="amber"],
@@ -124,12 +137,50 @@
   /* Portföy Platformu: Başlık ve Gövde Tüm Metinler Kesinlikle Karla */
   *, *::before, *::after {
     font-family: 'Karla', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   html, body {
     background-color: var(--bg-base);
     color: #f3efe9;
     font-family: 'Karla', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Müşteri bilgileri, manuel girilen notlar ve giriş kutuları seçilebilir */
+  input,
+  textarea,
+  [contenteditable="true"],
+  .select-text,
+  .select-text *,
+  .selectable-text,
+  .selectable-text *,
+  .break-words,
+  .break-words *,
+  .whitespace-pre-wrap,
+  .whitespace-pre-wrap *,
+  .whitespace-pre-line,
+  .whitespace-pre-line * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    -webkit-touch-callout: default !important;
+  }
+
+  .select-all,
+  .select-all * {
+    user-select: all !important;
+    -webkit-user-select: all !important;
+    -moz-user-select: all !important;
+    -ms-user-select: all !important;
+    -webkit-touch-callout: default !important;
   }
 
   /* TÜM BAŞLIKLAR KESİNLİKLE KARLA */
@@ -561,66 +612,421 @@ button.bg-\[\#b99881\]:hover,
    DYNAMIC THEME ACCENT SYSTEM
    Cascades --accent-color and --accent-light over all hardcoded Tailwind classes
    ========================================================================== */
+[data-theme-accent="light"],
+[data-theme-accent="gold"],
+html:not([data-theme-accent]) {
+  --bg-base: #f5f5f2 !important;
+  --card-surface: #ffffff !important;
+  --secondary-surface: #ebece9 !important;
+  --nav-surface: #e3e5e1 !important;
+  --primary-anthracite: #ebece9 !important;
+  --tertiary-white: #292d2b !important;
+}
 [data-theme-accent="amber"] {
-  --accent-color: #d97706 !important;
-  --accent-light: #f59e0b !important;
+  --accent-color: #d97706;
+  --accent-light: #f59e0b;
+  --accent-hover: #b45309;
 }
 [data-theme-accent="emerald"] {
-  --accent-color: #10b981 !important;
-  --accent-light: #34d399 !important;
+  --accent-color: #10b981;
+  --accent-light: #34d399;
+  --accent-hover: #059669;
 }
 [data-theme-accent="sapphire"] {
-  --accent-color: #0ea5e9 !important;
-  --accent-light: #38bdf8 !important;
+  --accent-color: #0ea5e9;
+  --accent-light: #38bdf8;
+  --accent-hover: #0284c7;
 }
 [data-theme-accent="platinum"] {
-  --accent-color: #94a3b8 !important;
-  --accent-light: #cbd5e1 !important;
+  --accent-color: #94a3b8;
+  --accent-light: #cbd5e1;
+  --accent-hover: #64748b;
 }
 
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="text-[#b99881]"],
-[data-theme-accent]:not([data-theme-accent="gold"]) .text-\[\#b99881\] {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="text-[#b99881]"],
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .text-\[\#b99881\] {
   color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="bg-[#b99881]"],
-[data-theme-accent]:not([data-theme-accent="gold"]) .bg-\[\#b99881\] {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .bg-\[\#b99881\] {
   background-color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="border-[#b99881]"],
-[data-theme-accent]:not([data-theme-accent="gold"]) .border-\[\#b99881\] {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="border-[#b99881]"],
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .border-\[\#b99881\] {
   border-color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="text-[#d6beae]"],
-[data-theme-accent]:not([data-theme-accent="gold"]) .text-\[\#d6beae\] {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="text-[#d6beae]"],
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .text-\[\#d6beae\] {
   color: var(--accent-light) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="bg-[#d6beae]"],
-[data-theme-accent]:not([data-theme-accent="gold"]) .bg-\[\#d6beae\] {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .bg-\[\#d6beae\] {
   background-color: var(--accent-light) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="hover:text-[#b99881]"]:hover {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="hover:text-[#b99881]"]:hover {
   color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="hover:bg-[#b99881]"]:hover {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="hover:bg-[#b99881]"]:hover {
   background-color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="hover:border-[#b99881]"]:hover {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="hover:border-[#b99881]"]:hover {
   border-color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) [class*="focus:border-[#b99881]"]:focus {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="focus:border-[#b99881]"]:focus {
   border-color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) .text-brand-gold,
-[data-theme-accent]:not([data-theme-accent="gold"]) .text-brand-goldLight {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .text-brand-gold,
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .text-brand-goldLight {
   color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) .bg-brand-gold,
-[data-theme-accent]:not([data-theme-accent="gold"]) .bg-brand-goldLight {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .bg-brand-gold,
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .bg-brand-goldLight {
   background-color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]) .border-brand-gold,
-[data-theme-accent]:not([data-theme-accent="gold"]) .border-brand-goldLight {
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .border-brand-gold,
+[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .border-brand-goldLight {
   border-color: var(--accent-color) !important;
+}
+
+/* ==========================================================================
+   ANA TEMA & AYDINLIK TEMA YÜZEY SİSTEMİ
+   - Arka Plan (Kırık Beyaz): #f5f5f2
+   - Kart Yüzeyi: #ffffff
+   - İkincil Yüzey: #ebece9
+   - Navigasyon (Sol Dikey Bar & Görev Çubuğu): #e3e5e1
+   - Ana Metin: #292d2b
+   - Vurgu Rengi (Varsayılan İndigo): var(--accent-color, #5c6ac4)
+   ========================================================================== */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) body,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .min-h-screen {
+  background: #f5f5f2 !important;
+  background-color: #f5f5f2 !important;
+  color: #292d2b !important;
+}
+
+/* Navigasyon (Sol Dikey Bar & Görev Çubuğu): #e3e5e1 */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header[class*="bg-[#34302c]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header {
+  background: #e3e5e1 !important;
+  background-color: #e3e5e1 !important;
+  border-bottom: 1px solid rgba(41, 45, 43, 0.12) !important;
+  border-right: 1px solid rgba(41, 45, 43, 0.12) !important;
+  color: #292d2b !important;
+}
+
+/* Üst bar ve sağ üst aksiyon kapsülleri (Arama, Hızlı Aksiyon, Bildirim, Profil Hapı): #ffffff */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header [class*="bg-[#24211f]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header [class*="bg-[#282522]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .top-utility-pill {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: rgba(41, 45, 43, 0.10) !important;
+  box-shadow: 0 2px 8px -2px rgba(41, 45, 43, 0.06), 0 1px 2px 0 rgba(41, 45, 43, 0.03) !important;
+  color: #292d2b !important;
+}
+
+/* Sol dikey bardaki menü ve aksiyon katmanları (pill shaped hover) */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header .sidebar-pill-item:not(.bg-\[\#b99881\]):hover {
+  background: rgba(255, 255, 255, 0.72) !important;
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  color: #292d2b !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#413f3d]/90"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#383834]/90"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#383830]/90"] {
+  background: rgba(227, 229, 225, 0.96) !important;
+  background-color: rgba(227, 229, 225, 0.96) !important;
+  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 30%, transparent) !important;
+}
+
+/* Ana Metin, Başlıklar ve Sayısal Metrikler -> #292d2b */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h1,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h2,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h3,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h4,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h5,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h6,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-white,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-white"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#f3efe9]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#d6beae]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#c4bcb5]"] {
+  color: #292d2b !important;
+}
+
+/* Vurgu Rengi (İkonlar ve Vurgulu Metinler) -> var(--accent-color, #5c6ac4) */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#dfb76c]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#b99881]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-\[\#b99881\],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#e4c9b3]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-brand-gold,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-brand-goldLight,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg {
+  color: var(--accent-color, #5c6ac4) !important;
+}
+
+/* Açıklama & Yardımcı Metinler: #292d2b tonunda hafif yumuşatılmış */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#a69f99]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#8c857f]"] {
+  color: rgba(41, 45, 43, 0.68) !important;
+}
+
+/* Kart Yüzeyi: #ffffff */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel-elevated,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#282522]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#24211f]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#24211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#25211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#1e1c1a]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#221f1d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#2a2622]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#34302d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(41, 45, 43, 0.10) !important;
+  box-shadow: 0 2px 8px -2px rgba(41, 45, 43, 0.05), 0 1px 2px 0 rgba(41, 45, 43, 0.03) !important;
+  color: #292d2b !important;
+}
+
+/* İkincil Yüzey (#ebece9): Kart içi alt elemanlarda kenarlık kalabalığı (katman içinde çerçeve) olmasın */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#34302d]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static [class*="bg-[#34302d]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#282522]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#24211f]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel [class*="bg-[#34302d]"] {
+  background: #ebece9 !important;
+  background-color: #ebece9 !important;
+  border-color: transparent !important;
+}
+
+/* TÜM BUTONLAR VE SEKMELER PILL SHAPE (rounded-full) */
+main button,
+header button,
+aside button,
+.glass-modal button,
+[role="tab"] {
+  border-radius: 9999px !important;
+}
+
+/* KATMAN ÜSTÜNDEKİ AYIRICI ÇİZGİLERİ KALDIR (Kart içi yatay/üst/alt çizgiler) */
+main .glass-card [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main .glass-card [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main .glass-card-static [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main .glass-card-static [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main .glass-panel [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main .glass-panel [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main .glass-panel-elevated [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main .glass-panel-elevated [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main [class*="rounded-[20px]"] [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main [class*="rounded-[20px]"] [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main [class*="rounded-[22px]"] [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main [class*="rounded-[22px]"] [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main [class*="rounded-[24px]"] [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+main [class*="rounded-[24px]"] [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+.glass-modal [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
+.glass-modal [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea) {
+  border-top-width: 0px !important;
+  border-bottom-width: 0px !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="hover:bg-[#282522]"]:hover {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 35%, transparent) !important;
+}
+
+/* Açılır Menüler (Dropdowns), Başlat Menüsü, Modallar ve Popover'lar: Kart Yüzeyi #ffffff & İkincil Yüzey #ebece9 */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-menu,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .popover-panel,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="listbox"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header .dropdown-panel,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.dropdown-panel,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-modal {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: rgba(41, 45, 43, 0.14) !important;
+  color: #292d2b !important;
+  box-shadow: 0 12px 32px -4px rgba(41, 45, 43, 0.12), 0 4px 12px -2px rgba(41, 45, 43, 0.06) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#34302d]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#282522]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211f]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211e]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1c1a18]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1c1a]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1d1b]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-navy-900"] {
+  background: #ebece9 !important;
+  background-color: #ebece9 !important;
+  border-color: rgba(41, 45, 43, 0.12) !important;
+  color: #292d2b !important;
+}
+
+/* Sağ üst aksiyon ikon katmanları ve profil hapı kesinlikle saf beyaz (#ffffff) */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.top-utility-pill,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.top-utility-pill,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .top-utility-pill {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: rgba(41, 45, 43, 0.10) !important;
+  box-shadow: 0 2px 8px -2px rgba(41, 45, 43, 0.06), 0 1px 2px 0 rgba(41, 45, 43, 0.03) !important;
+  color: #292d2b !important;
+}
+
+/* İç İçe Geçmeli 3D Perspektif Kartlar (Satış Hattı / Kanban Deck) */
+.perspective-deck-card {
+  box-shadow: -12px 10px 26px -6px rgba(0, 0, 0, 0.35), 0 4px 12px -2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.perspective-deck-card.is-focused {
+  box-shadow: 0 24px 48px -10px rgba(0, 0, 0, 0.55), -6px 12px 24px -6px color-mix(in srgb, var(--accent-color, #5c6ac4) 25%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 65%, transparent) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.perspective-deck-card {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(41, 45, 43, 0.13) !important;
+  box-shadow: -10px 8px 24px -6px rgba(41, 45, 43, 0.14), 0 4px 12px -2px rgba(41, 45, 43, 0.06) !important;
+  color: #292d2b !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.perspective-deck-card.is-focused {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
+  box-shadow: 0 24px 48px -10px rgba(41, 45, 43, 0.22), -8px 12px 24px -6px color-mix(in srgb, var(--accent-color, #5c6ac4) 22%, transparent) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu button:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"] button:hover {
+  background: #ebece9 !important;
+  background-color: #ebece9 !important;
+  color: #292d2b !important;
+}
+
+/* Açılır menüde ve sekmelerde aktif/seçili öge */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button[class*="bg-[#b99881]/20"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button[class*="bg-[#b99881]/25"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button[class*="bg-[#b99881]/20"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button[class*="bg-[#b99881]/25"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu button[class*="bg-[#b99881]/20"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"] button[class*="bg-[#b99881]/20"] {
+  background: color-mix(in srgb, var(--accent-color, #5c6ac4) 16%, transparent) !important;
+  background-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 16%, transparent) !important;
+  color: #292d2b !important;
+}
+
+/* Input, Select, Textarea -> İkincil Yüzey (#ebece9), Focus (#ffffff + var(--accent-color)) */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:not([type="checkbox"]):not([type="radio"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-input {
+  color-scheme: light !important;
+  background: #ebece9 !important;
+  background-color: #ebece9 !important;
+  color: #292d2b !important;
+  border-color: rgba(41, 45, 43, 0.16) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select:focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea:focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-input:focus {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: var(--accent-color, #5c6ac4) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input::placeholder,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea::placeholder {
+  color: rgba(41, 45, 43, 0.5) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) option,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) optgroup {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #292d2b !important;
+}
+
+/* Birincil Vurgu Butonları ve Aktif Seçili Rozetler: var(--accent-color) Zemin + #ffffff Yazı/İkon */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\] {
+  background: var(--accent-color, #5c6ac4) !important;
+  background-color: var(--accent-color, #5c6ac4) !important;
+  color: #ffffff !important;
+  border: 1px solid color-mix(in srgb, var(--accent-color, #5c6ac4) 65%, transparent) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\] *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\] * {
+  color: #ffffff !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\]:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\]:hover {
+  background: var(--accent-hover, #4c59b0) !important;
+  background-color: var(--accent-hover, #4c59b0) !important;
+  border-color: var(--accent-color, #5c6ac4) !important;
+  color: #ffffff !important;
+}
+
+/* Üst bardaki aktif sekme alt çizgisi (vurgu rengi) */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header span.h-0\.5.bg-\[\#b99881\] {
+  background: var(--accent-color, #5c6ac4) !important;
+  background-color: var(--accent-color, #5c6ac4) !important;
+  border: none !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle {
+  background: #ebece9 !important;
+  border-color: rgba(41, 45, 43, 0.16) !important;
+  color: #292d2b !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle:hover {
+  background: #dfe1dd !important;
+  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 40%, transparent) !important;
+  color: #292d2b !important;
+}
+
+/* Kenarlıklar (Borders) */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#4a443f]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .border-\[\#4a443f\],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#b99881]"] {
+  border-color: rgba(41, 45, 43, 0.14) !important;
+}
+
+/* Scrollbar (#e3e5e1 & var(--accent-color)) */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-track {
+  background: #e3e5e1;
+}
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent-color, #5c6ac4) 45%, transparent);
+}
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color, #5c6ac4);
 }
 
 /* ==========================================================================
@@ -636,48 +1042,48 @@ button.bg-\[\#b99881\]:hover,
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: none;
   }
 }
 
-.page-mexican-wave > * > *:nth-child(1),
-.page-mexican-wave > *:nth-child(1) {
+.page-mexican-wave > * > *:nth-child(1):not(.fixed),
+.page-mexican-wave > *:nth-child(1):not(.fixed) {
   animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.02s;
 }
 
-.page-mexican-wave > * > *:nth-child(2),
-.page-mexican-wave > *:nth-child(2) {
+.page-mexican-wave > * > *:nth-child(2):not(.fixed),
+.page-mexican-wave > *:nth-child(2):not(.fixed) {
   animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.07s;
 }
 
-.page-mexican-wave > * > *:nth-child(3),
-.page-mexican-wave > *:nth-child(3) {
+.page-mexican-wave > * > *:nth-child(3):not(.fixed),
+.page-mexican-wave > *:nth-child(3):not(.fixed) {
   animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.12s;
 }
 
-.page-mexican-wave > * > *:nth-child(4),
-.page-mexican-wave > *:nth-child(4) {
+.page-mexican-wave > * > *:nth-child(4):not(.fixed),
+.page-mexican-wave > *:nth-child(4):not(.fixed) {
   animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.17s;
 }
 
-.page-mexican-wave > * > *:nth-child(5),
-.page-mexican-wave > *:nth-child(5) {
+.page-mexican-wave > * > *:nth-child(5):not(.fixed),
+.page-mexican-wave > *:nth-child(5):not(.fixed) {
   animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.22s;
 }
 
-.page-mexican-wave > * > *:nth-child(6),
-.page-mexican-wave > *:nth-child(6) {
+.page-mexican-wave > * > *:nth-child(6):not(.fixed),
+.page-mexican-wave > *:nth-child(6):not(.fixed) {
   animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.27s;
 }
 
-.page-mexican-wave > * > *:nth-child(n+7),
-.page-mexican-wave > *:nth-child(n+7) {
+.page-mexican-wave > * > *:nth-child(n+7):not(.fixed),
+.page-mexican-wave > *:nth-child(n+7):not(.fixed) {
   animation: mexicanWaveSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.32s;
 }

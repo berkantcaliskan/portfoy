@@ -1,53 +1,7 @@
 import { MetaFormSummary, MetaWebhookEvent } from '@/types/meta'
 import { leadStore } from './leadStore'
 
-const INITIAL_FORMS: MetaFormSummary[] = [
-  {
-    id: '1136252376014028',
-    name: 'DMTRK | 2Q HYBRID | HIGH INTENT | V1',
-    campaignName: 'Demirtürk Rezidans & Konut Kampanyası',
-    leadCount: 42,
-    conversionRate: 28.5,
-    status: 'ACTIVE',
-    lastLeadAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-  },
-  {
-    id: '3247942948721728',
-    name: 'DMTRK | 1Q KONUT TİPİ | HIGH VOLUME | V1 (v5)',
-    campaignName: 'Demirtürk Panorama & Lüks Konutlar',
-    leadCount: 56,
-    conversionRate: 24.2,
-    status: 'ACTIVE',
-    lastLeadAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-  },
-  {
-    id: '1842764246701203',
-    name: 'DMTRK | 3Q QUALITY VOLUME | V1',
-    campaignName: 'Demirtürk Prestij Yatırım Portföyü',
-    leadCount: 31,
-    conversionRate: 35.7,
-    status: 'ACTIVE',
-    lastLeadAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-  },
-  {
-    id: '2270503660431344',
-    name: 'DMTRK | APPOINTMENT | HIGH INTENT | V1',
-    campaignName: 'Lansman Özel Birebir Randevu',
-    leadCount: 19,
-    conversionRate: 41.2,
-    status: 'ACTIVE',
-    lastLeadAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-  },
-  {
-    id: '2991794174546078',
-    name: 'Tutan Form',
-    campaignName: 'Demirtürk Genel Tanıtım Formu',
-    leadCount: 68,
-    conversionRate: 22.0,
-    status: 'ACTIVE',
-    lastLeadAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-]
+const INITIAL_FORMS: MetaFormSummary[] = []
 
 export interface MetaApiConfig {
   pageAccessToken: string
@@ -62,12 +16,12 @@ export interface MetaApiConfig {
 const STORAGE_KEY_META_CONFIG = 'demirturk_meta_api_config'
 
 const DEFAULT_META_CONFIG: MetaApiConfig = {
-  pageAccessToken: 'EAAVklAd7ZA50BSgMAsXsdDnjGw5aBK83kmLrm3n2TgXxHttpPsxxsFElZAwL43ZCxUqOz2lIAKIWHf15s6c9dFiAZA7zrPKvJAuiwu3VbhyvZCmymV4xiMsSfdxSklrezLCFWtxTyicgzgSLsSBX3kCLZAIZA8baAEa0VXtGZCFVzZBNcjLz4XxZBTXOwIjY2vvE4rmsyMZBfoBlkxfhbKYwQCQIJGRpJJVCN3QITluS5mg8W4ZD',
-  verifyToken: 'demirturk_meta_token_secure_2026',
-  webhookUrl: 'https://unjfqfservizfmbgofhq.supabase.co/functions/v1/meta-webhook',
-  pageId: '607978645738752',
-  pageName: 'Demirtürk İnşaat',
-  isConnected: true,
+  pageAccessToken: '',
+  verifyToken: '',
+  webhookUrl: '',
+  pageId: '',
+  pageName: '',
+  isConnected: false,
 }
 
 type Listener = () => void
@@ -75,26 +29,7 @@ type Listener = () => void
 class MetaStore {
   private forms: MetaFormSummary[] = INITIAL_FORMS
   private config: MetaApiConfig = this.loadConfig()
-  private webhookLogs: MetaWebhookEvent[] = [
-    {
-      id: 'wh-1',
-      receivedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-      formName: 'DMTRK | 1Q KONUT TİPİ | HIGH VOLUME | V1',
-      leadName: 'Ahmet Ulucak',
-      phone: '+905426064258',
-      payloadRaw: { form_id: '101', ad_id: '238510928391', platform: 'ig' },
-      status: 'PROCESSED',
-    },
-    {
-      id: 'wh-2',
-      receivedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-      formName: 'DMTRK | 2Q HYBRID | HIGH INTENT | V1',
-      leadName: 'Murat Şahin',
-      phone: '+905397348020',
-      payloadRaw: { form_id: '102', ad_id: '238510928400', platform: 'fb' },
-      status: 'PROCESSED',
-    }
-  ]
+  private webhookLogs: MetaWebhookEvent[] = []
   private listeners: Set<Listener> = new Set()
 
   private loadConfig(): MetaApiConfig {

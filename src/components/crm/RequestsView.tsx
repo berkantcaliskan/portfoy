@@ -427,9 +427,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#b99881]/20 border border-[#b99881]/40 flex items-center justify-center text-[#dfb76c]">
-              <AlertCircle className="w-4 h-4" />
-            </div>
+            <AlertCircle className="w-5 h-5 text-[#dfb76c]" />
             <div>
               <h2 className="text-2xl font-bold text-white tracking-wide">
                 Talepler
@@ -474,9 +472,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               <span className="text-xs text-[#a69f99] font-medium">web başvurusu</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-[#b99881]/20 border border-[#b99881]/40 flex items-center justify-center text-[#dfb76c]">
-            <Globe className="w-4 h-4" />
-          </div>
+          <Globe className="w-5 h-5 text-[#dfb76c] opacity-80" />
         </div>
 
         <div className="p-4 rounded-[18px] bg-[#282522] border border-rose-500/20 flex items-center justify-between">
@@ -487,9 +483,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               <span className="text-xs text-[#a69f99] font-medium">açık</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
-            <AlertCircle className="w-4 h-4" />
-          </div>
+          <AlertCircle className="w-5 h-5 text-rose-400 opacity-80" />
         </div>
 
         <div className="p-4 rounded-[18px] bg-[#282522] border border-amber-500/20 flex items-center justify-between">
@@ -500,9 +494,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               <span className="text-xs text-[#a69f99] font-medium">işlemde</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <RefreshCw className="w-4 h-4" />
-          </div>
+          <RefreshCw className="w-5 h-5 text-amber-400 opacity-80" />
         </div>
 
         <div className="p-4 rounded-[18px] bg-[#282522] border border-emerald-500/20 flex items-center justify-between">
@@ -513,9 +505,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               <span className="text-xs text-[#a69f99] font-medium">çözüldü</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <CheckCircle2 className="w-4 h-4" />
-          </div>
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 opacity-80" />
         </div>
 
         <div className="p-4 rounded-[18px] bg-[#282522] border border-[#4a443f] flex items-center justify-between">
@@ -526,14 +516,12 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               <span className="text-xs text-[#a69f99] font-medium">toplam kayıt</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-[#34302d] border border-[#4a443f] flex items-center justify-center text-[#a69f99]">
-            <Layers className="w-4 h-4" />
-          </div>
+          <Layers className="w-5 h-5 text-[#a69f99] opacity-80" />
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-[20px] bg-[#282522] border border-[#4a443f]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Filter buttons */}
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs text-[#8c857f] mr-1">Filtre:</span>
@@ -548,7 +536,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 filterStatus === tab.id
                   ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
                   : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
@@ -567,12 +555,12 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
             placeholder="Talep, isim veya telefon ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
+            className="w-full pl-8 pr-7 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8c857f] hover:text-white"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8c857f] hover:text-white rounded-full"
             >
               <X className="w-3 h-3" />
             </button>
@@ -667,7 +655,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                       {item.lead && onSelectLead && (
                         <button
                           onClick={() => onSelectLead(item.lead!)}
-                          className="text-[11px] text-[#dfb76c] hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-[11px] text-[#dfb76c] hover:underline flex items-center gap-1 cursor-pointer rounded-full px-2 py-0.5"
                         >
                           Kartı Aç <ExternalLink className="w-3 h-3" />
                         </button>
@@ -696,15 +684,15 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
 
                     {/* Customer Message / Notes */}
                     {item.notes && (
-                      <div className="p-2.5 rounded-[12px] bg-[#1e1c1a] border border-[#4a443f]/60 text-[11px] text-[#d6beae] mt-2 leading-relaxed">
-                        {item.notes}
-                      </div>
+                      <p className="text-[11px] text-[#d6beae] mt-2 leading-relaxed italic">
+                        "{item.notes}"
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {/* Footer and Actions */}
-                <div className="pt-3 border-t border-[#4a443f]/60 space-y-2.5">
+                <div className="pt-2 space-y-2.5">
                   <div className="flex items-center justify-between text-[10px] text-[#8c857f]">
                     <span>{formatDate(item.createdAt)}</span>
                     <span>Temsilci: {item.assignedToUserName}</span>
@@ -716,7 +704,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                       {item.customerPhone && (
                         <a
                           href={`tel:${cleanDigits}`}
-                          className="px-2.5 py-1 rounded-[10px] bg-[#34302d] hover:bg-[#3f3b37] border border-[#4a443f] text-[11px] text-white flex items-center gap-1 transition-all"
+                          className="px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3f3b37] border border-[#4a443f] text-[11px] text-white flex items-center gap-1 transition-all"
                           title="Hemen Ara"
                         >
                           <Phone className="w-3 h-3 text-[#b99881]" />
@@ -728,7 +716,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                           href={waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2.5 py-1 rounded-[10px] bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] text-emerald-400 flex items-center gap-1 transition-all"
+                          className="px-3 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] text-emerald-400 flex items-center gap-1 transition-all"
                           title="WhatsApp İle İletişim"
                         >
                           <MessageSquare className="w-3 h-3" />
@@ -742,7 +730,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                       {item.status !== 'İşlemde' && item.status !== 'Çözüldü' && (
                         <button
                           onClick={() => handleStatusChange(item, 'İşlemde')}
-                          className="px-2.5 py-1 rounded-[10px] bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[11px] font-semibold cursor-pointer transition-all"
+                          className="px-3 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[11px] font-semibold cursor-pointer transition-all"
                         >
                           İşleme Al
                         </button>
@@ -750,7 +738,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                       {item.status !== 'Çözüldü' && (
                         <button
                           onClick={() => handleStatusChange(item, 'Çözüldü')}
-                          className="px-2.5 py-1 rounded-[10px] bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold cursor-pointer transition-all"
+                          className="px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold cursor-pointer transition-all"
                         >
                           Çözüldü
                         </button>
@@ -782,7 +770,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                 placeholder="Örn: Ahmet Ulucak"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -795,7 +783,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                 placeholder="+90 542 000 00 00"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
           </div>
@@ -810,7 +798,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               placeholder="Örn: Balkon cam kapama ve mimari izin süreci"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
             />
           </div>
 
@@ -822,7 +810,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
                 <option value="Proje & Kat Planı">Proje & Kat Planı</option>
                 <option value="Satış Öncesi Bilgi">Satış Öncesi Bilgi</option>
@@ -839,7 +827,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as RequestPriority)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
                 <option value="Düşük">Düşük</option>
                 <option value="Orta">Orta</option>

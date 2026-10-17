@@ -141,13 +141,13 @@ export const PaymentsView: React.FC = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-2 p-4 rounded-[20px] bg-[#282522] border border-[#4a443f] overflow-x-auto">
+      <div className="flex flex-wrap items-center gap-2 overflow-x-auto">
         <span className="text-xs text-[#8c857f] mr-1">Kategori:</span>
         {['ALL', 'COMMISSION', 'CONSTRUCTION', 'MARKETING', 'OFFICE'].map((c) => (
           <button
             key={c}
             onClick={() => setFilterCategory(c)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer shrink-0 ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer shrink-0 ${
               filterCategory === c
                 ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
                 : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
@@ -204,7 +204,7 @@ export const PaymentsView: React.FC = () => {
                     {pay.status !== 'PAID' && (
                       <button
                         onClick={() => handleMarkPaid(pay.id)}
-                        className="px-2.5 py-1 rounded-[8px] bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer"
+                        className="px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer"
                       >
                         Öde
                       </button>
@@ -234,7 +234,7 @@ export const PaymentsView: React.FC = () => {
               placeholder="Örn: 2026 Q3 Satış Primi"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
             />
           </div>
 
@@ -249,7 +249,7 @@ export const PaymentsView: React.FC = () => {
                 placeholder="Örn: Berkant Çalışkan"
                 value={payee}
                 onChange={(e) => setPayee(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -260,7 +260,7 @@ export const PaymentsView: React.FC = () => {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as PaymentCategory)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
                 <option value="COMMISSION">Danışman Komisyonu</option>
                 <option value="CONSTRUCTION">Şantiye Hakedişi</option>
@@ -278,9 +278,9 @@ export const PaymentsView: React.FC = () => {
               <input
                 type="number"
                 required
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                value={amount === 0 ? '' : amount}
+                onChange={(e) => setAmount(e.target.value === '' ? 0 : Number(e.target.value))}
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
 
@@ -293,7 +293,7 @@ export const PaymentsView: React.FC = () => {
                 required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               />
             </div>
           </div>
@@ -307,7 +307,7 @@ export const PaymentsView: React.FC = () => {
               placeholder="Örn: FTR-2026-892"
               value={invoiceNo}
               onChange={(e) => setInvoiceNo(e.target.value)}
-              className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
             />
           </div>
 

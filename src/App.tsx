@@ -13,11 +13,11 @@ import { SharedFilesView } from '@/components/shared/SharedFilesView'
 import { SalesTeamView } from '@/components/sales/SalesTeamView'
 import { QuickToolsModal, ToolType } from '@/components/tools/QuickToolsModal'
 import { LoginModal } from '@/components/auth/LoginModal'
-import { SettingsModal } from '@/components/settings/SettingsModal'
+import { SettingsModal, applyAccentColorChoice } from '@/components/settings/SettingsModal'
 import { MailWorkspaceModal } from '@/components/mail/MailWorkspaceModal'
 import { AuthScreen } from '@/components/auth/AuthScreen'
+import { OpeningAnimation } from '@/components/common/OpeningAnimation'
 import { mailService } from '@/services/mailService'
-import { X } from 'lucide-react'
 import { formatPhoneNumber } from '@/utils/formatters'
 
 // Department-Specific Views
@@ -33,6 +33,7 @@ import { FinancialReportsView } from '@/components/accounting/FinancialReportsVi
 import { TeamPermissionsView } from '@/components/admin/TeamPermissionsView'
 import { ExecutiveReportsView } from '@/components/admin/ExecutiveReportsView'
 import { ApprovalsView } from '@/components/admin/ApprovalsView'
+import { TeamsView } from '@/components/teams/TeamsView'
 
 import { leadStore } from '@/services/leadStore'
 import { portfolioStore } from '@/services/portfolioStore'
@@ -56,6 +57,7 @@ import {
 import { notificationStore } from '@/services/notificationStore'
 
 export function App() {
+  const [showOpening, setShowOpening] = useState(true)
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
   const [activeTab, setActiveTabState] = useState<NavTab>(() => {
     const raw = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : 'dashboard'
@@ -131,9 +133,6 @@ export function App() {
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false)
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false)
 
-  // Floating realtime incoming lead notification
-  const [realtimeAlertLead, setRealtimeAlertLead] = useState<Lead | null>(null)
-
   // Global F5 and Ctrl+R / Cmd+R instant page reload support
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -146,16 +145,21 @@ export function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
   }, [])
 
-  // Listen for realtime new incoming leads
+  // Listen for realtime new incoming leads and push to notification preview
   useEffect(() => {
     const handleNewLeadEvent = (e: any) => {
       const incoming = e.detail as Lead
       if (incoming) {
-        setRealtimeAlertLead(incoming)
-        // Auto-dismiss alert after 8 seconds
-        setTimeout(() => {
-          setRealtimeAlertLead((prev) => (prev?.id === incoming.id ? null : prev))
-        }, 8000)
+        notificationStore.pushNotification({
+          id: `lead-incoming-${incoming.id}`,
+          type: 'LEAD',
+          title: `Yeni Başvuru: ${incoming.fullName}`,
+          subtitle: `${incoming.formName || 'Meta Lead Ads'} • ${formatPhoneNumber(incoming.phone)}${
+            incoming.preferredHousingType ? ` • ${incoming.preferredHousingType}` : ''
+          }`,
+          targetTab: 'customers',
+          referenceId: incoming.id,
+        })
       }
     }
     window.addEventListener('demirturk:new-lead', handleNewLeadEvent)
@@ -168,6 +172,10 @@ export function App() {
       const savedAccent = localStorage.getItem('demirturk_theme_accent')
       if (savedAccent && savedAccent !== 'gold') {
         document.documentElement.setAttribute('data-theme-accent', savedAccent)
+      }
+      const savedCustomAccentColor = localStorage.getItem('demirturk_accent_color') || 'indigo'
+      if (!savedAccent || savedAccent === 'gold' || savedAccent === 'light') {
+        applyAccentColorChoice(savedCustomAccentColor)
       }
       const savedContrast = localStorage.getItem('demirturk_theme_contrast')
       if (savedContrast === 'deep') {
@@ -307,17 +315,26 @@ export function App() {
   // Not logged in: Show dedicated modern Sign In & Sign Up screen
   if (!currentUser) {
     return (
-      <AuthScreen
-        onLoginSuccess={(user) => {
-          setCurrentUser(user)
-          setIsLoginModalOpen(false)
-        }}
-      />
+      <>
+        <AnimatePresence>
+          {showOpening && <OpeningAnimation onComplete={() => setShowOpening(false)} />}
+        </AnimatePresence>
+        <AuthScreen
+          onLoginSuccess={(user) => {
+            setCurrentUser(user)
+            setIsLoginModalOpen(false)
+          }}
+        />
+      </>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#383830] text-[#f3efe9] relative selection:bg-[#b99881]/30 selection:text-[#f3efe9] pb-24 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#f5f5f2] text-[#292d2b] relative selection:bg-[#657a72]/25 selection:text-[#292d2b] pb-24 font-sans overflow-x-hidden">
+      <AnimatePresence>
+        {showOpening && <OpeningAnimation onComplete={() => setShowOpening(false)} />}
+      </AnimatePresence>
+
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -341,15 +358,15 @@ export function App() {
               : '100%',
           transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        className="px-3 sm:px-6 lg:px-10 2xl:px-14 pt-3 sm:pt-6 pb-24 sm:pb-28 relative z-10 overflow-x-clip"
+        className="px-3 sm:px-6 md:pl-[236px] lg:pr-10 2xl:pr-14 pt-3 md:pt-2 pb-24 sm:pb-28 relative z-10 overflow-x-clip"
       >
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
             className="w-full page-mexican-wave"
           >
             {/* 1. Başlangıç (Tüm Departmanlarda Daima 1. Sayfa) */}
@@ -433,10 +450,18 @@ export function App() {
             {activeTab === 'executive-reports' && <ExecutiveReportsView leads={filteredLeads} />}
             {activeTab === 'approvals' && <ApprovalsView />}
 
-            {/* 5. Sayfa: Paylaşılanlar (Tüm Departmanlarda Daima 5. Sayfa) */}
+            {/* Ortak Sayfa: Ekipler (Paylaşılanlar'dan Hemen Önce) */}
+            {activeTab === 'teams' && (
+              <TeamsView
+                currentUser={currentUser}
+                onOpenProfile={() => setIsLoginModalOpen(true)}
+              />
+            )}
+
+            {/* Paylaşılanlar */}
             {activeTab === 'shared' && <SharedFilesView />}
 
-            {/* 6. Sayfa: Projeler (Tüm Departmanlarda Daima 6. Sayfa) */}
+            {/* Projeler */}
             {activeTab === 'projects' && (
               <ProjectsView onNavigateToPortfolio={() => setActiveTab('portfolio')} />
             )}
@@ -488,6 +513,7 @@ export function App() {
           setCurrentUser(null)
         }}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenTeams={() => setActiveTab('teams')}
       />
 
       {/* Settings Modal */}
@@ -515,63 +541,6 @@ export function App() {
         onClose={() => setIsMailWorkspaceOpen(false)}
         currentUser={currentUser}
       />
-
-      {/* Realtime New Lead Floating Alert Banner */}
-      <AnimatePresence>
-        {realtimeAlertLead && (
-          <motion.div
-            initial={{ opacity: 0, y: -40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
-            className="fixed top-20 right-6 z-[99999] max-w-md w-full bg-[#1c1917]/95 border border-[#b99881] rounded-[24px] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl flex items-center justify-between gap-3 text-white"
-          >
-            <div className="flex items-center gap-3 truncate mr-1">
-              <div className="w-10 h-10 rounded-full bg-[#b99881]/20 border border-[#b99881]/50 flex items-center justify-center shrink-0">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#b99881]"></span>
-                </span>
-              </div>
-              <div className="truncate">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#b99881]">
-                    Yeni Müşteri Düştü
-                  </span>
-                  <span className="text-[10px] text-[#a69f99]">Canlı</span>
-                </div>
-                <h4 className="font-bold text-sm text-white truncate max-w-[210px]">
-                  {realtimeAlertLead.fullName}
-                </h4>
-                <p className="text-xs text-[#a69f99] font-mono truncate max-w-[220px]">
-                  {formatPhoneNumber(realtimeAlertLead.phone)} • {realtimeAlertLead.formName || 'Meta Ads Formu'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  handleSelectLead(realtimeAlertLead)
-                  setRealtimeAlertLead(null)
-                }}
-                className="px-3.5 py-1.5 rounded-full text-xs font-bold text-[#1c1917] bg-[#b99881] hover:bg-[#c9a891] transition-all cursor-pointer shadow-md shadow-[#b99881]/20"
-              >
-                İncele
-              </button>
-              <button
-                type="button"
-                onClick={() => setRealtimeAlertLead(null)}
-                className="p-1 rounded-full text-[#8c857f] hover:text-white transition-colors cursor-pointer"
-                title="Kapat"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

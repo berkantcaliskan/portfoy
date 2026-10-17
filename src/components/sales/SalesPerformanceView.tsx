@@ -23,14 +23,17 @@ interface SalesPerformanceViewProps {
 
 export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ leads }) => {
   const allUsers = userStore.getAllUsers()
-  const salesUsers = allUsers.filter(
-    (u) => u.department === 'Satış' || u.department === 'Yönetim' || u.isManager
-  )
   const allUnits = projectStore.getAll().flatMap((p) => p.units || [])
   const soldUnits = allUnits.filter((u) => u.status === 'SATILDI')
   const totalVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
 
-  const quota = 40000000 // 40M TL Monthly Quota
+  const salesUsers = allUsers.filter(
+    (u) =>
+      (u.id !== 'usr-berkant' || soldUnits.length > 0) &&
+      (u.department === 'Satış' || u.department === 'Yönetim' || u.isManager)
+  )
+
+  const quota = 0
   const achievementRate = quota > 0 ? Math.min(100, Math.round((totalVolume / quota) * 100)) : 0
 
   return (
@@ -86,49 +89,55 @@ export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ lead
           <span>Danışman Satış Sıralaması (Leaderboard)</span>
         </h3>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead>
-              <tr className="border-b border-[#4a443f] text-[#8c857f] text-[11px]">
-                <th className="py-2.5 px-3">Danışman</th>
-                <th className="py-2.5 px-3">Rol</th>
-                <th className="py-2.5 px-3">Satılan Ünite</th>
-                <th className="py-2.5 px-3">Toplam Hacim</th>
-                <th className="py-2.5 px-3">Hakedilen Prim</th>
-                <th className="py-2.5 px-3">Durum</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]">
-              {salesUsers.map((user, idx) => {
-                const userSold = soldUnits.filter((u) => u.sale?.soldByUserId === user.id || u.sale?.soldByUserName === user.fullName)
-                const volume = userSold.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
-                const comm = Math.round(volume * 0.02)
+        {salesUsers.length === 0 ? (
+          <div className="py-8 text-center text-xs text-[#a69f99]">
+            Henüz satış kaydı veya aktif satış danışmanı verisi bulunmuyor.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-[#4a443f] text-[#8c857f] text-[11px]">
+                  <th className="py-2.5 px-3">Danışman</th>
+                  <th className="py-2.5 px-3">Rol</th>
+                  <th className="py-2.5 px-3">Satılan Ünite</th>
+                  <th className="py-2.5 px-3">Toplam Hacim</th>
+                  <th className="py-2.5 px-3">Hakedilen Prim</th>
+                  <th className="py-2.5 px-3">Durum</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]">
+                {salesUsers.map((user, idx) => {
+                  const userSold = soldUnits.filter((u) => u.sale?.soldByUserId === user.id || u.sale?.soldByUserName === user.fullName)
+                  const volume = userSold.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
+                  const comm = Math.round(volume * 0.02)
 
-                return (
-                  <tr key={user.id} className="hover:bg-[#34302d] transition-colors">
-                    <td className="py-3 px-3 font-semibold text-white flex items-center gap-2">
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                        idx === 0 ? 'bg-[#b99881] text-[#282522]' : 'bg-[#34302d] text-[#8c857f]'
-                      }`}>
-                        {idx + 1}
-                      </span>
-                      <span>{user.fullName}</span>
-                    </td>
-                    <td className="py-3 px-3 text-[#a69f99]">{user.role}</td>
-                    <td className="py-3 px-3 font-bold text-white">{userSold.length} Daire</td>
-                    <td className="py-3 px-3 font-bold text-white">{formatCurrency(volume)}</td>
-                    <td className="py-3 px-3 text-emerald-400 font-semibold">{formatCurrency(comm)}</td>
-                    <td className="py-3 px-3">
-                      <GlassBadge size="sm" variant={userSold.length > 0 ? 'success' : 'default'}>
-                        {userSold.length > 0 ? 'Kotada' : 'Geliştirilmeli'}
-                      </GlassBadge>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                  return (
+                    <tr key={user.id} className="hover:bg-[#34302d] transition-colors">
+                      <td className="py-3 px-3 font-semibold text-white flex items-center gap-2">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          idx === 0 ? 'bg-[#b99881] text-[#282522]' : 'bg-[#34302d] text-[#8c857f]'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                        <span>{user.fullName}</span>
+                      </td>
+                      <td className="py-3 px-3 text-[#a69f99]">{user.role}</td>
+                      <td className="py-3 px-3 font-bold text-white">{userSold.length} Daire</td>
+                      <td className="py-3 px-3 font-bold text-white">{formatCurrency(volume)}</td>
+                      <td className="py-3 px-3 text-emerald-400 font-semibold">{formatCurrency(comm)}</td>
+                      <td className="py-3 px-3">
+                        <GlassBadge size="sm" variant={userSold.length > 0 ? 'success' : 'default'}>
+                          {userSold.length > 0 ? 'Kotada' : 'Geliştirilmeli'}
+                        </GlassBadge>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </GlassCard>
     </div>
   )

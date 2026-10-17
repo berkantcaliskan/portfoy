@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Calculator,
@@ -90,11 +91,7 @@ interface PaymentRecord {
 
 const STORAGE_KEY_PAYMENTS = 'demirturk_tool_payments_v1'
 
-const DEFAULT_PAYMENTS: PaymentRecord[] = [
-  { id: 'p-1', item: 'Noter & Satış Sözleşmesi Tasdik Masrafı', amount: 3850, date: '2026-09-20' },
-  { id: 'p-2', item: 'Sosyal Medya Kampanya Reklam Bütçesi', amount: 12500, date: '2026-09-21' },
-  { id: 'p-3', item: 'Proje Tanıtım Kataloğu Baskı Bedeli', amount: 7200, date: '2026-09-22' },
-]
+const DEFAULT_PAYMENTS: PaymentRecord[] = []
 
 interface QuickToolsModalProps {
   isOpen: boolean
@@ -197,14 +194,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     } catch {
       // ignore
     }
-    return [
-      {
-        id: 'n-1',
-        title: 'Müşteri Görüşme Notu',
-        content: 'Kadıköy 2+1 rezidans için Ahmet Bey ile perşembe saat 14:00 randevusu teyit edilecek. Bütçe: 5.5M ₺.',
-        updatedAt: 'Bugün',
-      },
-    ]
+    return []
   })
   const [selectedNoteId, setSelectedNoteId] = useState<string>(notes[0]?.id || '')
 
@@ -317,7 +307,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 3. KOMİSYON & PRİM STATE & LOGIC
   // ==========================================
-  const [commSalePrice, setCommSalePrice] = useState<number>(5000000)
+  const [commSalePrice, setCommSalePrice] = useState<number>(0)
   const [commRate, setCommRate] = useState<number>(2) // 2%
   const [commAgencyRate, setCommAgencyRate] = useState<number>(4) // 4%
 
@@ -328,7 +318,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 4. DÖVİZ & KUR ÇEVİRİCİ STATE & LOGIC
   // ==========================================
-  const [currencyAmount, setCurrencyAmount] = useState<number>(100000)
+  const [currencyAmount, setCurrencyAmount] = useState<number>(0)
   const [baseCurrency, setBaseCurrency] = useState<'TRY' | 'USD' | 'EUR' | 'GBP'>('USD')
   const [rates] = useState({
     USD: 38.5,
@@ -349,7 +339,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 5. KONUT KREDİSİ STATE & LOGIC
   // ==========================================
-  const [mortgageLoan, setMortgageLoan] = useState<number>(2500000)
+  const [mortgageLoan, setMortgageLoan] = useState<number>(0)
   const [mortgageRate, setMortgageRate] = useState<number>(2.89) // Aylık %2.89
   const [mortgageMonths, setMortgageMonths] = useState<number>(120) // 120 ay
 
@@ -364,9 +354,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 6. TAPU HARCI STATE & LOGIC
   // ==========================================
-  const [deedPrice, setDeedPrice] = useState<number>(4500000)
+  const [deedPrice, setDeedPrice] = useState<number>(0)
   const [deedPayer, setDeedPayer] = useState<'split' | 'buyerOnly'>('split')
-  const revolvingFundFee = 3850 // 2026 Döner Sermaye ortalama
+  const revolvingFundFee = deedPrice > 0 ? 3850 : 0
 
   const buyerDeedFee = Math.round(deedPrice * 0.02)
   const sellerDeedFee = Math.round(deedPrice * 0.02)
@@ -375,9 +365,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 7. WHATSAPP ŞABLONLARI STATE & LOGIC
   // ==========================================
-  const [waClientName, setWaClientName] = useState('Ahmet Bey')
-  const [waProperty, setWaProperty] = useState('Demirtürk Sapphire 2+1')
-  const [waPrice, setWaPrice] = useState('4.850.000 ₺')
+  const [waClientName, setWaClientName] = useState('')
+  const [waProperty, setWaProperty] = useState('')
+  const [waPrice, setWaPrice] = useState('')
   const [waTemplateType, setWaTemplateType] = useState<'sunum' | 'randevu' | 'teklif' | 'kapora'>('sunum')
 
   const generateWaText = () => {
@@ -396,9 +386,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 8. METREKARE & BİRİM FİYAT STATE & LOGIC
   // ==========================================
-  const [sqmPriceTotal, setSqmPriceTotal] = useState<number>(6500000)
-  const [sqmGross, setSqmGross] = useState<number>(115)
-  const [sqmNet, setSqmNet] = useState<number>(94)
+  const [sqmPriceTotal, setSqmPriceTotal] = useState<number>(0)
+  const [sqmGross, setSqmGross] = useState<number>(0)
+  const [sqmNet, setSqmNet] = useState<number>(0)
 
   const grossUnit = sqmGross > 0 ? Math.round(sqmPriceTotal / sqmGross) : 0
   const netUnit = sqmNet > 0 ? Math.round(sqmPriceTotal / sqmNet) : 0
@@ -407,9 +397,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 9. ROI & KİRA AMORTİSMANI
   // ==========================================
-  const [roiPrice, setRoiPrice] = useState<number>(5000000)
-  const [roiRent, setRoiRent] = useState<number>(25000)
-  const [roiDues, setRoiDues] = useState<number>(1500)
+  const [roiPrice, setRoiPrice] = useState<number>(0)
+  const [roiRent, setRoiRent] = useState<number>(0)
+  const [roiDues, setRoiDues] = useState<number>(0)
   const roiYearlyNet = Math.max(0, (roiRent - roiDues) * 12)
   const roiYears = roiPrice > 0 && roiYearlyNet > 0 ? (roiPrice / roiYearlyNet).toFixed(1) : '0'
   const roiYield = roiPrice > 0 ? ((roiYearlyNet / roiPrice) * 100).toFixed(2) : '0'
@@ -417,19 +407,19 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 10. PAZARLIK & İNDİRİM MARJI
   // ==========================================
-  const [bargainListed, setBargainListed] = useState<number>(6500000)
-  const [bargainOffer, setBargainOffer] = useState<number>(5900000)
+  const [bargainListed, setBargainListed] = useState<number>(0)
+  const [bargainOffer, setBargainOffer] = useState<number>(0)
   const bargainDiscount = Math.max(0, bargainListed - bargainOffer)
   const bargainRate = bargainListed > 0 ? ((bargainDiscount / bargainListed) * 100).toFixed(1) : '0'
 
   // ==========================================
   // 11. PEŞİNAT & ARA ÖDEME
   // ==========================================
-  const [downTotal, setDownTotal] = useState<number | ''>(4500000)
-  const [downRate, setDownRate] = useState<number | ''>(30)
-  const [downInterimCount, setDownInterimCount] = useState<number | ''>(2)
-  const [downInterimAmount, setDownInterimAmount] = useState<number | ''>(450000)
-  const [downMonths, setDownMonths] = useState<number | ''>(24)
+  const [downTotal, setDownTotal] = useState<number | ''>(0)
+  const [downRate, setDownRate] = useState<number | ''>(0)
+  const [downInterimCount, setDownInterimCount] = useState<number | ''>(0)
+  const [downInterimAmount, setDownInterimAmount] = useState<number | ''>(0)
+  const [downMonths, setDownMonths] = useState<number | ''>(0)
 
   const activeDownTotal = typeof downTotal === 'number' ? downTotal : 0
   const activeDownRate = typeof downRate === 'number' ? downRate : 0
@@ -446,14 +436,14 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 12. TKGM PARSEL & İMAR
   // ==========================================
-  const [parselCity, setParselCity] = useState('İstanbul')
-  const [parselDistrict, setParselDistrict] = useState('Beşiktaş')
-  const [parselNeighborhood, setParselNeighborhood] = useState('Levent')
-  const [parselAda, setParselAda] = useState('1420')
-  const [parselNo, setParselNo] = useState('12')
-  const [parselKaks, setParselKaks] = useState(1.5)
-  const [parselTaks, setParselTaks] = useState(0.35)
-  const [parselArea, setParselArea] = useState(1000)
+  const [parselCity, setParselCity] = useState('')
+  const [parselDistrict, setParselDistrict] = useState('')
+  const [parselNeighborhood, setParselNeighborhood] = useState('')
+  const [parselAda, setParselAda] = useState('')
+  const [parselNo, setParselNo] = useState('')
+  const [parselKaks, setParselKaks] = useState(0)
+  const [parselTaks, setParselTaks] = useState(0)
+  const [parselArea, setParselArea] = useState(0)
 
   // ==========================================
   // 13. COMPASS (GÜNEŞ & CEPHE)
@@ -463,8 +453,8 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 14. VALUATION (EKSPERTİZ)
   // ==========================================
-  const [valSqm, setValSqm] = useState(65000)
-  const [valGross, setValGross] = useState(120)
+  const [valSqm, setValSqm] = useState(0)
+  const [valGross, setValGross] = useState(0)
   const [valAge, setValAge] = useState<'0' | '1-5' | '6-15' | '16+'>('0')
   const [valFloor, setValFloor] = useState<'ara' | 'giris' | 'dubleks'>('ara')
 
@@ -472,57 +462,50 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // 15. CONTRACTS (HAZIR SÖZLEŞMELER)
   // ==========================================
   const [contractType, setContractType] = useState<'yerGosterme' | 'yetki' | 'kapora'>('yerGosterme')
-  const [contractClient, setContractClient] = useState('Ahmet Yılmaz')
-  const [contractAddress, setContractAddress] = useState('Beşiktaş, Levent Mah. No: 14')
-  const [contractPrice, setContractPrice] = useState('8.500.000 ₺')
+  const [contractClient, setContractClient] = useState('')
+  const [contractAddress, setContractAddress] = useState('')
+  const [contractPrice, setContractPrice] = useState('')
 
   // ==========================================
   // 16. TARGET (SATIŞ HEDEFİ)
   // ==========================================
-  const [targetQuota, setTargetQuota] = useState(50000000)
-  const [targetRealized, setTargetRealized] = useState(21000000)
+  const [targetQuota, setTargetQuota] = useState(0)
+  const [targetRealized, setTargetRealized] = useState(0)
 
   // ==========================================
   // 17. REMINDERS (HATIRLATICILAR)
   // ==========================================
-  const [reminders, setReminders] = useState<{ id: string; text: string; done: boolean }[]>([
-    { id: '1', text: 'Tapu müdürlüğü harç dekontunu ilet', done: false },
-    { id: '2', text: 'Eksper randevusu saat 14:00 (Levent)', done: false },
-    { id: '3', text: 'Kira kontratı yenileme hatırlatması', done: true },
-  ])
+  const [reminders, setReminders] = useState<{ id: string; text: string; done: boolean }[]>([])
   const [newReminderText, setNewReminderText] = useState('')
 
   // ==========================================
   // 18. QR KARTVİZİT
   // ==========================================
-  const [qrName, setQrName] = useState('Berkant Çalışkan')
-  const [qrPhone, setQrPhone] = useState('+90 532 000 0000')
+  const [qrName, setQrName] = useState('')
+  const [qrPhone, setQrPhone] = useState('')
 
   // ==========================================
   // 20. CALENDAR (RANDEVULAR)
   // ==========================================
-  const [events, setEvents] = useState<{ id: string; title: string; time: string; date: string }[]>([
-    { id: '1', title: 'Müşteri Sunumu: Mehmet Bey', date: 'Bugün', time: '14:30' },
-    { id: '2', title: 'Tapu Randevusu: Daire 14', date: 'Yarın', time: '10:00' },
-  ])
+  const [events, setEvents] = useState<{ id: string; title: string; time: string; date: string }[]>([])
   const [newEventTitle, setNewEventTitle] = useState('')
   const [newEventTime, setNewEventTime] = useState('')
 
   // ==========================================
   // 21. DASK
   // ==========================================
-  const [daskArea, setDaskArea] = useState(120)
+  const [daskArea, setDaskArea] = useState(0)
 
   // ==========================================
   // 22. TAX INCOME (KİRA GELİR VERGİSİ)
   // ==========================================
-  const [taxYearlyRent, setTaxYearlyRent] = useState(360000)
+  const [taxYearlyRent, setTaxYearlyRent] = useState(0)
 
   // ==========================================
   // 23. AİDAT DAĞITICI
   // ==========================================
-  const [aidatTotal, setAidatTotal] = useState(75000)
-  const [aidatUnits, setAidatUnits] = useState(30)
+  const [aidatTotal, setAidatTotal] = useState(0)
+  const [aidatUnits, setAidatUnits] = useState(0)
 
   // ==========================================
   // 24. WEATHER (SAHA HAVA DURUMU)
@@ -581,29 +564,34 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
 
   const currentTool = toolsList.find((t) => t.id === activeTool)
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
           {/* Backdrop Blur Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.16 }}
             onClick={onClose}
             className="fixed inset-0 bg-black/65 backdrop-blur-md cursor-pointer"
           />
 
-          {/* 
-            QUICK TOOLS WRAPPER (Menü Dışarıda, Pencere Sağda, Ayarlar ile Eşit Boyut)
-          */}
-          <div className="relative z-10 flex items-stretch gap-7 max-w-[96vw] h-[680px] max-h-[90vh]">
-            
-            {/* Left Sidebar Menu: Pencere dışı, hiçbir katmana dahil olmadan sadece yazı ve ikonlar */}
-            <aside className="w-[210px] shrink-0 flex flex-col justify-between py-3 text-[#f3efe9] select-none">
+          {/* QUICK TOOLS WRAPPER (Sol Menü ve Sağ Pencere Birlikte Eşzamanlı Açılır/Kapanır) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 flex items-stretch gap-5 max-w-[96vw] h-[680px] max-h-[90vh]"
+          >
+            {/* Left Sidebar Menu */}
+            <aside className="glass-modal w-[222px] shrink-0 flex flex-col justify-between p-4 rounded-[28px] bg-[#282522] border border-[#4a443f] text-[#f3efe9] select-none">
               <div className="flex-1 overflow-y-auto pr-1 space-y-4">
-                <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-1 mb-2.5 flex items-center justify-between">
+                <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-2 mb-2 flex items-center justify-between">
                   <span>Uygulamalar</span>
                   <span className="text-[9px] text-[#8c857f]">{toolsList.length} Araç</span>
                 </div>
@@ -616,17 +604,14 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                         key={tool.id}
                         type="button"
                         onClick={() => setActiveTool(tool.id)}
-                        className={`w-full flex items-center gap-3 px-1.5 py-1.5 text-xs transition-colors cursor-pointer text-left ${
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                           isActive
-                            ? 'text-[#b99881] font-bold'
+                            ? 'bg-[#b99881] text-white font-bold'
                             : 'text-[#a69f99] hover:text-white font-medium'
                         }`}
                       >
-                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#b99881]' : 'text-[#8c857f]'}`} />
+                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#8c857f]'}`} />
                         <span className="truncate">{tool.label}</span>
-                        {isActive && (
-                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#b99881] shrink-0" />
-                        )}
                       </button>
                     )
                   })}
@@ -634,23 +619,12 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </div>
             </aside>
 
-            {/* Sağ Pencere: Sabit boyutlu, genişletilmiş ve dikey uzatılmış */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 12 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="w-[820px] max-w-[calc(96vw-240px)] h-full rounded-[32px] bg-[#2b2724]/95 backdrop-blur-2xl border border-[#4a443f] shadow-2xl shadow-black/80 flex flex-col overflow-hidden text-[#f3efe9] select-none font-sans relative"
-            >
-              {/* Top subtle highlight */}
-              <div className="pointer-events-none absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-[#b99881]/40 to-transparent" />
-
+            {/* Sağ Pencere */}
+            <div className="glass-modal w-[820px] max-w-[calc(96vw-242px)] h-full rounded-[32px] bg-[#282522] border border-[#4a443f] shadow-2xl flex flex-col overflow-hidden text-[#f3efe9] select-none font-sans relative">
               {/* Modal Header */}
-              <div className="px-7 py-4 border-b border-[#4a443f]/60 flex items-center justify-between shrink-0">
+              <div className="px-7 pt-5 pb-2 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-[#b99881]/15 text-[#b99881] flex items-center justify-center shrink-0">
-                    {currentTool ? <currentTool.icon className="w-4 h-4" /> : <Calculator className="w-4 h-4" />}
-                  </div>
+                  {currentTool ? <currentTool.icon className="w-4.5 h-4.5 text-[#b99881] shrink-0" /> : <Calculator className="w-4.5 h-4.5 text-[#b99881] shrink-0" />}
                   <div className="min-w-0">
                     <h2 className="text-sm font-bold text-white tracking-wide truncate">
                       {currentTool?.label || 'Başlat Uygulaması'}
@@ -659,15 +633,15 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-1.5 rounded-full text-[#a69f99] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-full text-[#a69f99] hover:text-white hover:bg-black/5 transition-colors cursor-pointer"
                   title="Kapat"
                 >
                   <X className="w-4.5 h-4.5" />
                 </button>
               </div>
 
-              {/* Right Content Area: Fixed container, scrolls internally */}
-              <main className="flex-1 p-7 overflow-y-auto space-y-4">
+              {/* Right Content Area */}
+              <div className="flex-1 p-7 pt-4 overflow-y-auto space-y-4">
 
                 {/* ---------------------------------------------------- */}
                 {/* TOOL 0: ÖDEMELER (PAYMENTS & EXPENSE TRACKER)        */}
@@ -2219,11 +2193,13 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             <p className="text-xs text-[#8c857f]">Müşteri mülk turu ve teklif görüşmesi süresini takip edin.</p>
           </div>
         )}
-      </main>
-    </motion.div>
-  </div>
+      </div>
+    </div>
+  </motion.div>
 </div>
 )}
-</AnimatePresence>
+</AnimatePresence>,
+    document.body
   )
 }
+

@@ -43,6 +43,7 @@ import {
   PinOff,
   Wallet,
   Mail,
+  UserPlus,
 } from 'lucide-react'
 import { NavTab } from './Navbar'
 import { BookLogo } from '@/components/common/BookLogo'
@@ -64,7 +65,6 @@ const DEFAULT_DOCK_ITEMS: DockItemConfig[] = [
   { id: 'dock-notepad', label: 'Not Defteri', iconType: 'notepad', toolId: 'notepad', isAction: true },
   { id: 'dock-calc', label: 'Hesap Makinesi', iconType: 'calc', toolId: 'calculator', isAction: true },
   { id: 'dock-tool-payments', label: 'Ödemeler', iconType: 'custom', toolId: 'payments', isAction: true },
-  { id: 'dock-new-lead', label: 'Yeni Veri', iconType: 'new-lead', isAction: true },
 ]
 
 const STORAGE_KEY_DOCK_ORDER = 'demirturk_dock_order_v1'
@@ -84,27 +84,6 @@ export interface StartMenuItem {
   isMail?: boolean
   isSettings?: boolean
 }
-
-// İnsan ve yanında iç içe geçmiş + (Artı) simgesi (Yeni Veri / Aday Ekleme)
-const IntertwinedUserPlusIcon = ({ className = 'w-4.5 h-4.5' }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    {/* İnsan Başı */}
-    <circle cx="8.5" cy="7" r="3.8" />
-    {/* İnsan Gövdesi */}
-    <path d="M1.5 20.5v-1.8a4.2 4.2 0 0 1 4.2-4.2h4.8a4.2 4.2 0 0 1 4.2 4.2v1.8" />
-    {/* İç İçe Geçmiş + (Artı) Simgesi */}
-    <line x1="17.5" y1="9.5" x2="17.5" y2="17.5" strokeWidth="2.2" />
-    <line x1="13" y1="13.5" x2="22" y2="13.5" strokeWidth="2.2" />
-  </svg>
-)
 
 export const SETTINGS_MENU_ITEM: StartMenuItem = {
   id: 'settings',
@@ -212,7 +191,9 @@ export const AppDock: React.FC<AppDockProps> = ({
               d.id !== 'dock-contacts' &&
               d.id !== 'dock-mail' &&
               !d.isMail &&
-              d.id !== 'dock-messages'
+              d.id !== 'dock-messages' &&
+              d.id !== 'dock-new-lead' &&
+              d.iconType !== 'new-lead'
           )
           if (sanitized.length > 0) {
             localStorage.setItem(STORAGE_KEY_DOCK_ORDER, JSON.stringify(sanitized))
@@ -295,7 +276,25 @@ export const AppDock: React.FC<AppDockProps> = ({
     !currentUser
 
   // Sayfalar dock'ta yer almaz; yalnızca araçlar ve eylemler
-  const visibleItems = dockItems.filter((item) => !item.tab)
+  const visibleItems = dockItems.filter(
+    (item) => !item.tab && item.id !== 'dock-new-lead' && item.id !== 'dock-messages' && item.id !== 'dock-mail'
+  )
+
+  // Sığmayan kelimeleri satır bazında '...' (ellipsis) ile kesen yardımcı fonksiyon
+  const renderMenuItemLabel = (name: string) => {
+    const words = name.trim().split(/\s+/)
+    if (words.length <= 1) {
+      return <span className="block w-full truncate">{name}</span>
+    }
+    const line1 = words.slice(0, -1).join(' ')
+    const line2 = words[words.length - 1]
+    return (
+      <>
+        <span className="block w-full truncate">{line1}</span>
+        <span className="block w-full truncate">{line2}</span>
+      </>
+    )
+  }
 
   // Timer reset helper
   const resetHideTimer = () => {
@@ -592,7 +591,7 @@ export const AppDock: React.FC<AppDockProps> = ({
       case 'calc':
         return <Calculator className="w-4 h-4" />
       case 'new-lead':
-        return <IntertwinedUserPlusIcon className="w-4.5 h-4.5" />
+        return <UserPlus className="w-4 h-4" />
       default:
         return <Sparkles className="w-4 h-4" />
     }
@@ -649,6 +648,22 @@ export const AppDock: React.FC<AppDockProps> = ({
       </div>
 
       {/* 
+        BAŞLAT AÇILDIĞINDA SOL BAR HARİÇ ARKA PLAN BLUR KATMANI
+      */}
+      <AnimatePresence>
+        {isStartMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsStartMenuOpen(false)}
+            className="fixed top-0 right-0 bottom-0 left-0 md:left-[216px] z-[45] bg-black/15 backdrop-blur-md"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 
         2. ASILI DOCK KONTEYNERI (FLOATING DOCK)
         2 sn inaktif kalındığında yumuşakça aşağı kayarak kendini saklar
       */}
@@ -656,7 +671,9 @@ export const AppDock: React.FC<AppDockProps> = ({
         ref={dockRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`fixed bottom-3.5 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ease-out transform ${
+        className={`fixed bottom-3.5 left-1/2 -translate-x-1/2 ${
+          isStartMenuOpen ? 'z-50' : 'z-40'
+        } transition-all duration-300 ease-out transform ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'
         }`}
       >
@@ -680,7 +697,7 @@ export const AppDock: React.FC<AppDockProps> = ({
               } rounded-[32px] p-4 sm:p-5 backdrop-blur-2xl space-y-3.5 z-50`}
             >
             {/* Header / User Info & Grid Selector */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#4a443f] gap-2">
+            <div className="flex items-center justify-between pb-1 gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-10 h-10 rounded-full bg-[#34302d] border border-[#b99881]/40 flex items-center justify-center text-sm font-bold text-[#b99881] shrink-0 overflow-hidden shadow-sm">
                   {currentUser?.avatarUrl ? (
@@ -722,7 +739,7 @@ export const AppDock: React.FC<AppDockProps> = ({
             {/* 
               1. HIZLI ERİŞİM (BAŞLAT MENÜSÜNDE ÜSTTE SABİT, KAYMAYAN İLK 4 VEYA 5 UYGULAMA)
             */}
-            <div className="space-y-1.5 pb-2.5 border-b border-[#4a443f]/60">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between px-1">
                 <span className="text-[10px] font-bold text-[#dfb76c] uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3 text-[#dfb76c]" />
@@ -760,7 +777,8 @@ export const AppDock: React.FC<AppDockProps> = ({
                         }
                       }}
                       onContextMenu={(e) => handleContextMenu(e, item)}
-                      className="group relative flex flex-col items-center justify-start p-1.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer text-center min-h-[72px]"
+                      title={item.name}
+                      className="group relative w-full min-w-0 overflow-hidden flex flex-col items-center justify-start px-1 py-1.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer text-center min-h-[72px]"
                     >
                       {/* Görev Çubuğunda Sabitli İkon Rozeti */}
                       {onTaskbar && (
@@ -777,11 +795,9 @@ export const AppDock: React.FC<AppDockProps> = ({
                         <Icon className="w-5 h-5" />
                       </div>
 
-                      {/* İsim Alanı: Çok satırlı isimler sadece alta doğru uzar */}
-                      <div className="w-full min-h-[26px] flex items-start justify-center mt-1">
-                        <span className="text-xs font-semibold text-[#f3efe9] group-hover:text-[#dfb76c] leading-tight text-center line-clamp-2 max-w-[78px]">
-                          {item.name}
-                        </span>
+                      {/* İsim Alanı: Sığmayan kelimeler '...' ile devam eder */}
+                      <div className="w-full min-w-0 overflow-hidden min-h-[26px] flex flex-col items-center justify-start mt-1 text-xs font-semibold text-[#f3efe9] group-hover:text-[#dfb76c] leading-tight text-center">
+                        {renderMenuItemLabel(item.name)}
                       </div>
                     </button>
                   )
@@ -796,9 +812,6 @@ export const AppDock: React.FC<AppDockProps> = ({
               <div className="flex items-center justify-between px-1 pt-0.5">
                 <span className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider">
                   Tüm Uygulamalar & Araçlar
-                </span>
-                <span className="text-[10px] text-[#8c857f]">
-                  (Sağ tık: Menü)
                 </span>
               </div>
 
@@ -829,7 +842,8 @@ export const AppDock: React.FC<AppDockProps> = ({
                         }
                       }}
                       onContextMenu={(e) => handleContextMenu(e, item)}
-                      className="group relative flex flex-col items-center justify-start p-1.5 rounded-2xl hover:bg-white/5 transition-all cursor-pointer text-center min-h-[76px]"
+                      title={item.name}
+                      className="group relative w-full min-w-0 overflow-hidden flex flex-col items-center justify-start px-1 py-1.5 rounded-2xl hover:bg-white/5 transition-all cursor-pointer text-center min-h-[76px]"
                     >
                       {/* Görev Çubuğunda Sabitli İkon Rozeti */}
                       {onTaskbar && (
@@ -846,11 +860,9 @@ export const AppDock: React.FC<AppDockProps> = ({
                         <Icon className="w-5.5 h-5.5" />
                       </div>
 
-                      {/* İsim Alanı: Çok satırlı isimler sadece alta doğru uzar */}
-                      <div className="w-full min-h-[28px] flex items-start justify-center mt-1">
-                        <span className="text-xs font-semibold text-[#c4bcb5] group-hover:text-white line-clamp-2 leading-tight text-center max-w-[78px]">
-                          {item.name}
-                        </span>
+                      {/* İsim Alanı: Sığmayan kelimeler '...' ile devam eder */}
+                      <div className="w-full min-w-0 overflow-hidden min-h-[28px] flex flex-col items-center justify-start mt-1 text-xs font-semibold text-[#c4bcb5] group-hover:text-white leading-tight text-center">
+                        {renderMenuItemLabel(item.name)}
                       </div>
                     </button>
                   )
@@ -859,7 +871,7 @@ export const AppDock: React.FC<AppDockProps> = ({
             </div>
 
             {/* Footer Bar */}
-            <div className="pt-2 border-t border-[#4a443f] flex items-center justify-between text-sm">
+            <div className="pt-1 flex items-center justify-between text-sm">
               <button
                 type="button"
                 onClick={() => {
@@ -897,7 +909,7 @@ export const AppDock: React.FC<AppDockProps> = ({
         )}
       </AnimatePresence>
 
-        <div className="flex items-center gap-2 p-2 rounded-full bg-[#383830]/90 border border-[#b99881]/25 backdrop-blur-xl shadow-2xl relative">
+        <div className="flex items-center gap-2 p-2 rounded-full bg-[#413f3d]/90 border border-[#b99881]/25 backdrop-blur-xl shadow-2xl relative">
           
           {/* 
             EN SOLDA HER ZAMAN SABİT BAŞLAT BUTONU (YUVARLAK İÇİNDE UYGULAMA LOGOSU)
