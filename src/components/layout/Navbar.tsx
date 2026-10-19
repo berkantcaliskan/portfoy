@@ -33,6 +33,8 @@ import {
   BookUser,
   UserCheck,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { AppUser, userStore } from '@/services/userStore'
 import {
@@ -135,6 +137,28 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false)
   const [isAppMenuOpen, setIsAppMenuOpen] = useState(false)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+
+  // Collapsible Left Sidebar State & Right-Click Context Menu
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('demirturk_sidebar_collapsed') === 'true'
+    } catch {
+      return false
+    }
+  })
+  const [sidebarContextMenu, setSidebarContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const sidebarContextMenuRef = useRef<HTMLDivElement>(null)
+
+  const handleSetSidebarCollapsed = (collapsed: boolean) => {
+    setIsSidebarCollapsed(collapsed)
+    setSidebarContextMenu(null)
+    try {
+      localStorage.setItem('demirturk_sidebar_collapsed', collapsed ? 'true' : 'false')
+      window.dispatchEvent(
+        new CustomEvent('demirturk_sidebar_collapsed_changed', { detail: collapsed })
+      )
+    } catch {}
+  }
 
   useEffect(() => {
     const unsub = messageStore.subscribe(() => {
@@ -339,6 +363,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       ) {
         setIsOverflowMenuOpen(false)
       }
+      if (
+        sidebarContextMenuRef.current &&
+        !sidebarContextMenuRef.current.contains(event.target as Node)
+      ) {
+        setSidebarContextMenu(null)
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
@@ -434,6 +464,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsOverflowMenuOpen(false)
+        setSidebarContextMenu(null)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -467,14 +498,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           Görsel referanstaki gibi: Yuvarlak Beyaz İkon Butonları + Sağda Profil Hapı
          ========================================================================== */}
       <div
-        className="hidden md:flex items-center justify-between gap-3 w-full md:pl-[236px] pr-6 lg:pr-10 2xl:pr-14 pt-4 pb-1 relative z-40 select-none"
+        className={`hidden md:flex items-center justify-between gap-3 w-full ${
+          isSidebarCollapsed ? 'md:pl-[88px]' : 'md:pl-[236px]'
+        } pr-6 lg:pr-10 2xl:pr-14 pt-4 pb-1 relative z-40 select-none transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
         style={
           {
             width:
               isMessagesOpen && messagingMode === 'sidebar'
                 ? `calc(100% - ${messagingSidebarWidth}px)`
                 : '100%',
-            transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1), padding-left 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
             WebkitAppRegion: 'no-drag',
           } as React.CSSProperties
         }
@@ -995,28 +1028,82 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <header
-        className="w-full md:w-[216px] md:fixed md:inset-y-0 md:left-0 border-b md:border-b-0 md:border-r border-[#b99881]/20 bg-[#34302c] sticky top-0 z-40 transition-colors shadow-sm select-none"
+        onContextMenu={(e) => {
+          if (window.innerWidth >= 768) {
+            e.preventDefault()
+            setSidebarContextMenu({ x: e.clientX, y: e.clientY })
+          }
+        }}
+        className={`w-full ${
+          isSidebarCollapsed ? 'md:w-[68px]' : 'md:w-[216px]'
+        } md:fixed md:inset-y-0 md:left-0 border-b md:border-b-0 md:border-r border-[#b99881]/20 bg-[#34302c] sticky top-0 z-40 transition-[width,background-color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] shadow-sm select-none`}
       >
         {/* Sağ Alt Köşe Pencere Kontrolleri */}
         <WindowControls />
 
+        {/* Sağ Tık Bağlam Menüsü (Daralt / Genişlet) */}
+        <AnimatePresence>
+          {sidebarContextMenu && (
+            <motion.div
+              ref={sidebarContextMenuRef}
+              initial={{ opacity: 0, scale: 0.94, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                top: Math.min(sidebarContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 64 : sidebarContextMenu.y),
+                left: Math.min(sidebarContextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 170 : sidebarContextMenu.x),
+              }}
+              className="fixed z-[90] min-w-[148px] rounded-2xl bg-[#282522]/95 backdrop-blur-xl border border-[#4a443f] p-1.5 shadow-2xl"
+            >
+              <button
+                type="button"
+                onClick={() => handleSetSidebarCollapsed(!isSidebarCollapsed)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
+              >
+                {isSidebarCollapsed ? (
+                  <>
+                    <PanelLeftOpen className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                    <span>Genişlet</span>
+                  </>
+                ) : (
+                  <>
+                    <PanelLeftClose className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                    <span>Daralt</span>
+                  </>
+                )}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ==========================================================================
             MASAÜSTÜ SOL DİKEY NAV BAR (Desktop Vertical Sidebar)
            ========================================================================== */}
-        <div className="hidden md:flex flex-col justify-between h-full w-full p-3">
+        <div
+          className={`hidden md:flex flex-col justify-between h-full w-full ${
+            isSidebarCollapsed ? 'px-2 py-3' : 'p-3'
+          } transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
+        >
           {/* Üst Alan: Logo */}
-          <div className="px-3.5 pt-1 pb-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <div
+            className={`${
+              isSidebarCollapsed ? 'px-0 flex justify-center items-center' : 'px-3.5'
+            } pt-1 pb-1 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
             <BrandLogoLockup
               logoSize={22}
-              gapClassName="gap-2"
+              gapClassName={isSidebarCollapsed ? 'gap-0' : 'gap-2'}
               slideDistance={20}
+              collapsed={isSidebarCollapsed}
               onClick={() => onTabChange('dashboard')}
             />
           </div>
 
           {/* Orta Alan: Dikey Sayfa Listesi */}
           <div
-            className="flex-1 flex flex-col justify-center overflow-y-auto no-scrollbar py-2 my-1"
+            className="flex-1 flex flex-col justify-center overflow-y-auto overflow-x-hidden no-scrollbar py-2 my-1"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <motion.nav
@@ -1033,26 +1120,45 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     key={item.id}
                     type="button"
+                    title={isSidebarCollapsed ? item.label : undefined}
                     onClick={() => {
                       notificationStore.markTabAsViewed(item.id)
                       onTabChange(item.id)
                     }}
-                    className={`sidebar-pill-item relative w-full flex items-center justify-between px-3.5 py-2 rounded-full text-[13px] font-medium transition-all cursor-pointer select-none group ${
+                    className={`sidebar-pill-item relative flex items-center ${
+                      isSidebarCollapsed
+                        ? 'w-10 h-10 mx-auto justify-center p-0'
+                        : 'w-full justify-between px-3.5 py-2'
+                    } rounded-full text-[13px] font-medium transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer select-none group overflow-hidden ${
                       isActive
                         ? 'bg-[#b99881] text-white font-semibold'
                         : 'text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10'
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'min-w-0'}`}>
                       <Icon
                         className={`w-4 h-4 transition-colors shrink-0 ${
                           isActive ? 'text-white' : 'text-[#a69f99] group-hover:text-white'
                         }`}
                         strokeWidth={isActive ? 2.2 : 1.9}
                       />
-                      <span className="truncate">{item.label}</span>
+                      {!isSidebarCollapsed && (
+                        <motion.span
+                          initial={false}
+                          animate={{
+                            x: 0,
+                            opacity: 1,
+                            maxWidth: 145,
+                            marginLeft: 8,
+                          }}
+                          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                          className="truncate overflow-hidden whitespace-nowrap inline-block"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
                     </div>
-                    {unread > 0 && (
+                    {unread > 0 && !isSidebarCollapsed && (
                       <span
                         className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                           isActive
@@ -1062,6 +1168,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                       >
                         {unread > 99 ? '99+' : unread}
                       </span>
+                    )}
+                    {unread > 0 && isSidebarCollapsed && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#dfb76c] ring-2 ring-[#34302c]" />
                     )}
                   </button>
                 )
@@ -1080,18 +1189,49 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
-                  className="w-full flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-full bg-[#282522] hover:bg-[#3d3733] border border-[#4a443f] text-xs text-[#d6beae] hover:text-white transition-all cursor-pointer select-none"
-                  title="Departman / Çalışma Alanı Değiştir"
+                  className={`flex items-center ${
+                    isSidebarCollapsed
+                      ? 'w-10 h-10 mx-auto justify-center p-0'
+                      : 'w-full justify-between gap-1.5 px-3.5 py-2'
+                  } rounded-full bg-[#282522] hover:bg-[#3d3733] border border-[#4a443f] text-xs text-[#d6beae] hover:text-white transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer select-none overflow-hidden`}
+                  title={`Departman / Çalışma Alanı: ${activeDept}`}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'min-w-0'}`}>
                     <Layers className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                    <span className="font-semibold text-white truncate">{activeDept}</span>
+                    {!isSidebarCollapsed && (
+                      <motion.span
+                        initial={false}
+                        animate={{
+                          x: 0,
+                          opacity: 1,
+                          maxWidth: 120,
+                          marginLeft: 8,
+                        }}
+                        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                        className="font-semibold text-white truncate overflow-hidden whitespace-nowrap inline-block"
+                      >
+                        {activeDept}
+                      </motion.span>
+                    )}
                   </div>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-[#a69f99] shrink-0 transition-transform duration-200 ${
-                      isWorkspaceMenuOpen ? 'rotate-180' : ''
-                    }`}
-                  />
+                  {!isSidebarCollapsed && (
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        x: 0,
+                        opacity: 1,
+                        width: 14,
+                      }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-hidden shrink-0 flex items-center"
+                    >
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-[#a69f99] shrink-0 transition-transform duration-200 ${
+                          isWorkspaceMenuOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </motion.div>
+                  )}
                 </button>
 
                 <AnimatePresence>
@@ -1101,7 +1241,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 6, scale: 0.97 }}
                       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                      className="dropdown-panel dropdown-panel-up absolute left-0 right-0 bottom-full mb-1.5 rounded-[22px] p-2 z-50 backdrop-blur-2xl border border-[#4a443f]"
+                      className="dropdown-panel dropdown-panel-up absolute left-0 w-[192px] bottom-full mb-1.5 rounded-[22px] p-2 z-50 backdrop-blur-2xl border border-[#4a443f]"
                     >
                       <div className="px-2.5 py-1 text-[10px] font-semibold text-[#8c857f] uppercase tracking-wider">
                         Yetkili Çalışma Alanları
@@ -1131,27 +1271,49 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <div
-                className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#282522]/60 border border-[#4a443f]/60 text-xs select-none"
+                className={`flex items-center ${
+                  isSidebarCollapsed
+                    ? 'w-10 h-10 mx-auto justify-center p-0'
+                    : 'px-3.5 py-2'
+                } rounded-full bg-[#282522]/60 border border-[#4a443f]/60 text-xs select-none overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
                 title={`Çalışma Alanı: ${activeDept}`}
               >
                 <Layers className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                <span className="font-semibold text-white truncate">{activeDept}</span>
+                {!isSidebarCollapsed && (
+                  <span className="font-semibold text-white truncate overflow-hidden whitespace-nowrap inline-block ml-2">
+                    {activeDept}
+                  </span>
+                )}
               </div>
             )}
 
-            <div className="flex items-center justify-around pt-1">
-              {/* 1. Ayarlar */}
-              <button
+            <motion.div
+              layout
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className={`flex ${
+                isSidebarCollapsed
+                  ? 'flex-col-reverse items-center gap-1.5 pt-1'
+                  : 'flex-row items-center justify-around pt-1'
+              }`}
+            >
+              {/* 1. Ayarlar (Daraltıldığında en altta) */}
+              <motion.button
+                layout
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 type="button"
+                title="Ayarlar"
                 onClick={onOpenSettings}
                 className="sidebar-pill-item relative w-10 h-10 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <Settings className="w-[18px] h-[18px] text-[#b99881] shrink-0" strokeWidth={1.9} />
-              </button>
+              </motion.button>
 
               {/* 2. Mail */}
-              <button
+              <motion.button
+                layout
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 type="button"
+                title="E-Posta"
                 onClick={onOpenMail}
                 className="sidebar-pill-item relative w-10 h-10 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
               >
@@ -1161,12 +1323,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {unreadMailCount > 99 ? '99+' : unreadMailCount}
                   </span>
                 )}
-              </button>
+              </motion.button>
 
               {/* 3. Mesajlar */}
-              <div ref={messagesRef} className="relative">
+              <motion.div
+                layout
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                ref={messagesRef}
+                className="relative"
+              >
                 <button
                   type="button"
+                  title="Mesajlar"
                   onClick={() => {
                     setIsNotificationsOpen(false)
                     messageStore.togglePanel()
@@ -1184,8 +1352,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   isOpen={isMessagesOpen}
                   onClose={() => messageStore.setPanelOpen(false)}
                 />
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
 

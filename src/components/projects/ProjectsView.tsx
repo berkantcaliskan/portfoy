@@ -19,7 +19,7 @@ import {
   TurkishLira,
   Lock,
   Edit2,
-  ArrowLeft,
+  ChevronLeft,
   ChevronRight,
   Compass,
   Settings,
@@ -120,6 +120,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     sourceDocumentName: string
     sourceDocumentSummary: string
     parsedUnits: ParsedUnitDraft[]
+    customAreas?: any[]
+    customFacades?: any[]
+    paymentBanner?: string
+    parcelInfo?: string
   }>({
     name: '',
     city: 'Sakarya',
@@ -138,6 +142,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     sourceDocumentName: '',
     sourceDocumentSummary: '',
     parsedUnits: [],
+    customAreas: undefined,
+    customFacades: undefined,
+    paymentBanner: undefined,
+    parcelInfo: undefined,
   })
 
   // Project Settings state
@@ -394,6 +402,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       defaultRoomType: newProject.defaultRoomType,
       sourceDocumentName: newProject.sourceDocumentName || undefined,
       sourceDocumentSummary: newProject.sourceDocumentSummary || undefined,
+      customAreas: newProject.customAreas,
+      customFacades: newProject.customFacades,
+      paymentBanner: newProject.paymentBanner,
+      parcelInfo: newProject.parcelInfo,
       parsedUnits: newProject.parsedUnits.length > 0 ? newProject.parsedUnits : undefined,
       status: 'SATISTA',
       description: newProject.description.trim(),
@@ -423,6 +435,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       sourceDocumentName: '',
       sourceDocumentSummary: '',
       parsedUnits: [],
+      customAreas: undefined,
+      customFacades: undefined,
+      paymentBanner: undefined,
+      parcelInfo: undefined,
     })
   }
 
@@ -534,23 +550,107 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
   const canEditPrice = permissionService.canEditProjectPrice(currentUser)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 pb-3">
       {/* Title Header (Katmansız, Çizgisiz, İkonlu) */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5">
-            <Building2 className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-2xl font-bold text-white tracking-wide">
-              Projeler
-            </h2>
-          </div>
-          <p className="text-xs text-[#a69f99] mt-1">
-            Tüm departmanlar için ortak tekil proje envanteri ve çakışma korumalı daire durum matrisi.
-          </p>
+          {viewMode === 'detail' && currentProject ? (
+            <div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className="p-1 -ml-1 rounded-full text-[#b99881] hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
+                  title="Tüm Projelere Dön"
+                >
+                  <ChevronLeft className="w-6 h-6" strokeWidth={2.4} />
+                </button>
+                <h2 className="text-2xl font-bold text-white tracking-wide">
+                  {currentProject.name}
+                </h2>
+                <span className="text-xs font-normal text-[#8c857f]">
+                  ({currentProject.code})
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2.5 text-xs text-[#a69f99] mt-0.5 pl-7">
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-[#b99881]" />
+                  {currentProject.district
+                    ? `${currentProject.district}, ${currentProject.city}`
+                    : currentProject.location}
+                  {currentProject.mevki ? ` • ${currentProject.mevki}` : ''}
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Layers className="w-3.5 h-3.5 text-[#b99881]" />
+                  {currentProject.type}
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-[#b99881]" />
+                  {currentProject.deliveryDate}
+                </span>
+                {currentProject.startingPrice && currentProject.startingPrice > 0 ? (
+                  <>
+                    <span>•</span>
+                    <span>Başlangıç: {formatCurrency(currentProject.startingPrice)}</span>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <Building2 className="w-5 h-5 text-[#b99881]" />
+              <h2 className="text-2xl font-bold text-white tracking-wide">
+                Projeler
+              </h2>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-3">
-          {(currentUser?.role === 'ADMIN' || currentUser?.isManager) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {viewMode === 'detail' && currentProject && (
+            <>
+              <button
+                type="button"
+                onClick={() => setDetailDisplayMode('blueprint')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  detailDisplayMode === 'blueprint'
+                    ? 'bg-[#b99881] text-white'
+                    : 'bg-[#34302d] text-[#a69f99] hover:text-white'
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5" />
+                <span>Etkileşimli Kat Planı (Kroki)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDetailDisplayMode('cards')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  detailDisplayMode === 'cards'
+                    ? 'bg-[#b99881] text-white'
+                    : 'bg-[#34302d] text-[#a69f99] hover:text-white'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Liste / Kart Matrisi</span>
+              </button>
+
+              {(currentUser?.role === 'ADMIN' || currentUser?.isManager) && (
+                <button
+                  type="button"
+                  onClick={handleOpenProjectSettings}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#c4bcb5] hover:text-white bg-[#34302d] hover:bg-[#3d3733] transition-all cursor-pointer"
+                  title="Proje Bilgileri ve Yönetim Ayarları"
+                >
+                  <Settings className="w-3.5 h-3.5 text-[#b99881]" />
+                  <span>Proje Ayarları</span>
+                </button>
+              )}
+            </>
+          )}
+
+          {viewMode === 'grid' && (currentUser?.role === 'ADMIN' || currentUser?.isManager) && (
             <GlassButton
               variant="gold"
               size="sm"
@@ -786,133 +886,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
         ) : (
           <motion.div
             key="detail-view"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="space-y-6"
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-3"
           >
-            {/* Geri Dönüş ve Başlık Çubuğu */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-1">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-[#c4bcb5] hover:text-white bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881] transition-all cursor-pointer shadow-sm"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-[#b99881]" />
-                <span>Tüm Projeler Listesine Dön</span>
-              </button>
-
-              <div className="text-xs text-[#8c857f]">
-                Görüntülenen Proje: <strong className="text-white ml-1 font-semibold">{currentProject?.name}</strong>
-              </div>
-            </div>
-
-            {/* Proje Seçimi Sekmeleri (Altındaki çizgi kaldırıldı) */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
-              {projects.map((p) => {
-                const isSelected = p.id === selectedProjectId
-                const soldCount = p.units?.filter((u) => u.status === 'SATILDI').length || 0
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedProjectId(p.id)}
-                    className={`px-4 py-2 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
-                      isSelected
-                        ? 'bg-[#b99881] text-[#282522] font-bold shadow-md'
-                        : 'bg-[#282522] text-[#a69f99] hover:text-white border border-[#4a443f]'
-                    }`}
-                  >
-                    <span>{p.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-[#282522]/20 text-[#282522]' : 'bg-[#34302d] text-[#8c857f]'}`}>
-                      {soldCount}/{p.units?.length || 0}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
             {/* Seçili Proje Detay & Daire Matrisi */}
             {currentProject && (
-              <div className="space-y-4">
-                {/* Bilgi Kısmı (Kutucuk olmadan, doğrudan zemin üzerinde) */}
-                <div className="flex flex-wrap items-center justify-between gap-4 py-2 px-1">
-                  <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <span>{currentProject.name}</span>
-                      <span className="text-xs font-normal text-[#8c857f]">({currentProject.code})</span>
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-[#a69f99] mt-1">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#b99881]" />
-                        {currentProject.district ? `${currentProject.district}, ${currentProject.city}` : currentProject.location}
-                        {currentProject.mevki ? ` • ${currentProject.mevki}` : ''}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-[#b99881]" />
-                        {currentProject.type}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-[#b99881]" />
-                        {currentProject.deliveryDate}
-                      </span>
-                      {currentProject.startingPrice && currentProject.startingPrice > 0 ? (
-                        <>
-                          <span>•</span>
-                          <span>Başlangıç: {formatCurrency(currentProject.startingPrice)}</span>
-                        </>
-                      ) : null}
-                    </div>
-                    {currentProject.description && (
-                      <p className="text-xs text-[#c4bcb5] mt-1.5 line-clamp-2">
-                        {currentProject.description}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Sağ Taraf: Görünüm Seçici (Etkileşimli Kat Planı Krokisi / Kart Matrisi) ve Proje Ayarları */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setDetailDisplayMode('blueprint')}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        detailDisplayMode === 'blueprint'
-                          ? 'bg-[#b99881] text-white'
-                          : 'bg-[#34302d] text-[#a69f99] hover:text-white'
-                      }`}
-                    >
-                      <Compass className="w-3.5 h-3.5" />
-                      <span>Etkileşimli Kat Planı (Kroki)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDetailDisplayMode('cards')}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        detailDisplayMode === 'cards'
-                          ? 'bg-[#b99881] text-white'
-                          : 'bg-[#34302d] text-[#a69f99] hover:text-white'
-                      }`}
-                    >
-                      <Layers className="w-3.5 h-3.5" />
-                      <span>Liste / Kart Matrisi</span>
-                    </button>
-
-                    {(currentUser?.role === 'ADMIN' || currentUser?.isManager) && (
-                      <button
-                        type="button"
-                        onClick={handleOpenProjectSettings}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#c4bcb5] hover:text-white bg-[#34302d] hover:bg-[#3d3733] transition-all cursor-pointer"
-                        title="Proje Bilgileri ve Yönetim Ayarları"
-                      >
-                        <Settings className="w-3.5 h-3.5 text-[#b99881]" />
-                        <span>Proje Ayarları</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
+              <div className="space-y-3">
                 {detailDisplayMode === 'blueprint' ? (
                   <ProjectFloorPlanView
                     project={currentProject}
@@ -1443,7 +1425,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
             <div className="flex items-center justify-between gap-2">
               <label className="text-xs font-bold text-[#f3efe9] flex items-center gap-1.5">
                 <FileSpreadsheet className="w-4 h-4 text-[#b99881]" />
-                <span>Dosyadan Otomatik Kroki Oluştur (Word, PDF, PPTX, Excel, Görsel)</span>
+                <span>Planı Yükle</span>
               </label>
               {isParsingNewProjectDoc && (
                 <span className="text-[11px] font-semibold text-[#b99881]">Okunuyor...</span>
@@ -1462,16 +1444,22 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                   setNewProject((prev) => ({
                     ...prev,
                     name: prev.name.trim() ? prev.name : parsed.detectedProjectName || prev.name,
+                    mevki: prev.mevki.trim() ? prev.mevki : parsed.parcelInfo || prev.mevki,
+                    deliveryDate: parsed.detectedDeliveryDate || prev.deliveryDate,
                     maxFloors: parsed.floorCount,
                     unitsPerFloor: parsed.unitsPerFloor,
                     blockCount: parsed.blockCount,
                     defaultRoomType: parsed.defaultRoomType,
                     layoutTemplate: parsed.layoutTemplate,
                     totalUnits: parsed.totalUnits,
-                    blueprintUrl: parsed.extractedBlueprintDataUrl || prev.blueprintUrl,
+                    blueprintUrl: parsed.clearBlueprint ? '' : parsed.extractedBlueprintDataUrl || prev.blueprintUrl,
                     sourceDocumentName: parsed.fileName,
                     sourceDocumentSummary: parsed.summary,
                     parsedUnits: parsed.parsedUnits,
+                    customAreas: parsed.customAreas,
+                    customFacades: parsed.customFacades,
+                    paymentBanner: parsed.paymentBanner,
+                    parcelInfo: parsed.parcelInfo,
                   }))
                 } catch (err) {
                   console.error('Proje belgesi okunamadı:', err)
@@ -1509,7 +1497,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               {/* Kat Sayısı (Maks 3: Zemin, Birinci, İkinci) */}
               <div>
                 <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
-                  Kat Sayısı (Maks 3 Kat)
+                  Kat Sayısı
                 </label>
                 <select
                   value={newProject.maxFloors}
@@ -1606,26 +1594,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 </select>
               </div>
 
-              {/* Mimari Kat Planı Dizilimi */}
+              {/* Mimari Kat Planı Görünümü */}
               <div>
                 <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
-                  Kroki Dizilimi
+                  Kroki Görünümü
                 </label>
-                <select
-                  value={newProject.layoutTemplate}
-                  onChange={(e) =>
-                    setNewProject({
-                      ...newProject,
-                      layoutTemplate: e.target.value as BlueprintLayoutTemplate,
-                    })
-                  }
-                  className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
-                >
-                  <option value="quad">Çekirdek (4 Aks)</option>
-                  <option value="corridor">Koridor Tipi</option>
-                  <option value="wing">Panoramik Kanat</option>
-                  <option value="villa">Villa / Parsel</option>
-                </select>
+                <div className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs font-semibold text-[#b99881]">
+                  Tepebakış
+                </div>
               </div>
             </div>
           </div>
@@ -1807,7 +1783,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                Bulunduğu Kat (Maks 3 Kat)
+                Bulunduğu Kat
               </label>
               <select
                 value={Number(editUnitForm.floor) || 0}

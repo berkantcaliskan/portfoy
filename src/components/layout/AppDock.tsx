@@ -240,6 +240,24 @@ export const AppDock: React.FC<AppDockProps> = ({
     return () => window.removeEventListener('demirturk_start_menu_grid_updated', handleSync)
   }, [])
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('demirturk_sidebar_collapsed') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    const handleSidebarCollapseChange = () => {
+      try {
+        setIsSidebarCollapsed(localStorage.getItem('demirturk_sidebar_collapsed') === 'true')
+      } catch {}
+    }
+    window.addEventListener('demirturk_sidebar_collapsed_changed', handleSidebarCollapseChange)
+    return () => window.removeEventListener('demirturk_sidebar_collapsed_changed', handleSidebarCollapseChange)
+  }, [])
+
   // Hızlı Erişim Durumu (Başlat menüsünün üstündeki sabit sıra)
   const [quickAccessIds, setQuickAccessIds] = useState<string[]>(() => {
     try {
@@ -332,11 +350,13 @@ export const AppDock: React.FC<AppDockProps> = ({
     }
   }, [isStartMenuOpen])
 
-  // Global mouse movement near bottom to reveal dock
+  // Global mouse movement near the centered bottom indicator to reveal dock
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // If mouse within 60px of the bottom edge, reveal dock
-      if (window.innerHeight - e.clientY <= 60) {
+      const distFromBottom = window.innerHeight - e.clientY
+      const distFromCenter = Math.abs(e.clientX - window.innerWidth / 2)
+      // Only reveal dock when cursor enters the narrow centered trigger zone around the dock line
+      if (distFromBottom <= 18 && distFromCenter <= 110) {
         setIsVisible(true)
         resetHideTimer()
       }
@@ -639,12 +659,12 @@ export const AppDock: React.FC<AppDockProps> = ({
           setIsVisible(true)
           resetHideTimer()
         }}
-        className={`fixed bottom-1.5 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 cursor-pointer group py-2 px-6 ${
+        className={`fixed bottom-1.5 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 cursor-pointer group py-1 px-2 ${
           isVisible ? 'opacity-0 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'
         }`}
         title="Görev Çubuğunu Göster"
       >
-        <div className="h-1.5 w-36 sm:w-52 rounded-full dock-breathing-line group-hover:h-2 group-hover:w-60 transition-all duration-300 shadow-lg" />
+        <div className="h-1.5 w-32 sm:w-44 rounded-full dock-breathing-line group-hover:h-2 group-hover:w-48 transition-all duration-300 shadow-lg" />
       </div>
 
       {/* 
@@ -658,7 +678,9 @@ export const AppDock: React.FC<AppDockProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={() => setIsStartMenuOpen(false)}
-            className="fixed top-0 right-0 bottom-0 left-0 md:left-[216px] z-[45] bg-black/15 backdrop-blur-md"
+            className={`fixed top-0 right-0 bottom-0 left-0 ${
+              isSidebarCollapsed ? 'md:left-[68px]' : 'md:left-[216px]'
+            } z-[45] bg-black/15 backdrop-blur-md transition-[left] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
           />
         )}
       </AnimatePresence>

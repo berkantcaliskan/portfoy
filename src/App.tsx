@@ -122,6 +122,23 @@ export function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isMailWorkspaceOpen, setIsMailWorkspaceOpen] = useState(false)
   const [unreadMailCount, setUnreadMailCount] = useState<number>(() => mailService.getUnreadCount(userStore.getCurrentUser()))
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('demirturk_sidebar_collapsed') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    const handleSidebarCollapseChange = () => {
+      try {
+        setIsSidebarCollapsed(localStorage.getItem('demirturk_sidebar_collapsed') === 'true')
+      } catch {}
+    }
+    window.addEventListener('demirturk_sidebar_collapsed_changed', handleSidebarCollapseChange)
+    return () => window.removeEventListener('demirturk_sidebar_collapsed_changed', handleSidebarCollapseChange)
+  }, [])
 
   // Reactive state from stores
   const [leads, setLeads] = useState<Lead[]>(() => leadStore.getAll(currentUser))
@@ -330,7 +347,7 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f2] text-[#292d2b] relative selection:bg-[#657a72]/25 selection:text-[#292d2b] pb-24 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#f5f5f2] text-[#292d2b] relative selection:bg-[#657a72]/25 selection:text-[#292d2b] pb-6 font-sans overflow-x-hidden">
       <AnimatePresence>
         {showOpening && <OpeningAnimation onComplete={() => setShowOpening(false)} />}
       </AnimatePresence>
@@ -356,9 +373,11 @@ export function App() {
             isMessagingOpen && messagingMode === 'sidebar' && typeof window !== 'undefined' && window.innerWidth >= 768
               ? `calc(100% - ${messagingSidebarWidth}px)`
               : '100%',
-          transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1), padding-left 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
-        className="px-3 sm:px-6 md:pl-[236px] lg:pr-10 2xl:pr-14 pt-3 md:pt-2 pb-24 sm:pb-28 relative z-10 overflow-x-clip"
+        className={`px-3 sm:px-6 ${
+          isSidebarCollapsed ? 'md:pl-[88px]' : 'md:pl-[236px]'
+        } lg:pr-10 2xl:pr-14 pt-3 md:pt-2 pb-9 sm:pb-10 relative z-10 overflow-x-clip transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
       >
         <AnimatePresence mode="wait">
           <motion.div

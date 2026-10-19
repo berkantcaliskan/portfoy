@@ -181,6 +181,8 @@ export interface BrandLogoLockupProps {
   initialDelay?: number
   /** Distance in px that the book starts shifted to the right before sliding left (default: 28) */
   slideDistance?: number
+  /** Whether the sidebar is collapsed (slides "Portföy" text smoothly to the left and hides it) */
+  collapsed?: boolean
 }
 
 /**
@@ -188,6 +190,7 @@ export interface BrandLogoLockupProps {
  * 1. Kitap başta kapalıdır ve hafif sağda (merkezde) durur.
  * 2. Kitap kapağı ve sayfaları pürüzsüzce açılır.
  * 3. Kitap sola doğru kayarken, "Portföy" yazısı da kayarak yanına yerleşir.
+ * 4. Sol bar daraltıldığında ("collapsed"), "Portföy" yazısı yumuşakça sola kayarak kaybolur.
  */
 export const BrandLogoLockup: React.FC<BrandLogoLockupProps> = ({
   logoSize = 24,
@@ -196,6 +199,7 @@ export const BrandLogoLockup: React.FC<BrandLogoLockupProps> = ({
   onClick,
   initialDelay = 0.08,
   slideDistance = 28,
+  collapsed = false,
 }) => {
   const [stage, setStage] = useState<'closed' | 'opening' | 'slid'>('closed')
   const [replayKey, setReplayKey] = useState(0)
@@ -222,18 +226,21 @@ export const BrandLogoLockup: React.FC<BrandLogoLockupProps> = ({
 
   const isBookOpen = stage === 'opening' || stage === 'slid'
   const hasSlid = stage === 'slid'
+  const showText = hasSlid && !collapsed
 
   return (
     <div
       onClick={handleClick}
       onDoubleClick={() => setReplayKey((k) => k + 1)}
-      className={`inline-flex items-center ${gapClassName} shrink-0 cursor-pointer select-none group`}
+      className={`inline-flex items-center ${
+        collapsed ? 'gap-0 justify-center w-full' : gapClassName
+      } shrink-0 cursor-pointer select-none group transition-all duration-300`}
     >
       {/* Kitap Logosu: Önce kapalı -> açılır -> sola kayar */}
       <motion.div
         initial={{ x: slideDistance, opacity: 0, scale: 0.94 }}
         animate={{
-          x: hasSlid ? 0 : slideDistance,
+          x: collapsed ? 0 : (hasSlid ? 0 : slideDistance),
           opacity: 1,
           scale: 1,
         }}
@@ -247,24 +254,34 @@ export const BrandLogoLockup: React.FC<BrandLogoLockupProps> = ({
         <BookLogo size={logoSize} isOpen={isBookOpen} duration={0.62} />
       </motion.div>
 
-      {/* "Portföy" Yazısı: Kitap sola kayarken pürüzsüzce kayarak belirir */}
-      <div className="overflow-hidden flex items-center py-0.5">
+      {/* "Portföy" Yazısı: Kitap sola kayarken pürüzsüzce kayarak belirir, daraltıldığında sola kayarak gizlenir */}
+      <motion.div
+        initial={false}
+        animate={{
+          maxWidth: showText ? 120 : 0,
+          opacity: showText ? 1 : 0,
+        }}
+        transition={{
+          duration: 0.38,
+          ease: SMOOTH_EASE,
+        }}
+        className="overflow-hidden flex items-center py-0.5"
+      >
         <motion.span
           initial={{ x: -24, opacity: 0, filter: 'blur(0px)' }}
           animate={{
-            x: hasSlid ? 0 : -24,
-            opacity: hasSlid ? 1 : 0,
+            x: showText ? 0 : -28,
+            opacity: showText ? 1 : 0,
           }}
           transition={{
-            duration: 0.68,
-            delay: hasSlid ? 0.04 : 0,
+            duration: 0.38,
             ease: SMOOTH_EASE,
           }}
           className={`${textClassName} inline-block whitespace-nowrap`}
         >
           Portföy
         </motion.span>
-      </div>
+      </motion.div>
     </div>
   )
 }

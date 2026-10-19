@@ -588,9 +588,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-10 flex items-stretch gap-5 max-w-[96vw] h-[680px] max-h-[90vh]"
           >
-            {/* Left Sidebar Menu */}
-            <aside className="glass-modal w-[222px] shrink-0 flex flex-col justify-between p-4 rounded-[28px] bg-[#282522] border border-[#4a443f] text-[#f3efe9] select-none">
-              <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+            {/* Left Sidebar Menu (Katmansız, doğrudan liste) */}
+            <aside className="w-[210px] shrink-0 flex flex-col justify-between py-3 pr-2 text-[#f3efe9] select-none">
+              <div className="flex-1 overflow-y-auto pr-1 space-y-4 no-scrollbar">
                 <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-2 mb-2 flex items-center justify-between">
                   <span>Uygulamalar</span>
                   <span className="text-[9px] text-[#8c857f]">{toolsList.length} Araç</span>
@@ -607,7 +607,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                           isActive
                             ? 'bg-[#b99881] text-white font-bold'
-                            : 'text-[#a69f99] hover:text-white font-medium'
+                            : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
                         }`}
                       >
                         <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#8c857f]'}`} />

@@ -483,8 +483,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
       {/* SETTINGS MODAL WRAPPER */}
       <div className="relative z-10 flex items-stretch gap-5 max-w-[96vw] h-[680px] max-h-[90vh]">
-        {/* SOL MENÜ */}
-        <aside className="glass-modal w-[222px] shrink-0 flex flex-col justify-between p-4 rounded-[28px] bg-[#282522] border border-[#4a443f] text-[#f3efe9] select-none">
+        {/* SOL MENÜ (Katmansız, doğrudan liste) */}
+        <aside className="w-[210px] shrink-0 flex flex-col justify-between py-3 pr-2 text-[#f3efe9] select-none">
           <div className="space-y-6">
             
             {/* Section 1: Genel Ayarlar */}
@@ -498,7 +498,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'account'
                       ? 'bg-[#b99881] text-white font-bold'
-                      : 'text-[#a69f99] hover:text-white font-medium'
+                      : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
                   }`}
                 >
                   <User className={`w-4 h-4 shrink-0 ${activeTab === 'account' ? 'text-white' : 'text-[#8c857f]'}`} />
@@ -510,7 +510,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'appearance'
                       ? 'bg-[#b99881] text-white font-bold'
-                      : 'text-[#a69f99] hover:text-white font-medium'
+                      : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
                   }`}
                 >
                   <Palette className={`w-4 h-4 shrink-0 ${activeTab === 'appearance' ? 'text-white' : 'text-[#8c857f]'}`} />
@@ -522,7 +522,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'company'
                       ? 'bg-[#b99881] text-white font-bold'
-                      : 'text-[#a69f99] hover:text-white font-medium'
+                      : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
                   }`}
                 >
                   <Building2 className={`w-4 h-4 shrink-0 ${activeTab === 'company' ? 'text-white' : 'text-[#8c857f]'}`} />
@@ -547,7 +547,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                         isActive
                           ? 'bg-[#b99881] text-white font-bold'
-                          : 'text-[#a69f99] hover:text-white font-medium'
+                          : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
                       }`}
                     >
                       <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#8c857f]'}`} />

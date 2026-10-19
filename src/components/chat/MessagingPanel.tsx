@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import {
   ChevronLeft,
   ArrowRight,
+  ArrowLeft,
   Smile,
   Mic,
   Paperclip,
@@ -57,6 +58,29 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [isRecordingVoice, setIsRecordingVoice] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
+
+  // Track collapsed sidebar state to dynamically position popup
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('demirturk_sidebar_collapsed') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    const handleCollapseChange = (e: any) => {
+      if (e?.detail !== undefined) {
+        setIsSidebarCollapsed(Boolean(e.detail))
+      } else {
+        try {
+          setIsSidebarCollapsed(localStorage.getItem('demirturk_sidebar_collapsed') === 'true')
+        } catch {}
+      }
+    }
+    window.addEventListener('demirturk_sidebar_collapsed_changed', handleCollapseChange)
+    return () => window.removeEventListener('demirturk_sidebar_collapsed_changed', handleCollapseChange)
+  }, [])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -682,15 +706,15 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
           {view === 'list' && renderListView()}
         </div>
 
-        {/* Sol altta sola bakan ok ile tekrar açılır menü moduna geri dönüş (Yazısız, Sadece Ok) */}
+        {/* Sol altta sola bakan ok ile tekrar açılır menü moduna geri dönüş (Katmansız, Tam ekrana geçiş okunun tam tersi: ArrowLeft) */}
         <div className="p-3 bg-transparent flex items-center justify-start shrink-0">
           <button
             type="button"
             onClick={() => handleToggleMode('popup')}
-            className="p-2 rounded-full bg-[#2a2623] hover:bg-[#34302d] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors cursor-pointer group"
-            title="Açılır Menü Moduna Dön"
+            className="p-1.5 rounded-full text-[#b99881] hover:text-white hover:bg-white/10 transition-colors cursor-pointer group"
+            title="Küçük Ekrana Geri Dön"
           >
-            <ChevronLeft className="w-4 h-4 text-[#b99881] group-hover:-translate-x-0.5 transition-transform" />
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
           </button>
         </div>
       </div>
@@ -700,7 +724,9 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
   // POPUP MODE: Sol alttaki mesaj ikonunun hemen yanında açılır
   return (
     <div
-      className="dropdown-panel fixed inset-x-0 md:inset-x-auto bottom-0 md:bottom-3 top-16 md:top-auto md:left-[214px] w-full md:w-[370px] h-[calc(100vh-64px)] md:h-[520px] rounded-t-[28px] md:rounded-[26px] shadow-2xl z-[60] animate-in slide-in-from-bottom md:zoom-in-95 duration-150 backdrop-blur-2xl flex flex-col overflow-hidden border border-[#4a443f]"
+      className={`dropdown-panel fixed inset-x-0 md:inset-x-auto bottom-0 md:bottom-3 top-16 md:top-auto ${
+        isSidebarCollapsed ? 'md:left-[74px]' : 'md:left-[222px]'
+      } w-full md:w-[370px] h-[calc(100vh-64px)] md:h-[520px] rounded-t-[28px] md:rounded-[26px] shadow-2xl z-[60] animate-in slide-in-from-bottom md:zoom-in-95 duration-150 backdrop-blur-2xl flex flex-col overflow-hidden border border-[#4a443f]`}
     >
       {view === 'contacts' && renderContactsView()}
       {view === 'chat' && renderChatView()}
