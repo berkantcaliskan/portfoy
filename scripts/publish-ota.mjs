@@ -129,21 +129,6 @@ async function main() {
     }
   }
 
-  // Sync GitHub read token (base64) to Supabase so other PCs can fetch from private GitHub repo
-  const ghToken = readGitCredentialToken()
-  if (ghToken) {
-    await upsertSupabaseKey('demirturk_ota_gh_config_v1', {
-      repo: 'berkantcaliskan/portfoy',
-      branch: 'main',
-      tokenB64: Buffer.from(ghToken, 'utf-8').toString('base64'),
-    })
-  }
-
-  // Upload OTA bundle & version to Supabase OTA channel
-  const okVer = await upsertSupabaseKey('demirturk_ota_version_v1', versionMeta)
-  const okBun = await upsertSupabaseKey('demirturk_ota_bundle_v1', bundlePayload)
-  console.log(`[OTA] Cloud OTA Mirror Upload: version=${okVer}, bundle=${okBun}`)
-
   // Commit & push to GitHub (origin main)
   if (process.argv.includes('--push')) {
     try {
