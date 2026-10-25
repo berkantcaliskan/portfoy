@@ -15,11 +15,17 @@ import {
   XCircle,
   Calendar,
   Award,
+  Edit3,
+  Phone,
 } from 'lucide-react'
 import { Lead, LeadStage } from '@/types/lead'
 import { MetaCapiEventName } from '@/types/meta'
 import { StageDropdown } from './StageDropdown'
+import { HOUSING_TYPES } from './LeadAddModal'
 import { GlassModal } from '@/components/ui/GlassModal'
+import { GlassInput } from '@/components/ui/GlassInput'
+import { GlassButton } from '@/components/ui/GlassButton'
+import { PhoneInput } from '@/components/common/PhoneInput'
 import { portfolioStore } from '@/services/portfolioStore'
 import { leadStore } from '@/services/leadStore'
 import { userStore } from '@/services/userStore'
@@ -49,6 +55,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('')
   const [copiedText, setCopiedText] = useState<string | null>(null)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [isEditingCustomer, setIsEditingCustomer] = useState(false)
   const [sendingCapi, setSendingCapi] = useState<MetaCapiEventName | null>(null)
   const [capiToast, setCapiToast] = useState<{ status: 'SENT' | 'QUEUED' | 'FAILED'; text: string } | null>(null)
   const [, setTick] = useState(0)
@@ -59,6 +66,59 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   }, [])
 
   const liveLead = leadStore.getById(lead.id) || lead
+  const allUsers = userStore.getAllUsers()
+  const customerRelationsUsers = allUsers.filter(
+    (u) =>
+      (u.department === 'Müşteri İlişkileri' ||
+        u.departments?.includes('Müşteri İlişkileri')) &&
+      u.role !== 'ADMIN'
+  )
+
+  const [editForm, setEditForm] = useState({
+    fullName: liveLead.fullName || '',
+    phone: liveLead.phone || '',
+    secondaryPhone: liveLead.secondaryPhone || '',
+    email: liveLead.email || '',
+    budget: liveLead.budget ? String(liveLead.budget) : '',
+    preferredHousingType: liveLead.preferredHousingType || '2+1 Konut',
+    assignedUserId: liveLead.assignedToUserId || '',
+  })
+
+  useEffect(() => {
+    setEditForm({
+      fullName: liveLead.fullName || '',
+      phone: liveLead.phone || '',
+      secondaryPhone: liveLead.secondaryPhone || '',
+      email: liveLead.email || '',
+      budget: liveLead.budget ? String(liveLead.budget) : '',
+      preferredHousingType: liveLead.preferredHousingType || '2+1 Konut',
+      assignedUserId: liveLead.assignedToUserId || '',
+    })
+  }, [liveLead.id, isEditingCustomer])
+
+  const handleSaveCustomerEdit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editForm.fullName.trim() || !editForm.phone.trim()) return
+
+    const assignedUser = allUsers.find((u) => u.id === editForm.assignedUserId)
+    leadStore.update(
+      liveLead.id,
+      {
+        fullName: editForm.fullName.trim(),
+        phone: editForm.phone.trim(),
+        whatsappPhone: editForm.phone.trim(),
+        secondaryPhone: editForm.secondaryPhone.trim() || undefined,
+        email: editForm.email.trim() || undefined,
+        budget: editForm.budget ? Number(editForm.budget) : undefined,
+        preferredHousingType: editForm.preferredHousingType,
+        assignedToUserId: assignedUser ? assignedUser.id : undefined,
+        assignedToUserName: assignedUser ? assignedUser.fullName : undefined,
+        owner: assignedUser ? assignedUser.fullName : 'Atanmamış',
+      },
+      currentUser
+    )
+    setIsEditingCustomer(false)
+  }
 
   const currentUser = userStore.getCurrentUser()
   const canDeleteLead =
@@ -104,14 +164,16 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     setTimeout(() => setCopiedText(null), 2000)
   }
 
-  const formAnswers = (lead.metaAnswers && lead.metaAnswers.length > 0)
-    ? lead.metaAnswers
-    : (lead.inquiries && lead.inquiries[0]?.metaAnswers && lead.inquiries[0].metaAnswers.length > 0)
-      ? lead.inquiries[0].metaAnswers
+  const formAnswers = (liveLead.metaAnswers && liveLead.metaAnswers.length > 0)
+    ? liveLead.metaAnswers
+    : (liveLead.inquiries && liveLead.inquiries[0]?.metaAnswers && liveLead.inquiries[0].metaAnswers.length > 0)
+      ? liveLead.inquiries[0].metaAnswers
       : [
-          ...(lead.preferredHousingType ? [{ question: 'İlgilendiğiniz Konut Tipi', answer: lead.preferredHousingType }] : []),
-          ...(lead.budget ? [{ question: 'Bütçe Beklentisi', answer: formatCurrency(lead.budget) }] : []),
-          ...(lead.notes ? [{ question: 'Form Notu / Talep', answer: lead.notes }] : []),
+          ...(liveLead.preferredHousingType ? [{ question: 'İlgilendiğiniz Konut Tipi', answer: liveLead.preferredHousingType }] : []),
+          ...(liveLead.budget ? [{ question: 'Bütçe Beklentisi', answer: formatCurrency(liveLead.budget) }] : []),
+          ...(liveLead.secondaryPhone ? [{ question: 'İkincil Telefon', answer: formatPhoneDisplay(liveLead.secondaryPhone) }] : []),
+          ...(liveLead.email ? [{ question: 'E-posta Adresi', answer: liveLead.email }] : []),
+          ...(liveLead.notes ? [{ question: 'Form Notu / Talep', answer: liveLead.notes }] : []),
         ]
 
   const quickMsgTemplates = [
@@ -151,8 +213,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     <GlassModal
       isOpen={isOpen}
       onClose={onClose}
-      title={lead.fullName}
-      description={`Kayıt No: ${leadStore.getLeadDisplayCode(lead)} • Eklenme: ${formatDate(lead.createdAt)}`}
+      title={liveLead.fullName}
+      description={`Kayıt No: ${leadStore.getLeadDisplayCode(liveLead)} • Eklenme: ${formatDate(liveLead.createdAt)}`}
       maxWidth="5xl"
     >
       <div className="space-y-3.5">
@@ -161,14 +223,14 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           {/* Sol: Avatar & İletişim */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#b99881] text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
-              {lead.fullName.slice(0, 2).toUpperCase()}
+              {liveLead.fullName.slice(0, 2).toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-white select-text">{lead.fullName}</span>
-                {lead.preferredHousingType && (
+                <span className="text-xs font-bold text-white select-text">{liveLead.fullName}</span>
+                {liveLead.preferredHousingType && (
                   <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-transparent text-[#b99881] border border-[#b99881]/45">
-                    {lead.preferredHousingType}
+                    {liveLead.preferredHousingType}
                   </span>
                 )}
                 {isWebLead ? (
@@ -176,19 +238,23 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                     <Globe className="w-2.5 h-2.5 text-amber-600" />
                     Web Sitesi
                   </span>
+                ) : liveLead.source === 'DIRECT' ? (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/12 text-emerald-700 border border-emerald-500/40">
+                    Manuel Kayıt
+                  </span>
                 ) : (
                   <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-blue-500/12 text-blue-700 border border-blue-500/40">
                     Meta Ads
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
                 <span className="text-xs text-[#f3efe9] font-mono select-all">
-                  {formatPhoneDisplay(lead.phone)}
+                  {formatPhoneDisplay(liveLead.phone)}
                 </span>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(lead.phone, 'phone')}
+                  onClick={() => copyToClipboard(liveLead.phone, 'phone')}
                   className="text-[#8c857f] hover:text-white transition-colors p-0.5 rounded-md hover:bg-black/5 cursor-pointer"
                   title="Numarayı Kopyala"
                 >
@@ -198,12 +264,21 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                     <Copy className="w-3 h-3" />
                   )}
                 </button>
-                {lead.email && (
+                {liveLead.secondaryPhone && (
                   <>
                     <span className="text-[#8c857f]">•</span>
-                    <span className="text-[11px] text-[#a69f99] truncate max-w-[140px] font-mono select-all flex items-center gap-1">
+                    <span className="text-[11px] text-[#a69f99] font-mono select-all flex items-center gap-1" title="İkincil Telefon">
+                      <Phone className="w-3 h-3 shrink-0" />
+                      {formatPhoneDisplay(liveLead.secondaryPhone)}
+                    </span>
+                  </>
+                )}
+                {liveLead.email && (
+                  <>
+                    <span className="text-[#8c857f]">•</span>
+                    <span className="text-[11px] text-[#a69f99] truncate max-w-[160px] font-mono select-all flex items-center gap-1">
                       <Mail className="w-3 h-3 shrink-0" />
-                      {lead.email}
+                      {liveLead.email}
                     </span>
                   </>
                 )}
@@ -211,21 +286,35 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Orta ve Sağ: Bütçe, Temsilci & Aşama Değiştirici (Şeffaf & Konturlu) */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* Orta ve Sağ: Bütçe, Temsilci, Bilgileri Düzenle & Aşama Değiştirici */}
+          <div className="flex flex-wrap items-center gap-2">
             <div className="px-3.5 py-1 rounded-full bg-transparent border border-[#4a443f] flex items-center gap-1.5">
               <span className="text-[10.5px] text-[#8c857f]">Bütçe:</span>
               <span className="text-xs font-bold text-emerald-700 font-mono">
-                {lead.budget ? formatCurrency(lead.budget) : 'Belirtilmedi'}
+                {liveLead.budget ? formatCurrency(liveLead.budget) : 'Belirtilmedi'}
               </span>
             </div>
 
             <div className="px-3.5 py-1 rounded-full bg-transparent border border-[#4a443f] flex items-center gap-1.5">
-              <span className="text-[10.5px] text-[#8c857f]">Temsilci:</span>
+              <span className="text-[10.5px] text-[#8c857f]">Danışman:</span>
               <span className="text-xs font-semibold text-[#f3efe9]">
-                {lead.assignedToUserName || lead.owner || 'Atanmadı'}
+                {liveLead.assignedToUserName || (liveLead.owner && liveLead.owner !== 'Atanmamış' ? liveLead.owner : 'Atanmadı')}
               </span>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsEditingCustomer((prev) => !prev)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer flex items-center gap-1.5 ${
+                isEditingCustomer
+                  ? 'bg-[#b99881] text-white border-[#b99881]'
+                  : 'bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border-[#4a443f]'
+              }`}
+              title="Müşteri Bilgilerini Düzenle (Bütçe, İkincil Telefon, E-posta vb.)"
+            >
+              <Edit3 className="w-3 h-3" />
+              <span>Müşteri Bilgilerini Düzenle</span>
+            </button>
 
             <div className="flex items-center gap-1.5 pl-1">
               <span className="text-xs font-semibold text-[#a69f99]">Aşama:</span>
@@ -236,6 +325,115 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* MÜŞTERİ BİLGİLERİNİ DÜZENLE PANELİ (Bütçe Beklentisi, İkincil Telefon, E-posta vb.) */}
+        {isEditingCustomer && (
+          <form
+            onSubmit={handleSaveCustomerEdit}
+            className="p-4 rounded-[22px] bg-transparent border border-[#b99881]/50 space-y-3.5"
+          >
+            <div className="flex items-center justify-between">
+              <h5 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Edit3 className="w-3.5 h-3.5 text-[#b99881]" />
+                <span>Müşteri Bilgilerini Düzenle</span>
+              </h5>
+              <span className="text-[11px] text-[#8c857f]">
+                Bütçe beklentisi, ikincil telefon, e-posta ve danışman bilgilerini güncelleyin
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <GlassInput
+                label="Adı ve Soyadı *"
+                value={editForm.fullName}
+                onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                placeholder="Örn: Mehmet Demir"
+              />
+
+              <PhoneInput
+                label="Telefon Numarası *"
+                value={editForm.phone}
+                onChange={(val) => setEditForm({ ...editForm, phone: val })}
+                required
+              />
+
+              <GlassInput
+                label="İkincil Telefon (İsteğe Bağlı)"
+                type="tel"
+                placeholder="Örn: 0532 000 00 00"
+                value={editForm.secondaryPhone}
+                onChange={(e) => setEditForm({ ...editForm, secondaryPhone: e.target.value })}
+              />
+
+              <GlassInput
+                label="E-posta Adresi (İsteğe Bağlı)"
+                type="email"
+                placeholder="Örn: mehmet@gmail.com"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+
+              <GlassInput
+                label="Bütçe Beklentisi (₺)"
+                type="number"
+                placeholder="Örn: 5000000"
+                value={editForm.budget}
+                onChange={(e) => setEditForm({ ...editForm, budget: e.target.value })}
+              />
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#f3efe9]">
+                  Konut Tipi Tercihi
+                </label>
+                <select
+                  value={editForm.preferredHousingType}
+                  onChange={(e) => setEditForm({ ...editForm, preferredHousingType: e.target.value })}
+                  className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+                >
+                  {HOUSING_TYPES.map((type) => (
+                    <option key={type} value={type} className="bg-[#24211f] text-white">
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#f3efe9]">
+                  Danışman Ata
+                </label>
+                <select
+                  value={editForm.assignedUserId}
+                  onChange={(e) => setEditForm({ ...editForm, assignedUserId: e.target.value })}
+                  className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+                >
+                  <option value="" className="bg-[#24211f] text-white">
+                    Danışman ataması yapma
+                  </option>
+                  {customerRelationsUsers.map((u) => (
+                    <option key={u.id} value={u.id} className="bg-[#24211f] text-white">
+                      {u.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <GlassButton
+                variant="subtle"
+                size="sm"
+                type="button"
+                onClick={() => setIsEditingCustomer(false)}
+              >
+                Vazgeç
+              </GlassButton>
+              <GlassButton variant="gold" size="sm" type="submit" className="px-5 font-bold">
+                Değişiklikleri Kaydet
+              </GlassButton>
+            </div>
+          </form>
+        )}
 
         {/* Meta Dönüşümler API'si (CAPI) Sinyal ve Kalite Bildirim Çubuğu */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2 rounded-[20px] bg-transparent border border-[#4a443f]">

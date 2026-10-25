@@ -352,12 +352,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         </label>
       )}
       {/* Container Box */}
-      <div className={`flex items-center w-full rounded-2xl bg-[#24211f] border ${error ? 'border-rose-500/80 focus-within:border-rose-400' : 'border-[#4a443f] focus-within:border-[#b99881]'} transition-colors overflow-hidden`}>
+      <div className={`flex items-center w-full rounded-full bg-[#24211f] border ${error ? 'border-rose-500/80 focus-within:border-rose-400' : 'border-[#4a443f] focus-within:border-[#b99881]'} transition-colors overflow-hidden`}>
         {/* Country Flag & DialCode Button */}
         <button
           type="button"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex items-center gap-1.5 px-3 py-2.5 bg-[#2d2926] hover:bg-[#38332f] border-r border-[#4a443f] text-xs font-semibold text-white transition-colors cursor-pointer select-none shrink-0"
+          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-[#34302d] hover:bg-[#3d3733] border-r border-[#4a443f] text-xs font-semibold text-white transition-colors cursor-pointer select-none shrink-0"
           title="Ülke Kodunu Değiştir"
         >
           <span className="text-base leading-none">{selectedCountry.flag}</span>
