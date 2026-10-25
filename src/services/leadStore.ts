@@ -710,13 +710,21 @@ class LeadStore {
         }
       : undefined
 
-    // Otomatik Eşit Danışman Ataması (Müşteri İlişkileri temsilcileri arasında Round-Robin)
+    // Otomatik Eşit Danışman Ataması: YALNIZCA Meta'dan çekilen datalarda yapılır
     let assignedUserId: string | undefined = undefined
     let assignedUserName: string | undefined = undefined
-    const nextMT = this.getNextRoundRobinMT()
-    if (nextMT) {
-      assignedUserId = nextMT.id
-      assignedUserName = nextMT.fullName
+    const isMetaLead =
+      !data.source ||
+      data.source === 'META_ADS' ||
+      data.source === 'INSTAGRAM' ||
+      data.source === 'FACEBOOK' ||
+      Boolean(data.metaLeadgenId)
+    if (isMetaLead) {
+      const nextMT = this.getNextRoundRobinMT()
+      if (nextMT) {
+        assignedUserId = nextMT.id
+        assignedUserName = nextMT.fullName
+      }
     }
 
     const activeCompany = userStore.getCurrentUser()?.companyName || 'Demirtürk İnşaat'
@@ -802,17 +810,15 @@ class LeadStore {
     const newId = `lead-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`
     this.registerKnownLeadNumber(activeCompany, newId, seqNumber)
     
-    // Determine consultant assignment
-    let assignedUserId = leadData.assignedToUserId
-    let assignedUserName = leadData.assignedToUserName || (leadData.owner && leadData.owner !== 'Atanmamış' && leadData.owner !== 'Demir Danışmanlık' ? leadData.owner : undefined)
-
-    if (!assignedUserId && !assignedUserName) {
-      const nextMT = this.getNextRoundRobinMT()
-      if (nextMT) {
-        assignedUserId = nextMT.id
-        assignedUserName = nextMT.fullName
-      }
-    }
+    // Manuel giriş olan datalarda otomatik atama yapılmaz; yalnızca açıkça seçildiyse atanır
+    const assignedUserId = leadData.assignedToUserId || undefined
+    const assignedUserName =
+      leadData.assignedToUserName ||
+      (leadData.owner &&
+      leadData.owner !== 'Atanmamış' &&
+      leadData.owner !== 'Demir Danışmanlık'
+        ? leadData.owner
+        : undefined)
 
     const isQualified = Boolean(leadData.isQualified || leadData.stage === 'QUALIFIED')
 
@@ -1215,8 +1221,13 @@ class LeadStore {
 
     let changed = false
     this.leads = this.leads.map((lead) => {
-      // If not yet assigned to an agent, assign to call center round-robin
-      if (!lead.assignedToUserId) {
+      // Yalnızca Meta'dan çekilen ve henüz atanmamış datalarda otomatik atama yapılır
+      const isMetaLead =
+        lead.source === 'META_ADS' ||
+        lead.source === 'INSTAGRAM' ||
+        lead.source === 'FACEBOOK' ||
+        Boolean(lead.metaLeadId)
+      if (!lead.assignedToUserId && isMetaLead) {
         lastIdx = (lastIdx + 1) % eligibleStaff.length
         const assignedUser = eligibleStaff[lastIdx]
         changed = true

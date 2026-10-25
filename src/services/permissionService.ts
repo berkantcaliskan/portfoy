@@ -27,8 +27,11 @@ export class PermissionService {
     // Scope: ALL
     if (user.scope === 'ALL') return true
 
-    // Scope: ASSIGNED_ONLY -> user must be explicitly assigned
+    // Scope: ASSIGNED_ONLY -> user must be explicitly assigned (or unassigned manual leads in Müşteri İlişkileri)
     if (user.scope === 'ASSIGNED_ONLY') {
+      if (user.department === 'Müşteri İlişkileri' && !lead.assignedToUserId) {
+        return true
+      }
       return (
         lead.assignedToUserId === user.id ||
         lead.owner === user.fullName ||

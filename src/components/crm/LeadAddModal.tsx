@@ -224,7 +224,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
               className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
             >
               <option value="" className="bg-[#24211f] text-white">
-                Otomatik Eşit Dağıtım (Round-Robin)
+                Atanmamış (Otomatik Atama Yok)
               </option>
               {users.map((u) => (
                 <option key={u.id} value={u.id} className="bg-[#24211f] text-white">
