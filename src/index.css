@@ -914,6 +914,7 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#221f1d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#2a2622]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#34302d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3a3430]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
   background: #ffffff !important;
   background-color: #ffffff !important;
@@ -991,6 +992,7 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#34302d]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#3a3430]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2e2a27]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#282522]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211f]"],

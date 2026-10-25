@@ -688,7 +688,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                           </button>
                           <button
                             onClick={() => handleOpenAssign(lead)}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3a3430] hover:bg-[#453e39] text-[#d6beae] hover:text-white border border-white/10 text-xs font-semibold cursor-pointer transition-colors shadow-sm"
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold cursor-pointer transition-colors shadow-sm"
                             title="Satış Ekibine Devret"
                           >
                             <UserPlus className="w-3 h-3 text-amber-400" />
