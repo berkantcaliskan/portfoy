@@ -44,10 +44,36 @@ class LeadStore {
     this.initFastPolling()
     if (typeof window !== 'undefined') {
       window.addEventListener('demirturk:cloud-db-synced', () => {
-        this.loadFromStorage()
+        const prevIds = new Set(this.leads.map((l) => l.id))
+        this.reloadFromCloudMirror()
+        for (const l of this.leads) {
+          if (!prevIds.has(l.id)) {
+            this.triggerNewLeadAlert(l)
+          }
+        }
         this.notify()
       })
     }
+  }
+
+  private reloadFromCloudMirror() {
+    try {
+      const savedLeads = localStorage.getItem(STORAGE_KEY_LEADS)
+      const savedActivities = localStorage.getItem(STORAGE_KEY_ACTIVITIES)
+      if (savedLeads) {
+        const parsed = JSON.parse(savedLeads)
+        if (Array.isArray(parsed)) {
+          this.leads = parsed
+        }
+      }
+      if (savedActivities) {
+        const parsedAct = JSON.parse(savedActivities)
+        if (parsedAct && typeof parsedAct === 'object') {
+          this.activities = parsedAct
+        }
+      }
+      this.ensureSequentialNumbersForLeads()
+    } catch {}
   }
 
   private getCompanyKey(companyName?: string): string {
@@ -153,10 +179,18 @@ class LeadStore {
     })
 
     const assignedById = new Map<string, number>()
+    const usedNumbers = new Set<number>()
     for (const l of chronological) {
-      const num = l.leadNumber && l.leadNumber > 0
-        ? this.registerKnownLeadNumber(l.companyName, l.id, l.leadNumber)
-        : this.allocateLeadNumber(l.companyName, l.id)
+      let num: number
+      if (l.leadNumber && l.leadNumber > 0 && !usedNumbers.has(l.leadNumber)) {
+        num = this.registerKnownLeadNumber(l.companyName, l.id, l.leadNumber)
+      } else {
+        num = this.allocateLeadNumber(l.companyName, l.id)
+        while (usedNumbers.has(num)) {
+          num = this.registerKnownLeadNumber(l.companyName, l.id, num + 1)
+        }
+      }
+      usedNumbers.add(num)
       assignedById.set(l.id, num)
     }
 
@@ -440,11 +474,32 @@ class LeadStore {
     latestTime?: string
     error?: string
   }> {
+    const beforeIds = new Set(this.leads.map((l) => l.id))
+    const beforeSnapshot = new Map(this.leads.map((l) => [l.id, l.updatedAt]))
+
+    try {
+      const winAny = typeof window !== 'undefined' ? (window as any) : null
+      if (winAny && typeof winAny.__demirturkPullCloudDb === 'function') {
+        await winAny.__demirturkPullCloudDb()
+        this.reloadFromCloudMirror()
+        this.notify()
+      }
+    } catch {}
+
     if (!isSupabaseConfigured()) {
+      let newCount = 0
+      let updatedCount = 0
+      for (const l of this.leads) {
+        if (!beforeIds.has(l.id)) {
+          newCount++
+        } else if (beforeSnapshot.get(l.id) !== l.updatedAt) {
+          updatedCount++
+        }
+      }
       return {
-        newCount: 0,
-        updatedCount: 0,
-        error: 'Bulut veritabanı bağlantısı henüz yapılandırılmamış.',
+        newCount,
+        updatedCount,
+        latestTime: new Date().toISOString(),
       }
     }
 
@@ -666,7 +721,7 @@ class LeadStore {
 
     const activeCompany = userStore.getCurrentUser()?.companyName || 'Demirtürk İnşaat'
     const seqNumber = this.allocateLeadNumber(activeCompany)
-    const newId = `lead-${seqNumber}`
+    const newId = `lead-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`
     this.registerKnownLeadNumber(activeCompany, newId, seqNumber)
 
     const newLead: Lead = {
@@ -744,7 +799,7 @@ class LeadStore {
   public add(leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>): Lead {
     const activeCompany = leadData.companyName || userStore.getCurrentUser()?.companyName || 'Demirtürk İnşaat'
     const seqNumber = this.allocateLeadNumber(activeCompany)
-    const newId = `lead-${seqNumber}`
+    const newId = `lead-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`
     this.registerKnownLeadNumber(activeCompany, newId, seqNumber)
     
     // Determine consultant assignment

@@ -42,6 +42,12 @@ class ApprovalStore {
   constructor() {
     this.loadFromStorage()
     this.initRealtime()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('demirturk:cloud-db-synced', () => {
+        this.loadFromStorage()
+        this.notify()
+      })
+    }
   }
 
   public setLoadedApprovals(approvals: ApprovalRequest[]) {

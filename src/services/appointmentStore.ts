@@ -41,6 +41,12 @@ class AppointmentStore {
   constructor() {
     this.loadFromStorage()
     this.initRealtime()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('demirturk:cloud-db-synced', () => {
+        this.loadFromStorage()
+        this.notify()
+      })
+    }
   }
 
   public setLoadedAppointments(appointments: Appointment[]) {

@@ -12,55 +12,126 @@ const distDir = path.join(rootDir, 'dist')
 const electronDir = path.join(rootDir, 'electron')
 const dataDir = path.join(rootDir, 'data')
 
+const BUSINESS_KEYS = new Set([
+  'demirturk_clean_slate_v7_demo_ready',
+  'demirturk_users_v2',
+  'demirturk_leads_v2',
+  'demirturk_activities_v2',
+  'demirturk_shared_projects_v2',
+  'demirturk_appointments_v2',
+  'demirturk_customer_requests_v2',
+  'demirturk_collections_v2',
+  'demirturk_payments_v2',
+  'demirturk_approvals_v2',
+  'demirturk_shared_files_v2',
+  'demirturk_mail_accounts_v2',
+  'demirturk_mail_messages_v2',
+  'demirturk_team_assets_v1',
+  'demirturk_team_asset_logs_v1',
+  'demirturk_team_leaves_v1',
+  'demirturk_meta_api_config',
+  'demirturk_meta_capi_logs_v1',
+])
+
+function isBusinessKey(k) {
+  return (
+    BUSINESS_KEYS.has(k) ||
+    k.startsWith('demirturk_avatar_') ||
+    k.startsWith('demirturk_calendar_')
+  )
+}
+
+function mergeJsonArrays(aStr, bStr, key) {
+  try {
+    const a = JSON.parse(aStr || '[]')
+    const b = JSON.parse(bStr || '[]')
+    if (!Array.isArray(a)) return bStr || '[]'
+    if (!Array.isArray(b)) return aStr || '[]'
+    const map = new Map()
+    const getK = (item, i) => {
+      if (!item || typeof item !== 'object') return String(i)
+      if (key === 'demirturk_users_v2' && item.username) return String(item.username).toLowerCase()
+      if (key === 'demirturk_leads_v2') {
+        const ph = String(item.phone || '').replace(/\D/g, '').slice(-10)
+        if (ph && ph.length >= 7) return `phone:${ph}`
+      }
+      return String(item.id || item.username || i)
+    }
+    a.forEach((x, i) => map.set(getK(x, i), x))
+    b.forEach((x, i) => {
+      const k = getK(x, i)
+      const ex = map.get(k)
+      if (!ex) map.set(k, x)
+      else map.set(k, { ...ex, ...x })
+    })
+    return JSON.stringify(Array.from(map.values()))
+  } catch {
+    return bStr || aStr || '[]'
+  }
+}
+
 function exportSharedCompanyDb() {
   const appDataDir = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming')
   const dbPath = path.join(appDataDir, 'DemirturkPortfoy', 'demirturk_persistent_db.json')
-  if (!fs.existsSync(dbPath)) return null
+  const cloudDbPath = path.join(dataDir, 'cloud_db.json')
 
+  let existingCloud = {}
   try {
-    const rawDb = JSON.parse(fs.readFileSync(dbPath, 'utf-8'))
-    const sharedDb = {}
-    const skipKeys = new Set(['demirturk_active_user_v2', 'demirturk_logged_out'])
-    for (const [k, v] of Object.entries(rawDb)) {
-      if (!skipKeys.has(k) && typeof v === 'string') {
-        sharedDb[k] = v
+    if (fs.existsSync(cloudDbPath)) {
+      existingCloud = JSON.parse(fs.readFileSync(cloudDbPath, 'utf-8')) || {}
+    }
+  } catch {}
+
+  let localDb = {}
+  try {
+    if (fs.existsSync(dbPath)) {
+      localDb = JSON.parse(fs.readFileSync(dbPath, 'utf-8')) || {}
+    }
+  } catch {}
+
+  const sharedDb = {
+    demirturk_clean_slate_v7_demo_ready: 'true',
+  }
+
+  const allKeys = new Set([...Object.keys(existingCloud), ...Object.keys(localDb)])
+  for (const k of allKeys) {
+    if (!isBusinessKey(k)) continue
+    const vCloud = existingCloud[k]
+    const vLocal = localDb[k]
+    if (k.endsWith('_v2') || k.endsWith('_v1')) {
+      if (
+        (typeof vCloud === 'string' && vCloud.trim().startsWith('[')) ||
+        (typeof vLocal === 'string' && vLocal.trim().startsWith('['))
+      ) {
+        sharedDb[k] = mergeJsonArrays(vCloud, vLocal, k)
+        continue
       }
     }
-
-    // 1. Write data/cloud_db.json for live multi-PC GitHub sync
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true })
-    }
-    fs.writeFileSync(
-      path.join(dataDir, 'cloud_db.json'),
-      JSON.stringify(sharedDb, null, 2),
-      'utf-8'
-    )
-
-    // 2. Write dist/shared-db.json so bundled/OTA dist also has it
-    if (fs.existsSync(distDir)) {
-      fs.writeFileSync(
-        path.join(distDir, 'shared-db.json'),
-        JSON.stringify(sharedDb),
-        'utf-8'
-      )
-    }
-
-    // 3. Keep src/services/seedCompanyData.ts up to date
-    const seedTsPath = path.join(rootDir, 'src', 'services', 'seedCompanyData.ts')
-    fs.writeFileSync(
-      seedTsPath,
-      'export const SEED_COMPANY_DB: Record<string, string> = ' +
-        JSON.stringify(sharedDb, null, 2) +
-        '\n',
-      'utf-8'
-    )
-
-    return sharedDb
-  } catch (err) {
-    console.warn('[OTA] Warning exporting shared company DB:', err.message)
-    return null
+    sharedDb[k] = typeof vLocal === 'string' ? vLocal : vCloud
   }
+
+  // 1. Write data/cloud_db.json for live multi-PC GitHub sync
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true })
+  }
+  fs.writeFileSync(cloudDbPath, JSON.stringify(sharedDb, null, 2), 'utf-8')
+
+  // 2. Write dist/shared-db.json so bundled/OTA dist also has it
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'shared-db.json'), JSON.stringify(sharedDb), 'utf-8')
+  }
+
+  // 3. Keep src/services/seedCompanyData.ts up to date
+  const seedTsPath = path.join(rootDir, 'src', 'services', 'seedCompanyData.ts')
+  fs.writeFileSync(
+    seedTsPath,
+    'export const SEED_COMPANY_DB: Record<string, string> = ' +
+      JSON.stringify(sharedDb, null, 2) +
+      '\n',
+    'utf-8'
+  )
+
+  return sharedDb
 }
 
 function collectDistFiles() {
@@ -95,6 +166,20 @@ async function main() {
     console.error('[OTA] dist/ directory not found. Run vite build first.')
     process.exit(1)
   }
+
+  // Pull latest cloud_db.json from origin/main before exporting so we never overwrite another PC's data
+  try {
+    execSync('git fetch origin main', { cwd: rootDir, stdio: 'ignore' })
+    const remoteCloudJson = execSync('git show origin/main:data/cloud_db.json', {
+      cwd: rootDir,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    })
+    if (remoteCloudJson) {
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
+      fs.writeFileSync(path.join(dataDir, 'cloud_db.json'), remoteCloudJson, 'utf-8')
+    }
+  } catch {}
 
   exportSharedCompanyDb()
 
@@ -157,6 +242,9 @@ async function main() {
       } catch {
         // Nothing new to commit
       }
+      try {
+        execSync('git pull --rebase -X ours origin main', { cwd: rootDir, stdio: 'inherit' })
+      } catch {}
       execSync('git push origin main', { cwd: rootDir, stdio: 'inherit' })
       console.log('[OTA] Successfully pushed to GitHub (origin/main)!')
     } catch (gitErr) {
