@@ -271,12 +271,10 @@ async function extractZipXmlEntries(buffer: ArrayBuffer): Promise<ZipEntryConten
  * Determine UnitSizePreset from a normalized percentage box
  */
 export function inferSizePresetFromBox(box: UnitPlanBox): UnitSizePreset {
-  const ratio = box.w / Math.max(1, box.h)
-  if (box.w <= 15 && box.h >= 30) return 'narrow-v'
-  if (box.h <= 17 && box.w >= 18) return 'narrow-h'
-  if (box.w >= 30 && box.h >= 28) return 'large-rect'
-  if (ratio >= 0.72 && ratio <= 1.05) return 'square'
-  return 'wide-rect'
+  const visualRatio = (box.w * 1.45) / Math.max(1, box.h)
+  if (visualRatio < 0.78) return '9x16'
+  if (visualRatio <= 1.25) return '1x1'
+  return '16x9'
 }
 
 /**

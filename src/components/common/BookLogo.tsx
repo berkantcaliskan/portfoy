@@ -232,11 +232,11 @@ export const BrandLogoLockup: React.FC<BrandLogoLockupProps> = ({
     <div
       onClick={handleClick}
       onDoubleClick={() => setReplayKey((k) => k + 1)}
-      className={`inline-flex items-center ${
-        collapsed ? 'gap-0 justify-center w-full' : gapClassName
-      } shrink-0 cursor-pointer select-none group transition-all duration-300`}
+      className={`flex items-center ${
+        collapsed ? 'w-[40px] min-w-[40px] max-w-[40px] gap-0' : `w-full ${gapClassName}`
+      } h-[40px] min-h-[40px] shrink-0 cursor-pointer select-none group overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
     >
-      {/* Kitap Logosu: Önce kapalı -> açılır -> sola kayar */}
+      {/* Kitap Logosu: Sabit 40x40px merkezli ikon yuvası (altındaki sayfa ikonlarıyla birebir aynı düşey eksende) */}
       <motion.div
         initial={{ x: slideDistance, opacity: 0, scale: 0.94 }}
         animate={{
@@ -249,7 +249,7 @@ export const BrandLogoLockup: React.FC<BrandLogoLockupProps> = ({
           opacity: { duration: 0.32, ease: SMOOTH_EASE },
           scale: { duration: 0.42, ease: SMOOTH_EASE },
         }}
-        className="flex items-center justify-center text-[#b99881] transition-transform group-hover:scale-105 relative z-10"
+        className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center text-[#b99881] transition-transform group-hover:scale-105 relative z-10"
       >
         <BookLogo size={logoSize} isOpen={isBookOpen} duration={0.62} />
       </motion.div>
@@ -258,23 +258,24 @@ export const BrandLogoLockup: React.FC<BrandLogoLockupProps> = ({
       <motion.div
         initial={false}
         animate={{
-          maxWidth: showText ? 120 : 0,
           opacity: showText ? 1 : 0,
         }}
         transition={{
-          duration: 0.38,
+          duration: 0.32,
           ease: SMOOTH_EASE,
         }}
-        className="overflow-hidden flex items-center py-0.5"
+        className={`overflow-hidden flex items-center py-0.5 min-w-0 ${
+          collapsed ? 'w-0 flex-none' : 'flex-1'
+        }`}
       >
         <motion.span
-          initial={{ x: -24, opacity: 0, filter: 'blur(0px)' }}
+          initial={{ x: -24, opacity: 0 }}
           animate={{
             x: showText ? 0 : -28,
             opacity: showText ? 1 : 0,
           }}
           transition={{
-            duration: 0.38,
+            duration: 0.34,
             ease: SMOOTH_EASE,
           }}
           className={`${textClassName} inline-block whitespace-nowrap`}

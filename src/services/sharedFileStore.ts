@@ -52,7 +52,15 @@ class SharedFileStore {
   }
 
   public setLoadedFiles(files: SharedFile[]) {
-    this.files = files || []
+    const byId = new Map<string, SharedFile>()
+    for (const f of files || []) byId.set(f.id, f)
+    for (const local of this.files) {
+      if (!byId.has(local.id)) {
+        byId.set(local.id, local)
+        this.persistCloudFile(local)
+      }
+    }
+    this.files = Array.from(byId.values())
     try {
       localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(this.files))
     } catch {}

@@ -1,19 +1,23 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   MessageCircle,
-  Phone,
   Mail,
   Sparkles,
   ExternalLink,
-  Plus,
   FileText,
   Copy,
   Check,
   Trash2,
   Clock,
   Globe,
+  Zap,
+  CheckCircle2,
+  XCircle,
+  Calendar,
+  Award,
 } from 'lucide-react'
 import { Lead, LeadStage } from '@/types/lead'
+import { MetaCapiEventName } from '@/types/meta'
 import { StageDropdown } from './StageDropdown'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { portfolioStore } from '@/services/portfolioStore'
@@ -45,12 +49,51 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('')
   const [copiedText, setCopiedText] = useState<string | null>(null)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [sendingCapi, setSendingCapi] = useState<MetaCapiEventName | null>(null)
+  const [capiToast, setCapiToast] = useState<{ status: 'SENT' | 'QUEUED' | 'FAILED'; text: string } | null>(null)
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    const unsub = leadStore.subscribe(() => setTick((t) => t + 1))
+    return unsub
+  }, [])
+
+  const liveLead = leadStore.getById(lead.id) || lead
 
   const currentUser = userStore.getCurrentUser()
   const canDeleteLead =
     currentUser?.department === 'Pazarlama' ||
     currentUser?.departments?.includes('Pazarlama') ||
     currentUser?.role === 'ADMIN'
+
+  const handleSendCapiSignal = async (signal: MetaCapiEventName) => {
+    setSendingCapi(signal)
+    setCapiToast(null)
+    try {
+      const log = await leadStore.sendLeadSignalToMeta(liveLead.id, signal, currentUser)
+      if (log) {
+        if (log.status === 'SENT') {
+          setCapiToast({
+            status: 'SENT',
+            text: `Meta'ya başarıyla iletildi: ${log.signalLabel} (${log.eventName})`,
+          })
+        } else if (log.status === 'QUEUED') {
+          setCapiToast({
+            status: 'QUEUED',
+            text: `${log.signalLabel} sinyali kaydedildi ve CAPI kuyruğuna alındı (Ayarlar > Meta & Reklam'dan Dataset ID girildiğinde otomatik iletilir).`,
+          })
+        } else {
+          setCapiToast({
+            status: 'FAILED',
+            text: log.errorMessage || 'Meta CAPI gönderim hatası.',
+          })
+        }
+        setTimeout(() => setCapiToast(null), 5000)
+      }
+    } finally {
+      setSendingCapi(null)
+    }
+  }
 
   const activities = leadStore.getActivities(lead.id)
   const matchingProperties = portfolioStore.matchPropertiesForLead(lead)
@@ -109,56 +152,57 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={lead.fullName}
-      description={`Kayıt No: #${lead.id} • Eklenme: ${formatDate(lead.createdAt)}`}
+      description={`Kayıt No: ${leadStore.getLeadDisplayCode(lead)} • Eklenme: ${formatDate(lead.createdAt)}`}
       maxWidth="5xl"
     >
       <div className="space-y-3.5">
-        {/* Üst Bilgi Şeridi: Kimlik, Bütçe, Temsilci, Aşama */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-[22px] bg-[#1e1c1a] border border-[#4a443f]">
+        {/* Üst Bilgi Şeridi: Şeffaf, yalnızca konturlu */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-[22px] bg-transparent border border-[#4a443f]">
           {/* Sol: Avatar & İletişim */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#b99881] text-[#1c1a18] flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
+            <div className="w-9 h-9 rounded-full bg-[#b99881] text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
               {lead.fullName.slice(0, 2).toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-white select-text">{lead.fullName}</span>
                 {lead.preferredHousingType && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-[#b99881]/20 text-[#dfb76c] border border-[#b99881]/30">
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-transparent text-[#b99881] border border-[#b99881]/45">
                     {lead.preferredHousingType}
                   </span>
                 )}
                 {isWebLead ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                    <Globe className="w-2.5 h-2.5" />
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-amber-500/12 text-amber-700 border border-amber-500/40 flex items-center gap-1">
+                    <Globe className="w-2.5 h-2.5 text-amber-600" />
                     Web Sitesi
                   </span>
                 ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-blue-500/12 text-blue-700 border border-blue-500/40">
                     Meta Ads
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-[#d6beae] font-mono select-all">
+                <span className="text-xs text-[#f3efe9] font-mono select-all">
                   {formatPhoneDisplay(lead.phone)}
                 </span>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(lead.phone, 'phone')}
-                  className="text-[#8c857f] hover:text-white transition-colors p-0.5 rounded-md hover:bg-white/5 cursor-pointer"
+                  className="text-[#8c857f] hover:text-white transition-colors p-0.5 rounded-md hover:bg-black/5 cursor-pointer"
                   title="Numarayı Kopyala"
                 >
                   {copiedText === 'phone' ? (
-                    <Check className="w-3 h-3 text-emerald-400" />
+                    <Check className="w-3 h-3 text-emerald-600" />
                   ) : (
                     <Copy className="w-3 h-3" />
                   )}
                 </button>
                 {lead.email && (
                   <>
-                    <span className="text-[#4a443f]">•</span>
-                    <span className="text-[11px] text-[#a69f99] truncate max-w-[140px] font-mono select-all">
+                    <span className="text-[#8c857f]">•</span>
+                    <span className="text-[11px] text-[#a69f99] truncate max-w-[140px] font-mono select-all flex items-center gap-1">
+                      <Mail className="w-3 h-3 shrink-0" />
                       {lead.email}
                     </span>
                   </>
@@ -167,16 +211,16 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Orta ve Sağ: Bütçe, Temsilci & Aşama Değiştirici */}
+          {/* Orta ve Sağ: Bütçe, Temsilci & Aşama Değiştirici (Şeffaf & Konturlu) */}
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="px-3.5 py-1 rounded-full bg-[#282522] border border-[#3b3632] flex items-center gap-1.5">
+            <div className="px-3.5 py-1 rounded-full bg-transparent border border-[#4a443f] flex items-center gap-1.5">
               <span className="text-[10.5px] text-[#8c857f]">Bütçe:</span>
-              <span className="text-xs font-bold text-emerald-400 font-mono">
+              <span className="text-xs font-bold text-emerald-700 font-mono">
                 {lead.budget ? formatCurrency(lead.budget) : 'Belirtilmedi'}
               </span>
             </div>
 
-            <div className="px-3.5 py-1 rounded-full bg-[#282522] border border-[#3b3632] flex items-center gap-1.5">
+            <div className="px-3.5 py-1 rounded-full bg-transparent border border-[#4a443f] flex items-center gap-1.5">
               <span className="text-[10.5px] text-[#8c857f]">Temsilci:</span>
               <span className="text-xs font-semibold text-[#f3efe9]">
                 {lead.assignedToUserName || lead.owner || 'Atanmadı'}
@@ -186,22 +230,113 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             <div className="flex items-center gap-1.5 pl-1">
               <span className="text-xs font-semibold text-[#a69f99]">Aşama:</span>
               <StageDropdown
-                value={lead.stage}
-                onChange={(newStage) => onStageChange(lead.id, newStage)}
+                value={liveLead.stage}
+                onChange={(newStage) => onStageChange(liveLead.id, newStage)}
               />
             </div>
           </div>
         </div>
 
+        {/* Meta Dönüşümler API'si (CAPI) Sinyal ve Kalite Bildirim Çubuğu */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2 rounded-[20px] bg-transparent border border-[#4a443f]">
+          <div className="flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <span className="text-[11px] font-bold text-white">Meta Dönüşümler API (CAPI):</span>
+            {liveLead.metaCapiStatus ? (
+              <span
+                className={`text-[10.5px] px-2.5 py-0.5 rounded-full font-semibold border ${
+                  liveLead.metaCapiStatus.status === 'SENT'
+                    ? 'bg-emerald-500/12 text-emerald-400 border-emerald-500/35'
+                    : liveLead.metaCapiStatus.status === 'QUEUED'
+                    ? 'bg-amber-500/12 text-amber-300 border-amber-500/35'
+                    : 'bg-rose-500/12 text-rose-400 border-rose-500/35'
+                }`}
+                title={liveLead.metaCapiStatus.errorMessage || `Olay: ${liveLead.metaCapiStatus.lastEventName}`}
+              >
+                {liveLead.metaCapiStatus.status === 'SENT'
+                  ? `İletildi: ${liveLead.metaCapiStatus.label}`
+                  : liveLead.metaCapiStatus.status === 'QUEUED'
+                  ? `Kuyrukta: ${liveLead.metaCapiStatus.label}`
+                  : `Hata: ${liveLead.metaCapiStatus.label}`}
+              </span>
+            ) : (
+              <span className="text-[10.5px] text-[#8c857f]">
+                Aşama değiştiğinde otomatik veya sağdaki butonlarla anında Meta'ya bildirilir
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              disabled={sendingCapi !== null}
+              onClick={() => handleSendCapiSignal('QualifiedLead')}
+              className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-teal-500/12 hover:bg-teal-500/25 text-teal-300 border border-teal-500/35 transition-colors cursor-pointer flex items-center gap-1"
+              title="Meta'ya bu adayın Olumlu / Nitelikli (QualifiedLead) olduğunu bildir"
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              <span>{sendingCapi === 'QualifiedLead' ? 'Gönderiliyor...' : 'Olumlu / Nitelikli'}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={sendingCapi !== null}
+              onClick={() => handleSendCapiSignal('Schedule')}
+              className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-indigo-500/12 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/35 transition-colors cursor-pointer flex items-center gap-1"
+              title="Meta'ya Randevu / Sunum (Schedule) sinyali gönder"
+            >
+              <Calendar className="w-3 h-3" />
+              <span>{sendingCapi === 'Schedule' ? 'Gönderiliyor...' : 'Randevu'}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={sendingCapi !== null}
+              onClick={() => handleSendCapiSignal('Purchase')}
+              className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-emerald-500/12 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 transition-colors cursor-pointer flex items-center gap-1"
+              title="Meta'ya Satış (Purchase) sinyali gönder"
+            >
+              <Award className="w-3 h-3" />
+              <span>{sendingCapi === 'Purchase' ? 'Gönderiliyor...' : 'Satış'}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={sendingCapi !== null}
+              onClick={() => handleSendCapiSignal('DisqualifiedLead')}
+              className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-rose-500/12 hover:bg-rose-500/25 text-rose-300 border border-rose-500/35 transition-colors cursor-pointer flex items-center gap-1"
+              title="Meta'ya bu adayın Olumsuz / Niteliksiz (DisqualifiedLead) olduğunu bildir"
+            >
+              <XCircle className="w-3 h-3" />
+              <span>{sendingCapi === 'DisqualifiedLead' ? 'Gönderiliyor...' : 'Olumsuz'}</span>
+            </button>
+          </div>
+        </div>
+
+        {capiToast && (
+          <div
+            className={`px-3.5 py-2 rounded-[14px] border text-xs flex items-center gap-2 ${
+              capiToast.status === 'SENT'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : capiToast.status === 'QUEUED'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 shrink-0" />
+            <span>{capiToast.text}</span>
+          </div>
+        )}
+
         {/* 2 Kolonlu Ana Gövde (Sol: Talep & Form Cevapları, Sağ: Aksiyon & İletişim) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
           {/* SOL KOLON (lg:col-span-7): Form Bilgileri & Başvuru Detayları */}
           <div className="lg:col-span-7 space-y-3">
-            {/* Form Yanıtları Kartı */}
-            <div className="p-3.5 rounded-[22px] bg-[#201d1b] border border-[#4a443f] space-y-2.5 shadow-lg">
+            {/* Form Yanıtları Kartı: Şeffaf, yalnızca konturlu */}
+            <div className="p-3.5 rounded-[22px] bg-transparent border border-[#4a443f] space-y-2.5">
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[#dfb76c]" />
+                  <FileText className="w-4 h-4 text-[#b99881]" />
                   <div>
                     <h5 className="text-xs font-bold text-white uppercase tracking-wider">
                       Form Bilgileri & Yanıtlar
@@ -210,42 +345,48 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10.5px] px-2.5 py-0.5 rounded-full bg-[#181614] text-[#dfb76c] border border-[#4a443f] font-semibold truncate max-w-[200px]" title={lead.formName}>
+                  <span
+                    className="text-[10.5px] px-2.5 py-0.5 rounded-full bg-transparent text-[#f3efe9] border border-[#4a443f] font-semibold truncate max-w-[200px]"
+                    title={lead.formName}
+                  >
                     {lead.formName || 'İletişim Formu'}
                   </span>
                   {lead.inquiries && lead.inquiries.length > 1 && (
-                    <span className="text-[10px] text-[#b99881] font-bold bg-[#b99881]/10 px-2 py-0.5 rounded-full border border-[#b99881]/25">
+                    <span className="text-[10px] text-[#b99881] font-bold bg-transparent px-2 py-0.5 rounded-full border border-[#b99881]/40">
                       {lead.inquiries.length} Başvuru
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Soru & Cevap Listesi (2'li Kompakt Izgara) */}
+              {/* Soru & Cevap Listesi (2'li Kompakt Izgara - Şeffaf, Yalnızca Konturlu) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {formAnswers.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-[16px] bg-[#181614] border border-[#34302d] flex flex-col justify-between gap-1 hover:border-[#b99881]/40 transition-colors"
+                    className="p-2.5 rounded-[16px] bg-transparent border border-[#4a443f] flex flex-col justify-between gap-1 hover:border-[#b99881]/50 transition-colors"
                   >
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wide truncate" title={item.question}>
+                      <span
+                        className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wide truncate"
+                        title={item.question}
+                      >
                         {item.question}
                       </span>
                       <button
                         type="button"
                         onClick={() => copyToClipboard(item.answer, `ans-${idx}`)}
-                        className="text-[#8c857f] hover:text-white transition-colors p-0.5 rounded-full hover:bg-white/5 cursor-pointer shrink-0"
+                        className="text-[#8c857f] hover:text-white transition-colors p-0.5 rounded-full hover:bg-black/5 cursor-pointer shrink-0"
                         title="Cevabı Kopyala"
                       >
                         {copiedText === `ans-${idx}` ? (
-                          <Check className="w-3 h-3 text-emerald-400" />
+                          <Check className="w-3 h-3 text-emerald-600" />
                         ) : (
                           <Copy className="w-3 h-3" />
                         )}
                       </button>
                     </div>
-                    <div className="text-xs font-semibold text-amber-100/90 break-words select-text">
+                    <div className="text-xs font-semibold text-[#f3efe9] break-words select-text">
                       {item.answer}
                     </div>
                   </div>
@@ -253,11 +394,11 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Önerilen Portföy Seçenekleri */}
+            {/* Önerilen Portföy Seçenekleri: Şeffaf, yalnızca konturlu */}
             {matchingProperties.length > 0 && (
-              <div className="p-3 rounded-[20px] bg-[#201d1b] border border-[#4a443f] space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#dfb76c] uppercase tracking-wide">
-                  <Sparkles className="w-3.5 h-3.5" />
+              <div className="p-3 rounded-[20px] bg-transparent border border-[#4a443f] space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#f3efe9] uppercase tracking-wide">
+                  <Sparkles className="w-3.5 h-3.5 text-[#b99881]" />
                   <span>Önerilen Portföy Seçenekleri ({matchingProperties.length})</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -268,7 +409,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                     return (
                       <div
                         key={prop.id}
-                        className="flex gap-2.5 p-2 rounded-[14px] bg-[#181614] border border-[#34302d] hover:border-[#b99881]/40 transition-colors"
+                        className="flex gap-2.5 p-2 rounded-[14px] bg-transparent border border-[#4a443f] hover:border-[#b99881]/50 transition-colors"
                       >
                         <img
                           src={prop.imageUrl}
@@ -283,14 +424,14 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                             {prop.location} • {prop.type}
                           </p>
                           <div className="flex items-center justify-between mt-0.5">
-                            <span className="text-[11px] font-bold text-[#dfb76c]">
+                            <span className="text-[11px] font-bold text-[#b99881]">
                               {formatCurrency(prop.price)}
                             </span>
                             <a
                               href={propWaUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[9.5px] font-semibold text-emerald-400 hover:text-emerald-300 underline"
+                              className="text-[9.5px] font-semibold text-emerald-700 hover:text-emerald-800 underline"
                             >
                               WhatsApp ile Paylaş
                             </a>
@@ -306,32 +447,32 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
           {/* SAĞ KOLON (lg:col-span-5): İletişim Aksiyonları & Görüşme Notları */}
           <div className="lg:col-span-5 space-y-3">
-            {/* WhatsApp Hızlı Mesajlaşma Merkezi */}
-            <div className="p-3.5 rounded-[22px] bg-emerald-950/20 border border-emerald-500/25 space-y-2 shadow-lg">
+            {/* WhatsApp Hızlı Mesajlaşma Merkezi: Şeffaf, yalnızca konturlu */}
+            <div className="p-3.5 rounded-[22px] bg-transparent border border-[#4a443f] space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-wide">
-                  <MessageCircle className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wide">
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Hızlı WhatsApp Mesajı</span>
                 </div>
                 <a
                   href={currentWaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500 hover:bg-emerald-400 text-[#141210] font-extrabold text-[11px] transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+                  className="whatsapp-action-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-all shadow-sm cursor-pointer"
                 >
                   <span>WhatsApp'ta Aç</span>
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="w-3 h-3 text-white" />
                 </a>
               </div>
 
-              {/* Hazır Mesaj Şablonları */}
+              {/* Hazır Mesaj Şablonları: Şeffaf, yalnızca konturlu, okunaklı koyu yeşil yazı */}
               <div className="flex flex-wrap gap-1.5">
                 {quickMsgTemplates.map((t, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setCustomWhatsAppMsg(t.msg)}
-                    className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-colors cursor-pointer"
+                    className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-transparent hover:bg-emerald-500/10 text-emerald-800 border border-emerald-600/35 transition-colors cursor-pointer"
                   >
                     + {t.title}
                   </button>
@@ -343,12 +484,12 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 value={customWhatsAppMsg}
                 onChange={(e) => setCustomWhatsAppMsg(e.target.value)}
                 placeholder="Özel WhatsApp mesajınızı buraya yazın veya yukarıdaki şablonlardan seçin..."
-                className="w-full bg-[#161412] border border-emerald-500/30 rounded-[14px] p-2.5 text-xs text-[#e8dfd8] placeholder-[#7d7771] focus:outline-none focus:border-emerald-400 resize-none transition-colors shadow-inner"
+                className="w-full bg-transparent border border-[#4a443f] rounded-[14px] p-2.5 text-xs text-[#f3efe9] placeholder-[#8c857f] focus:outline-none focus:border-emerald-600 resize-none transition-colors"
               />
             </div>
 
-            {/* Görüşme Notları & Takip Geçmişi */}
-            <div className="p-3.5 rounded-[22px] bg-[#201d1b] border border-[#4a443f] space-y-2 shadow-lg">
+            {/* Görüşme Notları & Takip Geçmişi: Şeffaf, yalnızca konturlu */}
+            <div className="p-3.5 rounded-[22px] bg-transparent border border-[#4a443f] space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-white uppercase tracking-wide">
                   <Clock className="w-3.5 h-3.5 text-[#b99881]" />
@@ -366,17 +507,17 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   placeholder="Görüşme notu ekleyin..."
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
-                  className="flex-1 bg-[#181614] border border-[#3b3632] rounded-full px-3.5 py-1.5 text-xs text-white placeholder-[#7d7771] focus:outline-none focus:border-[#b99881]"
+                  className="flex-1 bg-transparent border border-[#4a443f] rounded-full px-3.5 py-1.5 text-xs text-[#f3efe9] placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-full bg-[#b99881] hover:bg-[#c9a790] text-[#1c1a18] text-xs font-bold transition-colors cursor-pointer shrink-0"
+                  className="px-4 py-1.5 rounded-full bg-[#b99881] hover:bg-[#c9a790] text-white text-xs font-bold transition-colors cursor-pointer shrink-0"
                 >
                   Ekle
                 </button>
               </form>
 
-              {/* Aktivite Listesi */}
+              {/* Aktivite Listesi: Şeffaf, yalnızca konturlu */}
               <div className="space-y-1.5 max-h-[130px] overflow-y-auto pr-1">
                 {activities.length === 0 ? (
                   <p className="text-[10.5px] text-[#8c857f] italic py-2 text-center">
@@ -386,17 +527,17 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   activities.map((act) => (
                     <div
                       key={act.id}
-                      className="p-2 rounded-[12px] bg-[#181614] border border-[#34302d] flex items-start justify-between gap-2 text-xs"
+                      className="p-2 rounded-[12px] bg-transparent border border-[#4a443f] flex items-start justify-between gap-2 text-xs"
                     >
                       <div className="space-y-0.5 min-w-0">
                         <div className="font-medium text-[#f3efe9] text-[11px] break-words select-text">
                           {act.content}
                         </div>
                         <div className="text-[9.5px] text-[#8c857f]">
-                          Ekleyen: <span className="text-[#b99881]">{act.author}</span>
+                          Ekleyen: <span className="font-semibold text-[#b99881]">{act.author}</span>
                         </div>
                       </div>
-                      <span className="text-[9.5px] text-[#7d7771] shrink-0 font-mono">
+                      <span className="text-[9.5px] text-[#8c857f] shrink-0 tabular-nums">
                         {formatDate(act.createdAt)}
                       </span>
                     </div>
@@ -405,28 +546,28 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Pazarlama Yetkilisi İçin Silme Aksiyonu (Kompakt) */}
+            {/* Pazarlama Yetkilisi İçin Silme Aksiyonu (Şeffaf, yalnızca konturlu) */}
             {canDeleteLead && (
               <div className="pt-0.5">
                 {!isConfirmingDelete ? (
                   <button
                     type="button"
                     onClick={() => setIsConfirmingDelete(true)}
-                    className="w-full py-1.5 px-3 rounded-full text-[11px] font-semibold text-rose-400/90 hover:text-white bg-rose-500/5 hover:bg-rose-600/80 border border-rose-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full py-1.5 px-3 rounded-full text-[11px] font-semibold text-rose-700 hover:text-white bg-transparent hover:bg-rose-600 border border-rose-500/35 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-3 h-3 text-rose-600" />
                     <span>Müşteri Kaydını Sil (Pazarlama)</span>
                   </button>
                 ) : (
-                  <div className="p-2.5 rounded-[16px] bg-rose-950/30 border border-rose-500/40 space-y-1.5">
-                    <p className="text-[10.5px] text-rose-200">
+                  <div className="p-2.5 rounded-[16px] bg-transparent border border-rose-500/45 space-y-1.5">
+                    <p className="text-[10.5px] font-medium text-rose-700">
                       Bu kayıt ve tüm verileri silinecek. Emin misiniz?
                     </p>
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setIsConfirmingDelete(false)}
-                        className="px-2.5 py-1 rounded-full text-[10.5px] text-[#c7beba] hover:text-white bg-[#282522] border border-[#4a443f]"
+                        className="px-2.5 py-1 rounded-full text-[10.5px] text-[#f3efe9] bg-transparent border border-[#4a443f] cursor-pointer"
                       >
                         Vazgeç
                       </button>
@@ -437,7 +578,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                           setIsConfirmingDelete(false)
                           onClose()
                         }}
-                        className="px-3 py-1 rounded-full text-[10.5px] font-bold text-white bg-rose-600 hover:bg-rose-500"
+                        className="px-3 py-1 rounded-full text-[10.5px] font-bold text-white bg-rose-600 hover:bg-rose-500 cursor-pointer"
                       >
                         Evet, Sil
                       </button>

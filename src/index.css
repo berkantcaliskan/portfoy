@@ -272,8 +272,8 @@ header .dropdown-panel,
 div.dropdown-panel {
   background: #1e1b18 !important;
   background-color: #1e1b18 !important;
-  backdrop-filter: blur(28px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: 1px solid #4a443f !important;
   color: #f3efe9 !important;
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.28), 0 3px 8px -2px rgba(0, 0, 0, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 0.06) !important;
@@ -283,6 +283,8 @@ div.dropdown-panel {
    AÇILIR MENÜ SMOOTH SLIDE ANİMASYONLARI:
    Bağlam yukarıdaysa (aşağı açılan): Yukarıdan aşağıya slide (slide-down)
    Bağlam aşağıdaysa (yukarı açılan): Aşağıdan yukarıya slide (slide-up)
+   Not: Framer Motion (inline style) kullanan menülerde CSS forwards çakışmasını
+   ve kapanışta parlama (flash) efektini önlemek için :not([style]) kullanılır.
    ========================================================================== */
 @keyframes dropdownSlideDown {
   0% {
@@ -307,17 +309,18 @@ div.dropdown-panel {
 }
 
 /* Varsayılan: Bağlam yukarıdaysa yukarıdan aşağıya kayarak açılır */
-.dropdown-panel,
-.dropdown-panel-down {
-  animation: dropdownSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.dropdown-panel:not([style]),
+.dropdown-panel.dropdown-panel-down:not([style]),
+.dropdown-panel-down:not([style]) {
+  animation: dropdownSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: top center;
 }
 
 /* Bağlam aşağıdaysa (örn. Başlat menüsü, yukarı açılan açılır kutular): Aşağıdan yukarıya kayarak açılır */
-.dropdown-panel-up,
-.dropdown-panel[class*="bottom-full"],
-.dropdown-panel[class*="bottom-"] {
-  animation: dropdownSlideUp 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.dropdown-panel-up:not([style]),
+.dropdown-panel[class*="bottom-full"]:not(.dropdown-panel-down):not([style]),
+.dropdown-panel[class*="bottom-"]:not(.dropdown-panel-down):not([style]) {
+  animation: dropdownSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: bottom center;
 }
 
@@ -329,10 +332,10 @@ div.dropdown-panel {
 }
 
 /* Açılır menü içi butonlar ve hover efektleri */
-header div[class*="absolute"] button:hover,
-.dropdown-panel button:hover,
-.context-menu button:hover,
-[role="menu"] button:hover {
+header div[class*="absolute"] button:not(.no-layer-btn):hover,
+.dropdown-panel button:not(.no-layer-btn):hover,
+.context-menu button:not(.no-layer-btn):hover,
+[role="menu"] button:not(.no-layer-btn):hover {
   background: rgba(255, 255, 255, 0.08) !important;
   background-color: rgba(255, 255, 255, 0.08) !important;
   color: #ffffff !important;
@@ -496,6 +499,18 @@ button.bg-\[\#b99881\]:hover,
   background: rgba(185, 152, 129, 0.7);
 }
 
+/* Gizli kaydırma çubuğu (Sol dikey menü vb. alanlarda 6px scrollbar'ın daireleri sağdan kesmesini önler) */
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* Nefes Alan Gösterge Çizgisi: KESİNLİKLE KIRMIZI DEĞİL, PORTFÖY ALTIN/BRONZ & SICAK ANTRASİT TEMASI */
 @keyframes dockColorCycle {
   0% {
@@ -520,6 +535,42 @@ button.bg-\[\#b99881\]:hover,
   background: linear-gradient(90deg, #4a443f, var(--accent-color, #b99881), #f3efe9, #4a443f, var(--accent-color, #b99881));
   background-size: 300% 300%;
   animation: dockColorCycle 4s ease infinite;
+}
+
+.dock-vertical-divider {
+  background: linear-gradient(180deg, #d6beae 0%, #b99881 50%, #d6beae 100%) !important;
+  background-color: #c4a690 !important;
+}
+
+/* Etkileşimli Kat Planı Kontur Çizgisi: İnce (1px), pürüzsüz, arka plandaki açık gri tonunda normal kenarlık */
+html main .interactive-plan-contour,
+.interactive-plan-contour {
+  position: relative;
+  padding: 0 !important;
+  border-radius: 24px !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.interactive-plan-contour::before {
+  display: none !important;
+}
+
+html main .interactive-plan-canvas,
+.interactive-plan-canvas {
+  position: relative;
+  z-index: 1;
+  border-radius: 24px !important;
+  border: 1px solid #dfe1dd !important;
+  background-color: #ffffff !important;
+  background-image:
+    radial-gradient(rgba(41, 45, 43, 0.14) 1px, transparent 1px),
+    linear-gradient(to right, rgba(41, 45, 43, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(41, 45, 43, 0.045) 1px, transparent 1px) !important;
+  background-size: 2% 2%, 10% 10%, 10% 10% !important;
+  box-shadow: none !important;
 }
 
 /* Smooth Architectural Entrance Transitions */
@@ -746,8 +797,17 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h4,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h5,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h6,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) label,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-white,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-white"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-100"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-300"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-100"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-300"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-300"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#f3efe9]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#d6beae]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#c4bcb5]"] {
@@ -765,9 +825,79 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   color: var(--accent-color, #5c6ac4) !important;
 }
 
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-amber-"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-yellow-"] {
+  color: #f59e0b !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-emerald-"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-teal-"] {
+  color: #059669 !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-rose-"] {
+  color: #e11d48 !important;
+}
+
+/* Aydınlık temada renkli rozet ve butonların içindeki yazıların yüksek kontrastlı okunabilir olması */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-300"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-400"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-700"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-800"] {
+  color: #047857 !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-300"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-400"] {
+  color: #0f766e !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-100"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-300"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-400"]:not(svg),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-700"] {
+  color: #b45309 !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-300"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-400"]:not(svg) {
+  color: #0369a1 !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-300"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-400"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-700"] {
+  color: #1d4ed8 !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-200"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-300"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-400"]:not(svg),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-700"] {
+  color: #be123c !important;
+}
+
+/* Dolgulu yeşil/kırmızı aksiyon butonlarında (örn. WhatsApp'ta Aç) yazı ve ikon beyaz kalmalı */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-emerald-600"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-emerald-600"] *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-rose-600"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-rose-600"] * {
+  color: #ffffff !important;
+}
+
 /* Açıklama & Yardımcı Metinler: #292d2b tonunda hafif yumuşatılmış */
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#a69f99]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#8c857f]"] {
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#8c857f]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-400"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-400"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-400"] {
   color: rgba(41, 45, 43, 0.68) !important;
 }
 
@@ -812,23 +942,23 @@ aside button,
   border-radius: 9999px !important;
 }
 
-/* KATMAN ÜSTÜNDEKİ AYIRICI ÇİZGİLERİ KALDIR (Kart içi yatay/üst/alt çizgiler) */
-main .glass-card [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main .glass-card [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main .glass-card-static [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main .glass-card-static [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main .glass-panel [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main .glass-panel [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main .glass-panel-elevated [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main .glass-panel-elevated [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main [class*="rounded-[20px]"] [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main [class*="rounded-[20px]"] [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main [class*="rounded-[22px]"] [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main [class*="rounded-[22px]"] [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main [class*="rounded-[24px]"] [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-main [class*="rounded-[24px]"] [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-.glass-modal [class*="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea),
-.glass-modal [class*="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea) {
+/* KATMAN ÜSTÜNDEKİ AYIRICI ÇİZGİLERİ KALDIR (Kart içi yatay/üst/alt çizgiler - butonlar hariç) */
+main .glass-card [class~="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main .glass-card [class~="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main .glass-card-static [class~="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main .glass-card-static [class~="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main .glass-panel [class~="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main .glass-panel [class~="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main .glass-panel-elevated [class~="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main .glass-panel-elevated [class~="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main [class*="rounded-[20px]"] [class~="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main [class*="rounded-[20px]"] [class~="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main [class*="rounded-[22px]"] [class~="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main [class*="rounded-[22px]"] [class~="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main [class*="rounded-[24px]"] [class~="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+main [class*="rounded-[24px]"] [class~="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+.glass-modal [class~="border-b"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a),
+.glass-modal [class~="border-t"]:not(tr):not(thead):not(td):not(th):not(input):not(select):not(textarea):not(button):not(a) {
   border-top-width: 0px !important;
   border-bottom-width: 0px !important;
   border-top-color: transparent !important;
@@ -861,12 +991,14 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#34302d]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2e2a27]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#282522]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211f]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211e]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1c1a18]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1c1a]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1d1b]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1a1715]"]:not(.dropdown-panel):not(.popover-panel),
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-navy-900"] {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
@@ -910,13 +1042,97 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   box-shadow: 0 24px 48px -10px rgba(41, 45, 43, 0.22), -8px 12px 24px -6px color-mix(in srgb, var(--accent-color, #5c6ac4) 22%, transparent) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu button:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"] button:hover {
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"] button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
   color: #292d2b !important;
+}
+
+.no-layer-btn,
+.no-layer-btn:hover,
+.no-layer-btn:focus,
+.no-layer-btn:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Uygulamalar ve Ayarlar Sol Menüsü: KESİNLİKLE KATMANSIZ (Arka plan blur üzerinde doğrudan açık renkli liste) */
+.modal-layerless-aside {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  color: #f5f5f2 !important;
+}
+
+html .modal-layerless-aside .modal-aside-heading,
+html .modal-layerless-aside .modal-aside-heading span,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside .modal-aside-heading,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside .modal-aside-heading span {
+  color: rgba(245, 245, 242, 0.72) !important;
+}
+
+html .modal-layerless-aside button:not(.is-active-aside-btn),
+html .modal-layerless-aside button:not(.is-active-aside-btn) span,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn) span {
+  color: #f5f5f2 !important;
+}
+
+html .modal-layerless-aside button:not(.is-active-aside-btn) svg,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn) svg {
+  color: rgba(245, 245, 242, 0.88) !important;
+}
+
+html .modal-layerless-aside button:not(.is-active-aside-btn):hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+}
+
+html .modal-layerless-aside button:not(.is-active-aside-btn):hover span,
+html .modal-layerless-aside button:not(.is-active-aside-btn):hover svg,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover span,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover svg {
+  color: #ffffff !important;
+}
+
+html .modal-layerless-aside button.is-active-aside-btn,
+html .modal-layerless-aside button.is-active-aside-btn span,
+html .modal-layerless-aside button.is-active-aside-btn svg,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn span,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn svg {
+  color: #ffffff !important;
+}
+
+html .modal-layerless-aside ::-webkit-scrollbar,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+html .modal-layerless-aside ::-webkit-scrollbar-track,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+html .modal-layerless-aside ::-webkit-scrollbar-thumb,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-thumb {
+  background: rgba(245, 245, 242, 0.28) !important;
+  border-radius: 9999px !important;
+}
+
+html .modal-layerless-aside ::-webkit-scrollbar-thumb:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 245, 242, 0.5) !important;
 }
 
 /* Açılır menüde ve sekmelerde aktif/seçili öge */
@@ -932,9 +1148,9 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 /* Input, Select, Textarea -> İkincil Yüzey (#ebece9), Focus (#ffffff + var(--accent-color)) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:not([type="checkbox"]):not([type="radio"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not([class*="bg-transparent"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select:not(.bg-transparent):not([class*="bg-transparent"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea:not(.bg-transparent):not([class*="bg-transparent"]),
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-input {
   color-scheme: light !important;
   background: #ebece9 !important;
@@ -943,9 +1159,25 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   border-color: rgba(41, 45, 43, 0.16) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:focus,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select:focus,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea:focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input.bg-transparent,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input[class*="bg-transparent"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea.bg-transparent,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea[class*="bg-transparent"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input.bg-transparent:focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input[class*="bg-transparent"]:focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea.bg-transparent:focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea[class*="bg-transparent"]:focus {
+  color-scheme: light !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #292d2b !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:not(.bg-transparent):not([class*="bg-transparent"]):focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select:not(.bg-transparent):not([class*="bg-transparent"]):focus,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea:not(.bg-transparent):not([class*="bg-transparent"]):focus,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-input:focus {
   background: #ffffff !important;
   background-color: #ffffff !important;
@@ -988,7 +1220,7 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\]:hover {
   background: var(--accent-hover, #4c59b0) !important;
   background-color: var(--accent-hover, #4c59b0) !important;
-  border-color: var(--accent-color, #5c6ac4) !important;
+  border: 1px solid var(--accent-color, #5c6ac4) !important;
   color: #ffffff !important;
 }
 
@@ -1001,21 +1233,39 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle {
   background: #ebece9 !important;
-  border-color: rgba(41, 45, 43, 0.16) !important;
+  border: 1px solid rgba(41, 45, 43, 0.2) !important;
   color: #292d2b !important;
 }
 
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle:hover {
   background: #dfe1dd !important;
-  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 40%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
   color: #292d2b !important;
 }
 
 /* Kenarlıklar (Borders) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#4a443f]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .border-\[\#4a443f\],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#b99881]"] {
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#4a443f]"]:not(:hover),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .border-\[\#4a443f\]:not(:hover),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#b99881]"]:not(:hover) {
   border-color: rgba(41, 45, 43, 0.14) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button[class*="hover:border-[#b99881]"]:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-day-cell:hover {
+  border-color: var(--accent-color, #5c6ac4) !important;
+}
+
+.calendar-day-cell:hover {
+  border-color: var(--accent-color, #b99881) !important;
+}
+
+/* Dock dikey ayırıcı çizgisi: yuvarlak butonların dış katman çizgisi gibi gri/hafif koyu gri */
+.dock-vertical-divider {
+  background-color: #4a443f !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dock-vertical-divider {
+  background-color: rgba(41, 45, 43, 0.22) !important;
 }
 
 /* Scrollbar (#e3e5e1 & var(--accent-color)) */

@@ -51,31 +51,15 @@ export function generateUsername(fullName: string, existingUsers: { username: st
   const parts = fullName.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return 'kullanici'
 
-  const firstName = normalizeTurkish(parts[0]).replace(/[^a-z0-9]/g, '')
-  const lastName = parts.length > 1 ? normalizeTurkish(parts[parts.length - 1]).replace(/[^a-z0-9]/g, '') : ''
+  const firstName = normalizeTurkish(parts[0]).replace(/[^a-z0-9]/g, '') || 'kullanici'
   const taken = new Set(existingUsers.map((u) => u.username.toLowerCase()))
 
-  // 1. Aday: Sadece ilk ad
-  if (firstName && !taken.has(firstName)) {
+  // İlk başta yalnızca ad (aynı ad varsa sonuna numara eklenir)
+  if (!taken.has(firstName)) {
     return firstName
   }
 
-  // 2. Aday: İlk ad + Soyadı
-  if (firstName && lastName) {
-    const candidate2 = `${firstName}${lastName}`
-    if (!taken.has(candidate2)) {
-      return candidate2
-    }
-
-    // 3. Aday: İlk ad + soyadı baş harfi
-    const candidate3 = `${firstName}${lastName.charAt(0)}`
-    if (!taken.has(candidate3)) {
-      return candidate3
-    }
-  }
-
-  // 4. Aday: Numara uzatması
-  let counter = 1
+  let counter = 2
   while (taken.has(`${firstName}${counter}`)) {
     counter++
   }
@@ -83,42 +67,17 @@ export function generateUsername(fullName: string, existingUsers: { username: st
 }
 
 export function generateInitialPassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
-  let password = ''
-  for (let i = 0; i < 8; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
+  // Otomatik 6 haneli yalnızca sayı şifre (100000 - 999999)
+  const firstDigit = Math.floor(1 + Math.random() * 9).toString()
+  let rest = ''
+  for (let i = 0; i < 5; i++) {
+    rest += Math.floor(Math.random() * 10).toString()
   }
-  return password
+  return firstDigit + rest
 }
 
 const STORAGE_KEY_USERS = 'demirturk_users_v2'
 const STORAGE_KEY_CURRENT_USER = 'demirturk_active_user_v2'
-
-function createInitialRegisteredAdmin(): AppUser {
-  return {
-    id: 'usr-berkant',
-    fullName: 'Berkant Demirtürk',
-    username: 'berkant',
-    password: 'Berkant26.',
-    email: 'demirturkberkant@gmail.com',
-    companyName: 'Demirtürk Portföy',
-    department: 'Pazarlama',
-    departments: ['Pazarlama', 'Satış', 'Müşteri İlişkileri', 'Muhasebe', 'Yönetim'],
-    role: 'ADMIN',
-    isManager: true,
-    scope: 'ALL',
-    permissions: {
-      canEditProjectPrice: true,
-      canChangeFlatStatus: true,
-      canApproveDiscounts: true,
-      canRefundDeposit: true,
-      canManageTeam: true,
-      canReshareFiles: true,
-    },
-    mustChangePassword: false,
-    createdAt: '2026-01-01T09:00:00.000Z',
-  }
-}
 
 type Listener = () => void
 
@@ -134,14 +93,16 @@ class UserStore {
   }
 
   public setLoadedUsers(users: AppUser[]) {
-    if (users && users.length > 0) {
-      const filtered = users.filter(
-        (u) =>
-          u.id !== 'usr-admin-1' &&
-          u.email !== 'berkant@demirturkinsaat.com' &&
-          u.fullName !== 'Berkant Çalışkan'
-      )
-      this.users = filtered.map((u) => {
+    if (Array.isArray(users)) {
+      if (users.length === 0) {
+        // Keep all local users if cloud is empty, and push local users up to cloud
+        if (this.users.length > 0) {
+          this.users.forEach((u) => syncService.saveUser(u))
+        }
+        return
+      }
+
+      const incomingNormalized = users.map((u) => {
         const normalized = this.normalizeUser(u)
         if (!normalized.avatarUrl) {
           const inMemoryUser = this.users.find((eu) => eu.id === normalized.id)
@@ -151,26 +112,34 @@ class UserStore {
         }
         return normalized
       })
+
+      // Merge local users with incoming cloud users without losing any local users
+      const mergedMap = new Map<string, AppUser>()
+      for (const inc of incomingNormalized) {
+        mergedMap.set(inc.id, inc)
+      }
+      for (const localUser of this.users) {
+        if (!mergedMap.has(localUser.id)) {
+          mergedMap.set(localUser.id, localUser)
+          syncService.saveUser(localUser)
+        } else {
+          // Prefer local user fields if recently updated locally
+          mergedMap.set(localUser.id, { ...mergedMap.get(localUser.id)!, ...localUser })
+        }
+      }
+
+      this.users = Array.from(mergedMap.values())
       try {
         localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(this.users))
       } catch {}
       const isLoggedOut = typeof window !== 'undefined' && localStorage.getItem('demirturk_logged_out') === 'true'
-      if (!isLoggedOut) {
-        if (!this.currentUser || !this.users.some((u) => u.id === this.currentUser?.id)) {
-          this.currentUser = this.users[0] || null
-          if (this.currentUser) {
-            try {
-              localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
-            } catch {}
-          }
-        } else {
-          const syncedUser = this.users.find((u) => u.id === this.currentUser?.id)
-          if (syncedUser) {
-            this.currentUser = syncedUser
-            try {
-              localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
-            } catch {}
-          }
+      if (!isLoggedOut && this.currentUser) {
+        const syncedUser = this.users.find((u) => u.id === this.currentUser?.id)
+        if (syncedUser) {
+          this.currentUser = syncedUser
+          try {
+            localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
+          } catch {}
         }
       }
       this.notify()
@@ -200,6 +169,9 @@ class UserStore {
           }
         } else if (payload.eventType === 'DELETE') {
           this.users = this.users.filter((u) => u.id !== (payload.old as any).id)
+          if (this.currentUser && !this.users.some((u) => u.id === this.currentUser?.id)) {
+            this.currentUser = null
+          }
           this.saveToStorage()
         }
       })
@@ -266,32 +238,14 @@ class UserStore {
       if (savedUsers) {
         const raw = JSON.parse(savedUsers)
         this.users = Array.isArray(raw) ? raw.map((u) => this.normalizeUser(u)) : []
-      }
-
-      // Purge any accidental mock/fake/legacy users from storage
-      const fakeUserIds = new Set(['usr-cc-1', 'usr-cc-2', 'usr-sales-1', 'usr-admin-1'])
-      const fakeNames = new Set(['Selin Yılmaz', 'Can Özdemir', 'Mert Demir', 'Berkant Çalışkan'])
-      this.users = this.users.filter(
-        (u) =>
-          !fakeUserIds.has(u.id) &&
-          !fakeNames.has(u.fullName) &&
-          u.email !== 'berkant@demirturkinsaat.com'
-      )
-
-      // Ensure registered berkant account exists in storage like a registered admin account
-      const hasBerkant = this.users.some(
-        (u) => u.username.toLowerCase() === 'berkant' || u.id === 'usr-berkant'
-      )
-      if (!hasBerkant) {
-        const registeredBerkant = this.normalizeUser(createInitialRegisteredAdmin())
-        this.users = [registeredBerkant, ...this.users]
-        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(this.users))
+      } else {
+        this.users = []
       }
 
       const isExplicitlyLoggedOut =
         typeof window !== 'undefined' && localStorage.getItem('demirturk_logged_out') === 'true'
 
-      if (isExplicitlyLoggedOut) {
+      if (isExplicitlyLoggedOut || this.users.length === 0) {
         this.currentUser = null
       } else {
         const savedCurrentUser = localStorage.getItem(STORAGE_KEY_CURRENT_USER)
@@ -300,20 +254,21 @@ class UserStore {
           const matched = this.users.find(
             (u) => u.id === parsed.id || u.username.toLowerCase() === parsed.username?.toLowerCase()
           )
-          this.currentUser = matched ? this.normalizeUser(matched) : (this.users[0] || null)
+          this.currentUser = matched ? this.normalizeUser(matched) : null
         } else {
-          this.currentUser = this.users[0] || null
+          this.currentUser = null
         }
       }
 
       if (this.currentUser) {
         localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
+      } else {
+        localStorage.removeItem(STORAGE_KEY_CURRENT_USER)
       }
     } catch (e) {
       console.error('Failed to load users from storage:', e)
-      const fallback = this.normalizeUser(createInitialRegisteredAdmin())
-      this.users = [fallback]
-      this.currentUser = fallback
+      this.users = []
+      this.currentUser = null
     }
   }
 
@@ -452,7 +407,7 @@ class UserStore {
         canReshareFiles: true,
         ...data.permissions,
       },
-      mustChangePassword: true,
+      mustChangePassword: false,
       createdAt: new Date().toISOString(),
     }
 
@@ -523,10 +478,6 @@ class UserStore {
     return { success: true }
   }
 
-  /**
-   * Update User:
-   * Departman ve erişebileceği departmanlar kaydeden/yönetici tarafından sonradan serbestçe değiştirilebilir.
-   */
   updateUser(
     userId: string,
     updates: Partial<Omit<AppUser, 'id' | 'createdAt'>>
@@ -657,4 +608,3 @@ class UserStore {
 
 export const userStore = new UserStore()
 export const getAllUsers = (): AppUser[] => userStore.getAllUsers()
-

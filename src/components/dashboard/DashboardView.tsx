@@ -140,7 +140,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           type="button"
           onClick={() => setShowSeconds((prev) => !prev)}
           title={showSeconds ? 'Saniyeyi gizlemek için tıklayın' : 'Saniyeyi görmek için tıklayın'}
-          className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#282522]/70 hover:bg-[#282522]/90 border border-[#4a443f] text-[#d6beae] hover:text-white transition-all duration-200 cursor-pointer"
+          className="no-layer-btn group flex items-center gap-1.5 px-1 py-0.5 bg-transparent border-none text-[#d6beae] hover:text-white transition-all duration-200 cursor-pointer"
         >
           <Clock className="w-3.5 h-3.5 text-[#b99881] transition-colors" />
           <span className="font-mono tracking-tight text-[12px] font-semibold text-white">

@@ -77,12 +77,10 @@ export const TeamPermissionsView: React.FC = () => {
     const res = userStore.addMember({
       fullName: fullName.trim(),
       department,
-      departments: selectedDepts,
-      role,
-      scope,
+      departments: [department],
+      role: department === 'Yönetim' ? 'MANAGER' : 'REPRESENTATIVE',
+      scope: 'DEPARTMENT',
       initialPassword,
-      email: email.trim(),
-      permissions,
     })
 
     setCreatedInfo({ username: res.user.username, pass: res.generatedPassword })
@@ -150,7 +148,7 @@ export const TeamPermissionsView: React.FC = () => {
           }}
           className="rounded-full px-4 text-xs font-semibold"
         >
-          Yeni Üye Ekle
+          Ekip Üyesi Ekle
         </GlassButton>
       </div>
 
@@ -159,10 +157,10 @@ export const TeamPermissionsView: React.FC = () => {
         <div className="p-4 rounded-[16px] bg-emerald-500/10 border border-emerald-500/30 text-xs text-[#f3efe9] flex items-center justify-between">
           <div>
             <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4" /> Yeni üye başarıyla oluşturuldu!
+              <CheckCircle2 className="w-4 h-4" /> Ekip üyesi başarıyla oluşturuldu!
             </div>
             <div className="text-[11px] text-[#a69f99] mt-1">
-              Kullanıcı Adı: <span className="text-white font-mono font-bold">{createdInfo.username}</span> • İlk Giriş Şifresi: <span className="text-white font-mono font-bold">{createdInfo.pass}</span>
+              Kullanıcı Adı: <span className="text-white font-mono font-bold">{createdInfo.username}</span> • 6 Haneli Şifre: <span className="text-amber-300 font-mono font-bold tracking-wider">{createdInfo.pass}</span>
             </div>
           </div>
           <button
@@ -194,7 +192,9 @@ export const TeamPermissionsView: React.FC = () => {
                 <tr key={user.id} className="hover:bg-[#34302d] transition-colors">
                   <td className="py-3 px-3">
                     <div className="font-bold text-white">{user.fullName}</div>
-                    <div className="text-[10px] text-[#8c857f]">@{user.username}</div>
+                    <div className="text-[10px] text-[#8c857f]">
+                      @{user.username} • Şifre: <span className="font-mono text-[#d6beae] font-semibold">{user.password}</span>
+                    </div>
                   </td>
 
                   <td className="py-3 px-3">
@@ -261,160 +261,50 @@ export const TeamPermissionsView: React.FC = () => {
         </div>
       </GlassCard>
 
-      {/* YENİ ÜYE EKLE MODALI */}
+      {/* EKİP ÜYESİ EKLE MODALI */}
       <GlassModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Yeni Ekip Üyesi & Yetki Tanımlama"
+        title="Ekip Üyesi Ekle"
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                Adı Soyadı *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Örn: Ayşe Demir"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                E-posta (İsteğe Bağlı)
-              </label>
-              <input
-                type="email"
-                placeholder="ayse@demirturk.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+              Adı Soyadı *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Örn: Ayşe Demir"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+            />
+            {fullName.trim() && (
+              <span className="text-[11px] text-[#b99881] mt-1.5 block font-mono">
+                Kullanıcı Adı: @{generateUsername(fullName, users)}
+              </span>
+            )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                Varsayılan Çalışma Alanı
-              </label>
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value as Department)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
-              >
-                {CANONICAL_DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                Rol
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
-              >
-                <option value="REPRESENTATIVE">Temsilci / Danışman</option>
-                <option value="SPECIALIST">Uzman</option>
-                <option value="MANAGER">Yönetici / Takım Lideri</option>
-                <option value="ADMIN">Sistem Yöneticisi (ADMIN)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                Kayıt Görme (Scope)
-              </label>
-              <select
-                value={scope}
-                onChange={(e) => setScope(e.target.value as AccessScope)}
-                className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
-              >
-                <option value="ASSIGNED_ONLY">Yalnızca Kendine Atanan</option>
-                <option value="DEPARTMENT">Kendi Departmanı</option>
-                <option value="ALL">Tüm Kayıtlar (Kurumsal)</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+              Departman *
+            </label>
+            <select
+              value={department}
+              onChange={(e) => setDepartment(e.target.value as Department)}
+              className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
+            >
+              {CANONICAL_DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
 
-          {/* Çoklu Departman Seçimi */}
-          <div className="p-3 rounded-[14px] bg-[#24211f] border border-[#4a443f] space-y-2">
-            <div className="text-[11px] font-semibold text-[#b99881]">
-              Yetkili Olduğu Çalışma Alanları (Multi-Department):
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {CANONICAL_DEPARTMENTS.map((d) => {
-                const checked = selectedDepts.includes(d)
-                return (
-                  <label key={d} className="flex items-center gap-2 text-xs text-[#f3efe9] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleDeptCheckbox(d)}
-                      className="rounded border-[#4a443f] text-[#b99881] focus:ring-0"
-                    />
-                    <span>{d}</span>
-                  </label>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Granular Permissions */}
-          <div className="p-3 rounded-[14px] bg-[#24211f] border border-[#4a443f] space-y-2">
-            <div className="text-[11px] font-semibold text-[#b99881]">
-              İşlemsel Yetkiler:
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs text-[#f3efe9]">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={Boolean(permissions.canEditProjectPrice)}
-                  onChange={(e) => setPermissions({ ...permissions, canEditProjectPrice: e.target.checked })}
-                  className="rounded text-[#b99881]"
-                />
-                <span>Proje/Daire Fiyatı Düzenleme</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={Boolean(permissions.canChangeFlatStatus)}
-                  onChange={(e) => setPermissions({ ...permissions, canChangeFlatStatus: e.target.checked })}
-                  className="rounded text-[#b99881]"
-                />
-                <span>Daire Durumu Değiştirme</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={Boolean(permissions.canApproveDiscounts)}
-                  onChange={(e) => setPermissions({ ...permissions, canApproveDiscounts: e.target.checked })}
-                  className="rounded text-[#b99881]"
-                />
-                <span>İskonto Talebi Onaylama</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={Boolean(permissions.canRefundDeposit)}
-                  onChange={(e) => setPermissions({ ...permissions, canRefundDeposit: e.target.checked })}
-                  className="rounded text-[#b99881]"
-                />
-                <span>Kapora İadesi Onaylama</span>
-              </label>
-            </div>
-          </div>
+          <p className="text-[11px] text-[#8c857f]">
+            Otomatik olarak 6 haneli yalnızca sayıdan oluşan şifre tanımlanır. Kullanıcı adı ilk başta yalnızca ad olarak verilir; kullanıcı dilerse sonradan değiştirebilir.
+          </p>
 
           <div className="pt-2 flex justify-end gap-2">
             <button
@@ -425,7 +315,7 @@ export const TeamPermissionsView: React.FC = () => {
               Vazgeç
             </button>
             <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
-              Kullanıcıyı Oluştur
+              Ekip Üyesi Ekle
             </GlassButton>
           </div>
         </form>

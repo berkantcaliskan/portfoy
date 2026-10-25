@@ -156,14 +156,25 @@ export interface AiEvaluation {
 export interface LeadActivity {
   id: string
   leadId: string
-  type: 'CALL' | 'WHATSAPP' | 'NOTE' | 'STAGE_CHANGE' | 'ASSIGNMENT' | 'QUALIFICATION'
+  type: 'CALL' | 'WHATSAPP' | 'NOTE' | 'STAGE_CHANGE' | 'ASSIGNMENT' | 'QUALIFICATION' | 'META_CAPI'
   content: string
   author: string
   createdAt: string
 }
 
+export interface LeadMetaCapiStatus {
+  lastEventName: string
+  label: string
+  sentAt: string
+  status: 'SENT' | 'QUEUED' | 'FAILED'
+  fbtraceId?: string
+  errorMessage?: string
+}
+
 export interface Lead {
   id: string
+  leadNumber?: number
+  companyName?: string
   fullName: string
   phone: string
   secondaryPhone?: string
@@ -178,6 +189,8 @@ export interface Lead {
   budget?: number
   preferredHousingType?: string
   notes?: string
+  metaLeadId?: string
+  metaCapiStatus?: LeadMetaCapiStatus
   
   // Enterprise Unified Customer Pool Extensions
   assignedToUserId?: string

@@ -8,15 +8,17 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/publish-ota.mjs --push",
+    "ota:publish": "node scripts/publish-ota.mjs --push",
     "lint": "oxlint",
     "preview": "vite preview",
     "electron:dev": "electron .",
-    "electron:build": "npm run build && electron-builder --win portable"
+    "electron:build": "npm run build && electron-builder --win dir"
   },
   "build": {
     "appId": "com.demirturk.portfoy",
     "productName": "Demirturk Portfoy",
+    "asar": false,
     "directories": {
       "output": "dist-electron"
     },
@@ -26,11 +28,8 @@
     ],
     "win": {
       "icon": "build/icon.ico",
-      "target": "portable",
-      "artifactName": "portföyapp.${ext}"
-    },
-    "portable": {
-      "artifactName": "portföyapp.${ext}"
+      "target": "dir",
+      "signAndEditExecutable": false
     }
   },
   "dependencies": {

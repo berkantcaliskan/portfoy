@@ -35,6 +35,8 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  ClipboardList,
+  Headphones,
 } from 'lucide-react'
 import { AppUser, userStore } from '@/services/userStore'
 import {
@@ -87,7 +89,7 @@ export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?:
     case 'followups-appointments':
       return CalendarCheck
     case 'requests':
-      return Inbox
+      return ClipboardList
     case 'sales-performance':
       return Award
     case 'collections':
@@ -102,6 +104,25 @@ export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?:
       return BookUser
     default:
       return LayoutDashboard
+  }
+}
+
+export function getDepartmentIcon(dept: Department | string): React.ComponentType<{ className?: string; strokeWidth?: number }> {
+  switch (dept) {
+    case 'Pazarlama':
+      return Megaphone
+    case 'Müşteri İlişkileri':
+      return Headphones
+    case 'Satış':
+      return TrendingUp
+    case 'Finans':
+    case 'Muhasebe':
+    case 'Muhasebe & Finans':
+      return Wallet
+    case 'Yönetim':
+      return ShieldCheck
+    default:
+      return Layers
   }
 }
 
@@ -297,13 +318,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Current active department workspace
   const activeDept: Department = currentUser?.department || 'Pazarlama'
 
-  // Yöneticiler / Yönetim Ekibi kontrolü (Departman seçimi yalnızca yöneticiler için geçerlidir)
-  const isManagement = currentUser?.role === 'ADMIN'
+  // Available departments user can switch between (yetkisi olmayan kullanıcı diğer departmanları göremez)
+  const authorizedDepts: Department[] =
+    currentUser?.role === 'ADMIN'
+      ? CANONICAL_DEPARTMENTS
+      : Array.isArray(currentUser?.departments) && currentUser.departments.length > 0
+      ? currentUser.departments
+      : [activeDept]
 
-  // Available departments user can switch between (yalnızca yöneticiler departmanlar arası geçiş yapabilir)
-  const authorizedDepts: Department[] = isManagement
-    ? CANONICAL_DEPARTMENTS
-    : [activeDept]
+  // Yalnızca ADMIN veya birden fazla departman yetkisi verilenler departman seçicisini açabilir
+  const isManagement = currentUser?.role === 'ADMIN' || authorizedDepts.length > 1
 
   // Exact 6 pages for this active department
   const navItems = DEPARTMENT_MENU_CONFIG[activeDept] || DEPARTMENT_MENU_CONFIG['Pazarlama']
@@ -500,7 +524,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div
         className={`hidden md:flex items-center justify-between gap-3 w-full ${
           isSidebarCollapsed ? 'md:pl-[88px]' : 'md:pl-[236px]'
-        } pr-6 lg:pr-10 2xl:pr-14 pt-4 pb-1 relative z-40 select-none transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
+        } pr-6 lg:pr-10 2xl:pr-14 pt-4 pb-3 relative z-40 select-none transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
         style={
           {
             width:
@@ -508,7 +532,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? `calc(100% - ${messagingSidebarWidth}px)`
                 : '100%',
             transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1), padding-left 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
-            WebkitAppRegion: 'no-drag',
+            WebkitAppRegion: 'drag',
           } as React.CSSProperties
         }
       >
@@ -519,6 +543,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <motion.div
                 key={previewNotif.id}
                 ref={notifPreviewRef}
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
                 initial={{ opacity: 0, y: 18, scale: 0.96 }}
                 animate={
                   previewPhase === 'flying'
@@ -574,10 +599,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           </AnimatePresence>
         </div>
 
-        {/* SAĞ: Aksiyon İkonları ve Profil Hapı */}
-        <div className="ml-auto flex items-center gap-2.5 shrink-0">
+        {/* SAĞ: Aksiyon İkonları (Eşit aralıklı ve profil kartından biraz sola ayrılmış) + Profil Hapı */}
+        <div className="ml-auto flex items-center shrink-0">
+        <div className="flex items-center gap-2 mr-3.5">
         {/* 1. Arama (Yuvarlak beyaz kapsül buton; tıklandığında sola doğru genişler) */}
-        <div ref={searchContainerRef} className="relative flex items-center justify-end">
+        <div
+          ref={searchContainerRef}
+          className="relative flex items-center justify-end"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
           <motion.div
             initial={false}
             animate={{
@@ -592,7 +622,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className={`top-utility-pill h-10 rounded-full border border-[#4a443f]/60 bg-white flex items-center overflow-hidden select-none transition-colors ${
               isSearchOpen
                 ? 'px-3.5'
-                : 'justify-center cursor-pointer hover:border-[#b99881]/50'
+                : 'w-10 min-w-[40px] aspect-square p-0 justify-center cursor-pointer hover:border-[#b99881]/50'
             }`}
             onClick={() => {
               if (!isSearchOpen) {
@@ -602,7 +632,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             title={!isSearchOpen ? 'Arama Yap' : undefined}
           >
-            <div className={`shrink-0 flex items-center justify-center ${isSearchOpen ? 'mr-2' : ''}`}>
+            <div className={`shrink-0 flex items-center justify-center ${isSearchOpen ? 'mr-2' : 'w-10 h-10'}`}>
               <Search className="w-[18px] h-[18px] text-[#b99881]" strokeWidth={2} />
             </div>
 
@@ -627,7 +657,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         else onSearchChange && onSearchChange('')
                       }
                     }}
-                    className="w-full !bg-transparent !border-none text-xs text-[#f3efe9] placeholder-[#a69f99] focus:outline-none font-sans"
+                    className="w-full bg-transparent border-none text-xs text-[#f3efe9] placeholder-[#a69f99] focus:outline-none font-sans"
                   />
                   <button
                     type="button"
@@ -651,7 +681,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* 2. Hızlı Araçlar / Uygulama Menüsü (Yuvarlak Beyaz Buton) */}
-        <div ref={appMenuRef} className="relative">
+        <div
+          ref={appMenuRef}
+          className="relative"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
           <button
             type="button"
             onClick={() => setIsAppMenuOpen(!isAppMenuOpen)}
@@ -672,7 +706,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {isAppMenuOpen && (
-            <div className="dropdown-panel absolute right-0 top-full mt-2.5 w-80 rounded-[26px] shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-2xl space-y-3 border border-[#4a443f]">
+            <div className="dropdown-panel absolute right-0 top-full mt-2.5 w-[380px] sm:w-[410px] rounded-[26px] shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-2xl space-y-3 border border-[#4a443f]">
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2">
                   <BookLogo className="w-5 h-5 text-[#b99881]" />
@@ -764,7 +798,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* 4. Bildirimler (Yuvarlak Beyaz Buton + Kırmızı/Vurgu Bildirim Noktası) */}
-        <div ref={notificationsRef} className={`relative ${isNotificationsOpen ? 'z-[60]' : 'z-20'}`}>
+        <div
+          ref={notificationsRef}
+          className={`relative ${isNotificationsOpen ? 'z-[60]' : 'z-20'}`}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
           <button
             type="button"
             onClick={() => {
@@ -801,9 +839,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
           />
         </div>
+        </div>
 
         {/* 5. Kullanıcı Profil Hapı & Kompakt Açılır Menü (Popup) */}
-        <div ref={profileMenuRef} className={`relative ${isProfileMenuOpen ? 'z-[60]' : 'z-20'}`}>
+        <div
+          ref={profileMenuRef}
+          className={`relative ${isProfileMenuOpen ? 'z-[60]' : 'z-20'}`}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
           <button
             type="button"
             onClick={() => {
@@ -878,11 +921,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <AnimatePresence>
             {isProfileMenuOpen && currentUser && (
               <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                initial={{ opacity: 0, y: -6, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                className="dropdown-panel absolute right-0 top-full mt-2.5 w-72 rounded-[24px] shadow-2xl p-3.5 z-50 backdrop-blur-2xl border border-[#4a443f] space-y-3"
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.14, ease: 'easeOut' }}
+                className="dropdown-panel absolute right-0 top-full mt-2.5 w-72 rounded-[24px] shadow-2xl p-3.5 z-50 border border-[#4a443f] space-y-3"
               >
                 {/* 1. Kullanıcı Kimlik Özeti */}
                 <div className="flex items-center gap-3 px-1 pb-2.5 border-b border-[#4a443f]/60">
@@ -977,6 +1020,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                           updatedBy: currentUser.id,
                         })
                       }}
+                      onBlur={(e) => {
+                        const trimmed = e.target.value.trim()
+                        if (trimmed !== (myPresence.locationNote || '')) {
+                          teamOperationsStore.updateUserPresence(currentUser.id, {
+                            status: myPresence.status,
+                            locationNote: trimmed,
+                            returnTime: myPresence.returnTime || '',
+                            updatedBy: currentUser.id,
+                          })
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        e.stopPropagation()
+                      }}
                       className="w-full mt-1 px-3 py-1.5 rounded-full text-xs border border-[#4a443f] focus:outline-none"
                     />
                   )}
@@ -1035,9 +1092,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           }
         }}
         className={`w-full ${
-          isSidebarCollapsed ? 'md:w-[68px]' : 'md:w-[216px]'
+          isSidebarCollapsed ? 'md:w-[69px]' : 'md:w-[216px]'
         } md:fixed md:inset-y-0 md:left-0 border-b md:border-b-0 md:border-r border-[#b99881]/20 bg-[#34302c] sticky top-0 z-40 transition-[width,background-color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] shadow-sm select-none`}
       >
+        {/* Sol Menü Üst Boşluk Sürükleme Şeridi */}
+        <div
+          className="hidden md:block absolute top-0 inset-x-0 h-3.5 z-10"
+          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        />
         {/* Sağ Alt Köşe Pencere Kontrolleri */}
         <WindowControls />
 
@@ -1079,22 +1141,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* ==========================================================================
             MASAÜSTÜ SOL DİKEY NAV BAR (Desktop Vertical Sidebar)
+            69px daraltılmış genişlikte (68px iç genişlik + 1px sağ sınır) px-[14px]
+            (14px sol + 14px sağ) ile 40px (w-[40px] h-[40px]) yuvalar tam merkeze
+            oturur ve hiçbir mavi katman sağdan kırpılmaz.
            ========================================================================== */}
         <div
-          className={`hidden md:flex flex-col justify-between h-full w-full ${
-            isSidebarCollapsed ? 'px-2 py-3' : 'p-3'
-          } transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
+          className="hidden md:flex flex-col justify-between h-full w-full px-[14px] py-3 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
         >
-          {/* Üst Alan: Logo */}
+          {/* Üst Alan: Logo (40x40px sabit ikon yuvasıyla altındaki ikonlarla aynı düşey eksende) */}
           <div
-            className={`${
-              isSidebarCollapsed ? 'px-0 flex justify-center items-center' : 'px-3.5'
-            } pt-1 pb-1 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
+            className="pt-0.5 pb-1 flex items-center"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <BrandLogoLockup
               logoSize={22}
-              gapClassName={isSidebarCollapsed ? 'gap-0' : 'gap-2'}
+              gapClassName="gap-1"
               slideDistance={20}
               collapsed={isSidebarCollapsed}
               onClick={() => onTabChange('dashboard')}
@@ -1103,14 +1164,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Orta Alan: Dikey Sayfa Listesi */}
           <div
-            className="flex-1 flex flex-col justify-center overflow-y-auto overflow-x-hidden no-scrollbar py-2 my-1"
+            className={`flex-1 flex flex-col justify-center ${
+              isSidebarCollapsed ? 'overflow-visible items-center' : 'overflow-y-auto overflow-x-hidden'
+            } no-scrollbar py-2 my-1`}
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <motion.nav
               key={activeDept}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col gap-1"
+              className={`flex flex-col gap-1 ${isSidebarCollapsed ? 'w-[40px] items-center' : 'w-full'}`}
             >
               {navItems.map((item) => {
                 const isActive = activeTab === item.id
@@ -1125,50 +1188,50 @@ export const Navbar: React.FC<NavbarProps> = ({
                       notificationStore.markTabAsViewed(item.id)
                       onTabChange(item.id)
                     }}
-                    className={`sidebar-pill-item relative flex items-center ${
-                      isSidebarCollapsed
-                        ? 'w-10 h-10 mx-auto justify-center p-0'
-                        : 'w-full justify-between px-3.5 py-2'
-                    } rounded-full text-[13px] font-medium transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer select-none group overflow-hidden ${
+                    className={`sidebar-pill-item relative flex items-center justify-start h-[40px] min-h-[40px] p-0 ${
+                      isSidebarCollapsed ? 'w-[40px] min-w-[40px] max-w-[40px]' : 'w-full'
+                    } rounded-full text-[13px] font-medium transition-[width,background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer select-none group overflow-hidden shrink-0 ${
                       isActive
                         ? 'bg-[#b99881] text-white font-semibold'
                         : 'text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10'
                     }`}
                   >
-                    <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'min-w-0'}`}>
+                    {/* Sabit 40x40px İkon Yuvası: Daraltıldığında 40x40px mavi dairenin tam merkezinde kalır */}
+                    <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
                       <Icon
                         className={`w-4 h-4 transition-colors shrink-0 ${
                           isActive ? 'text-white' : 'text-[#a69f99] group-hover:text-white'
                         }`}
                         strokeWidth={isActive ? 2.2 : 1.9}
                       />
-                      {!isSidebarCollapsed && (
-                        <motion.span
-                          initial={false}
-                          animate={{
-                            x: 0,
-                            opacity: 1,
-                            maxWidth: 145,
-                            marginLeft: 8,
-                          }}
-                          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                          className="truncate overflow-hidden whitespace-nowrap inline-block"
-                        >
-                          {item.label}
-                        </motion.span>
-                      )}
                     </div>
-                    {unread > 0 && !isSidebarCollapsed && (
-                      <span
-                        className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
-                          isActive
-                            ? 'bg-white/25 text-white'
-                            : 'bg-[#b99881]/25 text-[#dfb76c] border border-[#b99881]/40'
-                        }`}
-                      >
-                        {unread > 99 ? '99+' : unread}
-                      </span>
-                    )}
+
+                    {/* Sayfa Adı ve Bildirim Sayacı: Daraltıldığında sola doğru kayarak kaybolur */}
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        x: isSidebarCollapsed ? -22 : 0,
+                        opacity: isSidebarCollapsed ? 0 : 1,
+                      }}
+                      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                      className={`min-w-0 flex items-center justify-between overflow-hidden whitespace-nowrap pointer-events-none ${
+                        isSidebarCollapsed ? 'w-0 pr-0 flex-none' : 'flex-1 pr-3.5'
+                      }`}
+                    >
+                      <span className="truncate">{item.label}</span>
+                      {unread > 0 && (
+                        <span
+                          className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                            isActive
+                              ? 'bg-white/25 text-white'
+                              : 'bg-[#b99881]/25 text-[#dfb76c] border border-[#b99881]/40'
+                          }`}
+                        >
+                          {unread > 99 ? '99+' : unread}
+                        </span>
+                      )}
+                    </motion.div>
+
                     {unread > 0 && isSidebarCollapsed && (
                       <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#dfb76c] ring-2 ring-[#34302c]" />
                     )}
@@ -1178,70 +1241,59 @@ export const Navbar: React.FC<NavbarProps> = ({
             </motion.nav>
           </div>
 
-          {/* Alt Alan: Departman Seçici + E-Posta & Ayarlar Kısayolu */}
+          {/* Alt Alan: Departman Seçici + E-Posta, Mesajlar & Ayarlar */}
           <div
             className="space-y-2.5"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
-            {/* Çalışma Alanı / Departman Seçicisi (Alttaki ikonların hemen üstünde) */}
+            {/* Çalışma Alanı / Departman Seçicisi (Alttaki ikonların hemen üstünde, 40x40px sabit ikon yuvalı) */}
             {isManagement && authorizedDepts.length > 1 ? (
               <div ref={workspaceRef} className="relative">
                 <button
                   type="button"
                   onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
-                  className={`flex items-center ${
-                    isSidebarCollapsed
-                      ? 'w-10 h-10 mx-auto justify-center p-0'
-                      : 'w-full justify-between gap-1.5 px-3.5 py-2'
-                  } rounded-full bg-[#282522] hover:bg-[#3d3733] border border-[#4a443f] text-xs text-[#d6beae] hover:text-white transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer select-none overflow-hidden`}
+                  className={`flex items-center justify-start h-[40px] min-h-[40px] p-0 ${
+                    isSidebarCollapsed ? 'w-[40px] min-w-[40px] max-w-[40px]' : 'w-full'
+                  } rounded-full bg-[#282522] hover:bg-[#3d3733] border border-[#4a443f] text-xs text-[#d6beae] hover:text-white transition-[width,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer select-none overflow-hidden shrink-0`}
                   title={`Departman / Çalışma Alanı: ${activeDept}`}
                 >
-                  <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'min-w-0'}`}>
-                    <Layers className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                    {!isSidebarCollapsed && (
-                      <motion.span
-                        initial={false}
-                        animate={{
-                          x: 0,
-                          opacity: 1,
-                          maxWidth: 120,
-                          marginLeft: 8,
-                        }}
-                        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                        className="font-semibold text-white truncate overflow-hidden whitespace-nowrap inline-block"
-                      >
-                        {activeDept}
-                      </motion.span>
-                    )}
+                  {/* Sabit 40x40px İkon Yuvası: Daraltıldığında aktif departman ikonu tam merkezde durur */}
+                  <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
+                    {(() => {
+                      const ActiveDeptIcon = getDepartmentIcon(activeDept)
+                      return <ActiveDeptIcon className="w-4 h-4 text-[#b99881] shrink-0" />
+                    })()}
                   </div>
-                  {!isSidebarCollapsed && (
-                    <motion.div
-                      initial={false}
-                      animate={{
-                        x: 0,
-                        opacity: 1,
-                        width: 14,
-                      }}
-                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                      className="overflow-hidden shrink-0 flex items-center"
-                    >
-                      <ChevronDown
-                        className={`w-3.5 h-3.5 text-[#a69f99] shrink-0 transition-transform duration-200 ${
-                          isWorkspaceMenuOpen ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </motion.div>
-                  )}
+
+                  {/* Departman Adı ve Ok: Daraltıldığında sola doğru kayarak kaybolur */}
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      x: isSidebarCollapsed ? -22 : 0,
+                      opacity: isSidebarCollapsed ? 0 : 1,
+                    }}
+                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    className={`min-w-0 flex items-center justify-between overflow-hidden whitespace-nowrap ${
+                      isSidebarCollapsed ? 'w-0 pr-0 flex-none' : 'flex-1 pr-3'
+                    }`}
+                  >
+                    <span className="font-semibold text-white truncate">{activeDept}</span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-[#a69f99] shrink-0 ml-1 transition-transform duration-200 ${
+                        isWorkspaceMenuOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </motion.div>
                 </button>
 
                 <AnimatePresence>
                   {isWorkspaceMenuOpen && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      initial={{ opacity: 0, y: 6, scale: 0.97 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 6, scale: 0.97 }}
-                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                      className="dropdown-panel dropdown-panel-up absolute left-0 w-[192px] bottom-full mb-1.5 rounded-[22px] p-2 z-50 backdrop-blur-2xl border border-[#4a443f]"
+                      exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                      transition={{ duration: 0.14, ease: 'easeOut' }}
+                      className="dropdown-panel dropdown-panel-up absolute left-0 w-[212px] bottom-full mb-1.5 rounded-[22px] p-2 z-50 border border-[#4a443f]"
                     >
                       <div className="px-2.5 py-1 text-[10px] font-semibold text-[#8c857f] uppercase tracking-wider">
                         Yetkili Çalışma Alanları
@@ -1249,17 +1301,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <div className="space-y-1 mt-0.5">
                         {authorizedDepts.map((dept) => {
                           const isCurrent = dept === activeDept
+                          const DeptIcon = getDepartmentIcon(dept)
                           return (
                             <button
                               key={dept}
                               onClick={() => handleSwitchWorkspace(dept)}
-                              className={`w-full flex items-center justify-between px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
+                              className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                                 isCurrent
                                   ? 'bg-[#b99881]/20 text-white font-semibold'
                                   : 'text-[#a69f99] hover:bg-[#34302d] hover:text-[#f3efe9]'
                               }`}
                             >
-                              <span className="truncate">{dept}</span>
+                              <span className="flex items-center gap-2 min-w-0 truncate">
+                                <DeptIcon className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? 'text-[#b99881]' : 'text-[#8c857f]'}`} />
+                                <span className="truncate">{dept}</span>
+                              </span>
                               {isCurrent && <Check className="w-3.5 h-3.5 text-[#b99881] shrink-0" />}
                             </button>
                           )
@@ -1271,19 +1327,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <div
-                className={`flex items-center ${
-                  isSidebarCollapsed
-                    ? 'w-10 h-10 mx-auto justify-center p-0'
-                    : 'px-3.5 py-2'
-                } rounded-full bg-[#282522]/60 border border-[#4a443f]/60 text-xs select-none overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
+                className={`flex items-center justify-start h-[40px] min-h-[40px] p-0 ${
+                  isSidebarCollapsed ? 'w-[40px] min-w-[40px] max-w-[40px]' : 'w-full'
+                } rounded-full bg-[#282522]/60 border border-[#4a443f]/60 text-xs select-none overflow-hidden shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
                 title={`Çalışma Alanı: ${activeDept}`}
               >
-                <Layers className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                {!isSidebarCollapsed && (
-                  <span className="font-semibold text-white truncate overflow-hidden whitespace-nowrap inline-block ml-2">
-                    {activeDept}
-                  </span>
-                )}
+                <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
+                  {(() => {
+                    const ActiveDeptIcon = getDepartmentIcon(activeDept)
+                    return <ActiveDeptIcon className="w-4 h-4 text-[#b99881] shrink-0" />
+                  })()}
+                </div>
+                <motion.span
+                  initial={false}
+                  animate={{
+                    x: isSidebarCollapsed ? -22 : 0,
+                    opacity: isSidebarCollapsed ? 0 : 1,
+                  }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  className={`font-semibold text-white truncate whitespace-nowrap ${
+                    isSidebarCollapsed ? 'w-0 pr-0 flex-none' : 'pr-3'
+                  }`}
+                >
+                  {activeDept}
+                </motion.span>
               </div>
             )}
 
@@ -1292,8 +1359,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className={`flex ${
                 isSidebarCollapsed
-                  ? 'flex-col-reverse items-center gap-1.5 pt-1'
-                  : 'flex-row items-center justify-around pt-1'
+                  ? 'flex-col-reverse items-center justify-center gap-1.5 pt-1 w-[40px]'
+                  : 'flex-row items-center justify-between pt-1 w-full'
               }`}
             >
               {/* 1. Ayarlar (Daraltıldığında en altta) */}
@@ -1303,7 +1370,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 title="Ayarlar"
                 onClick={onOpenSettings}
-                className="sidebar-pill-item relative w-10 h-10 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
+                className="sidebar-pill-item relative w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <Settings className="w-[18px] h-[18px] text-[#b99881] shrink-0" strokeWidth={1.9} />
               </motion.button>
@@ -1315,7 +1382,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 title="E-Posta"
                 onClick={onOpenMail}
-                className="sidebar-pill-item relative w-10 h-10 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
+                className="sidebar-pill-item relative w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <Mail className="w-[18px] h-[18px] text-[#b99881] shrink-0" strokeWidth={1.9} />
                 {unreadMailCount > 0 && (
@@ -1339,7 +1406,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setIsNotificationsOpen(false)
                     messageStore.togglePanel()
                   }}
-                  className="sidebar-pill-item relative w-10 h-10 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
+                  className="sidebar-pill-item relative w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <IosChatBubbleIcon className="w-[18px] h-[18px] shrink-0" />
                   {currentUser && messageStore.getTotalUnreadCount(currentUser.id) > 0 && (
@@ -1351,6 +1418,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   currentUser={currentUser}
                   isOpen={isMessagesOpen}
                   onClose={() => messageStore.setPanelOpen(false)}
+                  sidebarCollapsed={isSidebarCollapsed}
                 />
               </motion.div>
             </motion.div>
@@ -1714,13 +1782,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
               <div className="grid grid-cols-4 gap-1.5">
                 {[
+                  { id: 'calendar' as ToolType, label: 'Takvim' },
                   { id: 'notepad' as ToolType, label: 'Not Defteri' },
                   { id: 'calculator' as ToolType, label: 'Hesap Mak.' },
                   { id: 'commission' as ToolType, label: 'Satış Primi' },
                   { id: 'currency' as ToolType, label: 'Döviz & Kur' },
                   { id: 'mortgage' as ToolType, label: 'Konut Kredisi' },
                   { id: 'deedFee' as ToolType, label: 'Tapu Harcı' },
-                  { id: 'sqmPrice' as ToolType, label: 'm² Fiyat' },
                   { id: 'whatsapp' as ToolType, label: 'WhatsApp' },
                 ].map((t) => (
                   <button

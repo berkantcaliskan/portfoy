@@ -10,7 +10,9 @@ interface AuthScreenProps {
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
-  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin')
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(() =>
+    userStore.getAllUsers().length === 0 ? 'signup' : 'signin'
+  )
 
   // Sign In States
   const [identifier, setIdentifier] = useState('')

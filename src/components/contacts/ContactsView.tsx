@@ -237,11 +237,11 @@ export const ContactsView: React.FC = () => {
 
       {/* Contacts Grid */}
       {filteredContacts.length === 0 ? (
-        <div className="p-16 text-center rounded-[32px] bg-[#282522]/40 border border-dashed border-[#4a443f] flex flex-col items-center justify-center space-y-3">
-          <Users className="w-8 h-8 text-[#b99881]" />
+        <div className="py-20 text-center flex flex-col items-center justify-center space-y-3">
+          <Users className="w-10 h-10 text-[#8c857f] mx-auto opacity-40" />
           <div>
-            <h4 className="text-base font-bold text-white">Rehberde Kayıtlı Kişi Bulunmuyor</h4>
-            <p className="text-xs text-[#a69f99] mt-1">
+            <h4 className="text-sm font-semibold text-white">Rehberde kayıtlı kişi bulunmuyor</h4>
+            <p className="text-xs text-[#8c857f] mt-1 max-w-sm mx-auto">
               {contacts.length === 0
                 ? "Henüz kişi eklenmedi. 'Yeni Kişi Ekle' butonunu kullanarak ilk kişiyi ekleyebilirsiniz."
                 : 'Arama kriterlerinize uygun kişi bulunamadı.'}

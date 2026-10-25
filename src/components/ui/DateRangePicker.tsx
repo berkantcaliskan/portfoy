@@ -318,13 +318,13 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 <button
                   type="button"
                   onClick={() => handleDateClick(date)}
-                  className={`relative z-10 w-7 h-7 flex items-center justify-center text-xs transition-colors cursor-pointer ${
+                  className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs transition-colors cursor-pointer ${
                     isStart || isEnd
-                      ? 'rounded-full bg-[#b99881] text-[#1a1715] font-bold shadow-md shadow-[#b99881]/40 scale-105'
+                      ? 'bg-[#b99881] text-white font-bold shadow-sm scale-105'
                       : inRange
                       ? 'text-white font-semibold'
                       : isToday
-                      ? 'text-amber-300 font-bold hover:text-white relative after:content-[\'\'] after:absolute after:bottom-0.5 after:w-1 after:h-1 after:rounded-full after:bg-amber-400'
+                      ? 'text-[#b99881] font-bold hover:text-white relative after:content-[\'\'] after:absolute after:bottom-0.5 after:w-1 after:h-1 after:rounded-full after:bg-[#b99881]'
                       : 'text-[#d6cec7] hover:text-white'
                   }`}
                 >
@@ -375,7 +375,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 rounded-[24px] z-50 bg-[#1a1715] border border-[#4a443f] shadow-[0_24px_60px_rgba(0,0,0,0.95)] p-0 overflow-hidden`}
+            className={`dropdown-panel popover-panel absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 rounded-[24px] z-50 bg-[#1a1715] border border-[#4a443f] shadow-[0_24px_60px_rgba(0,0,0,0.95)] p-0 overflow-hidden`}
           >
             {/* Header / Content Split */}
             <div className="flex flex-col md:flex-row">
@@ -389,7 +389,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                         key={p.id}
                         type="button"
                         onClick={() => handlePresetSelect(p.id)}
-                        className={`w-full flex items-center justify-between text-xs py-1 transition-colors cursor-pointer text-left ${
+                        className={`no-layer-btn w-full flex items-center justify-between text-xs py-1 transition-colors cursor-pointer text-left ${
                           isSelected
                             ? 'text-[#b99881] font-bold'
                             : 'text-[#a69f99] hover:text-white'
@@ -402,11 +402,11 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                   })}
                 </div>
 
-                <div className="pt-3 mt-4 border-t border-[#3b3632]/50">
+                <div className="pt-3 mt-4 border-t border-[#4a443f]/50">
                   <button
                     type="button"
                     onClick={() => handlePresetSelect('ALL')}
-                    className="flex items-center gap-1.5 text-[11px] text-[#8c857f] hover:text-white transition-colors cursor-pointer"
+                    className="no-layer-btn flex items-center gap-1.5 text-[11px] text-[#8c857f] hover:text-white transition-colors cursor-pointer"
                   >
                     <RotateCcw className="w-3 h-3 text-[#b99881]" />
                     <span>Temizle</span>
@@ -415,10 +415,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               </div>
 
               {/* Dikey İnce Ayırıcı Çizgi */}
-              <div className="hidden md:block w-px bg-[#3b3632]/60 my-3" />
+              <div className="hidden md:block border-l border-[#4a443f]/50 my-3" />
 
               {/* Sağ Alan: İki Ay Yan Yana Takvim Görünümü */}
-              <div className="p-4 bg-[#1a1715] space-y-3">
+              <div className="p-4 space-y-3">
                 {/* Ay Değiştirme Butonları */}
                 <div className="flex items-center justify-between px-2">
                   <button
@@ -447,12 +447,12 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 {/* İki Ay Yan Yana */}
                 <div className="flex flex-col sm:flex-row gap-5 items-start">
                   {renderMonthCalendar(month1Year, month1Month)}
-                  <div className="hidden sm:block w-px h-56 bg-[#3b3632]" />
+                  <div className="hidden sm:block h-56 border-l border-[#4a443f]/50" />
                   {renderMonthCalendar(month2Year, month2Month)}
                 </div>
 
                 {/* Footer Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#3b3632] text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#4a443f]/50 text-xs">
                   <div className="text-[11px] text-[#a69f99]">
                     {value.startDate && value.endDate ? (
                       <span>
@@ -478,7 +478,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsOpen(false)}
-                      className="px-4 py-1 rounded-full text-xs font-bold text-navy-950 bg-[#b99881] hover:bg-[#c9a891] transition-all shadow-md shadow-[#b99881]/20 cursor-pointer"
+                      className="btn-primary px-4 py-1 rounded-full text-xs font-bold text-white bg-[#b99881] hover:bg-[#c9a891] transition-all cursor-pointer"
                     >
                       Uygula
                     </button>

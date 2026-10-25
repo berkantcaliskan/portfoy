@@ -76,6 +76,30 @@ class SyncService {
     }
   }
 
+  public async purgeAllCloudData() {
+    if (!isSupabaseConfigured()) return
+    const tables = [
+      'units',
+      'projects',
+      'lead_activities',
+      'leads',
+      'appointments',
+      'customer_requests',
+      'collections',
+      'payments',
+      'approvals',
+      'shared_files',
+      'app_users',
+    ]
+    for (const table of tables) {
+      try {
+        await supabase.from(table).delete().neq('id', '__never__')
+      } catch {
+        // ignore if table does not exist
+      }
+    }
+  }
+
   // --- PROJECTS & UNITS ---
   private async syncProjects(options: SyncInitOptions) {
     try {
@@ -129,6 +153,15 @@ class SyncService {
       await supabase.from('units').upsert(unitToRow(unit))
     } catch (e) {
       console.error('[Supabase Sync] Failed to save unit:', e)
+    }
+  }
+
+  public async deleteUnit(unitId: string) {
+    if (!isSupabaseConfigured()) return
+    try {
+      await supabase.from('units').delete().eq('id', unitId)
+    } catch (e) {
+      console.error('[Supabase Sync] Failed to delete unit:', e)
     }
   }
 
@@ -244,13 +277,8 @@ class SyncService {
       const { data, error } = await supabase.from('app_users').select('*').order('created_at', { ascending: true })
       if (error) throw error
 
-      if (data && data.length > 0) {
-        if (options.onUsersLoaded) options.onUsersLoaded(data.map(rowToUser))
-      } else if (options.getInitialUsers) {
-        const initial = options.getInitialUsers()
-        for (const u of initial) {
-          await this.saveUser(u)
-        }
+      if (options.onUsersLoaded) {
+        options.onUsersLoaded((data || []).map(rowToUser))
       }
     } catch (e) {
       console.error('[Supabase Sync] Error syncing users:', e)

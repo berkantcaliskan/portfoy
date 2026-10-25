@@ -11,12 +11,16 @@ export function formatCurrency(amount: number, currency: 'TRY' | 'USD' | 'EUR' =
   return `${symbols[currency]} ${amount.toLocaleString('tr-TR')}`
 }
 
-export function formatDate(dateString: string): string {
+export function formatDate(dateString: string, forceIncludeYear = false): string {
   try {
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) return dateString
+    const currentYear = new Date().getFullYear()
+    const isCurrentYear = date.getFullYear() === currentYear
     return new Intl.DateTimeFormat('tr-TR', {
       day: 'numeric',
       month: 'short',
+      ...((forceIncludeYear || !isCurrentYear) ? { year: 'numeric' } : {}),
       hour: '2-digit',
       minute: '2-digit',
     }).format(date)
@@ -28,6 +32,7 @@ export function formatDate(dateString: string): string {
 export function formatDateOnly(dateString: string, forceIncludeYear = false): string {
   try {
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) return dateString
     const currentYear = new Date().getFullYear()
     const isCurrentYear = date.getFullYear() === currentYear
     return new Intl.DateTimeFormat('tr-TR', {
@@ -43,6 +48,7 @@ export function formatDateOnly(dateString: string, forceIncludeYear = false): st
 export function formatTimeOnly(dateString: string): string {
   try {
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) return ''
     return new Intl.DateTimeFormat('tr-TR', {
       hour: '2-digit',
       minute: '2-digit',
@@ -110,15 +116,15 @@ export function formatAppointmentDate(dateStr: string, timeStr?: string): string
   try {
     const parts = dateStr.split('-')
     if (parts.length === 3) {
-      const year = parts[0]
+      const yearNum = parseInt(parts[0], 10)
+      const currentYear = new Date().getFullYear()
       const monthIndex = parseInt(parts[1], 10) - 1
       const day = parseInt(parts[2], 10)
       const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara']
       const monthName = months[monthIndex] || parts[1]
-      const formatted = `${day} ${monthName} ${year}`
+      const formatted = yearNum === currentYear ? `${day} ${monthName}` : `${day} ${monthName} ${yearNum}`
       return timeStr ? `${formatted}, ${timeStr}` : formatted
     }
   } catch {}
   return timeStr ? `${dateStr}, ${timeStr}` : dateStr
 }
-

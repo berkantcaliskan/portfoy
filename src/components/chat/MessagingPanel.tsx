@@ -38,6 +38,7 @@ interface MessagingPanelProps {
   currentUser?: AppUser | null
   isOpen: boolean
   onClose: () => void
+  sidebarCollapsed?: boolean
 }
 
 const QUICK_EMOJIS = ['👍', '👋', '🏢', '🔑', '📄', '📞', '🤝', '✨', '🙏', '💼']
@@ -46,6 +47,7 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
   currentUser,
   isOpen,
   onClose,
+  sidebarCollapsed,
 }) => {
   const [mode, setMode] = useState<'popup' | 'sidebar'>(() => messageStore.getDisplayMode())
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => messageStore.getSidebarWidth())
@@ -266,15 +268,15 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
       </div>
 
       {/* Arama Barı */}
-      <div className="p-3 bg-transparent">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs text-white">
-          <Search className="w-3.5 h-3.5 text-[#b99881]" />
+      <div className="px-3 py-2 bg-transparent">
+        <div className="relative flex items-center">
+          <Search className="w-3.5 h-3.5 text-[#b99881] absolute left-3.5 pointer-events-none" />
           <input
             type="text"
             placeholder="Ekip üyesi veya departman ara..."
             value={contactSearch}
             onChange={(e) => setContactSearch(e.target.value)}
-            className="bg-transparent border-none text-xs text-white placeholder-[#8c857f] focus:outline-none w-full"
+            className="w-full pl-9 pr-3.5 py-2 rounded-full bg-[#34302d] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881] transition-colors"
             autoFocus
           />
         </div>
@@ -551,16 +553,16 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
             </div>
           </form>
 
-          {/* Alt Kontrol: Popup Modunda Sağa Bakan Ok (Tam Ekran Sağ Sidebar'a Geçiş) */}
+          {/* Alt Kontrol: Popup Modunda Sağa Bakan Ok (Tam Ekran Sağ Sidebar'a Geçiş — Katmansız) */}
           {mode === 'popup' && (
             <div className="flex items-center justify-end px-1 pt-1">
               <button
                 type="button"
                 onClick={() => handleToggleMode('sidebar')}
-                className="p-1 rounded-full text-[#b99881] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                title="Genişlet"
+                className="no-layer-btn p-1 !bg-transparent hover:!bg-transparent !border-none !shadow-none text-[#b99881] hover:opacity-75 transition-all cursor-pointer group"
+                title="Tam Ekrana Geç"
               >
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
           )}
@@ -661,16 +663,16 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
         )}
       </div>
 
-      {/* Alt Footer: Popup modunda sağa geçiş oku (Yazısız, Sabit En Altta) */}
+      {/* Alt Footer: Popup modunda sağa geçiş oku (Katmansız, Sabit En Altta) */}
       {mode === 'popup' && (
         <div className="mt-auto shrink-0 p-2.5 bg-transparent flex items-center justify-end">
           <button
             type="button"
             onClick={() => handleToggleMode('sidebar')}
-            className="p-1.5 rounded-full hover:bg-white/10 text-[#b99881] hover:text-white transition-colors cursor-pointer"
-            title="Genişlet"
+            className="no-layer-btn p-1.5 !bg-transparent hover:!bg-transparent !border-none !shadow-none text-[#b99881] hover:opacity-75 transition-all cursor-pointer group"
+            title="Tam Ekrana Geç"
           >
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           </button>
         </div>
       )}
@@ -690,14 +692,12 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
         }}
         className="dropdown-panel fixed top-0 right-0 bottom-0 z-50 md:z-40 bg-[#383830] border-l border-[#4a443f] flex flex-col w-full md:w-auto animate-in slide-in-from-right duration-250 select-none !rounded-none"
       >
-        {/* Sürüklenebilir Sol Kenarlık (Draggable Resize Handle - Masaüstünde aktif) */}
+        {/* Sürüklenebilir Sol Kenarlık (Draggable Resize Handle - Masaüstünde aktif, görünmez/katmansız) */}
         <div
           onMouseDown={handleMouseDownResize}
-          className="hidden md:flex absolute -left-1.5 top-0 bottom-0 w-3 cursor-ew-resize hover:bg-[#b99881]/40 active:bg-[#b99881] transition-colors z-40 items-center justify-center group"
+          className="hidden md:flex absolute -left-1.5 top-0 bottom-0 w-3 cursor-ew-resize transition-colors z-40 items-center justify-center group"
           title="Genişliği ayarlamak için sürükleyin"
-        >
-          <div className="w-0.5 h-12 rounded-full bg-[#4a443f] group-hover:bg-[#b99881]" />
-        </div>
+        />
 
         {/* İçerik */}
         <div className="flex-1 flex flex-col min-h-0 bg-transparent">
@@ -706,12 +706,12 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
           {view === 'list' && renderListView()}
         </div>
 
-        {/* Sol altta sola bakan ok ile tekrar açılır menü moduna geri dönüş (Katmansız, Tam ekrana geçiş okunun tam tersi: ArrowLeft) */}
-        <div className="p-3 bg-transparent flex items-center justify-start shrink-0">
+        {/* Sol altta sola bakan ok ile tekrar küçük ekrana geri dönüş (Katmansız, Tam ekrana geçiş okunun tam tersi: ArrowLeft) */}
+        <div className="p-2.5 bg-transparent flex items-center justify-start shrink-0">
           <button
             type="button"
             onClick={() => handleToggleMode('popup')}
-            className="p-1.5 rounded-full text-[#b99881] hover:text-white hover:bg-white/10 transition-colors cursor-pointer group"
+            className="no-layer-btn p-1.5 !bg-transparent hover:!bg-transparent !border-none !shadow-none text-[#b99881] hover:opacity-75 transition-all cursor-pointer group"
             title="Küçük Ekrana Geri Dön"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
@@ -721,11 +721,23 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
     )
   }
 
-  // POPUP MODE: Sol alttaki mesaj ikonunun hemen yanında açılır
+  // POPUP MODE: Sol alttaki mesaj ikonunun hemen yanında açılır (Daraltılmış barda 76px, geniş barda 224px)
+  const effectiveCollapsed =
+    sidebarCollapsed !== undefined ? sidebarCollapsed : isSidebarCollapsed
+
   return (
     <div
-      className={`dropdown-panel fixed inset-x-0 md:inset-x-auto bottom-0 md:bottom-3 top-16 md:top-auto ${
-        isSidebarCollapsed ? 'md:left-[74px]' : 'md:left-[222px]'
+      style={{
+        left:
+          typeof window !== 'undefined' && window.innerWidth >= 768
+            ? effectiveCollapsed
+              ? '76px'
+              : '224px'
+            : undefined,
+        transition: 'left 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+      }}
+      className={`dropdown-panel fixed left-0 right-0 md:right-auto bottom-0 md:bottom-3 top-16 md:top-auto ${
+        effectiveCollapsed ? 'md:left-[76px]' : 'md:left-[224px]'
       } w-full md:w-[370px] h-[calc(100vh-64px)] md:h-[520px] rounded-t-[28px] md:rounded-[26px] shadow-2xl z-[60] animate-in slide-in-from-bottom md:zoom-in-95 duration-150 backdrop-blur-2xl flex flex-col overflow-hidden border border-[#4a443f]`}
     >
       {view === 'contacts' && renderContactsView()}

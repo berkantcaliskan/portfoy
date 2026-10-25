@@ -53,7 +53,7 @@ import { ToolType } from '@/components/tools/QuickToolsModal'
 export interface DockItemConfig {
   id: string
   label: string
-  iconType?: 'portfolio' | 'contacts' | 'crm' | 'shared' | 'projects' | 'calc' | 'notepad' | 'new-lead' | 'custom' | 'settings'
+  iconType?: 'portfolio' | 'contacts' | 'crm' | 'shared' | 'projects' | 'calc' | 'notepad' | 'calendar' | 'new-lead' | 'custom' | 'settings'
   tab?: NavTab
   toolId?: ToolType
   isAction?: boolean
@@ -62,17 +62,20 @@ export interface DockItemConfig {
 }
 
 const DEFAULT_DOCK_ITEMS: DockItemConfig[] = [
+  { id: 'dock-calendar', label: 'Takvim', iconType: 'calendar', toolId: 'calendar', isAction: true },
   { id: 'dock-notepad', label: 'Not Defteri', iconType: 'notepad', toolId: 'notepad', isAction: true },
   { id: 'dock-calc', label: 'Hesap Makinesi', iconType: 'calc', toolId: 'calculator', isAction: true },
   { id: 'dock-tool-payments', label: 'Ödemeler', iconType: 'custom', toolId: 'payments', isAction: true },
 ]
 
 const STORAGE_KEY_DOCK_ORDER = 'demirturk_dock_order_v1'
-const STORAGE_KEY_START_GRID = 'demirturk_start_menu_grid'
+const STORAGE_KEY_DOCK_CALENDAR_SEEDED = 'demirturk_dock_calendar_seeded_v1'
+const STORAGE_KEY_START_GRID = 'demirturk_start_menu_grid_v2'
 const STORAGE_KEY_DOCK_ENABLED = 'demirturk_dock_enabled'
-const STORAGE_KEY_QUICK_ACCESS = 'demirturk_start_quick_access_v2'
+const STORAGE_KEY_QUICK_ACCESS = 'demirturk_start_quick_access_v3'
+const STORAGE_KEY_QUICK_CALENDAR_SEEDED = 'demirturk_quick_calendar_seeded_v1'
 
-const DEFAULT_QUICK_ACCESS_IDS = ['contacts', 'payments', 'notepad', 'calculator', 'commission']
+const DEFAULT_QUICK_ACCESS_IDS = ['calendar', 'contacts', 'payments', 'notepad', 'calculator', 'commission']
 
 export interface StartMenuItem {
   id: string
@@ -94,6 +97,7 @@ export const SETTINGS_MENU_ITEM: StartMenuItem = {
 }
 
 const START_MENU_ITEMS: StartMenuItem[] = [
+  { id: 'calendar', name: 'Takvim', icon: Calendar, type: 'tool', toolId: 'calendar' },
   { id: 'contacts', name: 'Kişiler', icon: UserCheck, type: 'page', tab: 'contacts' },
   { id: 'payments', name: 'Ödemeler', icon: Wallet, type: 'tool', toolId: 'payments' },
   { id: 'notepad', name: 'Not Defteri', icon: FileText, type: 'tool', toolId: 'notepad' },
@@ -115,7 +119,6 @@ const START_MENU_ITEMS: StartMenuItem[] = [
   { id: 'reminders', name: 'Hatırlatıcı', icon: Bell, type: 'tool', toolId: 'reminders' },
   { id: 'qr', name: 'Kartvizit QR', icon: QrCode, type: 'tool', toolId: 'qr' },
   { id: 'market', name: 'Piyasa Endeks', icon: BarChart3, type: 'tool', toolId: 'market' },
-  { id: 'calendar', name: 'Randevular', icon: Calendar, type: 'tool', toolId: 'calendar' },
   { id: 'dask', name: 'DASK Sigorta', icon: ShieldCheck, type: 'tool', toolId: 'dask' },
   { id: 'taxincome', name: 'Kira Vergisi', icon: Receipt, type: 'tool', toolId: 'taxincome' },
   { id: 'aidat', name: 'Aidat Dağıtıcı', icon: Home, type: 'tool', toolId: 'aidat' },
@@ -177,24 +180,52 @@ export const AppDock: React.FC<AppDockProps> = ({
   const [dockItems, setDockItems] = useState<DockItemConfig[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_DOCK_ORDER)
+      const calendarSeeded = localStorage.getItem(STORAGE_KEY_DOCK_CALENDAR_SEEDED) === 'true'
       if (saved) {
         const parsed = JSON.parse(saved) as DockItemConfig[]
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Sayfalar ve mesaj/posta dock'ta yer almaz; yalnızca navbar'ın ikonlar kısmında olacak
-          const sanitized = parsed.filter(
-            (d) =>
-              !d.tab &&
-              d.id !== 'dock-portfolio' &&
-              d.id !== 'dock-crm' &&
-              d.id !== 'dock-shared' &&
-              d.id !== 'dock-projects' &&
-              d.id !== 'dock-contacts' &&
-              d.id !== 'dock-mail' &&
-              !d.isMail &&
-              d.id !== 'dock-messages' &&
-              d.id !== 'dock-new-lead' &&
-              d.iconType !== 'new-lead'
-          )
+          let sanitized = parsed
+            .filter(
+              (d) =>
+                !d.tab &&
+                d.id !== 'dock-portfolio' &&
+                d.id !== 'dock-crm' &&
+                d.id !== 'dock-shared' &&
+                d.id !== 'dock-projects' &&
+                d.id !== 'dock-contacts' &&
+                d.id !== 'dock-mail' &&
+                !d.isMail &&
+                d.id !== 'dock-messages' &&
+                d.id !== 'dock-new-lead' &&
+                d.iconType !== 'new-lead'
+            )
+            .map((d) =>
+              d.toolId === 'calendar' || d.id === 'dock-calendar'
+                ? { ...d, label: 'Takvim', iconType: 'calendar' as const, toolId: 'calendar' as ToolType }
+                : d
+            )
+
+          // Varsayılan olarak bir kez Takvim'i Dock'a sabitle (kullanıcı sonradan kaldırabilir)
+          if (!calendarSeeded) {
+            const hasCalendar = sanitized.some(
+              (d) => d.toolId === 'calendar' || d.id === 'dock-calendar'
+            )
+            if (!hasCalendar) {
+              sanitized = [
+                {
+                  id: 'dock-calendar',
+                  label: 'Takvim',
+                  iconType: 'calendar',
+                  toolId: 'calendar',
+                  isAction: true,
+                },
+                ...sanitized,
+              ]
+            }
+            localStorage.setItem(STORAGE_KEY_DOCK_CALENDAR_SEEDED, 'true')
+          }
+
           if (sanitized.length > 0) {
             localStorage.setItem(STORAGE_KEY_DOCK_ORDER, JSON.stringify(sanitized))
             return sanitized
@@ -204,11 +235,12 @@ export const AppDock: React.FC<AppDockProps> = ({
     } catch {
       // ignore
     }
+    localStorage.setItem(STORAGE_KEY_DOCK_CALENDAR_SEEDED, 'true')
     localStorage.setItem(STORAGE_KEY_DOCK_ORDER, JSON.stringify(DEFAULT_DOCK_ITEMS))
     return DEFAULT_DOCK_ITEMS
   })
 
-  // Start Menu Grid Layout ('4x5' | '5x5' | '5x6')
+  // Start Menu Grid Layout ('4x5' | '5x5' | '5x6') — Varsayılan: bir sırada 6 uygulama ('5x6')
   const [startMenuGrid, setStartMenuGrid] = useState<'4x5' | '5x5' | '5x6'>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_START_GRID)
@@ -216,7 +248,7 @@ export const AppDock: React.FC<AppDockProps> = ({
     } catch {
       // ignore
     }
-    return '4x5'
+    return '5x6'
   })
 
   const handleSetGrid = (grid: '4x5' | '5x5' | '5x6') => {
@@ -262,19 +294,28 @@ export const AppDock: React.FC<AppDockProps> = ({
   const [quickAccessIds, setQuickAccessIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_QUICK_ACCESS)
+      const quickCalendarSeeded = localStorage.getItem(STORAGE_KEY_QUICK_CALENDAR_SEEDED) === 'true'
       if (saved) {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const sanitized = parsed.filter((id) => id !== 'mail' && id !== 'messages')
+          let sanitized = parsed.filter((id) => id !== 'mail' && id !== 'messages')
+          if (!quickCalendarSeeded) {
+            sanitized = ['calendar', ...sanitized.filter((id) => id !== 'calendar')]
+            localStorage.setItem(STORAGE_KEY_QUICK_CALENDAR_SEEDED, 'true')
+            localStorage.setItem(STORAGE_KEY_QUICK_ACCESS, JSON.stringify(sanitized))
+          }
           if (sanitized.length > 0) return sanitized
         }
       }
     } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY_QUICK_CALENDAR_SEEDED, 'true')
+    } catch {}
     return DEFAULT_QUICK_ACCESS_IDS
   })
 
-  // Hızlı Erişim üst sınır sayısı: Izgara 4x5 ise ilk 4, 5x5 veya 5x6 ise ilk 5
-  const maxQuickCount = startMenuGrid === '4x5' ? 4 : 5
+  // Hızlı Erişim üst sınır sayısı: Bir sırada varsayılan 6 uygulama
+  const maxQuickCount = startMenuGrid === '4x5' ? 4 : startMenuGrid === '5x5' ? 5 : 6
   const activeQuickAccessIds = quickAccessIds.slice(0, maxQuickCount)
 
   const activeQuickAccessItems: StartMenuItem[] = activeQuickAccessIds
@@ -454,7 +495,8 @@ export const AppDock: React.FC<AppDockProps> = ({
       (d) =>
         d.toolId === item.toolId ||
         (item.toolId === 'calculator' && (d.id === 'dock-calc' || d.toolId === 'calculator')) ||
-        (item.toolId === 'notepad' && (d.id === 'dock-notepad' || d.toolId === 'notepad'))
+        (item.toolId === 'notepad' && (d.id === 'dock-notepad' || d.toolId === 'notepad')) ||
+        (item.toolId === 'calendar' && (d.id === 'dock-calendar' || d.toolId === 'calendar'))
     )
   }
 
@@ -479,7 +521,8 @@ export const AppDock: React.FC<AppDockProps> = ({
           (d) =>
             d.toolId !== item.toolId &&
             !(item.toolId === 'calculator' && (d.id === 'dock-calc' || d.toolId === 'calculator')) &&
-            !(item.toolId === 'notepad' && (d.id === 'dock-notepad' || d.toolId === 'notepad'))
+            !(item.toolId === 'notepad' && (d.id === 'dock-notepad' || d.toolId === 'notepad')) &&
+            !(item.toolId === 'calendar' && (d.id === 'dock-calendar' || d.toolId === 'calendar'))
         )
       }
       showToast(`"${item.name}" görev çubuğundan kaldırıldı.`)
@@ -502,8 +545,9 @@ export const AppDock: React.FC<AppDockProps> = ({
               isMail: true,
             }
           : {
-              id: `dock-tool-${item.toolId}`,
+              id: item.toolId === 'calendar' ? 'dock-calendar' : `dock-tool-${item.toolId}`,
               label: item.name,
+              iconType: item.toolId === 'calendar' ? 'calendar' : undefined,
               toolId: item.toolId,
               isAction: true,
             }
@@ -610,6 +654,8 @@ export const AppDock: React.FC<AppDockProps> = ({
         return <FileText className="w-4 h-4" />
       case 'calc':
         return <Calculator className="w-4 h-4" />
+      case 'calendar':
+        return <Calendar className="w-4 h-4" />
       case 'new-lead':
         return <UserPlus className="w-4 h-4" />
       default:
@@ -635,6 +681,8 @@ export const AppDock: React.FC<AppDockProps> = ({
       onOpenTool('calculator')
     } else if (item.id === 'dock-notepad') {
       onOpenTool('notepad')
+    } else if (item.id === 'dock-calendar') {
+      onOpenTool('calendar')
     } else if (item.id === 'dock-new-lead') {
       onOpenAddLead()
     }
@@ -714,9 +762,13 @@ export const AppDock: React.FC<AppDockProps> = ({
                 duration: 0.28,
                 ease: [0.16, 1, 0.3, 1],
               }}
-              className={`dropdown-panel absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 w-[calc(100vw-32px)] ${
-                startMenuGrid === '4x5' ? 'sm:w-[380px]' : 'sm:w-[460px]'
-              } rounded-[32px] p-4 sm:p-5 backdrop-blur-2xl space-y-3.5 z-50`}
+              className={`dropdown-panel absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 w-[calc(100vw-24px)] ${
+                startMenuGrid === '4x5'
+                  ? 'sm:w-[440px]'
+                  : startMenuGrid === '5x5'
+                  ? 'sm:w-[520px]'
+                  : 'sm:w-[600px]'
+              } rounded-[32px] p-4 sm:p-5 space-y-3.5 z-50`}
             >
             {/* Header / User Info & Grid Selector */}
             <div className="flex items-center justify-between pb-1 gap-2">
@@ -774,8 +826,12 @@ export const AppDock: React.FC<AppDockProps> = ({
 
               <div
                 className={`grid ${
-                  startMenuGrid === '4x5' ? 'grid-cols-4' : 'grid-cols-5'
-                } gap-1 p-1 rounded-2xl bg-[#24211f]/70 border border-[#b99881]/25`}
+                  startMenuGrid === '4x5'
+                    ? 'grid-cols-4'
+                    : startMenuGrid === '5x5'
+                    ? 'grid-cols-5'
+                    : 'grid-cols-6'
+                } gap-1.5 -mx-1.5 px-2.5 py-2 rounded-2xl bg-[#24211f]/70 border border-[#b99881]/25`}
               >
                 {activeQuickAccessItems.map((item) => {
                   const Icon = item.icon
@@ -839,8 +895,12 @@ export const AppDock: React.FC<AppDockProps> = ({
 
               <div
                 className={`grid ${
-                  startMenuGrid === '4x5' ? 'grid-cols-4' : 'grid-cols-5'
-                } gap-y-3 gap-x-1 py-1.5 max-h-[250px] overflow-y-auto pr-0.5`}
+                  startMenuGrid === '4x5'
+                    ? 'grid-cols-4'
+                    : startMenuGrid === '5x5'
+                    ? 'grid-cols-5'
+                    : 'grid-cols-6'
+                } gap-y-3 gap-x-1.5 py-1.5 max-h-[250px] overflow-y-auto pr-0.5`}
               >
                 {remainingItems.map((item) => {
                   const Icon = item.icon
@@ -977,8 +1037,10 @@ export const AppDock: React.FC<AppDockProps> = ({
             </span>
           </div>
 
-          {/* Dikey Ayrım Çizgisi */}
-          <div className="w-[1px] h-6 bg-[#4a443f] mx-0.5" />
+          {/* Dikey Ayrım Çizgisi (Yuvarlakların dış katman çizgisi gibi gri/hafif koyu gri) */}
+          <div
+            className="dock-vertical-divider w-[1.5px] h-6 rounded-full mx-0.5 shrink-0 bg-[#4a443f]"
+          />
 
           {/* 
             SÜRÜKLENEBİLİR VE YER DEĞİŞTİREBİLİR DOCK BUTONLARI
@@ -1018,6 +1080,7 @@ export const AppDock: React.FC<AppDockProps> = ({
                         (item.toolId && s.toolId === item.toolId) ||
                         (item.id === 'dock-calc' && s.toolId === 'calculator') ||
                         (item.id === 'dock-notepad' && s.toolId === 'notepad') ||
+                        (item.id === 'dock-calendar' && s.toolId === 'calendar') ||
                         (item.isMail && s.id === 'mail')
                     )
                     if (matched) {

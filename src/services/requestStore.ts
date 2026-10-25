@@ -37,7 +37,15 @@ class RequestStore {
   }
 
   public setLoadedRequests(requests: CustomerRequest[]) {
-    this.requests = requests || []
+    const byId = new Map<string, CustomerRequest>()
+    for (const r of requests || []) byId.set(r.id, r)
+    for (const local of this.requests) {
+      if (!byId.has(local.id)) {
+        byId.set(local.id, local)
+        syncService.saveRequest(local)
+      }
+    }
+    this.requests = Array.from(byId.values())
     try {
       localStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(this.requests))
     } catch {}
@@ -105,8 +113,7 @@ class RequestStore {
         .select('*')
         .order('created_at', { ascending: false })
       if (!error && data) {
-        this.requests = data.map(rowToRequest)
-        this.saveToStorage()
+        this.setLoadedRequests(data.map(rowToRequest))
       }
     } catch (e) {
       console.error('[RequestStore] refreshFromSupabase error:', e)

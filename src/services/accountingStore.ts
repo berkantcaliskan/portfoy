@@ -46,11 +46,6 @@ export interface PaymentRecord {
 const STORAGE_KEY_COLLECTIONS = 'demirturk_collections_v2'
 const STORAGE_KEY_PAYMENTS = 'demirturk_payments_v2'
 
-function getFutureDate(days: number): string {
-  const d = new Date(Date.now() + 86400000 * days)
-  return d.toISOString().split('T')[0]
-}
-
 const INITIAL_COLLECTIONS: CollectionRecord[] = []
 const INITIAL_PAYMENTS: PaymentRecord[] = []
 
@@ -68,8 +63,26 @@ class AccountingStore {
   }
 
   public setLoadedAccounting(collections: CollectionRecord[], payments: PaymentRecord[]) {
-    this.collections = collections || []
-    this.payments = payments || []
+    const colMap = new Map<string, CollectionRecord>()
+    for (const c of collections || []) colMap.set(c.id, c)
+    for (const lc of this.collections) {
+      if (!colMap.has(lc.id)) {
+        colMap.set(lc.id, lc)
+        syncService.saveCollection(lc)
+      }
+    }
+
+    const payMap = new Map<string, PaymentRecord>()
+    for (const p of payments || []) payMap.set(p.id, p)
+    for (const lp of this.payments) {
+      if (!payMap.has(lp.id)) {
+        payMap.set(lp.id, lp)
+        syncService.savePayment(lp)
+      }
+    }
+
+    this.collections = Array.from(colMap.values())
+    this.payments = Array.from(payMap.values())
     try {
       localStorage.setItem(STORAGE_KEY_COLLECTIONS, JSON.stringify(this.collections))
       localStorage.setItem(STORAGE_KEY_PAYMENTS, JSON.stringify(this.payments))

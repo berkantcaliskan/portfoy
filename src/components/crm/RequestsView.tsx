@@ -18,6 +18,7 @@ import {
   RefreshCw,
   X,
   Layers,
+  ClipboardList,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -427,7 +428,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <AlertCircle className="w-5 h-5 text-[#dfb76c]" />
+            <ClipboardList className="w-5 h-5 text-[#dfb76c]" />
             <div>
               <h2 className="text-2xl font-bold text-white tracking-wide">
                 Talepler
@@ -570,10 +571,10 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
 
       {/* Requests Grid */}
       {filtered.length === 0 ? (
-        <div className="p-12 text-center rounded-[24px] bg-[#282522] border border-[#4a443f]">
+        <div className="py-20 text-center flex flex-col items-center justify-center">
           <AlertCircle className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
           <h3 className="text-sm font-semibold text-white">Talep kaydı bulunamadı</h3>
-          <p className="text-xs text-[#8c857f] mt-1">
+          <p className="text-xs text-[#8c857f] mt-1 max-w-sm mx-auto">
             Seçili filtreye veya arama kriterine uygun müşteri ya da web talebi bulunmamaktadır.
           </p>
         </div>

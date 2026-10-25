@@ -158,64 +158,75 @@ export const PaymentsView: React.FC = () => {
         ))}
       </div>
 
-      {/* Tablo */}
-      <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead>
-              <tr className="border-b border-[#4a443f] text-[#8c857f] text-[11px]">
-                <th className="py-2.5 px-3">Başlık</th>
-                <th className="py-2.5 px-3">Alıcı / Firma</th>
-                <th className="py-2.5 px-3">Kategori</th>
-                <th className="py-2.5 px-3">Tutar</th>
-                <th className="py-2.5 px-3">Vade</th>
-                <th className="py-2.5 px-3">Durum</th>
-                <th className="py-2.5 px-3 text-right">İşlem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]">
-              {filtered.map((pay) => (
-                <tr key={pay.id} className="hover:bg-[#34302d] transition-colors">
-                  <td className="py-3 px-3 font-semibold text-white">
-                    {pay.title}
-                    {pay.invoiceNo && (
-                      <div className="text-[10px] text-[#8c857f] font-normal">{pay.invoiceNo}</div>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 text-[#a69f99]">{pay.payee}</td>
-                  <td className="py-3 px-3">
-                    <span className="text-[11px] text-[#d6beae]">
-                      {pay.category === 'COMMISSION' ? 'Komisyon' : pay.category === 'CONSTRUCTION' ? 'İnşaat/Şantiye' : pay.category === 'MARKETING' ? 'Reklam/Pazarlama' : 'Ofis'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 font-bold text-white">
-                    {formatCurrency(pay.amount)}
-                  </td>
-                  <td className="py-3 px-3 text-[#a69f99]">{pay.dueDate}</td>
-                  <td className="py-3 px-3">
-                    <GlassBadge
-                      size="sm"
-                      variant={pay.status === 'PAID' ? 'success' : 'warning'}
-                    >
-                      {pay.status === 'PAID' ? 'Ödendi' : 'Bekliyor'}
-                    </GlassBadge>
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    {pay.status !== 'PAID' && (
-                      <button
-                        onClick={() => handleMarkPaid(pay.id)}
-                        className="px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer"
-                      >
-                        Öde
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Tablo (Boşken Katmansız ve Ortalı) */}
+      {filtered.length === 0 ? (
+        <div className="py-20 text-center flex flex-col items-center justify-center">
+          <p className="text-sm font-semibold text-[#f3efe9]">
+            Kayıtlı ödeme bulunamadı
+          </p>
+          <p className="text-xs text-[#a69f99] mt-1">
+            Bu kategoriye uygun ödeme veya hakediş kaydı bulunmuyor.
+          </p>
         </div>
-      </GlassCard>
+      ) : (
+        <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-[#4a443f] text-[#8c857f] text-[11px]">
+                  <th className="py-2.5 px-3">Başlık</th>
+                  <th className="py-2.5 px-3">Alıcı / Firma</th>
+                  <th className="py-2.5 px-3">Kategori</th>
+                  <th className="py-2.5 px-3">Tutar</th>
+                  <th className="py-2.5 px-3">Vade</th>
+                  <th className="py-2.5 px-3">Durum</th>
+                  <th className="py-2.5 px-3 text-right">İşlem</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]">
+                {filtered.map((pay) => (
+                  <tr key={pay.id} className="hover:bg-[#34302d] transition-colors">
+                    <td className="py-3 px-3 font-semibold text-white">
+                      {pay.title}
+                      {pay.invoiceNo && (
+                        <div className="text-[10px] text-[#8c857f] font-normal">{pay.invoiceNo}</div>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-[#a69f99]">{pay.payee}</td>
+                    <td className="py-3 px-3">
+                      <span className="text-[11px] text-[#d6beae]">
+                        {pay.category === 'COMMISSION' ? 'Komisyon' : pay.category === 'CONSTRUCTION' ? 'İnşaat/Şantiye' : pay.category === 'MARKETING' ? 'Reklam/Pazarlama' : 'Ofis'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 font-bold text-white">
+                      {formatCurrency(pay.amount)}
+                    </td>
+                    <td className="py-3 px-3 text-[#a69f99]">{pay.dueDate}</td>
+                    <td className="py-3 px-3">
+                      <GlassBadge
+                        size="sm"
+                        variant={pay.status === 'PAID' ? 'success' : 'warning'}
+                      >
+                        {pay.status === 'PAID' ? 'Ödendi' : 'Bekliyor'}
+                      </GlassBadge>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      {pay.status !== 'PAID' && (
+                        <button
+                          onClick={() => handleMarkPaid(pay.id)}
+                          className="px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer"
+                        >
+                          Öde
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+      )}
 
       {/* YENİ ÖDEME PLANI MODALI */}
       <GlassModal

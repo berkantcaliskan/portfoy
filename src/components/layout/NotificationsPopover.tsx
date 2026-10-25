@@ -66,7 +66,7 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className="dropdown-panel fixed md:absolute right-3.5 md:right-0 bottom-24 md:bottom-auto md:top-full md:mt-2.5 w-[calc(100vw-28px)] md:w-96 max-w-sm rounded-[26px] bg-[#282522] border border-[#4a443f] shadow-2xl p-4 z-[70] animate-in fade-in zoom-in-95 duration-150 backdrop-blur-2xl space-y-3"
+      className="dropdown-panel dropdown-panel-down fixed md:absolute right-3.5 md:right-0 top-16 md:top-full md:mt-2.5 w-[calc(100vw-28px)] md:w-96 max-w-sm rounded-[26px] bg-[#282522] border border-[#4a443f] shadow-2xl p-4 z-[70] backdrop-blur-2xl space-y-3"
       style={{
         boxShadow:
           '0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(185, 152, 129, 0.35)',

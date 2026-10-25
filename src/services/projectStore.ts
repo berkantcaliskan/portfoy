@@ -8,49 +8,70 @@ export type FlatStatus = 'SATISTA' | 'REZERVE' | 'SATILDI'
 export type RoomType = '1+1' | '2+1' | '3+1' | '4+1' | 'Villa' | 'Penthouse' | 'Ticari'
 
 export type UnitSizePreset =
-  | 'wide-rect'  // Geniş Yatay Dikdörtgen
-  | 'square'     // Kare
-  | 'large-rect' // Geniş Uzun Dikdörtgen
-  | 'narrow-v'   // Yarısı Kadar Dar Düşey Dikdörtgen
-  | 'narrow-h'   // Yarısı Kadar Dar Yatay Dikdörtgen
+  | '1x1'        // 1:1 Kare
+  | '16x9'       // 16:9 Yatay
+  | '9x16'       // 9:16 Düşey
+  | 'wide-rect'  // Legacy: 16:9
+  | 'square'     // Legacy: 1:1
+  | 'large-rect' // Legacy: 16:9
+  | 'narrow-v'   // Legacy: 9:16
+  | 'narrow-h'   // Legacy: 16:9
 
 export const UNIT_SIZE_PRESETS: Record<
   UnitSizePreset,
   { label: string; shortLabel: string; w: number; h: number }
 > = {
+  '1x1': {
+    label: '1:1',
+    shortLabel: '1:1',
+    w: 9.2,
+    h: 14.0,
+  },
+  '16x9': {
+    label: '16:9',
+    shortLabel: '16:9',
+    w: 16.5,
+    h: 14.0,
+  },
+  '9x16': {
+    label: '9:16',
+    shortLabel: '9:16',
+    w: 8.8,
+    h: 24.0,
+  },
   'wide-rect': {
-    label: 'Geniş Yatay Dikdörtgen',
-    shortLabel: 'Geniş Yatay',
-    w: 22,
-    h: 27,
+    label: '16:9',
+    shortLabel: '16:9',
+    w: 16.5,
+    h: 14.0,
   },
   square: {
-    label: 'Kare',
-    shortLabel: 'Kare',
-    w: 19,
-    h: 23,
+    label: '1:1',
+    shortLabel: '1:1',
+    w: 9.2,
+    h: 14.0,
   },
   'large-rect': {
-    label: 'Geniş Uzun Dikdörtgen',
-    shortLabel: 'Geniş Uzun',
-    w: 33,
-    h: 32,
+    label: '16:9',
+    shortLabel: '16:9',
+    w: 18.0,
+    h: 15.0,
   },
   'narrow-v': {
-    label: 'Dar Düşey Dikdörtgen (Yarım)',
-    shortLabel: 'Dar Düşey',
-    w: 11,
-    h: 42,
+    label: '9:16',
+    shortLabel: '9:16',
+    w: 8.8,
+    h: 24.0,
   },
   'narrow-h': {
-    label: 'Dar Yatay Dikdörtgen (Yarım)',
-    shortLabel: 'Dar Yatay',
-    w: 22,
-    h: 14,
+    label: '16:9',
+    shortLabel: '16:9',
+    w: 16.5,
+    h: 13.0,
   },
 }
 
-export type KrokiAreaKind = 'pool' | 'entrance' | 'corridor' | 'garden' | 'parking' | 'custom'
+export type KrokiAreaKind = 'pool' | 'entrance' | 'block' | 'corridor' | 'garden' | 'parking' | 'custom'
 
 export interface KrokiAreaItem {
   id: string
@@ -58,6 +79,7 @@ export interface KrokiAreaItem {
   kind: KrokiAreaKind
   floor?: number | 'ALL'
   direction?: 'up' | 'down' | 'left' | 'right'
+  textOrientation?: 'horizontal' | 'vertical'
   box: UnitPlanBox
 }
 
@@ -177,6 +199,7 @@ export interface FlatUnit {
   projectId: string
   unitNumber: string
   block?: string
+  entrance?: string
   floor: number
   roomType: RoomType
   grossSqm: number
@@ -217,7 +240,9 @@ export interface SharedProject {
   sourceDocumentSummary?: string
   customAreas?: KrokiAreaItem[]
   customFacades?: KrokiFacadeItem[]
+  krokiCustomized?: boolean
   paymentBanner?: string
+  footerInfo?: string
   parcelInfo?: string
   status: 'SATISTA' | 'YAKINDA' | 'TAMAMLANDI'
   description?: string
@@ -227,15 +252,34 @@ export interface SharedProject {
 const STORAGE_KEY_PROJECTS = 'demirturk_projects_v2'
 
 export const DEFAULT_KROKI_FACADES: KrokiFacadeItem[] = [
-  { id: 'fac-n-v2', label: 'Kuzey', edge: 'top' },
-  { id: 'fac-s-v2', label: 'Güney', edge: 'bottom' },
-  { id: 'fac-w-v2', label: 'Batı', edge: 'left' },
-  { id: 'fac-e-v2', label: 'Doğu', edge: 'right' },
-  { id: 'fac-nw-v2', label: 'Kuzeybatı', edge: 'top-left' },
-  { id: 'fac-ne-v2', label: 'Kuzeydoğu', edge: 'top-right' },
-  { id: 'fac-sw-v2', label: 'Güneybatı', edge: 'bottom-left' },
-  { id: 'fac-se-v2', label: 'Güneydoğu', edge: 'bottom-right' },
+  { id: 'fac-n-v3', label: 'Kuzey', edge: 'top' },
+  { id: 'fac-s-v3', label: 'Güney', edge: 'bottom' },
+  { id: 'fac-w-v3', label: 'Batı', edge: 'left' },
+  { id: 'fac-e-v3', label: 'Doğu', edge: 'right' },
 ]
+
+export function resolveCanonicalCompassEdge(label: string): FacadeEdge | null {
+  const key = label
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .replace(/\s+/g, '')
+
+  if (key === 'kuzeybati' || key === 'kb') return 'top-left'
+  if (key === 'kuzeydogu' || key === 'kd') return 'top-right'
+  if (key === 'guneybati' || key === 'gb') return 'bottom-left'
+  if (key === 'guneydogu' || key === 'gd') return 'bottom-right'
+  if (key === 'kuzey' || key === 'k') return 'top'
+  if (key === 'guney' || key === 'g') return 'bottom'
+  if (key === 'bati' || key === 'b') return 'left'
+  if (key === 'dogu' || key === 'd') return 'right'
+  return null
+}
 
 /**
  * Check if two kroki boxes overlap (with an optional minimum separation gap in percentage points)
@@ -257,10 +301,10 @@ export function findNonOverlappingBox(
   desired: UnitPlanBox,
   obstacles: UnitPlanBox[],
   bounds: { minX: number; maxX: number; minY: number; maxY: number } = {
-    minX: 9.0,
-    maxX: 90.5,
-    minY: 10.0,
-    maxY: 81.5,
+    minX: 3.2,
+    maxX: 96.8,
+    minY: 5.5,
+    maxY: 85.5,
   },
   gap = 1.0
 ): UnitPlanBox {
@@ -321,7 +365,7 @@ function buildAlmina2SpatialData(projectId: string): {
   units: FlatUnit[]
   customAreas: KrokiAreaItem[]
   customFacades: KrokiFacadeItem[]
-  paymentBanner: string
+  paymentBanner?: string
   parcelInfo: string
   summary: string
 } {
@@ -445,7 +489,7 @@ function buildAlmina2SpatialData(projectId: string): {
     units,
     customAreas,
     customFacades,
-    paymentBanner: '1.500.000₺ Peşinat / 36 Ay Vade',
+    paymentBanner: undefined,
     parcelInfo: 'Aşağıincilli Mh • 996 Ada / 12 Parsel',
     summary:
       'PowerPoint Sunumu (.pptx) mimari planı otomatik uygulandı: Zemin + Birinci + İkinci Kat (3 Kat), her katta 6 daire (toplam 18 bağımsız bölüm), Havuz ve A/B Giriş alanları birebir kroki alanına yerleştirildi.',
@@ -465,10 +509,11 @@ function normalizeProjectFloors(project: SharedProject): SharedProject {
       project.units.some((u) => u.price === 1500000) &&
       project.units.some((u) => u.price === 5500000))
   const hasOldBrokenAlminaParse =
+    !project.krokiCustomized &&
     isAlminaDoc &&
-    ((project.units && project.units.length <= 4) ||
-      Boolean(project.blueprintUrl) ||
-      Boolean(project.floorPlans?.['DEFAULT']))
+    project.units &&
+    project.units.length <= 3 &&
+    (Boolean(project.blueprintUrl) || Boolean(project.floorPlans?.['DEFAULT']))
 
   if (hasOldBrokenAlminaParse) {
     const repaired = buildAlmina2SpatialData(project.id)
@@ -493,13 +538,24 @@ function normalizeProjectFloors(project: SharedProject): SharedProject {
     }
   }
 
-  // Upgrade legacy 4-facade default sets to the 8-direction compass set once
-  let nextFacades = project.customFacades
-  if (
-    nextFacades &&
-    nextFacades.length === 4 &&
-    nextFacades.every((f) => ['fac-n', 'fac-s', 'fac-w', 'fac-e', 'fac-top', 'fac-bottom', 'fac-left', 'fac-right'].includes(f.id))
-  ) {
+  // Preserve user's customFacades; strip only legacy auto-seeded intercardinal -v3 facades
+  const AUTO_INTERCARDINAL_IDS = new Set(['fac-nw-v3', 'fac-ne-v3', 'fac-sw-v3', 'fac-se-v3'])
+  let nextFacades: KrokiFacadeItem[]
+  if (Array.isArray(project.customFacades)) {
+    const seen = new Set<string>()
+    nextFacades = project.customFacades
+      .filter((f) => !AUTO_INTERCARDINAL_IDS.has(f.id))
+      .map((f) => {
+        const canonical = resolveCanonicalCompassEdge(f.label)
+        return canonical ? { ...f, edge: canonical } : f
+      })
+      .filter((f) => {
+        const key = `${f.edge}-${f.label.trim().toLocaleLowerCase('tr-TR')}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+  } else {
     nextFacades = [...DEFAULT_KROKI_FACADES]
   }
 
@@ -509,39 +565,14 @@ function normalizeProjectFloors(project: SharedProject): SharedProject {
       : 3
   const units = Array.isArray(project.units) ? project.units : []
 
-  const bounds = {
-    minX: 9.0,
-    maxX: 90.0,
-    minY: 10.0,
-    maxY: project.paymentBanner ? 80.5 : 88.0,
-  }
-
-  // Filter out bogus floor-title custom areas (e.g. "ZEMİN KAT", "1. KAT") and normalize area positions
-  const isAlminaStyleLayout =
-    Boolean(project.parcelInfo?.includes('996')) ||
-    Boolean(project.paymentBanner?.includes('1.500.000')) ||
-    Boolean(project.customAreas?.some((a) => a.kind === 'pool'))
-
-  let nextAreas: KrokiAreaItem[] | undefined = project.customAreas
-    ? project.customAreas
-        .filter((a) => !/^(zemin\s*kat|giriş\s*kat|1\s*\.\s*kat|birinci\s*kat|2\s*\.\s*kat|ikinci\s*kat)$/i.test(a.label.trim()))
-        .map((a) => {
-          if (isAlminaStyleLayout) {
-            if (a.kind === 'pool') {
-              return { ...a, box: { x: 38.0, y: 45.5, w: 29.0, h: 34.0 } }
-            }
-            if (a.kind === 'entrance' && /b\s*giriş/i.test(a.label)) {
-              return { ...a, direction: 'up', box: { x: 24.5, y: 36.5, w: 9.0, h: 6.5 } }
-            }
-            if (a.kind === 'entrance' && /a\s*giriş/i.test(a.label)) {
-              return { ...a, direction: 'right', box: { x: 59.0, y: 36.5, w: 9.5, h: 6.5 } }
-            }
-          }
-          return a
-        })
+  // Preserve user's customAreas positions and sizes without overwriting them
+  const nextAreas: KrokiAreaItem[] | undefined = project.customAreas
+    ? project.customAreas.filter(
+        (a) => !/^(zemin\s*kat|giriş\s*kat|1\s*\.\s*kat|birinci\s*kat|2\s*\.\s*kat|ikinci\s*kat)$/i.test(a.label.trim())
+      )
     : undefined
 
-  // Normalize floor numbers first
+  // Normalize floor numbers while strictly preserving each unit's saved planBox and sizePreset
   const remappedUnits: FlatUnit[] = units.map((u, idx) => {
     let fl = u.floor
     if (typeof fl !== 'number' || isNaN(fl) || fl < 0 || fl > 2 || fl >= maxFl) {
@@ -550,83 +581,9 @@ function normalizeProjectFloors(project: SharedProject): SharedProject {
     return { ...u, floor: fl }
   })
 
-  // Resolve any overlapping boxes floor by floor
-  const topAlminaBoxes: UnitPlanBox[] = [
-    { x: 9.0, y: 10.0, w: 19.0, h: 25.0 },
-    { x: 29.5, y: 10.0, w: 19.0, h: 25.0 },
-    { x: 50.0, y: 10.0, w: 19.0, h: 25.0 },
-    { x: 70.5, y: 10.0, w: 19.5, h: 25.0 },
-  ]
-  const rightAlminaBoxes: UnitPlanBox[] = [
-    { x: 70.5, y: 37.0, w: 9.2, h: 43.0 },
-    { x: 80.8, y: 37.0, w: 9.2, h: 43.0 },
-  ]
-
-  for (let fl = 0; fl < maxFl; fl++) {
-    const flUnits = remappedUnits.filter((u) => u.floor === fl)
-    const flAreas = (nextAreas || []).filter((a) => a.floor === undefined || a.floor === 'ALL' || a.floor === fl)
-
-    // Check if any pair on this floor currently overlaps or exceeds safe bounds
-    const allBoxesOnFloor: UnitPlanBox[] = [
-      ...flAreas.map((a) => a.box),
-      ...flUnits.map((u) => u.planBox).filter((b): b is UnitPlanBox => Boolean(b)),
-    ]
-
-    let hasOverlapOrOutOfBounds = false
-    for (let i = 0; i < allBoxesOnFloor.length; i++) {
-      const b1 = allBoxesOnFloor[i]
-      if (
-        b1.x < bounds.minX - 0.5 ||
-        b1.x + b1.w > bounds.maxX + 0.5 ||
-        b1.y < bounds.minY - 0.5 ||
-        b1.y + b1.h > bounds.maxY + 0.5
-      ) {
-        hasOverlapOrOutOfBounds = true
-        break
-      }
-      for (let j = i + 1; j < allBoxesOnFloor.length; j++) {
-        if (boxesOverlap(b1, allBoxesOnFloor[j], 0.5)) {
-          hasOverlapOrOutOfBounds = true
-          break
-        }
-      }
-      if (hasOverlapOrOutOfBounds) break
-    }
-
-    if (hasOverlapOrOutOfBounds) {
-      const placedBoxes: UnitPlanBox[] = flAreas.map((a) => a.box)
-
-      // If this floor is an Almina-style L-wing floor (6+ units), assign clean L-wing slots first
-      if (isAlminaStyleLayout && flUnits.length >= 6) {
-        flUnits.forEach((u, idx) => {
-          let desired: UnitPlanBox
-          if (idx < 4) {
-            desired = { ...topAlminaBoxes[idx] }
-            u.sizePreset = 'wide-rect'
-          } else if (idx < 6) {
-            desired = { ...rightAlminaBoxes[idx - 4] }
-            u.sizePreset = 'narrow-v'
-          } else {
-            // Extra manually added unit on this floor (e.g. 7th unit 1+1 on bottom-left)
-            desired = { x: 10.0, y: 46.0, w: 24.0, h: 33.0 }
-          }
-          const resolved = findNonOverlappingBox(desired, placedBoxes, bounds, 1.0)
-          u.planBox = resolved
-          placedBoxes.push(resolved)
-        })
-      } else {
-        flUnits.forEach((u) => {
-          if (!u.planBox) return
-          const resolved = findNonOverlappingBox(u.planBox, placedBoxes, bounds, 1.0)
-          u.planBox = resolved
-          placedBoxes.push(resolved)
-        })
-      }
-    }
-  }
-
   return {
     ...project,
+    paymentBanner: undefined,
     maxFloors: maxFl,
     customAreas: nextAreas,
     customFacades: nextFacades,
@@ -647,52 +604,76 @@ class ProjectStore {
   }
 
   public setLoadedProjects(incomingProjects: SharedProject[]) {
-    // Merge with existing local kroki metadata so Supabase sync never wipes out planBox, customAreas, customFacades, etc.
+    // Merge with existing local kroki metadata so Supabase sync never wipes out planBox, customAreas, customFacades, or locally edited units
     const existingById = new Map(this.projects.map((p) => [p.id, p]))
     const merged = (incomingProjects || []).map((inc) => {
       const local = existingById.get(inc.id)
       if (!local) return normalizeProjectFloors(inc)
 
-      // If local has spatial kroki units (with planBox) or customAreas from a parsed document, preserve local kroki state
+      // Preserve local kroki units and layout state if local has units
       const localHasSpatial =
+        Boolean(local.krokiCustomized) ||
         Boolean(local.customAreas && local.customAreas.length > 0) ||
         Boolean(local.units && local.units.some((u) => Boolean(u.planBox)))
 
+      const incUnitsById = new Map((inc.units || []).map((u) => [u.id, u]))
       const localUnitsById = new Map((local.units || []).map((u) => [u.id, u]))
+
       const mergedUnits =
-        localHasSpatial && local.units.length !== inc.units.length
-          ? local.units
+        localHasSpatial && local.units && local.units.length > 0
+          ? local.units.map((lu) => {
+              const iu = incUnitsById.get(lu.id)
+              return {
+                ...iu,
+                ...lu,
+                planBox: lu.planBox || iu?.planBox,
+                sizePreset: lu.sizePreset || iu?.sizePreset,
+                entrance: lu.entrance || iu?.entrance,
+                block: lu.block || iu?.block,
+              }
+            })
           : (inc.units || []).map((u, i) => {
               const lu = localUnitsById.get(u.id) || local.units?.[i]
               return {
                 ...u,
+                ...lu,
                 statusLabel: lu?.statusLabel || u.statusLabel,
                 planBox: lu?.planBox || u.planBox,
                 sizePreset: lu?.sizePreset || u.sizePreset,
+                entrance: lu?.entrance || u.entrance,
+                block: lu?.block || u.block,
               }
             })
 
       return normalizeProjectFloors({
         ...inc,
-        blueprintUrl: local.blueprintUrl,
-        floorPlans: local.floorPlans,
+        ...local,
+        blueprintUrl: local.blueprintUrl || inc.blueprintUrl,
+        floorPlans: local.floorPlans || inc.floorPlans,
         layoutTemplate: local.layoutTemplate || inc.layoutTemplate,
         maxFloors: local.maxFloors || inc.maxFloors,
         unitsPerFloor: local.unitsPerFloor || inc.unitsPerFloor,
         blockCount: local.blockCount || inc.blockCount,
         defaultRoomType: local.defaultRoomType || inc.defaultRoomType,
-        sourceDocumentName: local.sourceDocumentName,
-        sourceDocumentSummary: local.sourceDocumentSummary,
-        customAreas: local.customAreas,
-        customFacades: local.customFacades,
-        paymentBanner: local.paymentBanner,
-        parcelInfo: local.parcelInfo,
+        sourceDocumentName: local.sourceDocumentName || inc.sourceDocumentName,
+        sourceDocumentSummary: local.sourceDocumentSummary || inc.sourceDocumentSummary,
+        customAreas: local.customAreas || inc.customAreas,
+        customFacades: local.customFacades || inc.customFacades,
+        krokiCustomized: local.krokiCustomized ?? inc.krokiCustomized,
+        paymentBanner: undefined,
+        footerInfo: local.footerInfo || inc.footerInfo,
+        parcelInfo: local.parcelInfo || inc.parcelInfo,
         totalUnits: mergedUnits.length,
         units: mergedUnits,
       })
     })
 
-    this.projects = merged
+    // Also keep any purely local projects not yet present in incomingProjects
+    const incomingIds = new Set((incomingProjects || []).map((p) => p.id))
+    const localOnly = this.projects.filter((p) => !incomingIds.has(p.id))
+    localOnly.forEach((p) => syncService.saveProject(p))
+
+    this.projects = [...localOnly, ...merged]
     try {
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(this.projects))
     } catch {}
@@ -776,7 +757,17 @@ class ProjectStore {
     try {
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(this.projects))
     } catch (e) {
-      console.error('ProjectStore save error:', e)
+      // If quota exceeded due to large base64 blueprint images, strip base64 blueprints and save kroki data reliably
+      try {
+        const compact = this.projects.map((p) => ({
+          ...p,
+          blueprintUrl: p.blueprintUrl && p.blueprintUrl.length > 50000 ? undefined : p.blueprintUrl,
+          floorPlans: undefined,
+        }))
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(compact))
+      } catch (err) {
+        console.error('ProjectStore save error:', err)
+      }
     }
     this.notify()
   }
@@ -791,7 +782,12 @@ class ProjectStore {
   }
 
   public getAll(): SharedProject[] {
-    return [...this.projects]
+    return this.projects.map((p) => ({
+      ...p,
+      units: [...(p.units || [])],
+      customAreas: p.customAreas ? [...p.customAreas] : undefined,
+      customFacades: p.customFacades ? [...p.customFacades] : undefined,
+    }))
   }
 
   public getById(id: string): SharedProject | undefined {
@@ -1038,6 +1034,7 @@ class ProjectStore {
       netSqm?: number
       roomType?: RoomType
       block?: string
+      entrance?: string
       floor?: number
       status?: FlatStatus
       statusLabel?: string
@@ -1059,11 +1056,13 @@ class ProjectStore {
     if (updates.netSqm !== undefined) unit.netSqm = updates.netSqm
     if (updates.roomType !== undefined) unit.roomType = updates.roomType
     if (updates.block !== undefined) unit.block = updates.block
+    if (updates.entrance !== undefined) unit.entrance = updates.entrance
     if (updates.floor !== undefined) unit.floor = updates.floor
     if (updates.status !== undefined) unit.status = updates.status
     if (updates.statusLabel !== undefined) unit.statusLabel = updates.statusLabel
     if (updates.sizePreset !== undefined) unit.sizePreset = updates.sizePreset
     if (updates.planBox !== undefined) unit.planBox = updates.planBox
+    if (project) project.krokiCustomized = true
 
     const reasons: string[] = []
     if (updates.price !== undefined && updates.price !== oldPrice) {
@@ -1396,16 +1395,18 @@ class ProjectStore {
     const clampedFloor = Math.max(0, Math.min(2, floor))
     const floorUnits = project.units.filter((u) => u.floor === clampedFloor)
     const floorAreas = (project.customAreas || []).filter(
-      (a) => a.floor === undefined || a.floor === 'ALL' || a.floor === clampedFloor
+      (a) =>
+        a.kind !== 'block' &&
+        (a.floor === undefined || a.floor === 'ALL' || a.floor === clampedFloor)
     )
     const preset: UnitSizePreset = options?.sizePreset || 'wide-rect'
     const presetDims = UNIT_SIZE_PRESETS[preset]
 
     const bounds = {
-      minX: 9.0,
-      maxX: 90.0,
-      minY: 10.0,
-      maxY: project.paymentBanner ? 80.5 : 88.0,
+      minX: 3.2,
+      maxX: 96.8,
+      minY: 5.5,
+      maxY: project.paymentBanner ? 85.5 : 93.5,
     }
     const obstacles: UnitPlanBox[] = [
       ...floorAreas.map((a) => a.box),
@@ -1438,8 +1439,9 @@ class ProjectStore {
       history: [],
     }
 
-    project.units.push(newUnit)
+    project.units = [...project.units, newUnit]
     project.totalUnits = project.units.length
+    project.krokiCustomized = true
     this.saveToStorage()
     syncService.saveUnit(newUnit)
     return { success: true, unit: newUnit }
@@ -1453,7 +1455,10 @@ class ProjectStore {
     if (!project) return { success: false }
     project.units = project.units.filter((u) => u.id !== unitId)
     project.totalUnits = project.units.length
+    project.krokiCustomized = true
     this.saveToStorage()
+    syncService.deleteUnit(unitId)
+    syncService.saveProject(project)
     return { success: true }
   }
 
@@ -1470,17 +1475,22 @@ class ProjectStore {
     const targetFloor = typeof area.floor === 'number' ? area.floor : 0
     const floorUnits = project.units.filter((u) => u.floor === targetFloor)
     const floorAreas = (project.customAreas || []).filter(
-      (a) => a.floor === undefined || a.floor === 'ALL' || a.floor === targetFloor
+      (a) =>
+        a.kind !== 'block' &&
+        (a.floor === undefined || a.floor === 'ALL' || a.floor === targetFloor)
     )
-    const obstacles: UnitPlanBox[] = [
-      ...floorAreas.map((a) => a.box),
-      ...floorUnits.map((u) => u.planBox).filter((b): b is UnitPlanBox => Boolean(b)),
-    ]
+    const obstacles: UnitPlanBox[] =
+      area.kind === 'block' || area.kind === 'entrance'
+        ? []
+        : [
+            ...floorAreas.map((a) => a.box),
+            ...floorUnits.map((u) => u.planBox).filter((b): b is UnitPlanBox => Boolean(b)),
+          ]
     const bounds = {
-      minX: 9.0,
-      maxX: 90.0,
-      minY: 10.0,
-      maxY: project.paymentBanner ? 80.5 : 88.0,
+      minX: 3.2,
+      maxX: 96.8,
+      minY: 5.5,
+      maxY: project.paymentBanner ? 85.5 : 93.5,
     }
     const safeBox = findNonOverlappingBox(area.box, obstacles, bounds, 1.0)
 
@@ -1490,7 +1500,9 @@ class ProjectStore {
       id: `area-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     }
     project.customAreas = [...(project.customAreas || []), created]
+    project.krokiCustomized = true
     this.saveToStorage()
+    syncService.saveProject(project)
     return { success: true, area: created }
   }
 
@@ -1508,7 +1520,9 @@ class ProjectStore {
     project.customAreas = project.customAreas.map((a) =>
       a.id === areaId ? { ...a, ...updates } : a
     )
+    project.krokiCustomized = true
     this.saveToStorage()
+    syncService.saveProject(project)
     return { success: true }
   }
 
@@ -1520,7 +1534,9 @@ class ProjectStore {
     if (!project) return { success: false }
 
     project.customAreas = (project.customAreas || []).filter((a) => a.id !== areaId)
+    project.krokiCustomized = true
     this.saveToStorage()
+    syncService.saveProject(project)
     return { success: true }
   }
 
@@ -1535,7 +1551,9 @@ class ProjectStore {
     if (!project) return { success: false }
 
     project.customFacades = facades
+    project.krokiCustomized = true
     this.saveToStorage()
+    syncService.saveProject(project)
     return { success: true }
   }
 
@@ -1550,6 +1568,7 @@ class ProjectStore {
     const updated: SharedProject = {
       ...current,
       ...updates,
+      krokiCustomized: true,
       id: current.id,
       units: current.units,
     }
@@ -1644,11 +1663,133 @@ class ProjectStore {
   ): { success: boolean; error?: string } {
     const project = this.getById(projectId)
     const unit = project?.units.find((u) => u.id === unitId)
-    if (!unit) return { success: false, error: 'Daire bulunamadı.' }
+    if (!project || !unit) return { success: false, error: 'Daire bulunamadı.' }
 
-    unit.planBox = planBox
-    if (sizePreset) unit.sizePreset = sizePreset
+    let updatedUnit: FlatUnit | undefined
+    project.units = project.units.map((u) => {
+      if (u.id === unitId) {
+        updatedUnit = {
+          ...u,
+          planBox,
+          sizePreset: sizePreset || u.sizePreset,
+        }
+        return updatedUnit
+      }
+      return u
+    })
+    project.krokiCustomized = true
     this.saveToStorage()
+    if (updatedUnit) {
+      syncService.saveUnit(updatedUnit)
+    }
+    return { success: true }
+  }
+
+  /**
+   * Populate or adjust a floor to have 4, 5, 6, or 12 ready units with non-overlapping coordinates
+   */
+  public applyFloorReadyUnits(
+    projectId: string,
+    floor: number,
+    targetCount: 4 | 5 | 6 | 12,
+    blockName = 'A Blok'
+  ): { success: boolean } {
+    const project = this.getById(projectId)
+    if (!project) return { success: false }
+
+    const clampedFloor = Math.max(0, Math.min(2, floor))
+    const otherFloorUnits = (project.units || []).filter((u) => u.floor !== clampedFloor)
+    const currentFloorUnits = (project.units || []).filter((u) => u.floor === clampedFloor)
+
+    const buildPresetBox = (idx: number, count: 4 | 5 | 6 | 12): UnitPlanBox => {
+      if (count === 4) {
+        const boxes: UnitPlanBox[] = [
+          { x: 10.0, y: 12.0, w: 17.5, h: 16.0 },
+          { x: 30.0, y: 12.0, w: 17.5, h: 16.0 },
+          { x: 50.0, y: 12.0, w: 17.5, h: 16.0 },
+          { x: 70.0, y: 12.0, w: 17.5, h: 16.0 },
+        ]
+        return boxes[idx % 4]
+      }
+      if (count === 5) {
+        const boxes: UnitPlanBox[] = [
+          { x: 8.5, y: 12.0, w: 15.2, h: 15.5 },
+          { x: 25.5, y: 12.0, w: 15.2, h: 15.5 },
+          { x: 42.5, y: 12.0, w: 15.2, h: 15.5 },
+          { x: 59.5, y: 12.0, w: 15.2, h: 15.5 },
+          { x: 76.5, y: 12.0, w: 15.2, h: 15.5 },
+        ]
+        return boxes[idx % 5]
+      }
+      if (count === 6) {
+        const boxes: UnitPlanBox[] = [
+          { x: 9.0, y: 11.0, w: 18.5, h: 16.5 },
+          { x: 29.5, y: 11.0, w: 18.5, h: 16.5 },
+          { x: 50.0, y: 11.0, w: 18.5, h: 16.5 },
+          { x: 70.5, y: 11.0, w: 18.5, h: 16.5 },
+          { x: 70.5, y: 31.0, w: 8.8, h: 24.0 },
+          { x: 80.2, y: 31.0, w: 8.8, h: 24.0 },
+        ]
+        return boxes[idx % 6]
+      }
+      // 12 units (2 rows of 6 or compact grid)
+      const col = idx % 6
+      const row = Math.floor(idx / 6)
+      return {
+        x: Number((8.0 + col * 14.2).toFixed(1)),
+        y: Number((12.0 + row * 18.0).toFixed(1)),
+        w: 12.5,
+        h: 14.5,
+      }
+    }
+
+    const nextFloorUnits: FlatUnit[] = []
+    for (let i = 0; i < targetCount; i++) {
+      const existing = currentFloorUnits[i]
+      const box = buildPresetBox(i, targetCount)
+      const preset: UnitSizePreset =
+        targetCount === 6 && i >= 4 ? '9x16' : targetCount === 12 ? '1x1' : '16x9'
+      if (existing) {
+        nextFloorUnits.push({
+          ...existing,
+          planBox: box,
+          sizePreset: preset,
+        })
+      } else {
+        const seqNum = otherFloorUnits.length + i + 1
+        nextFloorUnits.push({
+          id: `${project.id}-u-${clampedFloor}-${i + 1}-${Date.now()}`,
+          projectId: project.id,
+          unitNumber: `DAİRE ${seqNum}`,
+          block: blockName,
+          entrance: 'A Giriş',
+          floor: clampedFloor,
+          roomType: '2+1',
+          grossSqm: 98,
+          netSqm: 80,
+          price: project.startingPrice && project.startingPrice > 0 ? project.startingPrice : 4658000,
+          status: 'SATISTA',
+          statusLabel: 'Satışta',
+          facade: 'Güney / Ön Cephe',
+          planBox: box,
+          sizePreset: preset,
+          history: [],
+        })
+      }
+    }
+
+    // Delete any removed units from Supabase if floor count was reduced
+    if (currentFloorUnits.length > targetCount) {
+      currentFloorUnits.slice(targetCount).forEach((removedUnit) => {
+        syncService.deleteUnit(removedUnit.id)
+      })
+    }
+
+    project.units = [...otherFloorUnits, ...nextFloorUnits]
+    project.totalUnits = project.units.length
+    project.krokiCustomized = true
+    this.saveToStorage()
+    syncService.saveProject(project)
     return { success: true }
   }
 }

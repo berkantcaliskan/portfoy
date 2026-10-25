@@ -353,7 +353,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                 {/* Cards List */}
                 <div className="space-y-2 flex-1 min-h-[220px]">
                   {stageLeads.length === 0 ? (
-                    <div className="h-20 rounded-[18px] border border-dashed border-[#4a443f] flex items-center justify-center text-[11px] text-[#8c857f]">
+                    <div className="h-32 flex items-center justify-center text-[11px] text-[#8c857f]">
                       Fırsat yok
                     </div>
                   ) : (
@@ -445,28 +445,31 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
 
       {/* View 2: Deals Table View */}
       {viewMode === 'table' && (
-        <div className="rounded-[32px] bg-[#282522]/70 border border-[#4a443f] overflow-hidden shadow-glass">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-white/[0.02] border-b border-[#4a443f] text-[#a69f99] uppercase font-semibold">
-                <tr>
-                  <th className="py-3.5 px-5">Müşteri</th>
-                  <th className="py-3.5 px-4">Anlaşma Tutarı</th>
-                  <th className="py-3.5 px-4">Satışçı</th>
-                  <th className="py-3.5 px-4">Aşama</th>
-                  <th className="py-3.5 px-4">Tahmini Prim (%2)</th>
-                  <th className="py-3.5 px-5 text-right">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#4a443f]/60">
-                {filteredLeads.length === 0 ? (
+        filteredLeads.length === 0 ? (
+          <div className="py-20 text-center flex flex-col items-center justify-center">
+            <p className="text-sm font-semibold text-[#f3efe9]">
+              Kayıtlı satış fırsatı bulunmuyor
+            </p>
+            <p className="text-xs text-[#a69f99] mt-1">
+              Seçili kriterlere uygun satış fırsatı bulunamadı.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-[32px] bg-[#282522]/70 border border-[#4a443f] overflow-hidden shadow-glass">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-white/[0.02] border-b border-[#4a443f] text-[#a69f99] uppercase font-semibold">
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-xs text-[#8c857f]">
-                      Kayıtlı satış fırsatı bulunmuyor.
-                    </td>
+                    <th className="py-3.5 px-5">Müşteri</th>
+                    <th className="py-3.5 px-4">Anlaşma Tutarı</th>
+                    <th className="py-3.5 px-4">Satışçı</th>
+                    <th className="py-3.5 px-4">Aşama</th>
+                    <th className="py-3.5 px-4">Tahmini Prim (%2)</th>
+                    <th className="py-3.5 px-5 text-right">İşlemler</th>
                   </tr>
-                ) : (
-                  filteredLeads.map((lead) => (
+                </thead>
+                <tbody className="divide-y divide-[#4a443f]/60">
+                  {filteredLeads.map((lead) => (
                     <tr
                       key={lead.id}
                       onClick={() => onSelectLead(lead)}
@@ -518,12 +521,12 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* Sales Leaderboard (Satışçı Başarı Sıralaması) */}

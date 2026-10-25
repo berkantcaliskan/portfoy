@@ -345,31 +345,34 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
 
       {/* Sub-Tab 1: Müşteri Listesi / Tablosu */}
       {activeSubTab === 'leads-table' && (
-        <div className="rounded-[32px] bg-[#282522]/70 border border-[#4a443f] overflow-hidden shadow-glass">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-white/[0.02] border-b border-[#4a443f] text-[#a69f99] uppercase font-semibold">
-                <tr>
-                  <th className="py-3.5 px-5">Müşteri Profili</th>
-                  <th className="py-3.5 px-4">İletişim & WhatsApp</th>
-                  <th className="py-3.5 px-4">Talep & Bütçe</th>
-                  <th className="py-3.5 px-4">Müşteri Durumu</th>
-                  <th className="py-3.5 px-4">Tarih</th>
-                  <th className="py-3.5 px-4">Danışman</th>
-                  <th className="py-3.5 px-5 text-right">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#4a443f]/60">
-                {filteredLeads.length === 0 ? (
+        filteredLeads.length === 0 ? (
+          <div className="py-20 text-center flex flex-col items-center justify-center">
+            <p className="text-sm font-semibold text-[#f3efe9]">
+              Kayıtlı müşteri bulunamadı
+            </p>
+            <p className="text-xs text-[#a69f99] mt-1 max-w-md">
+              {leads.length === 0
+                ? "Henüz kayıtlı müşteri bulunmuyor. Sağ üstteki 'Yeni Müşteri' butonuna tıklayarak ilk müşteriyi ekleyebilirsiniz."
+                : 'Kriterlere veya seçili tarih aralığına uygun müşteri bulunamadı.'}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-[32px] bg-[#282522]/70 border border-[#4a443f] overflow-hidden shadow-glass">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-white/[0.02] border-b border-[#4a443f] text-[#a69f99] uppercase font-semibold">
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-[#8c857f]">
-                      {leads.length === 0
-                        ? "Henüz kayıtlı müşteri bulunmuyor. Sağ üstteki 'Yeni Müşteri' butonuna tıklayarak ilk müşteriyi ekleyebilirsiniz."
-                        : 'Kriterlere veya seçili tarih aralığına uygun müşteri bulunamadı.'}
-                    </td>
+                    <th className="py-3.5 px-5">Müşteri Profili</th>
+                    <th className="py-3.5 px-4">İletişim & WhatsApp</th>
+                    <th className="py-3.5 px-4">Talep & Bütçe</th>
+                    <th className="py-3.5 px-4">Müşteri Durumu</th>
+                    <th className="py-3.5 px-4">Tarih</th>
+                    <th className="py-3.5 px-4">Danışman</th>
+                    <th className="py-3.5 px-5 text-right">İşlemler</th>
                   </tr>
-                ) : (
-                  paginatedLeads.map((lead) => {
+                </thead>
+                <tbody className="divide-y divide-[#4a443f]/60">
+                  {paginatedLeads.map((lead) => {
                     const stageConfig = STAGE_CONFIGS[lead.stage] || STAGE_CONFIGS.NEW
 
                     return (
@@ -476,32 +479,37 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                         </td>
                       </tr>
                     )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-          <PaginationBar
-            totalItems={filteredLeads.length}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
-        </div>
+            <PaginationBar
+              totalItems={filteredLeads.length}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
+        )
       )}
 
       {/* Sub-Tab 2: Müşteri Kartları */}
       {activeSubTab === 'leads-cards' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredLeads.length === 0 ? (
-            <div className="col-span-full py-16 text-center text-[#8c857f]">
+        filteredLeads.length === 0 ? (
+          <div className="py-20 text-center flex flex-col items-center justify-center">
+            <p className="text-sm font-semibold text-[#f3efe9]">
+              Kayıtlı müşteri bulunamadı
+            </p>
+            <p className="text-xs text-[#a69f99] mt-1 max-w-md">
               Kriterlere veya seçili tarih aralığına uygun müşteri bulunamadı.
-            </div>
-          ) : (
-            paginatedLeads.map((lead) => {
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedLeads.map((lead) => {
               const stageConfig = STAGE_CONFIGS[lead.stage] || STAGE_CONFIGS.NEW
 
               return (
@@ -576,19 +584,19 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                   </div>
                 </div>
               )
-            })
-          )}
-        </div>
+            })}
+            </div>
 
-          {/* Müşteri Kartları Sayfalama Çubuğu */}
-          <PaginationBar
-            totalItems={filteredLeads.length}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
-        </div>
+            {/* Müşteri Kartları Sayfalama Çubuğu */}
+            <PaginationBar
+              totalItems={filteredLeads.length}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
+        )
       )}
     </div>
   )

@@ -6,18 +6,23 @@ import {
   AssignmentHistoryEntry,
   StageHistoryEntry,
   AiEvaluation,
+  LeadMetaCapiStatus,
 } from '@/types/lead'
+import { MetaCapiEventName } from '@/types/meta'
 import { AppUser, userStore } from './userStore'
 import { permissionService } from './permissionService'
 import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { syncService } from './syncService'
 import { rowToLead, rowToActivity } from './dbMapper'
+import { metaStore } from './metaStore'
 
 import { playNewLeadChime } from '@/utils/audioAlert'
 
 const STORAGE_KEY_LEADS = 'demirturk_leads_v2'
 const STORAGE_KEY_ACTIVITIES = 'demirturk_activities_v2'
 const STORAGE_KEY_LAST_ASSIGNED_MT = 'demirturk_last_assigned_mt_idx'
+const STORAGE_KEY_COMPANY_LEAD_SEQ = 'demirturk_company_lead_seq_v1'
+const STORAGE_KEY_COMPANY_LEAD_MAP = 'demirturk_company_lead_map_v1'
 
 type Listener = () => void
 
@@ -39,8 +44,151 @@ class LeadStore {
     this.initFastPolling()
   }
 
+  private getCompanyKey(companyName?: string): string {
+    const raw = (companyName || userStore.getCurrentUser()?.companyName || 'Demirtürk İnşaat').trim()
+    return raw.toLocaleLowerCase('tr-TR').replace(/\s+/g, '_') || 'default_company'
+  }
+
+  private loadSeqStore(): Record<string, number> {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_COMPANY_LEAD_SEQ)
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  }
+
+  private saveSeqStore(store: Record<string, number>): void {
+    try {
+      localStorage.setItem(STORAGE_KEY_COMPANY_LEAD_SEQ, JSON.stringify(store))
+    } catch {}
+  }
+
+  private loadLeadNumberMap(): Record<string, Record<string, number>> {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_COMPANY_LEAD_MAP)
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  }
+
+  private saveLeadNumberMap(map: Record<string, Record<string, number>>): void {
+    try {
+      localStorage.setItem(STORAGE_KEY_COMPANY_LEAD_MAP, JSON.stringify(map))
+    } catch {}
+  }
+
+  /**
+   * Şirket bazlı 1'den başlayan ve kayıt silinse bile asla geri çekilmeyen
+   * ardışık lead numarası (#lead-1, #lead-2, ...) üretir veya mevcut kaydın numarasını döner.
+   */
+  public allocateLeadNumber(companyName?: string, existingLeadId?: string): number {
+    const companyKey = this.getCompanyKey(companyName)
+    const seqStore = this.loadSeqStore()
+    const mapStore = this.loadLeadNumberMap()
+    if (!mapStore[companyKey]) {
+      mapStore[companyKey] = {}
+    }
+    const companyMap = mapStore[companyKey]
+
+    if (existingLeadId && typeof companyMap[existingLeadId] === 'number' && companyMap[existingLeadId] > 0) {
+      const existingNum = companyMap[existingLeadId]
+      if ((seqStore[companyKey] || 0) < existingNum) {
+        seqStore[companyKey] = existingNum
+        this.saveSeqStore(seqStore)
+      }
+      return existingNum
+    }
+
+    // Eğer ID zaten "lead-1", "lead-2" gibi ardışık kısa numara formatındaysa (timestamp değilse)
+    if (existingLeadId) {
+      const shortMatch = existingLeadId.match(/^lead-(\d{1,6})$/)
+      if (shortMatch) {
+        const parsedNum = parseInt(shortMatch[1], 10)
+        const alreadyUsedByOther = Object.entries(companyMap).some(
+          ([k, v]) => k !== existingLeadId && v === parsedNum
+        )
+        if (parsedNum > 0 && !alreadyUsedByOther) {
+          companyMap[existingLeadId] = parsedNum
+          seqStore[companyKey] = Math.max(seqStore[companyKey] || 0, parsedNum)
+          this.saveLeadNumberMap(mapStore)
+          this.saveSeqStore(seqStore)
+          return parsedNum
+        }
+      }
+    }
+
+    const currentMax = seqStore[companyKey] || 0
+    const highestInMap = Object.values(companyMap).reduce((max, n) => (n > max ? n : max), 0)
+    const nextNum = Math.max(currentMax, highestInMap) + 1
+
+    seqStore[companyKey] = nextNum
+    if (existingLeadId) {
+      companyMap[existingLeadId] = nextNum
+      this.saveLeadNumberMap(mapStore)
+    }
+    this.saveSeqStore(seqStore)
+    return nextNum
+  }
+
+  /**
+   * Mevcut veya dışarıdan (Meta Ads, Web, Supabase) gelen tüm lead'lere
+   * oluşturulma sırasına (createdAt) göre şirket bazlı ardışık numara (#lead-1, #lead-2...) atar.
+   */
+  private ensureSequentialNumbersForLeads(): void {
+    if (!this.leads || this.leads.length === 0) return
+
+    // Numarası henüz atanmamış olanlara kronolojik sırayla (eskiden yeniye) numara ver
+    const chronological = [...this.leads].sort((a, b) => {
+      const tA = new Date(a.createdAt).getTime() || 0
+      const tB = new Date(b.createdAt).getTime() || 0
+      return tA - tB
+    })
+
+    const assignedById = new Map<string, number>()
+    for (const l of chronological) {
+      const num = l.leadNumber && l.leadNumber > 0
+        ? this.registerKnownLeadNumber(l.companyName, l.id, l.leadNumber)
+        : this.allocateLeadNumber(l.companyName, l.id)
+      assignedById.set(l.id, num)
+    }
+
+    this.leads = this.leads.map((l) => ({
+      ...l,
+      companyName: l.companyName || userStore.getCurrentUser()?.companyName || 'Demirtürk İnşaat',
+      leadNumber: assignedById.get(l.id) || l.leadNumber || 1,
+    }))
+  }
+
+  private registerKnownLeadNumber(companyName: string | undefined, leadId: string, num: number): number {
+    const companyKey = this.getCompanyKey(companyName)
+    const seqStore = this.loadSeqStore()
+    const mapStore = this.loadLeadNumberMap()
+    if (!mapStore[companyKey]) {
+      mapStore[companyKey] = {}
+    }
+    mapStore[companyKey][leadId] = num
+    if ((seqStore[companyKey] || 0) < num) {
+      seqStore[companyKey] = num
+      this.saveSeqStore(seqStore)
+    }
+    this.saveLeadNumberMap(mapStore)
+    return num
+  }
+
+  /**
+   * Lead'in kullanıcıya gösterilen ardışık kayıt numarasını (#lead-1, #lead-2 vb.) döner.
+   */
+  public getLeadDisplayCode(lead: Lead): string {
+    const num = lead.leadNumber && lead.leadNumber > 0
+      ? lead.leadNumber
+      : this.allocateLeadNumber(lead.companyName, lead.id)
+    return `#lead-${num}`
+  }
+
   public setLoadedLeads(leads: Lead[], activities: Record<string, LeadActivity[]>) {
-    // Merge loaded leads while preserving any incoming leads from realtime
+    // Merge loaded leads while preserving any local leads
     const currentMap = new Map(this.leads.map((l) => [l.id, l]))
     const merged = [...(leads || [])]
 
@@ -48,11 +196,30 @@ class LeadStore {
     for (const [id, lead] of currentMap) {
       if (!merged.some((m) => m.id === id)) {
         merged.unshift(lead)
+        syncService.saveLead(lead)
+      }
+    }
+
+    // Merge activities per lead without losing local activities
+    const mergedActivities: Record<string, LeadActivity[]> = { ...this.activities }
+    if (activities && typeof activities === 'object') {
+      for (const [leadId, incomingActs] of Object.entries(activities)) {
+        const localActs = mergedActivities[leadId] || []
+        const byId = new Map<string, LeadActivity>()
+        for (const a of incomingActs || []) byId.set(a.id, a)
+        for (const la of localActs) {
+          if (!byId.has(la.id)) {
+            byId.set(la.id, la)
+            syncService.saveActivity(la)
+          }
+        }
+        mergedActivities[leadId] = Array.from(byId.values())
       }
     }
 
     this.leads = merged
-    this.activities = activities || {}
+    this.activities = mergedActivities
+    this.ensureSequentialNumbersForLeads()
     try {
       localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(this.leads))
       localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(this.activities))
@@ -88,6 +255,7 @@ class LeadStore {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const incoming = rowToLead(payload.new)
+          incoming.leadNumber = this.allocateLeadNumber(incoming.companyName, incoming.id)
           const existingIdx = this.leads.findIndex((l) => l.id === incoming.id)
           if (existingIdx !== -1) {
             this.leads[existingIdx] = incoming
@@ -98,6 +266,7 @@ class LeadStore {
           this.saveToStorage(false)
         } else if (payload.eventType === 'UPDATE') {
           const incoming = rowToLead(payload.new)
+          incoming.leadNumber = this.allocateLeadNumber(incoming.companyName, incoming.id)
           const idx = this.leads.findIndex((l) => l.id === incoming.id)
           if (idx !== -1) {
             this.leads[idx] = incoming
@@ -152,6 +321,7 @@ class LeadStore {
         for (const raw of latestLeads) {
           const mapped = rowToLead(raw)
           if (!this.leads.some((l) => l.id === mapped.id)) {
+            mapped.leadNumber = this.allocateLeadNumber(mapped.companyName, mapped.id)
             this.leads.unshift(mapped)
             hasNew = true
             this.triggerNewLeadAlert(mapped)
@@ -176,24 +346,19 @@ class LeadStore {
       this.activities = {}
     }
 
-    // Purge any fake mock leads and any accidental admin/fake call center assignments
-    const fakeLeadIds = new Set(['lead-1', 'lead-2', 'lead-3', 'lead-4', 'lead-5', 'lead-6', 'lead-7'])
     const fakeDanismanNames = new Set(['Selin Yılmaz', 'Can Özdemir', 'Mert Demir', 'Berkant Çalışkan'])
 
-    const prevCount = this.leads.length
-    this.leads = this.leads
-      .filter((l) => !fakeLeadIds.has(l.id))
-      .map((l) => {
-        if (l.assignedToUserName && fakeDanismanNames.has(l.assignedToUserName)) {
-          return {
-            ...l,
-            assignedToUserId: undefined,
-            assignedToUserName: undefined,
-            owner: 'Atanmamış',
-          }
+    this.leads = this.leads.map((l) => {
+      if (l.assignedToUserName && fakeDanismanNames.has(l.assignedToUserName)) {
+        return {
+          ...l,
+          assignedToUserId: undefined,
+          assignedToUserName: undefined,
+          owner: 'Atanmamış',
         }
-        return l
-      })
+      }
+      return l
+    })
 
     // Migrate any cached leads before Oct 3 from NEW to CONTACTED (moved from İletişim to Tümü)
     const oct3Cutoff = new Date('2026-10-02T21:00:00.000Z').getTime()
@@ -207,12 +372,15 @@ class LeadStore {
       return l
     })
 
+    this.ensureSequentialNumbersForLeads()
+
     try {
       localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(this.leads))
     } catch {}
   }
 
   private saveToStorage(_syncCloud = true) {
+    this.ensureSequentialNumbersForLeads()
     try {
       localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(this.leads))
       localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(this.activities))
@@ -315,6 +483,7 @@ class LeadStore {
       } else if (newDbRows && newDbRows.length > 0) {
         const mapped = newDbRows.map(rowToLead)
         for (const incoming of mapped) {
+          incoming.leadNumber = this.allocateLeadNumber(incoming.companyName, incoming.id)
           const existingIdx = this.leads.findIndex((l) => l.id === incoming.id)
           if (existingIdx === -1) {
             this.leads.unshift(incoming)
@@ -339,6 +508,7 @@ class LeadStore {
         for (const inc of mappedRecent) {
           const existingIdx = this.leads.findIndex((l) => l.id === inc.id)
           if (existingIdx === -1) {
+            inc.leadNumber = this.allocateLeadNumber(inc.companyName, inc.id)
             this.leads.unshift(inc)
             newCount++
             this.triggerNewLeadAlert(inc)
@@ -453,6 +623,7 @@ class LeadStore {
         budget: data.budget || existing.budget,
         preferredHousingType: data.preferredHousingType || existing.preferredHousingType,
         metaAnswers: data.metaAnswers || existing.metaAnswers,
+        metaLeadId: data.metaLeadgenId || existing.metaLeadId,
         updatedAt: new Date().toISOString(),
       }
 
@@ -487,8 +658,15 @@ class LeadStore {
       assignedUserName = nextMT.fullName
     }
 
+    const activeCompany = userStore.getCurrentUser()?.companyName || 'Demirtürk İnşaat'
+    const seqNumber = this.allocateLeadNumber(activeCompany)
+    const newId = `lead-${seqNumber}`
+    this.registerKnownLeadNumber(activeCompany, newId, seqNumber)
+
     const newLead: Lead = {
-      id: 'lead-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      id: newId,
+      leadNumber: seqNumber,
+      companyName: activeCompany,
       fullName: data.fullName.trim(),
       phone: data.phone.trim(),
       secondaryPhone: data.secondaryPhone?.trim(),
@@ -504,6 +682,7 @@ class LeadStore {
       preferredHousingType: data.preferredHousingType,
       notes: data.notes,
       metaAnswers: data.metaAnswers,
+      metaLeadId: data.metaLeadgenId,
       inquiries: [inquiry],
       assignedToUserId: assignedUserId,
       assignedToUserName: assignedUserName,
@@ -557,7 +736,10 @@ class LeadStore {
    * Add a new lead (manual entry) with full property support and instant storage update
    */
   public add(leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>): Lead {
-    const newId = 'lead-' + Date.now() + '-' + Math.floor(Math.random() * 1000)
+    const activeCompany = leadData.companyName || userStore.getCurrentUser()?.companyName || 'Demirtürk İnşaat'
+    const seqNumber = this.allocateLeadNumber(activeCompany)
+    const newId = `lead-${seqNumber}`
+    this.registerKnownLeadNumber(activeCompany, newId, seqNumber)
     
     // Determine consultant assignment
     let assignedUserId = leadData.assignedToUserId
@@ -587,6 +769,8 @@ class LeadStore {
 
     const newLead: Lead = {
       id: newId,
+      leadNumber: seqNumber,
+      companyName: activeCompany,
       fullName: leadData.fullName.trim(),
       phone: leadData.phone.trim(),
       secondaryPhone: leadData.secondaryPhone?.trim(),
@@ -663,7 +847,9 @@ class LeadStore {
       updatedAt: new Date().toISOString(),
     }
 
-    if (updates.stage && updates.stage !== oldLead.stage) {
+    const stageChanged = Boolean(updates.stage && updates.stage !== oldLead.stage)
+
+    if (stageChanged && updates.stage) {
       const stageEntry: StageHistoryEntry = {
         id: 'sh-' + Date.now(),
         fromStage: oldLead.stage,
@@ -685,7 +871,90 @@ class LeadStore {
     this.leads[index] = updatedLead
     this.saveToStorage()
     syncService.saveLead(updatedLead)
+
+    // Otomatik Meta Dönüşümler API'si (CAPI) Sinyali Gönderimi
+    if (stageChanged && updates.stage) {
+      try {
+        const cfg = metaStore.getConfig()
+        if (cfg.autoSyncStages) {
+          void metaStore.sendCapiLeadEvent(updatedLead, updates.stage)
+        }
+      } catch {}
+    }
+
     return updatedLead
+  }
+
+  /**
+   * Update only the lead's Meta CAPI status without re-triggering stage sync
+   */
+  public updateMetaCapiStatus(leadId: string, status: LeadMetaCapiStatus): void {
+    const index = this.leads.findIndex((l) => l.id === leadId)
+    if (index === -1) return
+    const updatedLead: Lead = {
+      ...this.leads[index],
+      metaCapiStatus: status,
+      updatedAt: new Date().toISOString(),
+    }
+    this.leads[index] = updatedLead
+    this.saveToStorage()
+    syncService.saveLead(updatedLead)
+  }
+
+  /**
+   * Manually trigger a Meta CAPI signal from Lead Detail Modal or CRM table
+   */
+  public async sendLeadSignalToMeta(
+    leadId: string,
+    signal: MetaCapiEventName,
+    changedByUser?: AppUser | null
+  ) {
+    const lead = this.getById(leadId)
+    if (!lead) return null
+
+    // If user clicks Olumlu (QualifiedLead) or Olumsuz (DisqualifiedLead), also sync qualification state
+    if (signal === 'QualifiedLead' && !lead.isQualified) {
+      this.leads = this.leads.map((l) =>
+        l.id === leadId
+          ? {
+              ...l,
+              isQualified: true,
+              stage: l.stage === 'NEW' || l.stage === 'CONTACTED' ? 'QUALIFIED' : l.stage,
+              qualifiedByUserName: changedByUser?.fullName || 'Danışman',
+              qualifiedAt: new Date().toISOString(),
+            }
+          : l
+      )
+    } else if (signal === 'DisqualifiedLead' && lead.stage !== 'LOST' && lead.stage !== 'NO_INTENT') {
+      this.leads = this.leads.map((l) =>
+        l.id === leadId
+          ? {
+              ...l,
+              isQualified: false,
+              stage: 'LOST',
+            }
+          : l
+      )
+    }
+
+    const freshLead = this.getById(leadId) || lead
+    const log = await metaStore.sendCapiLeadEvent(freshLead, signal)
+
+    const statusBadge =
+      log.status === 'SENT'
+        ? 'Meta CAPI ile iletildi'
+        : log.status === 'QUEUED'
+        ? 'Meta CAPI kuyruğuna alındı'
+        : 'Meta CAPI gönderim hatası'
+
+    this.addActivity(
+      leadId,
+      'META_CAPI',
+      `Meta'ya sinyal gönderildi: ${log.signalLabel} (${log.eventName}) • ${statusBadge}`,
+      changedByUser?.fullName || 'Danışman'
+    )
+
+    return log
   }
 
   public updateStage(id: string, newStage: LeadStage, changedByUser?: AppUser | null): void {
@@ -795,6 +1064,14 @@ class LeadStore {
     }
 
     const updated = this.update(id, updates, changedByUser)
+
+    if (updated && !updates.stage && isQualified) {
+      try {
+        if (metaStore.getConfig().autoSyncStages) {
+          void metaStore.sendCapiLeadEvent(updated, 'QualifiedLead')
+        }
+      } catch {}
+    }
 
     this.addActivity(
       id,
@@ -953,6 +1230,7 @@ class LeadStore {
     const beforeLen = this.leads.length
     this.leads = this.leads.filter((l) => l.id !== id)
     delete this.activities[id]
+    // Not: Silinen kaydın numarası (seqStore) asla geri çekilmez; sıradaki yeni lead kaldığı sayıdan devam eder.
     this.saveToStorage()
     syncService.deleteLead(id)
     return this.leads.length < beforeLen

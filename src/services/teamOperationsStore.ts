@@ -268,8 +268,8 @@ class TeamOperationsStore {
     this.presenceMap[userId] = {
       userId,
       status: payload.status,
-      locationNote: (payload.locationNote ?? '').trim(),
-      returnTime: (payload.returnTime ?? '').trim(),
+      locationNote: payload.locationNote ?? '',
+      returnTime: payload.returnTime ?? '',
       updatedAt: new Date().toISOString(),
       updatedBy: payload.updatedBy || userId,
     }

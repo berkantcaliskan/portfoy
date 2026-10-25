@@ -523,37 +523,40 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </div>
       </div>
 
-      {/* MÜŞTERİ TABLOSU: Katman & Kontür Çerçeve */}
-      <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] overflow-hidden shadow-sm backdrop-blur-sm">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead>
-              <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
-                {/* 1. Kolon: Tarih */}
-                <th className="py-3 px-4">Tarih</th>
-                {/* 2. Kolon: Müşteri */}
-                <th className="py-3 px-4">Müşteri</th>
-                {/* 3. Kolon: İletişim */}
-                <th className="py-3 px-3 w-[170px] min-w-[170px]">İletişim</th>
-                {/* 4. Kolon: Atanan Danışman */}
-                <th className="py-3 px-4">Atanan Danışman</th>
-                {/* 5. Kolon: Açıklama */}
-                <th className="py-3 px-4">Açıklama</th>
-                {/* 6. Kolon: İşlemler */}
-                <th className="py-3 px-4">İşlemler</th>
-                {/* 7. Kolon: Aşama & Nitelik */}
-                <th className="py-3 px-4">Aşama & Nitelik</th>
-              </tr>
-            </thead>
-            <tbody className="text-[#f3efe9]">
-              {filteredLeads.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-10 text-center text-[#8c857f] text-xs">
-                    Bu filtreye uygun müşteri kaydı bulunamadı.
-                  </td>
+      {/* MÜŞTERİ TABLOSU: Katman & Kontür Çerçeve (Boşken Katmansız ve Ortalı) */}
+      {filteredLeads.length === 0 ? (
+        <div className="py-20 text-center flex flex-col items-center justify-center">
+          <p className="text-sm font-semibold text-[#f3efe9]">
+            Kayıtlı müşteri bulunamadı
+          </p>
+          <p className="text-xs text-[#a69f99] mt-1 max-w-md">
+            Bu filtreye uygun müşteri kaydı bulunamadı.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] overflow-hidden shadow-sm backdrop-blur-sm">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
+                  {/* 1. Kolon: Tarih */}
+                  <th className="py-3 px-4">Tarih</th>
+                  {/* 2. Kolon: Müşteri */}
+                  <th className="py-3 px-4">Müşteri</th>
+                  {/* 3. Kolon: İletişim */}
+                  <th className="py-3 px-3 w-[170px] min-w-[170px]">İletişim</th>
+                  {/* 4. Kolon: Atanan Danışman */}
+                  <th className="py-3 px-4">Atanan Danışman</th>
+                  {/* 5. Kolon: Açıklama */}
+                  <th className="py-3 px-4">Açıklama</th>
+                  {/* 6. Kolon: İşlemler */}
+                  <th className="py-3 px-4">İşlemler</th>
+                  {/* 7. Kolon: Aşama & Nitelik */}
+                  <th className="py-3 px-4">Aşama & Nitelik</th>
                 </tr>
-              ) : (
-              paginatedLeads.map((lead) => {
+              </thead>
+              <tbody className="text-[#f3efe9]">
+                {paginatedLeads.map((lead) => {
                 const inquiryCount = lead.inquiries?.length || 1
                 const hasAi = Boolean(lead.aiEvaluation)
                 const isQualifiedLead = Boolean(lead.isQualified || lead.stage === 'QUALIFIED')
@@ -565,8 +568,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   >
                       {/* 1. Kolon: Tarih & Saat */}
                       <td className="py-3 px-3 text-[#d6beae] whitespace-nowrap">
-                        <div className="font-semibold text-white text-xs">{formatDateOnly(lead.createdAt)}</div>
-                        <div className="text-[10px] text-[#8c857f] font-mono mt-0.5">
+                        <div className="font-semibold text-white text-xs leading-tight">
+                          {formatDateOnly(lead.createdAt)}
+                        </div>
+                        <div className="text-[9px] leading-tight text-[#8c857f] tabular-nums tracking-tight mt-0.5">
                           {formatTimeOnly(lead.createdAt)}
                         </div>
                       </td>
@@ -686,7 +691,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                             className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3a3430] hover:bg-[#453e39] text-[#d6beae] hover:text-white border border-white/10 text-xs font-semibold cursor-pointer transition-colors shadow-sm"
                             title="Satış Ekibine Devret"
                           >
-                            <UserPlus className="w-3 h-3 text-[#b99881]" />
+                            <UserPlus className="w-3 h-3 text-amber-400" />
                             <span>Satışa Devret</span>
                           </button>
                         </div>
@@ -733,21 +738,21 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                       </td>
                     </tr>
                   )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Listenin Sonunda Ortalı Sayfalama ve Sağda Göster [20, 50, 100] İbaresi */}
-        <PaginationBar
-          totalItems={filteredLeads.length}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-        />
-      </div>
+          {/* Listenin Sonunda Ortalı Sayfalama ve Sağda Göster [20, 50, 100] İbaresi */}
+          <PaginationBar
+            totalItems={filteredLeads.length}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
+      )}
 
       {/* ÖZEL SEKME EKLEME MODALI */}
       <GlassModal
@@ -827,11 +832,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             </div>
           )}
 
-          <div className="pt-2 flex justify-end gap-2">
+          <div className="pt-2 pb-1 flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setIsAddTabModalOpen(false)}
-              className="px-4 py-2 rounded-full text-xs text-[#a69f99] hover:text-white cursor-pointer"
+              className="px-4 py-2 rounded-full text-xs glass-button-subtle border border-[#4a443f] hover:border-[#b99881] text-[#a69f99] hover:text-white cursor-pointer transition-colors"
             >
               Vazgeç
             </button>
@@ -862,11 +867,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             />
           </div>
 
-          <div className="pt-2 flex justify-end gap-2">
+          <div className="pt-2 pb-1 flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setSelectedLeadForConsultantChange(null)}
-              className="px-4 py-2 rounded-full text-xs text-[#a69f99] hover:text-white cursor-pointer"
+              className="px-4 py-2 rounded-full text-xs glass-button-subtle border border-[#4a443f] hover:border-[#b99881] text-[#a69f99] hover:text-white cursor-pointer transition-colors"
             >
               Vazgeç
             </button>
@@ -910,11 +915,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             />
           </div>
 
-          <div className="pt-2 flex justify-end gap-2">
+          <div className="pt-2 pb-1 flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setSelectedLeadForAssign(null)}
-              className="px-4 py-2 rounded-full text-xs text-[#a69f99] hover:text-white cursor-pointer"
+              className="px-4 py-2 rounded-full text-xs glass-button-subtle border border-[#4a443f] hover:border-[#b99881] text-[#a69f99] hover:text-white cursor-pointer transition-colors"
             >
               Vazgeç
             </button>
@@ -942,7 +947,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                 <div key={inq.id || i} className="p-3 rounded-[14px] bg-[#34302d] border border-[#4a443f] space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-white">{inq.formName}</span>
-                    <span className="text-[10px] text-[#8c857f]">{new Date(inq.createdAt).toLocaleString('tr-TR')}</span>
+                    <span className="text-[10px] text-[#8c857f]">{formatDate(inq.createdAt)}</span>
                   </div>
                   <div className="text-[11px] text-[#a69f99]">
                     Kanal: {inq.channel} • Tercih: {inq.preferredHousingType || 'Belirtilmedi'} • Bütçe: {inq.budget ? formatCurrency(inq.budget) : 'Belirtilmedi'}
@@ -984,11 +989,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             />
           </div>
 
-          <div className="pt-2 flex justify-end gap-2">
+          <div className="pt-2 pb-1 flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setSelectedLeadForNoteEdit(null)}
-              className="px-4 py-2 rounded-full text-xs text-[#a69f99] hover:text-white cursor-pointer transition-colors"
+              className="px-4 py-2 rounded-full text-xs glass-button-subtle border border-[#4a443f] hover:border-[#b99881] text-[#a69f99] hover:text-white cursor-pointer transition-colors"
             >
               Vazgeç
             </button>

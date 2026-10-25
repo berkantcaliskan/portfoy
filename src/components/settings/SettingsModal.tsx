@@ -386,8 +386,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }
 
   // Team Member & Company state
-  const allUsers = userStore.getAllUsers()
-  const isManager = Boolean(currentUser?.isManager || currentUser?.role === 'ADMIN')
+  const [allUsers, setAllUsers] = useState<AppUser[]>(() => userStore.getAllUsers())
+  const isManager = Boolean(currentUser?.isManager || currentUser?.role === 'ADMIN' || currentUser?.permissions?.canManageTeam)
+  const [newMemberFullName, setNewMemberFullName] = useState('')
+  const [newMemberDepartment, setNewMemberDepartment] = useState<Department>('Satış')
+  const [createdMemberInfo, setCreatedMemberInfo] = useState<{
+    fullName: string
+    username: string
+    password: string
+    department: Department
+  } | null>(null)
+  const [copiedMemberPass, setCopiedMemberPass] = useState(false)
+
+  useEffect(() => {
+    const unsub = userStore.subscribe(() => {
+      setAllUsers(userStore.getAllUsers())
+    })
+    return unsub
+  }, [])
+
+  const previewMemberUsername = newMemberFullName.trim()
+    ? generateUsername(newMemberFullName, allUsers)
+    : ''
+
+  const handleAddTeamMember = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMemberFullName.trim()) return
+    const initialPassword = generateInitialPassword()
+    const res = userStore.addMember({
+      fullName: newMemberFullName.trim(),
+      department: newMemberDepartment,
+      departments: [newMemberDepartment],
+      role: newMemberDepartment === 'Yönetim' ? 'MANAGER' : 'REPRESENTATIVE',
+      scope: 'DEPARTMENT',
+      initialPassword,
+    })
+    setCreatedMemberInfo({
+      fullName: res.user.fullName,
+      username: res.user.username,
+      password: res.generatedPassword,
+      department: res.user.department,
+    })
+    setNewMemberFullName('')
+  }
 
   // Department-specific mock configurations with persistence
   const [metaDailyBudget, setMetaDailyBudget] = useState('50000')
@@ -398,13 +439,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [dailyKpiReportEnabled, setDailyKpiReportEnabled] = useState(true)
   const [deptSavedMessage, setDeptSavedMessage] = useState<string | null>(null)
 
-  // Direct Meta API Connection State
+  // Direct Meta API & Conversions API (CAPI) Connection State
   const metaConfig = metaStore.getConfig()
   const [metaPageToken, setMetaPageToken] = useState(metaConfig.pageAccessToken)
   const [showMetaToken, setShowMetaToken] = useState(false)
   const [testingMeta, setTestingMeta] = useState(false)
   const [metaTestResult, setMetaTestResult] = useState<{ success?: boolean; msg?: string } | null>(null)
   const [copiedMetaField, setCopiedMetaField] = useState<string | null>(null)
+
+  // Meta CAPI (CRM Conversion Leads) State
+  const [metaDatasetId, setMetaDatasetId] = useState(metaConfig.datasetId || '')
+  const [metaCapiToken, setMetaCapiToken] = useState(metaConfig.capiAccessToken || '')
+  const [metaTestEventCode, setMetaTestEventCode] = useState(metaConfig.testEventCode || '')
+  const [metaAutoSyncStages, setMetaAutoSyncStages] = useState(metaConfig.autoSyncStages ?? true)
+  const [showCapiToken, setShowCapiToken] = useState(false)
+  const [testingCapi, setTestingCapi] = useState(false)
+  const [capiTestResult, setCapiTestResult] = useState<{ success: boolean; msg: string } | null>(null)
+  const [capiLogs, setCapiLogs] = useState(() => metaStore.getCapiLogs())
+
+  useEffect(() => {
+    const unsub = metaStore.subscribe(() => {
+      setCapiLogs(metaStore.getCapiLogs())
+    })
+    return unsub
+  }, [])
 
   const copyMetaToClipboard = (text: string, fieldId: string) => {
     navigator.clipboard.writeText(text)
@@ -424,8 +482,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const handleTestCapiConnection = async () => {
+    setTestingCapi(true)
+    setCapiTestResult(null)
+    const res = await metaStore.sendTestCapiEvent({
+      datasetId: metaDatasetId,
+      capiAccessToken: metaCapiToken || metaPageToken,
+      testEventCode: metaTestEventCode,
+    })
+    setTestingCapi(false)
+    setCapiTestResult({ success: res.success, msg: res.message })
+    setCapiLogs(metaStore.getCapiLogs())
+  }
+
   const handleSaveDeptConfig = (msg = 'Departman ayarları başarıyla kaydedildi.') => {
-    metaStore.saveConfig({ pageAccessToken: metaPageToken })
+    metaStore.saveConfig({
+      pageAccessToken: metaPageToken,
+      datasetId: metaDatasetId.trim(),
+      capiAccessToken: metaCapiToken.trim(),
+      testEventCode: metaTestEventCode.trim(),
+      autoSyncStages: metaAutoSyncStages,
+    })
     setDeptSavedMessage(msg)
     setTimeout(() => setDeptSavedMessage(null), 2500)
   }
@@ -455,6 +532,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         ]
       case 'Yönetim':
         return [
+          { id: 'dept-meta' as SettingsTab, label: 'Meta & Dönüşümler API', icon: Megaphone },
           { id: 'dept-admin-permissions' as SettingsTab, label: 'Yetki Matrisi', icon: Shield },
           { id: 'dept-admin-approvals' as SettingsTab, label: 'İskonto & Onay Sınırları', icon: Percent },
           { id: 'dept-admin-audit' as SettingsTab, label: 'Güvenlik & Denetim', icon: Lock },
@@ -462,7 +540,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       case 'Pazarlama':
       default:
         return [
-          { id: 'dept-meta' as SettingsTab, label: 'Meta & Reklam', icon: Megaphone },
+          { id: 'dept-meta' as SettingsTab, label: 'Meta & Dönüşümler API', icon: Megaphone },
           { id: 'dept-leads' as SettingsTab, label: 'Form ve Müşteri Akışı', icon: FileText },
           { id: 'dept-notifications' as SettingsTab, label: 'Otomatik Bildirimler', icon: Bell },
         ]
@@ -484,12 +562,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       {/* SETTINGS MODAL WRAPPER */}
       <div className="relative z-10 flex items-stretch gap-5 max-w-[96vw] h-[680px] max-h-[90vh]">
         {/* SOL MENÜ (Katmansız, doğrudan liste) */}
-        <aside className="w-[210px] shrink-0 flex flex-col justify-between py-3 pr-2 text-[#f3efe9] select-none">
-          <div className="space-y-6">
+        <aside className="modal-layerless-aside w-[226px] shrink-0 flex flex-col justify-between py-3 text-[#f5f5f2] select-none">
+          <div className="flex-1 overflow-y-auto pr-3.5 space-y-6">
             
             {/* Section 1: Genel Ayarlar */}
             <div>
-              <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-2 mb-2">
+              <div className="modal-aside-heading text-[10px] font-bold uppercase tracking-wider px-3 mb-2">
                 Genel Ayarlar
               </div>
               <nav className="space-y-1">
@@ -497,11 +575,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => setActiveTab('account')}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'account'
-                      ? 'bg-[#b99881] text-white font-bold'
-                      : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
+                      ? 'bg-[#b99881] text-white font-bold is-active-aside-btn'
+                      : 'hover:bg-white/12 font-medium'
                   }`}
                 >
-                  <User className={`w-4 h-4 shrink-0 ${activeTab === 'account' ? 'text-white' : 'text-[#8c857f]'}`} />
+                  <User className="w-4 h-4 shrink-0" />
                   <span className="truncate">Hesap ve profil</span>
                 </button>
 
@@ -509,11 +587,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => setActiveTab('appearance')}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'appearance'
-                      ? 'bg-[#b99881] text-white font-bold'
-                      : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
+                      ? 'bg-[#b99881] text-white font-bold is-active-aside-btn'
+                      : 'hover:bg-white/12 font-medium'
                   }`}
                 >
-                  <Palette className={`w-4 h-4 shrink-0 ${activeTab === 'appearance' ? 'text-white' : 'text-[#8c857f]'}`} />
+                  <Palette className="w-4 h-4 shrink-0" />
                   <span className="truncate">Kişiselleştir</span>
                 </button>
 
@@ -521,11 +599,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => setActiveTab('company')}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                     activeTab === 'company'
-                      ? 'bg-[#b99881] text-white font-bold'
-                      : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
+                      ? 'bg-[#b99881] text-white font-bold is-active-aside-btn'
+                      : 'hover:bg-white/12 font-medium'
                   }`}
                 >
-                  <Building2 className={`w-4 h-4 shrink-0 ${activeTab === 'company' ? 'text-white' : 'text-[#8c857f]'}`} />
+                  <Building2 className="w-4 h-4 shrink-0" />
                   <span className="truncate">Şirket ve departman</span>
                 </button>
               </nav>
@@ -533,7 +611,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Section 2: Departman Ayarları */}
             <div>
-              <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-2 mb-2">
+              <div className="modal-aside-heading text-[10px] font-bold uppercase tracking-wider px-3 mb-2">
                 {currentDept} Ayarları
               </div>
               <nav className="space-y-1">
@@ -546,11 +624,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => setActiveTab(tab.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                         isActive
-                          ? 'bg-[#b99881] text-white font-bold'
-                          : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
+                          ? 'bg-[#b99881] text-white font-bold is-active-aside-btn'
+                          : 'hover:bg-white/12 font-medium'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#8c857f]'}`} />
+                      <Icon className="w-4 h-4 shrink-0" />
                       <span className="truncate">{tab.label}</span>
                     </button>
                   )
@@ -560,7 +638,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Menü Altı Kullanıcı Künyesi */}
-          <div className="px-2 text-[11px] text-[#8c857f] truncate">
+          <div className="modal-aside-heading px-3 pt-2 text-[11px] truncate">
             @{currentUser?.username || 'berkant'} • {currentDept}
           </div>
         </aside>
@@ -964,7 +1042,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     Şirket ve Departman Yapılandırması
                   </h3>
                   <p className="text-xs text-[#a69f99] mt-0.5">
-                    Kurumsal kimlik, aktif çalışma alanınız ve yetkili departmanlarınız.
+                    Kurumsal kimlik, departmanınız ve şirket çalışanları yönetimi.
                   </p>
                 </div>
 
@@ -974,7 +1052,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-[10px] text-[#8c857f] block uppercase tracking-wider">
                         ŞİRKET ÜNVANI
                       </span>
-                      <span className="text-white font-bold">Demirtürk Portföy</span>
+                      <span className="text-white font-bold">
+                        {currentUser?.companyName || 'Demirtürk Portföy'}
+                      </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-[#8c857f] block uppercase tracking-wider">
@@ -984,45 +1064,207 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-[#4a443f]/40">
-                    <span className="text-[10px] text-[#8c857f] block uppercase tracking-wider mb-1.5">
-                      ERİŞİM YETKİLİ ÇALIŞMA ALANLARI (5 DEPARTMAN)
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {CANONICAL_DEPARTMENTS.map((dept) => (
-                        <span
-                          key={dept}
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
-                            dept === currentDept
-                              ? 'bg-[#b99881]/20 text-[#b99881] border-[#b99881]/40 font-bold'
-                              : 'bg-white/5 text-[#c4bcb5] border-white/10'
-                          }`}
-                        >
-                          {dept} {dept === currentDept && '• Aktif'}
+                  {(() => {
+                    const userAllowedDepts: Department[] =
+                      currentUser?.role === 'ADMIN'
+                        ? CANONICAL_DEPARTMENTS
+                        : Array.isArray(currentUser?.departments) && currentUser.departments.length > 0
+                        ? currentUser.departments
+                        : [currentDept]
+                    return (
+                      <div className="pt-2 border-t border-[#4a443f]/40">
+                        <span className="text-[10px] text-[#8c857f] block uppercase tracking-wider mb-1.5">
+                          YETKİLİ ÇALIŞMA ALANI ({userAllowedDepts.length} DEPARTMAN)
                         </span>
-                      ))}
-                    </div>
-                    <p className="text-[11px] text-[#8c857f] mt-2">
-                      * Sistem yöneticisi olarak sol üst menüden dilediğiniz çalışma alanına anında geçiş yapabilirsiniz.
-                    </p>
-                  </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {userAllowedDepts.map((dept) => (
+                            <span
+                              key={dept}
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                dept === currentDept
+                                  ? 'bg-[#b99881]/20 text-[#b99881] border-[#b99881]/40 font-bold'
+                                  : 'bg-white/5 text-[#c4bcb5] border-white/10'
+                              }`}
+                            >
+                              {dept} {dept === currentDept && '• Aktif'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
 
-                {/* Ekip Sayısı & Özet Bilgi */}
-                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#b99881]/15 text-[#b99881] flex items-center justify-center">
-                      <Users className="w-5 h-5" />
+                {/* YÖNETİCİ İSE: EKİP ÜYESİ EKLE & ÇALIŞAN LİSTESİ */}
+                {isManager && (
+                  <>
+                    <form
+                      onSubmit={handleAddTeamMember}
+                      className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="w-4 h-4 text-[#b99881]" />
+                          <h4 className="text-xs font-bold text-white">Ekip Üyesi Ekle</h4>
+                        </div>
+                        <span className="text-[11px] text-[#8c857f]">
+                          Otomatik 6 haneli sayısal şifre verilir
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                        <div className="sm:col-span-6">
+                          <label className="text-[11px] text-[#a69f99] block mb-1">
+                            Adı Soyadı *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Örn: Ayşe Demir"
+                            value={newMemberFullName}
+                            onChange={(e) => setNewMemberFullName(e.target.value)}
+                            className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                          />
+                          {previewMemberUsername && (
+                            <span className="text-[10.5px] text-[#b99881] mt-1 block font-mono pl-2">
+                              Kullanıcı adı: @{previewMemberUsername}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="sm:col-span-4">
+                          <label className="text-[11px] text-[#a69f99] block mb-1">
+                            Departman *
+                          </label>
+                          <select
+                            value={newMemberDepartment}
+                            onChange={(e) => setNewMemberDepartment(e.target.value as Department)}
+                            className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-3.5 py-2 text-xs text-white focus:outline-none cursor-pointer"
+                          >
+                            {CANONICAL_DEPARTMENTS.map((dept) => (
+                              <option key={dept} value={dept}>
+                                {dept}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="sm:col-span-2 sm:pt-[21px]">
+                          <GlassButton
+                            type="submit"
+                            variant="gold"
+                            size="sm"
+                            className="w-full rounded-full py-2 justify-center font-bold"
+                          >
+                            Ekle
+                          </GlassButton>
+                        </div>
+                      </div>
+
+                      {createdMemberInfo && (
+                        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>{createdMemberInfo.fullName} ({createdMemberInfo.department}) eklendi</span>
+                            </div>
+                            <div className="text-xs text-[#f3efe9]">
+                              Kullanıcı Adı:{' '}
+                              <span className="font-mono font-bold text-white">
+                                {createdMemberInfo.username}
+                              </span>{' '}
+                              • 6 Haneli Şifre:{' '}
+                              <span className="font-mono font-bold text-amber-300 tracking-wider">
+                                {createdMemberInfo.password}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  `Kullanıcı Adı: ${createdMemberInfo.username}\nŞifre: ${createdMemberInfo.password}`
+                                )
+                                setCopiedMemberPass(true)
+                                setTimeout(() => setCopiedMemberPass(false), 2000)
+                              }}
+                              className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-white flex items-center gap-1 cursor-pointer"
+                            >
+                              {copiedMemberPass ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span>Kopyalandı</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Kopyala</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setCreatedMemberInfo(null)}
+                              className="p-1 text-[#a69f99] hover:text-white cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </form>
+
+                    {/* Kayıtlı Şirket Çalışanları Listesi */}
+                    <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-[#b99881]" />
+                          <span>Şirket Çalışanları ({allUsers.length})</span>
+                        </h4>
+                      </div>
+
+                      <div className="divide-y divide-[#4a443f]/40 max-h-[210px] overflow-y-auto pr-1">
+                        {allUsers.map((u) => (
+                          <div
+                            key={u.id}
+                            className="py-2.5 flex items-center justify-between gap-3 text-xs"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-bold text-white truncate">
+                                {u.fullName}{' '}
+                                <span className="font-mono font-normal text-[#b99881]">
+                                  @{u.username}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-[#8c857f]">
+                                {u.department} • Şifre:{' '}
+                                <span className="font-mono text-[#d6beae] font-semibold">
+                                  {u.password}
+                                </span>
+                              </div>
+                            </div>
+
+                            {u.id !== currentUser?.id && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`${u.fullName} adlı kullanıcıyı silmek istediğinize emin misiniz?`)) {
+                                    userStore.deleteUser(u.id)
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 cursor-pointer shrink-0"
+                                title="Kullanıcıyı Sil"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs font-bold text-white">Sistem Personel Havuzu</div>
-                      <div className="text-[11px] text-[#8c857f]">Toplam kayıtlı kullanıcı: {allUsers.length} kişi</div>
-                    </div>
-                  </div>
-                  <span className="text-xs font-mono text-[#b99881] bg-[#b99881]/10 px-3 py-1 rounded-full border border-[#b99881]/20">
-                    Supabase PostgreSQL Canlı
-                  </span>
-                </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -1157,6 +1399,178 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       {metaTestResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
                       <span>{metaTestResult.msg}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* META DÖNÜŞÜMLER API'Sİ (CAPI - CRM CONVERSION LEADS) */}
+                <div className="p-5 rounded-2xl bg-[#24211f]/80 border border-[#4a443f] space-y-4 shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#4a443f]/60">
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <span>Meta Dönüşümler API'si (CAPI - CRM Geri Bildirimi)</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                          Olumlu / Olumsuz Nitelik Aktarımı
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-[#a69f99] mt-0.5">
+                        Potansiyel müşterinin Olumlu (QualifiedLead), Randevu (Schedule), Satış (Purchase) veya Olumsuz (DisqualifiedLead) durumunu SHA-256 şifreli olarak Meta'ya geri bildirir.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-medium text-[#d6cec7] block mb-1">
+                        Meta Veri Seti / Pixel Kimliği (Dataset ID) *
+                      </label>
+                      <input
+                        type="text"
+                        value={metaDatasetId}
+                        onChange={(e) => setMetaDatasetId(e.target.value)}
+                        placeholder="Örn: 123456789012345"
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none"
+                      />
+                      <span className="text-[10px] text-[#8c857f] mt-0.5 block">
+                        Meta Olay Yöneticisi &gt; Veri Kaynakları &gt; Ayarlar altındaki 15-16 haneli Veri Seti Kimliği
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-medium text-[#d6cec7] block mb-1">
+                        Test Olay Kodu (İsteğe Bağlı - Test Events)
+                      </label>
+                      <input
+                        type="text"
+                        value={metaTestEventCode}
+                        onChange={(e) => setMetaTestEventCode(e.target.value)}
+                        placeholder="Örn: TEST48291 (Canlıda boş bırakın)"
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none"
+                      />
+                      <span className="text-[10px] text-[#8c857f] mt-0.5 block">
+                        Olayları Test Et sekmesinde anlık görmek için girin; canlıya geçince silin.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-[#d6cec7] block mb-1">
+                      Dönüşümler API Erişim Anahtarı (CAPI Access Token) *
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={showCapiToken ? 'text' : 'password'}
+                          value={metaCapiToken}
+                          onChange={(e) => setMetaCapiToken(e.target.value)}
+                          placeholder="EAA... (Boş bırakılırsa yukarıdaki Sayfa Erişim Anahtarı kullanılır)"
+                          className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCapiToken(!showCapiToken)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8c857f] hover:text-white transition-colors"
+                        >
+                          {showCapiToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+
+                      <GlassButton
+                        variant="subtle"
+                        size="sm"
+                        onClick={handleTestCapiConnection}
+                        disabled={testingCapi}
+                        className="rounded-xl px-3.5 text-xs font-semibold shrink-0"
+                      >
+                        {testingCapi ? 'Gönderiliyor...' : 'Test Sinyali Gönder'}
+                      </GlassButton>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/50">
+                    <div>
+                      <div className="text-xs font-medium text-white">
+                        Aşama Değiştiğinde Otomatik Meta Sinyali Gönder
+                      </div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Müşteri Nitelikli, Randevu, Satış veya Pasif/Olumsuz yapıldığında anında Meta'ya bildirilir
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMetaAutoSyncStages(!metaAutoSyncStages)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        metaAutoSyncStages ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          metaAutoSyncStages ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {capiTestResult && (
+                    <div
+                      className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                        capiTestResult.success
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                      }`}
+                    >
+                      {capiTestResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                      )}
+                      <span>{capiTestResult.msg}</span>
+                    </div>
+                  )}
+
+                  {/* Son Gönderilen CAPI Sinyalleri Özeti */}
+                  {capiLogs.length > 0 && (
+                    <div className="pt-2 border-t border-[#4a443f]/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-[#d6cec7] uppercase tracking-wider">
+                          Son Gönderilen Meta CAPI Sinyalleri ({capiLogs.length})
+                        </span>
+                        {capiLogs.some((l) => l.status === 'QUEUED') && (
+                          <button
+                            type="button"
+                            onClick={() => metaStore.flushQueuedCapiEvents()}
+                            className="text-[10.5px] font-bold text-[#b99881] hover:underline cursor-pointer"
+                          >
+                            Kuyruktakileri Şimdi Gönder
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
+                        {capiLogs.slice(0, 8).map((log) => (
+                          <div
+                            key={log.id}
+                            className="px-3 py-1.5 rounded-xl bg-[#1e1c1a] border border-[#4a443f]/70 flex items-center justify-between gap-2 text-[11px]"
+                          >
+                            <div className="truncate">
+                              <span className="font-bold text-white">{log.leadName}</span>
+                              <span className="text-[#8c857f] mx-1.5">•</span>
+                              <span className="text-[#d6beae] font-semibold">{log.signalLabel}</span>
+                              <span className="text-[#8c857f] font-mono ml-1.5">({log.eventName})</span>
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                                log.status === 'SENT'
+                                  ? 'bg-emerald-500/15 text-emerald-400'
+                                  : log.status === 'QUEUED'
+                                  ? 'bg-amber-500/15 text-amber-300'
+                                  : 'bg-rose-500/15 text-rose-400'
+                              }`}
+                            >
+                              {log.status === 'SENT' ? 'İletildi' : log.status === 'QUEUED' ? 'Kuyrukta' : 'Hata'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

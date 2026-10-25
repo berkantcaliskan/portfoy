@@ -82,18 +82,24 @@ export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ lead
         </GlassCard>
       </div>
 
-      {/* Danışman Skor Tablosu */}
-      <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Award className="w-4 h-4 text-[#b99881]" />
-          <span>Danışman Satış Sıralaması (Leaderboard)</span>
-        </h3>
-
-        {salesUsers.length === 0 ? (
-          <div className="py-8 text-center text-xs text-[#a69f99]">
+      {/* Danışman Skor Tablosu (Boşken Katmansız ve Ortalı) */}
+      {salesUsers.length === 0 ? (
+        <div className="py-20 text-center flex flex-col items-center justify-center">
+          <Award className="w-10 h-10 text-[#b99881]/50 mb-3" />
+          <p className="text-sm font-semibold text-[#f3efe9]">
+            Danışman satış sıralaması verisi bulunmuyor
+          </p>
+          <p className="text-xs text-[#a69f99] mt-1">
             Henüz satış kaydı veya aktif satış danışmanı verisi bulunmuyor.
-          </div>
-        ) : (
+          </p>
+        </div>
+      ) : (
+        <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+            <Award className="w-4 h-4 text-[#b99881]" />
+            <span>Danışman Satış Sıralaması (Leaderboard)</span>
+          </h3>
+
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead>
@@ -137,8 +143,8 @@ export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ lead
               </tbody>
             </table>
           </div>
-        )}
-      </GlassCard>
+        </GlassCard>
+      )}
     </div>
   )
 }

@@ -28,7 +28,13 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
-import { AppUser, userStore } from '@/services/userStore'
+import {
+  AppUser,
+  Department,
+  generateInitialPassword,
+  generateUsername,
+  userStore,
+} from '@/services/userStore'
 import { CANONICAL_DEPARTMENTS } from '@/types/department'
 import {
   teamOperationsStore,
@@ -112,6 +118,17 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
   const [leaveEndTime, setLeaveEndTime] = useState('')
   const [leaveReason, setLeaveReason] = useState('')
 
+  // Modal: Add Team Member (Ekip Üyesi Ekle)
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
+  const [newMemberFullName, setNewMemberFullName] = useState('')
+  const [newMemberDepartment, setNewMemberDepartment] = useState<Department>('Satış')
+  const [createdMemberBanner, setCreatedMemberBanner] = useState<{
+    fullName: string
+    username: string
+    password: string
+    department: Department
+  } | null>(null)
+
   useEffect(() => {
     const unsubUsers = userStore.subscribe(() => {
       setUsers(userStore.getAllUsers())
@@ -131,16 +148,33 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
   const isManagerOrAdmin = Boolean(
     currentUser?.role === 'ADMIN' ||
       currentUser?.isManager ||
-      currentUser?.department === 'Yönetim'
+      currentUser?.department === 'Yönetim' ||
+      currentUser?.permissions?.canManageTeam
   )
+
+  const allowedDepartmentsForUser: Department[] =
+    currentUser?.role === 'ADMIN'
+      ? CANONICAL_DEPARTMENTS
+      : Array.isArray(currentUser?.departments) && currentUser.departments.length > 0
+      ? currentUser.departments
+      : [currentUser?.department || 'Satış']
+
+  const canSeeMultipleDepartments =
+    currentUser?.role === 'ADMIN' || allowedDepartmentsForUser.length > 1
 
   const myPresence = currentUser
     ? presenceMap[currentUser.id] || teamOperationsStore.getUserPresence(currentUser.id)
     : null
   const myMeta = getPresenceMeta(myPresence?.status)
 
-  // Only include users on the live presence board when they have an active presence entry or are newly added team members
-  const trackedUsers = users.filter((u) => Boolean(presenceMap[u.id]) || u.id !== 'usr-berkant')
+  // Only include users on the live presence board that belong to departments the current user is allowed to see
+  const trackedUsers = users.filter((u) => {
+    if (u.id === 'usr-berkant' && !presenceMap[u.id]) return false
+    if (!canSeeMultipleDepartments && u.department !== (currentUser?.department || 'Satış')) {
+      return false
+    }
+    return true
+  })
 
   // Summary KPIs
   const totalInOffice = trackedUsers.filter((u) => {
@@ -396,6 +430,17 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
         </div>
 
         <div className="flex items-center gap-2">
+          {isManagerOrAdmin && (
+            <GlassButton
+              variant="gold"
+              size="sm"
+              icon={<Plus className="w-4 h-4" />}
+              className="rounded-full"
+              onClick={() => setIsAddMemberOpen(true)}
+            >
+              Ekip Üyesi Ekle
+            </GlassButton>
+          )}
           {activeSubTab === 'assets' && (
             <GlassButton
               variant="gold"
@@ -420,6 +465,34 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
           )}
         </div>
       </div>
+
+      {/* Yeni Oluşturulan Ekip Üyesi Bilgilendirme Kartı */}
+      {createdMemberBanner && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-0.5 text-xs">
+            <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>
+                {createdMemberBanner.fullName} ({createdMemberBanner.department}) başarıyla eklendi!
+              </span>
+            </div>
+            <div className="text-[#f3efe9] mt-1">
+              Kullanıcı Adı:{' '}
+              <span className="font-mono font-bold text-white">{createdMemberBanner.username}</span> • 6 Haneli Şifre:{' '}
+              <span className="font-mono font-bold text-amber-300 tracking-wider">
+                {createdMemberBanner.password}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreatedMemberBanner(null)}
+            className="text-[#a69f99] hover:text-white cursor-pointer p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* =================================================================== */}
       {/* TAB 1: CANLI "KİM NEREDE?" PANOSU                                  */}
@@ -464,18 +537,20 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
             </div>
 
             <div className="flex items-center gap-2">
-              <select
-                value={deptFilter}
-                onChange={(e) => setDeptFilter(e.target.value)}
-                className="bg-[#282522] border border-[#4a443f] rounded-full px-3.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#b99881]"
-              >
-                <option value="ALL">Tüm Departmanlar</option>
-                {CANONICAL_DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+              {canSeeMultipleDepartments && (
+                <select
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                  className="bg-[#282522] border border-[#4a443f] rounded-full px-3.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#b99881]"
+                >
+                  <option value="ALL">Tüm Departmanlar</option>
+                  {allowedDepartmentsForUser.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              )}
 
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-[#8c857f] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -492,9 +567,13 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
 
           {/* Team Cards Grid */}
           {filteredUsers.length === 0 ? (
-            <GlassCard className="p-10 text-center text-[#a69f99] text-sm">
-              Henüz canlı durum kaydı veya ekip üyesi bulunmuyor.
-            </GlassCard>
+            <div className="py-20 text-center flex flex-col items-center justify-center">
+              <Users className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
+              <h4 className="text-sm font-semibold text-white">Kayıtlı ekip üyesi bulunamadı</h4>
+              <p className="text-xs text-[#8c857f] mt-1 max-w-sm mx-auto">
+                Henüz canlı durum kaydı veya seçili filtreye uygun ekip üyesi bulunmuyor.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredUsers.map((member) => {
@@ -672,13 +751,13 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
           </div>
 
           {filteredAssets.length === 0 ? (
-            <GlassCard className="p-10 text-center space-y-3">
-              <Key className="w-8 h-8 mx-auto text-[#b99881]" />
+            <div className="py-20 text-center flex flex-col items-center justify-center space-y-3">
+              <Key className="w-10 h-10 mx-auto text-[#8c857f] opacity-40" />
               <div className="space-y-1">
-                <h4 className="text-base font-bold text-white">
-                  Henüz Tanımlanmış Araç veya Anahtar Yok
+                <h4 className="text-sm font-semibold text-white">
+                  Henüz tanımlanmış araç veya anahtar yok
                 </h4>
-                <p className="text-xs text-[#a69f99] max-w-md mx-auto">
+                <p className="text-xs text-[#8c857f] max-w-md mx-auto">
                   Şirket araçlarını (plaka/anahtar), satılık/kiralık portföy veya örnek daire anahtarlarını ve ortak ekipmanları tanımlayarak kimin aldığını anlık takip edebilirsiniz.
                 </p>
               </div>
@@ -693,7 +772,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                   İlk Araç veya Anahtarı Ekle
                 </GlassButton>
               </div>
-            </GlassCard>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredAssets.map((asset) => {
@@ -861,15 +940,13 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
       {activeSubTab === 'leaves' && (
         <div className="space-y-4">
           {leaves.length === 0 ? (
-            <GlassCard className="p-10 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#b99881]/15 border border-[#b99881]/30 flex items-center justify-center mx-auto text-[#dfb76c]">
-                <Calendar className="w-6 h-6" />
-              </div>
+            <div className="py-20 text-center flex flex-col items-center justify-center space-y-3">
+              <Calendar className="w-10 h-10 text-[#8c857f] mx-auto opacity-40" />
               <div className="space-y-1">
-                <h4 className="text-base font-bold text-white">
-                  Henüz İzin veya Saatlik Çıkış Talebi Bulunmuyor
+                <h4 className="text-sm font-semibold text-white">
+                  Henüz izin veya saatlik çıkış talebi bulunmuyor
                 </h4>
-                <p className="text-xs text-[#a69f99] max-w-md mx-auto">
+                <p className="text-xs text-[#8c857f] max-w-md mx-auto">
                   Yıllık izin, mazeret izni, sağlık raporu veya gün içi saatlik dışarı çıkış taleplerini buradan oluşturabilir ve onay durumunu takip edebilirsiniz.
                 </p>
               </div>
@@ -884,7 +961,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                   Yeni İzin / Çıkış Talebi Oluştur
                 </GlassButton>
               </div>
-            </GlassCard>
+            </div>
           ) : (
             <div className="space-y-3">
               {leaves.map((lv) => {
@@ -1367,6 +1444,101 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
             </GlassButton>
             <GlassButton variant="gold" size="sm" type="submit">
               Talebi Gönder
+            </GlassButton>
+          </div>
+        </form>
+      </GlassModal>
+
+      {/* =================================================================== */}
+      {/* MODAL 5: EKİP ÜYESİ EKLE (Ad Soyad + Departman + Otomatik 6 Haneli Şifre) */}
+      {/* =================================================================== */}
+      <GlassModal
+        isOpen={isAddMemberOpen}
+        onClose={() => setIsAddMemberOpen(false)}
+        title="Ekip Üyesi Ekle"
+        maxWidth="md"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!newMemberFullName.trim()) return
+            const initialPassword = generateInitialPassword()
+            const res = userStore.addMember({
+              fullName: newMemberFullName.trim(),
+              department: newMemberDepartment,
+              departments: [newMemberDepartment],
+              role: newMemberDepartment === 'Yönetim' ? 'MANAGER' : 'REPRESENTATIVE',
+              scope: 'DEPARTMENT',
+              initialPassword,
+            })
+            teamOperationsStore.updateUserPresence(res.user.id, {
+              status: 'OFISTE',
+              locationNote: '',
+              returnTime: '',
+              updatedBy: currentUser?.id || res.user.id,
+            })
+            setCreatedMemberBanner({
+              fullName: res.user.fullName,
+              username: res.user.username,
+              password: res.generatedPassword,
+              department: res.user.department,
+            })
+            setNewMemberFullName('')
+            setIsAddMemberOpen(false)
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="text-xs font-semibold text-[#d6beae] block mb-1.5">
+              Adı Soyadı *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Örn: Ayşe Demir"
+              value={newMemberFullName}
+              onChange={(e) => setNewMemberFullName(e.target.value)}
+              className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-[#8c857f] focus:outline-none"
+            />
+            {newMemberFullName.trim() && (
+              <span className="text-[11px] text-[#b99881] mt-1.5 block font-mono">
+                Kullanıcı Adı: @{generateUsername(newMemberFullName, users)}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-[#d6beae] block mb-1.5">
+              Departman *
+            </label>
+            <select
+              value={newMemberDepartment}
+              onChange={(e) => setNewMemberDepartment(e.target.value as Department)}
+              className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none cursor-pointer"
+            >
+              {CANONICAL_DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <p className="text-[11px] text-[#8c857f]">
+            Otomatik olarak 6 haneli yalnızca sayıdan oluşan şifre tanımlanır. Kullanıcı adı ilk başta yalnızca ad olarak verilir; kullanıcı dilerse sonradan Ayarlar menüsünden değiştirebilir.
+          </p>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <GlassButton
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => setIsAddMemberOpen(false)}
+            >
+              Vazgeç
+            </GlassButton>
+            <GlassButton variant="gold" size="sm" type="submit">
+              Ekip Üyesi Ekle
             </GlassButton>
           </div>
         </form>

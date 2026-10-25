@@ -45,7 +45,15 @@ class ApprovalStore {
   }
 
   public setLoadedApprovals(approvals: ApprovalRequest[]) {
-    this.approvals = approvals || []
+    const byId = new Map<string, ApprovalRequest>()
+    for (const a of approvals || []) byId.set(a.id, a)
+    for (const local of this.approvals) {
+      if (!byId.has(local.id)) {
+        byId.set(local.id, local)
+        syncService.saveApproval(local)
+      }
+    }
+    this.approvals = Array.from(byId.values())
     try {
       localStorage.setItem(STORAGE_KEY_APPROVALS, JSON.stringify(this.approvals))
     } catch {}

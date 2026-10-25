@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Megaphone,
   Plus,
@@ -17,11 +17,22 @@ import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { metaStore } from '@/services/metaStore'
-import { MetaFormSummary } from '@/types/meta'
+import { MetaFormSummary, MetaCapiEventLog } from '@/types/meta'
 
 export const MarketingCampaignsView: React.FC = () => {
   const [forms, setForms] = useState<MetaFormSummary[]>(metaStore.getForms())
+  const [capiLogs, setCapiLogs] = useState<MetaCapiEventLog[]>(metaStore.getCapiLogs())
+  const [metaConfig, setMetaConfig] = useState(() => metaStore.getConfig())
   const [isSimulateOpen, setIsSimulateOpen] = useState(false)
+
+  useEffect(() => {
+    const unsub = metaStore.subscribe(() => {
+      setForms(metaStore.getForms())
+      setCapiLogs(metaStore.getCapiLogs())
+      setMetaConfig(metaStore.getConfig())
+    })
+    return unsub
+  }, [])
   const [newLeadName, setNewLeadName] = useState('')
   const [newLeadPhone, setNewLeadPhone] = useState('')
   const [selectedFormName, setSelectedFormName] = useState(forms[0]?.name || '')
@@ -105,20 +116,104 @@ export const MarketingCampaignsView: React.FC = () => {
         </GlassCard>
 
         <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-sky-400">Entegrasyon Durumu</div>
+          <div className="text-xs text-sky-400">Dönüşümler API (CAPI) Durumu</div>
           <div className="text-sm font-semibold text-white mt-2 flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${forms.length > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-[#8c857f]'}`} />
-            {forms.length > 0 ? 'Meta Webhook Dinleniyor' : 'Henüz Kampanya Yok'}
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                metaConfig.datasetId ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}
+            />
+            {metaConfig.datasetId
+              ? `Dataset: ${metaConfig.datasetId}`
+              : 'Dataset ID Bekleniyor (Ayarlar > Meta)'}
           </div>
-          <div className="text-[11px] text-[#8c857f] mt-1">SSL Şifreli Uç Nokta</div>
+          <div className="text-[11px] text-[#8c857f] mt-1">
+            {capiLogs.length} CAPI Sinyali • SHA-256 Şifreli CRM Aktarımı
+          </div>
         </GlassCard>
       </div>
 
+      {/* Meta Dönüşümler API (CAPI) Son Gönderilen CRM Kalite Sinyalleri */}
+      <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Zap className="w-4 h-4 text-[#b99881]" />
+              <span>Meta Dönüşümler API'si (CAPI) — Olumlu / Olumsuz Müşteri Sinyalleri</span>
+            </h3>
+            <p className="text-xs text-[#a69f99] mt-0.5">
+              CRM'de aşaması değişen veya Nitelikli (QualifiedLead) / Olumsuz (DisqualifiedLead) olarak işaretlenen müşterilerin Meta'ya aktarım kaydı.
+            </p>
+          </div>
+          {capiLogs.some((l) => l.status === 'QUEUED') && (
+            <GlassButton
+              variant="subtle"
+              size="sm"
+              onClick={() => metaStore.flushQueuedCapiEvents()}
+              className="rounded-full px-3.5 text-xs font-semibold"
+            >
+              Kuyruktaki Sinyalleri Gönder
+            </GlassButton>
+          )}
+        </div>
+
+        {capiLogs.length === 0 ? (
+          <div className="py-6 text-center text-xs text-[#8c857f] border border-dashed border-[#4a443f] rounded-2xl">
+            Henüz Meta'ya gönderilmiş bir dönüşüm sinyali yok. Müşteri detayından <strong>Olumlu / Nitelikli</strong> veya <strong>Olumsuz</strong> butonuna tıkladığınızda ya da müşteri aşamasını değiştirdiğinizde burada listelenir.
+          </div>
+        ) : (
+          <div className="divide-y divide-[#4a443f]/50 max-h-[220px] overflow-y-auto pr-1">
+            {capiLogs.slice(0, 15).map((log) => (
+              <div key={log.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                      log.eventName === 'QualifiedLead' || log.eventName === 'Purchase'
+                        ? 'bg-emerald-500/12 text-emerald-400 border-emerald-500/30'
+                        : log.eventName === 'DisqualifiedLead'
+                        ? 'bg-rose-500/12 text-rose-400 border-rose-500/30'
+                        : 'bg-sky-500/12 text-sky-300 border-sky-500/30'
+                    }`}
+                  >
+                    {log.eventName}
+                  </span>
+                  <span className="font-bold text-white truncate">{log.leadName}</span>
+                  <span className="text-[#8c857f]">•</span>
+                  <span className="text-[#d6beae] font-medium">{log.signalLabel}</span>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[11px] text-[#8c857f] font-mono">
+                    {new Date(log.sentAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      log.status === 'SENT'
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : log.status === 'QUEUED'
+                        ? 'bg-amber-500/15 text-amber-300'
+                        : 'bg-rose-500/15 text-rose-400'
+                    }`}
+                    title={log.errorMessage || ''}
+                  >
+                    {log.status === 'SENT' ? 'Meta\'ya İletildi' : log.status === 'QUEUED' ? 'Kuyrukta' : 'Hata'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
+
       {/* Kampanya ve Form Kartları */}
       {forms.length === 0 ? (
-        <GlassCard className="p-10 text-center text-[#a69f99] text-sm">
-          Henüz tanımlanmış bir reklam kampanyası veya Meta formu bulunmuyor.
-        </GlassCard>
+        <div className="py-20 text-center flex flex-col items-center justify-center">
+          <Megaphone className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
+          <h3 className="text-sm font-semibold text-white">Kayıtlı kampanya bulunamadı</h3>
+          <p className="text-xs text-[#8c857f] mt-1 max-w-sm mx-auto">
+            Henüz tanımlanmış bir reklam kampanyası veya Meta formu bulunmuyor.
+          </p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {forms.map((form) => (

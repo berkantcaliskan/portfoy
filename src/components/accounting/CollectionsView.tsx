@@ -193,78 +193,89 @@ export const CollectionsView: React.FC = () => {
         ))}
       </div>
 
-      {/* Tablo */}
-      <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead>
-              <tr className="border-b border-[#4a443f] text-[#8c857f] text-[11px]">
-                <th className="py-2.5 px-3">Müşteri</th>
-                <th className="py-2.5 px-3">Proje & Ünite</th>
-                <th className="py-2.5 px-3">Tür</th>
-                <th className="py-2.5 px-3">Tutar</th>
-                <th className="py-2.5 px-3">Vade Tarihi</th>
-                <th className="py-2.5 px-3">Durum</th>
-                <th className="py-2.5 px-3 text-right">İşlem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]">
-              {filtered.map((col) => (
-                <tr key={col.id} className="hover:bg-[#34302d] transition-colors">
-                  <td className="py-3 px-3 font-semibold text-white">
-                    {col.customerName}
-                    {col.receiptNo && (
-                      <div className="text-[10px] text-[#8c857f] font-normal">{col.receiptNo}</div>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 text-[#a69f99]">
-                    {col.projectName} ({col.unitNumber})
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className="text-[11px] font-medium text-[#d6beae]">
-                      {col.type === 'DEPOSIT' ? 'Ön Kapora' : col.type === 'DOWN_PAYMENT' ? 'Peşinat' : col.type === 'INSTALLMENT' ? 'Taksit' : 'Tam Ödeme'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 font-bold text-white">
-                    {formatCurrency(col.amount)}
-                  </td>
-                  <td className="py-3 px-3 text-[#a69f99]">{col.dueDate}</td>
-                  <td className="py-3 px-3">
-                    <GlassBadge
-                      size="sm"
-                      variant={col.status === 'COLLECTED' ? 'success' : col.status === 'OVERDUE' ? 'danger' : col.status === 'REFUNDED' ? 'default' : 'warning'}
-                    >
-                      {col.status === 'COLLECTED' ? 'Tahsil Edildi' : col.status === 'OVERDUE' ? 'Gecikmede' : col.status === 'REFUNDED' ? 'İade Edildi' : 'Bekliyor'}
-                    </GlassBadge>
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {col.status !== 'COLLECTED' && col.status !== 'REFUNDED' && (
-                        <button
-                          onClick={() => handleMarkCollected(col.id)}
-                          className="px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer"
-                        >
-                          Tahsil Et
-                        </button>
-                      )}
-
-                      {col.type === 'DEPOSIT' && col.status === 'COLLECTED' && canRefund && (
-                        <button
-                          onClick={() => handleOpenRefund(col)}
-                          className="px-3 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold cursor-pointer"
-                          title="Kapora İadesi Gerçekleştir"
-                        >
-                          İade
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Tablo (Boşken Katmansız ve Ortalı) */}
+      {filtered.length === 0 ? (
+        <div className="py-20 text-center flex flex-col items-center justify-center">
+          <p className="text-sm font-semibold text-[#f3efe9]">
+            Kayıtlı tahsilat bulunamadı
+          </p>
+          <p className="text-xs text-[#a69f99] mt-1">
+            Bu filtreye uygun tahsilat veya ödeme planı kaydı bulunmuyor.
+          </p>
         </div>
-      </GlassCard>
+      ) : (
+        <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-[#4a443f] text-[#8c857f] text-[11px]">
+                  <th className="py-2.5 px-3">Müşteri</th>
+                  <th className="py-2.5 px-3">Proje & Ünite</th>
+                  <th className="py-2.5 px-3">Tür</th>
+                  <th className="py-2.5 px-3">Tutar</th>
+                  <th className="py-2.5 px-3">Vade Tarihi</th>
+                  <th className="py-2.5 px-3">Durum</th>
+                  <th className="py-2.5 px-3 text-right">İşlem</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]">
+                {filtered.map((col) => (
+                  <tr key={col.id} className="hover:bg-[#34302d] transition-colors">
+                    <td className="py-3 px-3 font-semibold text-white">
+                      {col.customerName}
+                      {col.receiptNo && (
+                        <div className="text-[10px] text-[#8c857f] font-normal">{col.receiptNo}</div>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-[#a69f99]">
+                      {col.projectName} ({col.unitNumber})
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="text-[11px] font-medium text-[#d6beae]">
+                        {col.type === 'DEPOSIT' ? 'Ön Kapora' : col.type === 'DOWN_PAYMENT' ? 'Peşinat' : col.type === 'INSTALLMENT' ? 'Taksit' : 'Tam Ödeme'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 font-bold text-white">
+                      {formatCurrency(col.amount)}
+                    </td>
+                    <td className="py-3 px-3 text-[#a69f99]">{col.dueDate}</td>
+                    <td className="py-3 px-3">
+                      <GlassBadge
+                        size="sm"
+                        variant={col.status === 'COLLECTED' ? 'success' : col.status === 'OVERDUE' ? 'danger' : col.status === 'REFUNDED' ? 'default' : 'warning'}
+                      >
+                        {col.status === 'COLLECTED' ? 'Tahsil Edildi' : col.status === 'OVERDUE' ? 'Gecikmede' : col.status === 'REFUNDED' ? 'İade Edildi' : 'Bekliyor'}
+                      </GlassBadge>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {col.status !== 'COLLECTED' && col.status !== 'REFUNDED' && (
+                          <button
+                            onClick={() => handleMarkCollected(col.id)}
+                            className="px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer"
+                          >
+                            Tahsil Et
+                          </button>
+                        )}
+
+                        {col.type === 'DEPOSIT' && col.status === 'COLLECTED' && canRefund && (
+                          <button
+                            onClick={() => handleOpenRefund(col)}
+                            className="px-3 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold cursor-pointer"
+                            title="Kapora İadesi Gerçekleştir"
+                          >
+                            İade
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+      )}
 
       {/* KAPORA İADE MODALI */}
       <GlassModal

@@ -40,10 +40,17 @@ import {
   Wallet,
   Eye,
   EyeOff,
+  Users,
+  Building2,
+  Globe,
+  Lock,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { formatCurrency, generateWhatsAppUrl } from '@/utils/formatters'
+import { CalendarWorkspaceTool } from './CalendarWorkspaceTool'
+import { userStore, AppUser } from '@/services/userStore'
+import { CANONICAL_DEPARTMENTS, Department } from '@/types/department'
 
 export type ToolType =
   | 'payments'
@@ -73,11 +80,20 @@ export type ToolType =
   | 'weather'
   | 'timer'
 
+export type NoteShareScope = 'PRIVATE' | 'USERS' | 'DEPARTMENTS' | 'COMPANY'
+
 interface NoteItem {
   id: string
   title: string
   content: string
   updatedAt: string
+  ownerId?: string
+  ownerName?: string
+  ownerDepartment?: Department
+  shareScope?: NoteShareScope
+  sharedUserIds?: string[]
+  sharedDepartments?: Department[]
+  sharedAt?: string
 }
 
 const STORAGE_KEY_NOTES = 'demirturk_notepad_notes_v1'
@@ -187,6 +203,17 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 1. NOT DEFTERİ (NOTEPAD) STATE & LOGIC
   // ==========================================
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => userStore.getCurrentUser())
+  const [allUsers, setAllUsers] = useState<AppUser[]>(() => userStore.getAll())
+
+  useEffect(() => {
+    const syncUsers = () => {
+      setCurrentUser(userStore.getCurrentUser())
+      setAllUsers(userStore.getAll())
+    }
+    return userStore.subscribe(syncUsers)
+  }, [])
+
   const [notes, setNotes] = useState<NoteItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_NOTES)
@@ -196,9 +223,40 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     }
     return []
   })
-  const [selectedNoteId, setSelectedNoteId] = useState<string>(notes[0]?.id || '')
 
-  const activeNote = notes.find((n) => n.id === selectedNoteId) || notes[0]
+  // Kullanıcının kendi notları + kendisiyle / departmanıyla / tüm şirketle paylaşılan notlar
+  const visibleNotes = notes.filter((n) => {
+    if (!n.ownerId || !currentUser || n.ownerId === currentUser.id) return true
+    if (n.shareScope === 'COMPANY') return true
+    if (
+      n.shareScope === 'DEPARTMENTS' &&
+      n.sharedDepartments?.some(
+        (d) => d === currentUser.department || (currentUser.departments || []).includes(d)
+      )
+    ) {
+      return true
+    }
+    if (n.shareScope === 'USERS' && n.sharedUserIds?.includes(currentUser.id)) {
+      return true
+    }
+    return false
+  })
+
+  const [selectedNoteId, setSelectedNoteId] = useState<string>(visibleNotes[0]?.id || notes[0]?.id || '')
+  const activeNote = visibleNotes.find((n) => n.id === selectedNoteId) || visibleNotes[0]
+
+  // Not Paylaşım Paneli State
+  const [isNoteShareOpen, setIsNoteShareOpen] = useState(false)
+  const [shareTab, setShareTab] = useState<'USERS' | 'DEPARTMENTS' | 'COMPANY'>('USERS')
+  const [selectedShareUsers, setSelectedShareUsers] = useState<string[]>([])
+  const [selectedShareDepts, setSelectedShareDepts] = useState<Department[]>([])
+  const [shareUserSearch, setShareUserSearch] = useState('')
+  const [shareSavedFeedback, setShareSavedFeedback] = useState(false)
+
+  useEffect(() => {
+    setIsNoteShareOpen(false)
+    setShareUserSearch('')
+  }, [activeNote?.id])
 
   const saveNotesToStorage = (updatedNotes: NoteItem[]) => {
     setNotes(updatedNotes)
@@ -211,10 +269,17 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
       title: 'Yeni Not',
       content: '',
       updatedAt: 'Az önce',
+      ownerId: currentUser?.id,
+      ownerName: currentUser?.fullName,
+      ownerDepartment: currentUser?.department,
+      shareScope: 'PRIVATE',
+      sharedUserIds: [],
+      sharedDepartments: [],
     }
     const updated = [newNote, ...notes]
     saveNotesToStorage(updated)
     setSelectedNoteId(newNote.id)
+    setIsNoteShareOpen(false)
   }
 
   const handleUpdateActiveNote = (updates: Partial<NoteItem>) => {
@@ -233,6 +298,134 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     if (selectedNoteId === id && updated.length > 0) {
       setSelectedNoteId(updated[0].id)
     }
+    setIsNoteShareOpen(false)
+  }
+
+  const handleToggleNoteShare = () => {
+    if (!activeNote) return
+    if (!isNoteShareOpen) {
+      const currentScope = activeNote.shareScope
+      if (currentScope === 'COMPANY') {
+        setShareTab('COMPANY')
+      } else if (currentScope === 'DEPARTMENTS') {
+        setShareTab('DEPARTMENTS')
+      } else {
+        setShareTab('USERS')
+      }
+      setSelectedShareUsers(activeNote.sharedUserIds || [])
+      setSelectedShareDepts(
+        activeNote.sharedDepartments && activeNote.sharedDepartments.length > 0
+          ? activeNote.sharedDepartments
+          : currentUser?.department
+          ? [currentUser.department]
+          : ['Satış']
+      )
+      setShareUserSearch('')
+    }
+    setIsNoteShareOpen((prev) => !prev)
+  }
+
+  const toggleShareUser = (userId: string) => {
+    setSelectedShareUsers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    )
+  }
+
+  const toggleShareDept = (dept: Department) => {
+    setSelectedShareDepts((prev) =>
+      prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]
+    )
+  }
+
+  const handleApplyNoteShare = () => {
+    if (!activeNote) return
+    const nowTime = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+    const baseOwner = {
+      ownerId: activeNote.ownerId || currentUser?.id,
+      ownerName: activeNote.ownerName || currentUser?.fullName || 'Kullanıcı',
+      ownerDepartment: activeNote.ownerDepartment || currentUser?.department,
+      sharedAt: `Bugün ${nowTime}`,
+    }
+
+    if (shareTab === 'COMPANY') {
+      handleUpdateActiveNote({
+        ...baseOwner,
+        shareScope: 'COMPANY',
+        sharedDepartments: [...CANONICAL_DEPARTMENTS],
+        sharedUserIds: [],
+      })
+    } else if (shareTab === 'DEPARTMENTS') {
+      if (selectedShareDepts.length === 0) {
+        handleUpdateActiveNote({
+          ...baseOwner,
+          shareScope: 'PRIVATE',
+          sharedDepartments: [],
+          sharedUserIds: [],
+        })
+      } else {
+        handleUpdateActiveNote({
+          ...baseOwner,
+          shareScope: 'DEPARTMENTS',
+          sharedDepartments: selectedShareDepts,
+          sharedUserIds: [],
+        })
+      }
+    } else if (shareTab === 'USERS') {
+      if (selectedShareUsers.length === 0) {
+        handleUpdateActiveNote({
+          ...baseOwner,
+          shareScope: 'PRIVATE',
+          sharedUserIds: [],
+          sharedDepartments: [],
+        })
+      } else {
+        handleUpdateActiveNote({
+          ...baseOwner,
+          shareScope: 'USERS',
+          sharedUserIds: selectedShareUsers,
+          sharedDepartments: [],
+        })
+      }
+    }
+
+    setShareSavedFeedback(true)
+    setTimeout(() => {
+      setShareSavedFeedback(false)
+      setIsNoteShareOpen(false)
+    }, 650)
+  }
+
+  const handleRemoveNoteShare = () => {
+    if (!activeNote) return
+    handleUpdateActiveNote({
+      shareScope: 'PRIVATE',
+      sharedUserIds: [],
+      sharedDepartments: [],
+      sharedAt: undefined,
+    })
+    setSelectedShareUsers([])
+    setSelectedShareDepts([])
+    setIsNoteShareOpen(false)
+  }
+
+  const getNoteShareSummary = (note: NoteItem): string | null => {
+    if (!note.shareScope || note.shareScope === 'PRIVATE') return null
+    if (note.shareScope === 'COMPANY') return 'Tüm Şirket'
+    if (note.shareScope === 'DEPARTMENTS') {
+      const depts = note.sharedDepartments || []
+      if (depts.length === 0) return null
+      return depts.length <= 2 ? depts.join(', ') : `${depts.length} Departman`
+    }
+    if (note.shareScope === 'USERS') {
+      const ids = note.sharedUserIds || []
+      if (ids.length === 0) return null
+      const names = ids
+        .map((id) => allUsers.find((u) => u.id === id)?.fullName)
+        .filter(Boolean) as string[]
+      if (names.length === 0) return `${ids.length} Kişi`
+      return names.length <= 2 ? names.join(', ') : `${names.length} Kişi`
+    }
+    return null
   }
 
   // ==========================================
@@ -417,21 +610,18 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   const [downTotal, setDownTotal] = useState<number | ''>(0)
   const [downRate, setDownRate] = useState<number | ''>(0)
-  const [downInterimCount, setDownInterimCount] = useState<number | ''>(0)
   const [downInterimAmount, setDownInterimAmount] = useState<number | ''>(0)
   const [downMonths, setDownMonths] = useState<number | ''>(0)
 
-  const activeDownTotal = typeof downTotal === 'number' ? downTotal : 0
-  const activeDownRate = typeof downRate === 'number' ? downRate : 0
-  const activeDownInterimCount = typeof downInterimCount === 'number' ? downInterimCount : 0
-  const activeDownInterimAmount = typeof downInterimAmount === 'number' ? downInterimAmount : 0
-  const activeDownMonths = typeof downMonths === 'number' ? downMonths : 0
+  const activeDownTotal = Math.max(0, typeof downTotal === 'number' ? downTotal : 0)
+  const activeDownRate = Math.max(0, Math.min(100, typeof downRate === 'number' ? downRate : 0))
+  const activeDownInterimAmount = Math.max(0, typeof downInterimAmount === 'number' ? downInterimAmount : 0)
+  const activeDownMonths = Math.max(0, typeof downMonths === 'number' ? downMonths : 0)
 
   const downInitial = Math.round((activeDownTotal * activeDownRate) / 100)
-  const downTotalInterim = activeDownInterimCount * activeDownInterimAmount
+  const downTotalInterim = activeDownInterimAmount
   const downRemaining = Math.max(0, activeDownTotal - downInitial - downTotalInterim)
   const downMonthly = activeDownMonths > 0 ? Math.round(downRemaining / activeDownMonths) : 0
-  const isDownMonthsEmpty = downMonths === '' || downMonths === 0
 
   // ==========================================
   // 12. TKGM PARSEL & İMAR
@@ -534,6 +724,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // TOOLS NAVIGATION CONFIG (26 ÇALIŞAN ARAÇ)
   // ==========================================
   const toolsList: { id: ToolType; label: string; icon: any }[] = [
+    { id: 'calendar', label: 'Takvim', icon: Calendar },
     { id: 'payments', label: 'Ödemeler', icon: Wallet },
     { id: 'notepad', label: 'Not Defteri', icon: FileText },
     { id: 'calculator', label: 'Hesap Makinesi', icon: Calculator },
@@ -554,7 +745,6 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     { id: 'reminders', label: 'Tapu Hatırlatıcı', icon: Bell },
     { id: 'qr', label: 'Dijital Kartvizit', icon: QrCode },
     { id: 'market', label: 'Piyasa Endeksi', icon: BarChart3 },
-    { id: 'calendar', label: 'Randevu Takvimi', icon: Calendar },
     { id: 'dask', label: 'DASK Sigorta', icon: ShieldCheck },
     { id: 'taxincome', label: 'Kira Vergisi', icon: Receipt },
     { id: 'aidat', label: 'Aidat Dağıtıcı', icon: Home },
@@ -589,11 +779,11 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             className="relative z-10 flex items-stretch gap-5 max-w-[96vw] h-[680px] max-h-[90vh]"
           >
             {/* Left Sidebar Menu (Katmansız, doğrudan liste) */}
-            <aside className="w-[210px] shrink-0 flex flex-col justify-between py-3 pr-2 text-[#f3efe9] select-none">
-              <div className="flex-1 overflow-y-auto pr-1 space-y-4 no-scrollbar">
-                <div className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wider px-2 mb-2 flex items-center justify-between">
+            <aside className="modal-layerless-aside w-[226px] shrink-0 flex flex-col justify-between py-3 text-[#f5f5f2] select-none">
+              <div className="flex-1 overflow-y-auto pr-3.5 space-y-4">
+                <div className="modal-aside-heading text-[10px] font-bold uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
                   <span>Uygulamalar</span>
-                  <span className="text-[9px] text-[#8c857f]">{toolsList.length} Araç</span>
+                  <span className="text-[9px]">{toolsList.length} Araç</span>
                 </div>
                 <nav className="space-y-1">
                   {toolsList.map((tool) => {
@@ -606,11 +796,11 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                         onClick={() => setActiveTool(tool.id)}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
                           isActive
-                            ? 'bg-[#b99881] text-white font-bold'
-                            : 'text-[#a69f99] hover:text-white hover:bg-white/10 font-medium'
+                            ? 'bg-[#b99881] text-white font-bold is-active-aside-btn'
+                            : 'hover:bg-white/12 font-medium'
                         }`}
                       >
-                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#8c857f]'}`} />
+                        <Icon className="w-4 h-4 shrink-0" />
                         <span className="truncate">{tool.label}</span>
                       </button>
                     )
@@ -620,7 +810,11 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             </aside>
 
             {/* Sağ Pencere */}
-            <div className="glass-modal w-[820px] max-w-[calc(96vw-242px)] h-full rounded-[32px] bg-[#282522] border border-[#4a443f] shadow-2xl flex flex-col overflow-hidden text-[#f3efe9] select-none font-sans relative">
+            <div
+              className={`glass-modal ${
+                activeTool === 'calendar' ? 'w-[960px]' : 'w-[820px]'
+              } max-w-[calc(96vw-242px)] h-full rounded-[32px] bg-[#282522] border border-[#4a443f] shadow-2xl flex flex-col overflow-hidden text-[#f3efe9] select-none font-sans relative transition-[width] duration-200`}
+            >
               {/* Modal Header */}
               <div className="px-7 pt-5 pb-2 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -676,11 +870,16 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                           </label>
                           <input
                             type="number"
+                            min="0"
                             step="any"
                             required
                             placeholder="Örn: 5000"
                             value={newPaymentAmount}
-                            onChange={(e) => setNewPaymentAmount(e.target.value)}
+                            onChange={(e) => {
+                              const raw = e.target.value
+                              if (raw.startsWith('-')) return
+                              setNewPaymentAmount(raw)
+                            }}
                             className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none placeholder-[#8c857f] font-mono"
                           />
                         </div>
@@ -816,11 +1015,11 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 <div className="flex items-center justify-between pb-2 border-b border-[#4a443f]">
                   <span className="text-sm font-bold text-white flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5 text-[#b99881]" />
-                    Notlarım ({notes.length})
+                    Notlarım ({visibleNotes.length})
                   </span>
                   <button
                     onClick={handleCreateNote}
-                    className="p-1 rounded-full bg-[#34302d] hover:bg-[#b99881] hover:text-[#1c1a18] text-[#d6beae] transition-colors"
+                    className="p-1 rounded-full bg-[#34302d] hover:bg-[#b99881] hover:text-[#1c1a18] text-[#d6beae] transition-colors cursor-pointer"
                     title="Yeni Not Ekle"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -828,20 +1027,41 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 </div>
 
                 <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
-                  {notes.map((note) => (
-                    <div
-                      key={note.id}
-                      onClick={() => setSelectedNoteId(note.id)}
-                      className={`p-2.5 rounded-xl cursor-pointer transition-all border ${
-                        selectedNoteId === note.id
-                          ? 'bg-[#34302d] border-[#b99881] text-white shadow-sm'
-                          : 'bg-[#24211f] border-transparent text-[#a69f99] hover:text-white hover:bg-[#2e2a27]'
-                      }`}
-                    >
-                      <h5 className="text-sm font-bold truncate">{note.title || 'Başlıksız Not'}</h5>
-                      <p className="text-xs text-[#8c857f] truncate mt-0.5">{note.content || 'İçerik boş...'}</p>
-                    </div>
-                  ))}
+                  {visibleNotes.map((note) => {
+                    const shareSummary = getNoteShareSummary(note)
+                    const isSharedWithMe =
+                      note.ownerId && currentUser && note.ownerId !== currentUser.id
+                    return (
+                      <div
+                        key={note.id}
+                        onClick={() => setSelectedNoteId(note.id)}
+                        className={`p-2.5 rounded-xl cursor-pointer transition-all border ${
+                          activeNote?.id === note.id
+                            ? 'bg-[#34302d] border-[#b99881] text-white shadow-sm'
+                            : 'bg-[#24211f] border-transparent text-[#a69f99] hover:text-white hover:bg-[#2e2a27]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1.5">
+                          <h5 className="text-sm font-bold truncate">
+                            {note.title || 'Başlıksız Not'}
+                          </h5>
+                          {shareSummary && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-[#b99881]/15 border border-[#b99881]/35 text-[10px] font-semibold text-[#d6beae] truncate max-w-[92px]">
+                              {shareSummary}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[#8c857f] truncate mt-0.5">
+                          {note.content || 'İçerik boş...'}
+                        </p>
+                        {isSharedWithMe && note.ownerName && (
+                          <div className="text-[10px] text-[#b99881] mt-1 truncate">
+                            {note.ownerName} tarafından paylaşıldı
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -851,7 +1071,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             </div>
 
             {/* Note Editor Column */}
-            <div className="md:col-span-2 p-4 rounded-2xl bg-[#282522] border border-[#4a443f] flex flex-col justify-between space-y-3">
+            <div className="md:col-span-2 p-4 rounded-2xl bg-[#282522] border border-[#4a443f] flex flex-col justify-between space-y-3 relative">
               {activeNote ? (
                 <div className="space-y-3 flex-1 flex flex-col">
                   <div className="flex items-center justify-between gap-3">
@@ -862,17 +1082,48 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                       placeholder="Not Başlığı..."
                       className="w-full bg-transparent text-sm font-bold text-white focus:outline-none placeholder-[#8c857f]"
                     />
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* En solda: Apple stili yarım kutu ve yukarı ok ikonu (sadece ikon) */}
+                      <button
+                        type="button"
+                        onClick={handleToggleNoteShare}
+                        className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer ${
+                          isNoteShareOpen ||
+                          (activeNote.shareScope && activeNote.shareScope !== 'PRIVATE')
+                            ? 'bg-[#b99881]/20 border border-[#b99881]/50 text-[#b99881]'
+                            : 'bg-[#34302d] hover:bg-white/10 text-[#d6beae]'
+                        }`}
+                        title="Paylaş"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="w-3.5 h-3.5 shrink-0"
+                        >
+                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                          <polyline points="16 6 12 2 8 6" />
+                          <line x1="12" y1="2" x2="12" y2="15" />
+                        </svg>
+                      </button>
+
                       <button
                         onClick={() => copyToClipboard(activeNote.content, 'note')}
-                        className="p-1.5 rounded-lg bg-[#34302d] hover:bg-white/10 text-[#d6beae] text-xs flex items-center gap-1"
+                        className="p-1.5 rounded-lg bg-[#34302d] hover:bg-white/10 text-[#d6beae] text-xs flex items-center gap-1 cursor-pointer"
                         title="Metni Kopyala"
                       >
-                        {copied === 'note' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copied === 'note' ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
                       </button>
                       <button
                         onClick={() => handleDeleteNote(activeNote.id)}
-                        className="p-1.5 rounded-lg bg-[#34302d] hover:bg-rose-500/20 text-[#a69f99] hover:text-rose-400"
+                        className="p-1.5 rounded-lg bg-[#34302d] hover:bg-rose-500/20 text-[#a69f99] hover:text-rose-400 cursor-pointer"
                         title="Notu Sil"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -880,8 +1131,272 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Paylaşım Durumu Özeti Bandı */}
+                  {activeNote.shareScope && activeNote.shareScope !== 'PRIVATE' && !isNoteShareOpen && (
+                    <div
+                      onClick={handleToggleNoteShare}
+                      className="px-3 py-1.5 rounded-xl bg-[#1c1a18]/80 border border-[#b99881]/35 flex items-center justify-between gap-2 text-xs cursor-pointer hover:border-[#b99881]/60 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 text-[#d6beae]">
+                        {activeNote.shareScope === 'COMPANY' ? (
+                          <Globe className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                        ) : activeNote.shareScope === 'DEPARTMENTS' ? (
+                          <Building2 className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                        ) : (
+                          <Users className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                        )}
+                        <span className="truncate">
+                          Paylaşıldı:{' '}
+                          <strong className="text-white">{getNoteShareSummary(activeNote)}</strong>
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#b99881] font-semibold shrink-0">
+                        Düzenle
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Not Paylaşım Seçenekleri Paneli (Kişilerle, Departmanlarla, Şirket) */}
+                  {isNoteShareOpen && (
+                    <div className="p-3.5 rounded-2xl bg-[#1c1a18] border border-[#b99881]/45 space-y-3 shadow-xl">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="w-3.5 h-3.5 text-[#b99881]"
+                          >
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                            <polyline points="16 6 12 2 8 6" />
+                            <line x1="12" y1="2" x2="12" y2="15" />
+                          </svg>
+                          Notu Paylaş
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsNoteShareOpen(false)}
+                          className="p-1 rounded-lg text-[#8c857f] hover:text-white hover:bg-white/5 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* 3 Ana Paylaşım Seçeneği: Kişilerle | Departmanlarla | Şirket */}
+                      <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#282522] border border-[#4a443f]">
+                        <button
+                          type="button"
+                          onClick={() => setShareTab('USERS')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            shareTab === 'USERS'
+                              ? 'bg-[#b99881] text-[#1c1a18] font-bold shadow-sm'
+                              : 'text-[#d6beae] hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <Users className="w-3.5 h-3.5 shrink-0" />
+                          <span>Kişilerle</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setShareTab('DEPARTMENTS')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            shareTab === 'DEPARTMENTS'
+                              ? 'bg-[#b99881] text-[#1c1a18] font-bold shadow-sm'
+                              : 'text-[#d6beae] hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <Building2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>Departmanlarla</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setShareTab('COMPANY')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            shareTab === 'COMPANY'
+                              ? 'bg-[#b99881] text-[#1c1a18] font-bold shadow-sm'
+                              : 'text-[#d6beae] hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <Globe className="w-3.5 h-3.5 shrink-0" />
+                          <span>Şirket</span>
+                        </button>
+                      </div>
+
+                      {/* SEÇENEK 1: KİŞİLERLE PAYLAŞ */}
+                      {shareTab === 'USERS' && (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={shareUserSearch}
+                            onChange={(e) => setShareUserSearch(e.target.value)}
+                            placeholder="Kişi veya departman ara..."
+                            className="w-full bg-[#282522] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none placeholder-[#8c857f]"
+                          />
+                          <div className="max-h-[135px] overflow-y-auto space-y-1 pr-1">
+                            {allUsers
+                              .filter((u) => {
+                                if (!shareUserSearch.trim()) return true
+                                const q = shareUserSearch.toLowerCase()
+                                return (
+                                  u.fullName.toLowerCase().includes(q) ||
+                                  u.department.toLowerCase().includes(q)
+                                )
+                              })
+                              .map((u) => {
+                                const isSelected = selectedShareUsers.includes(u.id)
+                                return (
+                                  <button
+                                    key={u.id}
+                                    type="button"
+                                    onClick={() => toggleShareUser(u.id)}
+                                    className={`w-full px-2.5 py-1.5 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-[#b99881]/20 border-[#b99881] text-white'
+                                        : 'bg-[#282522]/70 border-[#4a443f]/60 text-[#d6beae] hover:border-[#b99881]/40'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="w-5 h-5 rounded-full bg-[#34302d] border border-[#b99881]/40 flex items-center justify-center text-[10px] font-bold text-[#b99881] shrink-0">
+                                        {u.fullName
+                                          .split(/\s+/)
+                                          .map((p) => p[0])
+                                          .join('')
+                                          .slice(0, 2)
+                                          .toUpperCase()}
+                                      </span>
+                                      <span className="text-xs font-semibold truncate">
+                                        {u.fullName}
+                                      </span>
+                                      <span className="text-[10px] text-[#8c857f] shrink-0">
+                                        • {u.department}
+                                      </span>
+                                    </div>
+                                    <div
+                                      className={`w-4 h-4 rounded-md flex items-center justify-center border shrink-0 ${
+                                        isSelected
+                                          ? 'bg-[#b99881] border-[#b99881] text-[#1c1a18]'
+                                          : 'border-[#4a443f]'
+                                      }`}
+                                    >
+                                      {isSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
+                                    </div>
+                                  </button>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* SEÇENEK 2: DEPARTMANLARLA PAYLAŞ */}
+                      {shareTab === 'DEPARTMENTS' && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                          {CANONICAL_DEPARTMENTS.map((dept) => {
+                            const isSelected = selectedShareDepts.includes(dept)
+                            return (
+                              <button
+                                key={dept}
+                                type="button"
+                                onClick={() => toggleShareDept(dept)}
+                                className={`px-2.5 py-2 rounded-xl border text-xs font-semibold flex items-center justify-between gap-1.5 transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-[#b99881]/20 border-[#b99881] text-white'
+                                    : 'bg-[#282522]/70 border-[#4a443f]/60 text-[#d6beae] hover:border-[#b99881]/40'
+                                }`}
+                              >
+                                <span className="truncate">{dept}</span>
+                                <div
+                                  className={`w-4 h-4 rounded-md flex items-center justify-center border shrink-0 ${
+                                    isSelected
+                                      ? 'bg-[#b99881] border-[#b99881] text-[#1c1a18]'
+                                      : 'border-[#4a443f]'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* SEÇENEK 3: ŞİRKET İLE PAYLAŞ */}
+                      {shareTab === 'COMPANY' && (
+                        <div className="p-3 rounded-xl bg-[#282522] border border-[#4a443f] flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-[#b99881]/15 border border-[#b99881]/40 flex items-center justify-center text-[#b99881] shrink-0">
+                            <Globe className="w-4.5 h-4.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white">
+                              Tüm Şirket İle Paylaş
+                            </div>
+                            <div className="text-[11px] text-[#a69f99]">
+                              Bu not tüm departmanlardaki şirket çalışanlarının not listesinde görünür olur.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Alt Aksiyon Butonları */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        {activeNote.shareScope && activeNote.shareScope !== 'PRIVATE' ? (
+                          <button
+                            type="button"
+                            onClick={handleRemoveNoteShare}
+                            className="px-2.5 py-1.5 rounded-lg bg-[#282522] hover:bg-rose-500/15 border border-[#4a443f] hover:border-rose-500/40 text-[11px] font-semibold text-[#a69f99] hover:text-rose-300 flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Lock className="w-3 h-3" />
+                            <span>Paylaşımı Kaldır</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-[#8c857f]">
+                            {shareTab === 'USERS'
+                              ? `${selectedShareUsers.length} kişi seçildi`
+                              : shareTab === 'DEPARTMENTS'
+                              ? `${selectedShareDepts.length} departman seçildi`
+                              : 'Tüm şirket seçildi'}
+                          </span>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={handleApplyNoteShare}
+                          className="px-4 py-1.5 rounded-xl bg-[#b99881] hover:bg-[#c7a892] text-[#1c1a18] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ml-auto"
+                        >
+                          {shareSavedFeedback ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>Paylaşıldı</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="w-3.5 h-3.5"
+                              >
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                                <polyline points="16 6 12 2 8 6" />
+                                <line x1="12" y1="2" x2="12" y2="15" />
+                              </svg>
+                              <span>Paylaş</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <textarea
-                    rows={8}
+                    rows={isNoteShareOpen ? 5 : 8}
                     value={activeNote.content}
                     onChange={(e) => handleUpdateActiveNote({ content: e.target.value })}
                     placeholder="Müşteri talepleri, telefonlar, hatırlatmalar ve portföy bilgileri..."
@@ -1460,11 +1975,17 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Toplam Bedel (₺)</label>
                 <input
                   type="number"
+                  min="0"
                   step="100000"
                   value={downTotal}
                   onChange={(e) => {
                     const val = e.target.value.trim()
-                    setDownTotal(val === '' ? '' : parseFloat(val) || 0)
+                    if (val === '') {
+                      setDownTotal('')
+                    } else {
+                      const parsed = parseFloat(val)
+                      setDownTotal(isNaN(parsed) ? '' : Math.max(0, parsed))
+                    }
                   }}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
                 />
@@ -1473,39 +1994,45 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Peşinat (%)</label>
                 <input
                   type="number"
+                  min="0"
+                  max="100"
                   value={downRate}
                   onChange={(e) => {
                     const val = e.target.value.trim()
-                    setDownRate(val === '' ? '' : parseFloat(val) || 0)
+                    if (val === '') {
+                      setDownRate('')
+                    } else {
+                      const parsed = parseFloat(val)
+                      setDownRate(isNaN(parsed) ? '' : Math.max(0, Math.min(100, parsed)))
+                    }
                   }}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Ara Ödeme Adedi</label>
+                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Ara Ödeme Tutarı (₺)</label>
                 <input
                   type="number"
-                  value={downInterimCount}
+                  min="0"
+                  step="50000"
+                  value={downInterimAmount}
                   onChange={(e) => {
                     const val = e.target.value.trim()
-                    setDownInterimCount(val === '' ? '' : parseInt(val, 10) || 0)
+                    if (val === '') {
+                      setDownInterimAmount('')
+                    } else {
+                      const parsed = parseFloat(val)
+                      setDownInterimAmount(isNaN(parsed) ? '' : Math.max(0, parsed))
+                    }
                   }}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
                 />
               </div>
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-medium text-[#d6beae] block mb-1">Vade (Ay)</label>
-                  {isDownMonthsEmpty && (
-                    <span className="text-sm text-rose-400 font-semibold animate-pulse">
-                      Vadeyi girin
-                    </span>
-                  )}
-                </div>
+                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Vade (Ay)</label>
                 <input
                   type="number"
-                  min="1"
-                  placeholder="Vadeyi girin"
+                  min="0"
                   value={downMonths}
                   onChange={(e) => {
                     const val = e.target.value.trim()
@@ -1516,17 +2043,8 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                       setDownMonths(isNaN(parsed) ? '' : Math.max(0, parsed))
                     }
                   }}
-                  className={`w-full rounded-xl px-3.5 py-2.5 text-sm font-bold transition-all focus:outline-none ${
-                    isDownMonthsEmpty
-                      ? 'bg-[#3b181b]/50 border border-rose-800/90 text-rose-200 placeholder-rose-400/50 shadow-[0_0_8px_rgba(225,29,72,0.25)]'
-                      : 'bg-[#282522] border border-[#4a443f] text-white focus:border-[#b99881]'
-                  }`}
+                  className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
                 />
-                {isDownMonthsEmpty && (
-                  <p className="text-sm text-rose-400/80 mt-1">
-                    Vadeyi girin
-                  </p>
-                )}
               </div>
             </div>
 
@@ -1536,21 +2054,17 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 <p className="text-xl font-bold text-white mt-1">{formatCurrency(downInitial)}</p>
                 <span className="text-xs sm:text-sm text-[#8c857f]">%{activeDownRate} oranında</span>
               </div>
-              <div className={`p-4 rounded-2xl transition-colors ${isDownMonthsEmpty ? 'bg-[#282522] border border-rose-800/50' : 'bg-[#282522] border border-[#b99881]/40'}`}>
+              <div className="p-4 rounded-2xl bg-[#282522] border border-[#b99881]/40">
                 <span className="text-sm font-medium text-[#c4bcb5]">Aylık Eşit Taksit</span>
-                {isDownMonthsEmpty ? (
-                  <p className="text-sm font-bold text-rose-400 mt-1">Vade bekleniyor</p>
-                ) : (
-                  <p className="text-xl font-bold text-emerald-400 mt-1">{formatCurrency(downMonthly)}</p>
-                )}
+                <p className="text-xl font-bold text-emerald-400 mt-1">{formatCurrency(downMonthly)}</p>
                 <span className="text-xs sm:text-sm text-[#8c857f]">
-                  {isDownMonthsEmpty ? 'Vade girilmedi' : `${downMonths} ay boyunca`}
+                  {activeDownMonths > 0 ? `${activeDownMonths} ay boyunca` : 'Kalan bakiye: ' + formatCurrency(downRemaining)}
                 </span>
               </div>
               <div className="p-4 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#c4bcb5]">Toplam Ara Ödeme</span>
+                <span className="text-sm font-medium text-[#c4bcb5]">Ara Ödeme</span>
                 <p className="text-xl font-bold text-[#b99881] mt-1">{formatCurrency(downTotalInterim)}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">{activeDownInterimCount} x {formatCurrency(activeDownInterimAmount)}</span>
+                <span className="text-xs sm:text-sm text-[#8c857f]">Toplam bedelden düşülen</span>
               </div>
             </div>
           </div>
@@ -1977,57 +2491,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
         )}
 
         {/* ---------------------------------------------------- */}
-        {/* TOOL 20: CALENDAR (RANDEVU TAKVİMİ)                 */}
+        {/* TOOL 20: CALENDAR (KURUMSAL & ORTAK TAKVİM)          */}
         {/* ---------------------------------------------------- */}
-        {activeTool === 'calendar' && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <input
-                type="text"
-                placeholder="Randevu Başlığı / Müşteri..."
-                value={newEventTitle}
-                onChange={(e) => setNewEventTitle(e.target.value)}
-                className="col-span-2 bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-sm text-white"
-              />
-              <input
-                type="text"
-                placeholder="Saat (Örn: 15:30)"
-                value={newEventTime}
-                onChange={(e) => setNewEventTime(e.target.value)}
-                className="bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-sm text-white"
-              />
-            </div>
-            <button
-              onClick={() => {
-                if (newEventTitle.trim()) {
-                  setEvents([
-                    ...events,
-                    { id: Date.now().toString(), title: newEventTitle.trim(), time: newEventTime || '14:00', date: 'Bugün' },
-                  ])
-                  setNewEventTitle('')
-                  setNewEventTime('')
-                }
-              }}
-              className="w-full py-2 rounded-xl bg-[#b99881] text-[#1c1a18] font-bold text-xs"
-            >
-              Yeni Randevu Kaydet
-            </button>
-
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {events.map((ev) => (
-                <div key={ev.id} className="p-3 rounded-xl bg-[#282522] border border-[#4a443f] flex justify-between items-center">
-                  <div>
-                    <span className="text-sm font-bold text-white block">{ev.title}</span>
-                    <span className="text-xs sm:text-sm text-[#8c857f]">{ev.date} • {ev.time}</span>
-                  </div>
-                  <button onClick={() => setEvents(events.filter((x) => x.id !== ev.id))} className="text-[#8c857f] hover:text-rose-400">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {activeTool === 'calendar' && <CalendarWorkspaceTool />}
 
         {/* ---------------------------------------------------- */}
         {/* TOOL 21: DASK                                        */}

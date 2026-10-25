@@ -44,7 +44,15 @@ class AppointmentStore {
   }
 
   public setLoadedAppointments(appointments: Appointment[]) {
-    this.appointments = appointments || []
+    const byId = new Map<string, Appointment>()
+    for (const a of appointments || []) byId.set(a.id, a)
+    for (const local of this.appointments) {
+      if (!byId.has(local.id)) {
+        byId.set(local.id, local)
+        syncService.saveAppointment(local)
+      }
+    }
+    this.appointments = Array.from(byId.values())
     try {
       localStorage.setItem(STORAGE_KEY_APPOINTMENTS, JSON.stringify(this.appointments))
     } catch {}
@@ -174,6 +182,24 @@ class AppointmentStore {
       ...this.appointments[index],
       status,
       outcomeNote: outcomeNote || this.appointments[index].outcomeNote,
+    }
+
+    this.appointments[index] = updated
+    this.saveToStorage()
+    syncService.saveAppointment(updated)
+    return updated
+  }
+
+  public updateAppointment(
+    id: string,
+    updates: Partial<Omit<Appointment, 'id' | 'createdAt'>>
+  ): Appointment | undefined {
+    const index = this.appointments.findIndex((a) => a.id === id)
+    if (index === -1) return undefined
+
+    const updated: Appointment = {
+      ...this.appointments[index],
+      ...updates,
     }
 
     this.appointments[index] = updated

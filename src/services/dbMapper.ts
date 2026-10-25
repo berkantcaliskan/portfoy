@@ -146,6 +146,57 @@ export function rowToActivity(r: any): LeadActivity {
 }
 
 // --- PROJECTS ---
+const PROJECT_META_MARKER = '\n<!--KROKI_META:'
+const PROJECT_META_END = '-->'
+
+function encodeProjectDescriptionWithMeta(p: SharedProject): string | null {
+  const cleanDesc = (p.description || '').split(PROJECT_META_MARKER)[0]
+  const meta = {
+    maxFloors: p.maxFloors,
+    unitsPerFloor: p.unitsPerFloor,
+    blockCount: p.blockCount,
+    defaultRoomType: p.defaultRoomType,
+    layoutTemplate: p.layoutTemplate,
+    customAreas: p.customAreas,
+    customFacades: p.customFacades,
+    footerInfo: p.footerInfo,
+    parcelInfo: p.parcelInfo,
+    krokiCustomized: p.krokiCustomized,
+    sourceDocumentName: p.sourceDocumentName,
+    sourceDocumentSummary: p.sourceDocumentSummary,
+    blueprintUrl:
+      p.blueprintUrl && p.blueprintUrl.length < 120000 ? p.blueprintUrl : undefined,
+  }
+  try {
+    return `${cleanDesc}${PROJECT_META_MARKER}${JSON.stringify(meta)}${PROJECT_META_END}`
+  } catch {
+    return cleanDesc || null
+  }
+}
+
+function decodeProjectDescriptionAndMeta(rawDesc: any): {
+  description?: string
+  meta: Partial<SharedProject>
+} {
+  if (!rawDesc || typeof rawDesc !== 'string') {
+    return { description: undefined, meta: {} }
+  }
+  const idx = rawDesc.indexOf(PROJECT_META_MARKER)
+  if (idx === -1) {
+    return { description: rawDesc || undefined, meta: {} }
+  }
+  const cleanDesc = rawDesc.slice(0, idx).trim() || undefined
+  const jsonPart = rawDesc
+    .slice(idx + PROJECT_META_MARKER.length)
+    .replace(/-->\s*$/, '')
+  try {
+    const parsed = JSON.parse(jsonPart)
+    return { description: cleanDesc, meta: parsed && typeof parsed === 'object' ? parsed : {} }
+  } catch {
+    return { description: cleanDesc, meta: {} }
+  }
+}
+
 export function projectToRow(p: SharedProject) {
   return {
     id: p.id,
@@ -161,11 +212,12 @@ export function projectToRow(p: SharedProject) {
     starting_price: p.startingPrice ?? null,
     image_url: p.imageUrl || '',
     status: p.status || 'SATISTA',
-    description: p.description || null,
+    description: encodeProjectDescriptionWithMeta(p),
   }
 }
 
 export function rowToProject(r: any, units: FlatUnit[] = []): SharedProject {
+  const { description, meta } = decodeProjectDescriptionAndMeta(r.description)
   return {
     id: r.id,
     code: r.code,
@@ -180,12 +232,66 @@ export function rowToProject(r: any, units: FlatUnit[] = []): SharedProject {
     startingPrice: r.starting_price ? Number(r.starting_price) : undefined,
     imageUrl: r.image_url || '',
     status: r.status || 'SATISTA',
-    description: r.description || undefined,
+    description,
+    maxFloors: meta.maxFloors,
+    unitsPerFloor: meta.unitsPerFloor,
+    blockCount: meta.blockCount,
+    defaultRoomType: meta.defaultRoomType,
+    layoutTemplate: meta.layoutTemplate,
+    customAreas: meta.customAreas,
+    customFacades: meta.customFacades,
+    footerInfo: meta.footerInfo,
+    parcelInfo: meta.parcelInfo,
+    krokiCustomized: meta.krokiCustomized,
+    sourceDocumentName: meta.sourceDocumentName,
+    sourceDocumentSummary: meta.sourceDocumentSummary,
+    blueprintUrl: meta.blueprintUrl,
     units,
   }
 }
 
 // --- UNITS ---
+const UNIT_META_MARKER = '\n<!--UNIT_META:'
+const UNIT_META_END = '-->'
+
+function encodeUnitDescriptionWithMeta(u: FlatUnit): string | null {
+  const cleanDesc = (u.description || '').split(UNIT_META_MARKER)[0]
+  const meta = {
+    planBox: u.planBox,
+    sizePreset: u.sizePreset,
+    entrance: u.entrance,
+    statusLabel: u.statusLabel,
+  }
+  try {
+    return `${cleanDesc}${UNIT_META_MARKER}${JSON.stringify(meta)}${UNIT_META_END}`
+  } catch {
+    return cleanDesc || null
+  }
+}
+
+function decodeUnitDescriptionAndMeta(rawDesc: any): {
+  description?: string
+  meta: Partial<FlatUnit>
+} {
+  if (!rawDesc || typeof rawDesc !== 'string') {
+    return { description: undefined, meta: {} }
+  }
+  const idx = rawDesc.indexOf(UNIT_META_MARKER)
+  if (idx === -1) {
+    return { description: rawDesc || undefined, meta: {} }
+  }
+  const cleanDesc = rawDesc.slice(0, idx).trim() || undefined
+  const jsonPart = rawDesc
+    .slice(idx + UNIT_META_MARKER.length)
+    .replace(/-->\s*$/, '')
+  try {
+    const parsed = JSON.parse(jsonPart)
+    return { description: cleanDesc, meta: parsed && typeof parsed === 'object' ? parsed : {} }
+  } catch {
+    return { description: cleanDesc, meta: {} }
+  }
+}
+
 export function unitToRow(u: FlatUnit) {
   return {
     id: u.id,
@@ -199,7 +305,7 @@ export function unitToRow(u: FlatUnit) {
     price: u.price,
     status: u.status,
     facade: u.facade || null,
-    description: u.description || null,
+    description: encodeUnitDescriptionWithMeta(u),
     reservation: u.reservation || null,
     sale: u.sale || null,
     history: u.history || [],
@@ -207,19 +313,24 @@ export function unitToRow(u: FlatUnit) {
 }
 
 export function rowToUnit(r: any): FlatUnit {
+  const { description, meta } = decodeUnitDescriptionAndMeta(r.description)
   return {
     id: r.id,
     projectId: r.project_id,
     unitNumber: r.unit_number,
     block: r.block || undefined,
+    entrance: meta.entrance || undefined,
     floor: r.floor,
     roomType: r.room_type,
     grossSqm: Number(r.gross_sqm),
     netSqm: Number(r.net_sqm),
     price: Number(r.price),
     status: r.status,
+    statusLabel: meta.statusLabel || undefined,
+    planBox: meta.planBox || undefined,
+    sizePreset: meta.sizePreset || undefined,
     facade: r.facade || undefined,
-    description: r.description || undefined,
+    description,
     reservation: r.reservation || undefined,
     sale: r.sale || undefined,
     history: Array.isArray(r.history) ? r.history : [],
@@ -505,4 +616,3 @@ export function rowToSharedFile(r: any): SharedFile {
     downloadsAudit: Array.isArray(r.downloads_audit) ? r.downloads_audit : [],
   }
 }
-

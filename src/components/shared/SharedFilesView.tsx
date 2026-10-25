@@ -275,7 +275,7 @@ export const SharedFilesView: React.FC = () => {
 
       {/* Dosya Listesi */}
       {filteredFiles.length === 0 ? (
-        <div className="p-12 text-center rounded-[24px] bg-[#282522] border border-[#4a443f]">
+        <div className="py-20 text-center flex flex-col items-center justify-center">
           <Folder className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
           <h3 className="text-sm font-semibold text-white">Erişilebilir dosya bulunamadı</h3>
           <p className="text-xs text-[#8c857f] mt-1 max-w-sm mx-auto">

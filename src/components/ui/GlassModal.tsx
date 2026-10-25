@@ -102,7 +102,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
             )}
 
             {/* Content */}
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            <div className="flex-1 min-h-0 overflow-y-auto px-1 py-1.5">
               {children}
             </div>
           </motion.div>

@@ -27,6 +27,8 @@ import {
   Trash2,
   FileSpreadsheet,
   Sparkles,
+  List,
+  LayoutGrid,
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
@@ -57,6 +59,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
   const [selectedCity, setSelectedCity] = useState<string>('ALL')
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid')
   const [detailDisplayMode, setDetailDisplayMode] = useState<'blueprint' | 'cards'>('blueprint')
+  const [listSubViewMode, setListSubViewMode] = useState<'list' | 'card'>('list')
+  const [activeListUnitId, setActiveListUnitId] = useState<string | null>(null)
 
   // Modals
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
@@ -550,7 +554,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
   const canEditPrice = permissionService.canEditProjectPrice(currentUser)
 
   return (
-    <div className="space-y-3 pb-3">
+    <div className="space-y-2 pb-1">
       {/* Title Header (Katmansız, Çizgisiz, İkonlu) */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -632,8 +636,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                     : 'bg-[#34302d] text-[#a69f99] hover:text-white'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Liste / Kart Matrisi</span>
+                <List className="w-3.5 h-3.5" />
+                <span>Liste</span>
               </button>
 
               {(currentUser?.role === 'ADMIN' || currentUser?.isManager) && (
@@ -696,6 +700,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               </GlassCard>
 
               <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
+                <div className="text-xs text-[#38bdf8]">Satışta Olanlar</div>
+                <div className="text-2xl font-bold text-white mt-1">{totalUnits - totalSold - totalReserved}</div>
+                <div className="text-[11px] text-[#8c857f] mt-1">Hemen rezerve edilebilir</div>
+              </GlassCard>
+
+              <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
                 <div className="text-xs text-emerald-400">Satılan Daireler</div>
                 <div className="text-2xl font-bold text-emerald-400 mt-1">{totalSold}</div>
                 <div className="text-[11px] text-[#8c857f] mt-1">%{overallRate} Satış Oranı</div>
@@ -705,12 +715,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <div className="text-xs text-amber-400">Rezerve Daireler</div>
                 <div className="text-2xl font-bold text-amber-400 mt-1">{totalReserved}</div>
                 <div className="text-[11px] text-[#8c857f] mt-1">Opsiyonlu bağımsız bölüm</div>
-              </GlassCard>
-
-              <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-                <div className="text-xs text-[#38bdf8]">Satışta Olanlar</div>
-                <div className="text-2xl font-bold text-white mt-1">{totalUnits - totalSold - totalReserved}</div>
-                <div className="text-[11px] text-[#8c857f] mt-1">Hemen rezerve edilebilir</div>
               </GlassCard>
             </div>
 
@@ -728,10 +732,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
 
             {/* Büyük Proje Kartları */}
             {projects.length === 0 ? (
-              <div className="p-16 text-center rounded-[24px] bg-[#282522] border border-[#4a443f]">
-                <Building2 className="w-12 h-12 text-[#8c857f] mx-auto mb-3 opacity-40" />
-                <h3 className="text-base font-bold text-white">Kayıtlı Proje Bulunmuyor</h3>
-                <p className="text-xs text-[#a69f99] mt-1.5 max-w-md mx-auto">
+              <div className="py-20 text-center flex flex-col items-center justify-center">
+                <Building2 className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
+                <h3 className="text-sm font-semibold text-white">Kayıtlı proje bulunmuyor</h3>
+                <p className="text-xs text-[#8c857f] mt-1.5 max-w-md mx-auto">
                   Sistemde henüz aktif bir proje ve daire portföyü tanımlanmamış. "Yeni Proje Ekle" butonu ile ilk projenizi ve bağımsız bölüm envanterinizi oluşturabilirsiniz.
                 </p>
                 <div className="mt-5">
@@ -839,30 +843,30 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                             title={`Satılan: ${sold}`}
                           />
                           <div
-                            style={{ width: `${resPct}%` }}
-                            className="bg-amber-500 h-full transition-all"
-                            title={`Rezerve: ${reserved}`}
-                          />
-                          <div
                             style={{ width: `${availPct}%` }}
                             className="bg-[#b99881] h-full transition-all"
                             title={`Satışta: ${available}`}
                           />
+                          <div
+                            style={{ width: `${resPct}%` }}
+                            className="bg-amber-500 h-full transition-all"
+                            title={`Rezerve: ${reserved}`}
+                          />
                         </div>
 
-                        {/* Mikro Durumlar */}
+                        {/* Mikro Durumlar (Satışta olanlar 2. sırada) */}
                         <div className="flex items-center justify-between text-[11px] text-[#8c857f] mt-2">
                           <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
                             <span>Satıldı: <strong className="text-emerald-400">{sold}</strong></span>
                           </span>
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
-                            <span>Rezerve: <strong className="text-amber-400">{reserved}</strong></span>
-                          </span>
-                          <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-[#b99881]" />
                             <span>Satışta: <strong className="text-white">{available}</strong></span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span>Rezerve: <strong className="text-amber-400">{reserved}</strong></span>
                           </span>
                         </div>
                       </div>
@@ -909,186 +913,517 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                     onProjectUpdated={() => setProjects(projectStore.getAll())}
                   />
                 ) : (
-                /* Daireler Grid Matrisi */
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {currentUnits.map((unit) => {
-                    const isAvailable = unit.status === 'SATISTA'
-                    const isReserved = unit.status === 'REZERVE'
-                    const isSold = unit.status === 'SATILDI'
-
-                    return (
-                      <div
-                        key={unit.id}
-                        className={`p-4 rounded-[22px] border transition-all duration-200 ${
-                          isAvailable
-                            ? 'bg-[#282522] border-[#4a443f] hover:border-[#b99881]'
-                            : isReserved
-                            ? 'bg-amber-500/5 border-amber-500/30'
-                            : 'bg-[#24211f] border-rose-500/20 opacity-80'
+                <div className="space-y-3">
+                  {/* Sağ kenarda sekmelerin hemen altında Liste ve Kart görünüm seçenekleri */}
+                  <div className="flex items-center justify-end">
+                    <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#282522] border border-[#4a443f]">
+                      <button
+                        type="button"
+                        onClick={() => setListSubViewMode('list')}
+                        className={`no-layer-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer bg-transparent border-none shadow-none ${
+                          listSubViewMode === 'list'
+                            ? 'text-[#d6beae]'
+                            : 'text-[#a69f99] hover:text-white'
                         }`}
                       >
-                        {/* Üst Kısım: Daire No, Kat, Durum Rozeti ve Düzenle Butonu */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-bold text-white">{unit.unitNumber}</span>
-                            <span className="text-[10px] text-[#8c857f] px-2 py-0.5 rounded-full bg-[#34302d]">
-                              {unit.block || 'A Blok'} • {FLOOR_LABELS[Math.max(0, Math.min(2, unit.floor))]?.short || `${unit.floor}. Kat`}
-                            </span>
+                        <List className="w-3.5 h-3.5 text-[#b99881]" />
+                        <span>Liste</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setListSubViewMode('card')}
+                        className={`no-layer-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer bg-transparent border-none shadow-none ${
+                          listSubViewMode === 'card'
+                            ? 'text-[#d6beae]'
+                            : 'text-[#a69f99] hover:text-white'
+                        }`}
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5 text-[#b99881]" />
+                        <span>Kart</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {listSubViewMode === 'list' ? (
+                    /* LİSTE GÖRÜNÜMÜ: Solda daireler listeli, sağda bilgiler katmansız şekilde */
+                    (() => {
+                      const activeListUnit =
+                        currentUnits.find((u) => u.id === activeListUnitId) || null
+
+                      return (
+                        <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)] gap-6 items-start">
+                          {/* SOL: Daireler Listesi */}
+                          <div className="rounded-[22px] bg-[#282522] border border-[#4a443f] p-2.5 max-h-[640px] overflow-y-auto space-y-1.5">
+                            {currentUnits.map((unit) => {
+                              const isSelected = activeListUnit?.id === unit.id
+                              const isAvailable = unit.status === 'SATISTA'
+                              const isReserved = unit.status === 'REZERVE'
+                              const floorText =
+                                FLOOR_LABELS[Math.max(0, Math.min(2, unit.floor))]?.short ||
+                                `${unit.floor}. Kat`
+
+                              return (
+                                <button
+                                  key={unit.id}
+                                  type="button"
+                                  onClick={() => setActiveListUnitId(unit.id)}
+                                  className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl text-left transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-[#b99881] text-white'
+                                      : 'bg-[#34302d] text-[#f3efe9] hover:bg-[#3d3733]'
+                                  }`}
+                                >
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-bold text-white truncate">
+                                        {unit.unitNumber}
+                                      </span>
+                                      <span
+                                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                          isSelected
+                                            ? 'bg-black/20 text-white'
+                                            : 'bg-[#282522] text-[#a69f99]'
+                                        }`}
+                                      >
+                                        {unit.roomType}
+                                      </span>
+                                    </div>
+                                    <div
+                                      className={`text-[11px] mt-0.5 truncate ${
+                                        isSelected ? 'text-white/85' : 'text-[#a69f99]'
+                                      }`}
+                                    >
+                                      {unit.block || 'A Blok'} • {floorText} • {unit.grossSqm} m²
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider ${
+                                        isAvailable
+                                          ? 'bg-emerald-600 !text-white'
+                                          : isReserved
+                                          ? 'bg-amber-500 !text-white'
+                                          : 'bg-rose-600 !text-white'
+                                      }`}
+                                    >
+                                      {isAvailable
+                                        ? 'Satışta'
+                                        : isReserved
+                                        ? 'Rezerve'
+                                        : unit.statusLabel || 'Satıldı'}
+                                    </span>
+                                    <span className="text-xs font-bold font-mono text-white">
+                                      {unit.price > 0 ? formatCurrency(unit.price) : 'Belirlenmedi'}
+                                    </span>
+                                  </div>
+                                </button>
+                              )
+                            })}
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <GlassBadge
-                              size="sm"
-                              variant={isAvailable ? 'primary' : isReserved ? 'warning' : 'danger'}
-                            >
-                              {isAvailable ? 'Satışta' : isReserved ? 'Rezerve' : 'Satıldı'}
-                            </GlassBadge>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditUnit(unit)}
-                              className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#a69f99] hover:text-[#282522] transition-all cursor-pointer"
-                              title="Daire Bilgilerini Düzenle (Fiyat, Cephe, Açıklama vb.)"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
+
+                          {/* SAĞ: Seçili Daire Bilgileri (Katmansız) */}
+                          <div className="min-h-[420px] flex flex-col justify-center px-2 py-1">
+                            {activeListUnit ? (
+                              (() => {
+                                const isAvailable = activeListUnit.status === 'SATISTA'
+                                const isReserved = activeListUnit.status === 'REZERVE'
+                                const isSold = activeListUnit.status === 'SATILDI'
+                                const floorLabel =
+                                  FLOOR_LABELS[Math.max(0, Math.min(2, activeListUnit.floor))]
+                                    ?.short || `${activeListUnit.floor}. Kat`
+
+                                return (
+                                  <div className="space-y-5 max-w-2xl">
+                                    {/* Başlık */}
+                                    <div className="flex items-start justify-between gap-4 pb-3 border-b border-[#4a443f]/50">
+                                      <div>
+                                        <div className="flex items-center gap-2.5">
+                                          <h3 className="text-xl font-bold text-white">
+                                            {activeListUnit.unitNumber}
+                                          </h3>
+                                          <GlassBadge
+                                            size="sm"
+                                            variant={
+                                              isAvailable
+                                                ? 'primary'
+                                                : isReserved
+                                                ? 'warning'
+                                                : 'danger'
+                                            }
+                                          >
+                                            {isAvailable
+                                              ? 'Satışta'
+                                              : isReserved
+                                              ? 'Rezerve'
+                                              : activeListUnit.statusLabel || 'Satıldı'}
+                                          </GlassBadge>
+                                        </div>
+                                        <p className="text-xs text-[#a69f99] mt-1">
+                                          {currentProject.name} • {activeListUnit.block || 'A Blok'}{' '}
+                                          {activeListUnit.entrance
+                                            ? `• ${activeListUnit.entrance}`
+                                            : ''}{' '}
+                                          • {floorLabel}
+                                        </p>
+                                      </div>
+
+                                      <div className="text-right">
+                                        <div className="text-[11px] text-[#a69f99]">
+                                          Liste Fiyatı
+                                        </div>
+                                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                                          <span className="text-lg font-bold font-mono text-white">
+                                            {activeListUnit.price > 0
+                                              ? formatCurrency(activeListUnit.price)
+                                              : 'Belirlenmedi'}
+                                          </span>
+                                          {canEditPrice && isAvailable && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleOpenPrice(activeListUnit)}
+                                              className="text-[#b99881] hover:text-white p-1 rounded-full cursor-pointer"
+                                              title="Fiyatı Güncelle"
+                                            >
+                                              <TurkishLira className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Katmansız Satır Bilgileri */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6 text-xs">
+                                      <div>
+                                        <div className="text-[#8c857f] mb-0.5">Bulunduğu Kat</div>
+                                        <div className="font-semibold text-white">{floorLabel}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-[#8c857f] mb-0.5">Blok</div>
+                                        <div className="font-semibold text-white">
+                                          {activeListUnit.block || 'A Blok'}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-[#8c857f] mb-0.5">Giriş</div>
+                                        <div className="font-semibold text-white">
+                                          {activeListUnit.entrance || 'A Giriş'}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-[#8c857f] mb-0.5">Oda Tipi</div>
+                                        <div className="font-semibold text-white">
+                                          {activeListUnit.roomType}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-[#8c857f] mb-0.5">Brüt / Net Alan</div>
+                                        <div className="font-semibold text-white">
+                                          {activeListUnit.grossSqm} m² Brüt / {activeListUnit.netSqm}{' '}
+                                          m² Net
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-[#8c857f] mb-0.5">Cephe</div>
+                                        <div className="font-semibold text-white">
+                                          {activeListUnit.facade || 'Belirtilmedi'}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {activeListUnit.description && (
+                                      <div className="text-xs text-[#c4bcb5] pt-2 border-t border-[#4a443f]/30">
+                                        {activeListUnit.description}
+                                      </div>
+                                    )}
+
+                                    {isReserved && activeListUnit.reservation && (
+                                      <div className="pt-2 border-t border-[#4a443f]/30 text-xs space-y-1 text-amber-300">
+                                        <div className="font-semibold flex items-center gap-1.5">
+                                          <User className="w-3.5 h-3.5" />
+                                          <span>
+                                            Rezerve Müşteri: {activeListUnit.reservation.customerName}
+                                          </span>
+                                        </div>
+                                        <div className="text-[#a69f99]">
+                                          Vade:{' '}
+                                          {new Date(
+                                            activeListUnit.reservation.expiresAt
+                                          ).toLocaleDateString('tr-TR')}{' '}
+                                          • Danışman: {activeListUnit.reservation.reservedByUserName}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {isSold && activeListUnit.sale && (
+                                      <div className="pt-2 border-t border-[#4a443f]/30 text-xs space-y-1 text-rose-300">
+                                        <div className="font-semibold flex items-center gap-1.5">
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                          <span>Alıcı: {activeListUnit.sale.customerName}</span>
+                                        </div>
+                                        <div className="text-[#a69f99]">
+                                          Sözleşme: {activeListUnit.sale.contractNo} • Satış:{' '}
+                                          {formatCurrency(activeListUnit.sale.salePrice)}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Eylem Butonları */}
+                                    <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-[#4a443f]/40">
+                                      {isAvailable && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenReserve(activeListUnit)}
+                                            className="py-2 px-4 text-xs font-semibold rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition-colors cursor-pointer"
+                                          >
+                                            Rezerve Et
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenSell(activeListUnit)}
+                                            className="py-2 px-4 text-xs font-semibold rounded-full bg-[#b99881] text-white transition-colors cursor-pointer"
+                                          >
+                                            Satış Yap
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {isReserved && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenSell(activeListUnit)}
+                                            className="py-2 px-4 text-xs font-semibold rounded-full bg-[#b99881] text-white transition-colors cursor-pointer"
+                                          >
+                                            Satışa Çevir
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleCancelReserve(activeListUnit)}
+                                            className="py-2 px-4 text-xs font-medium rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer"
+                                          >
+                                            Rezervasyonu İptal Et
+                                          </button>
+                                        </>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEditUnit(activeListUnit)}
+                                        className="py-2 px-4 text-xs font-semibold rounded-full bg-[#34302d] hover:bg-[#3d3733] text-white inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5 text-[#b99881]" />
+                                        <span>Daireyi Düzenle</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenHistory(activeListUnit)}
+                                        className="p-2 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                                        title="Durum Değişiklik Geçmişi"
+                                      >
+                                        <History className="w-4 h-4 text-[#b99881]" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                )
+                              })()
+                            ) : (
+                              <div className="flex flex-col items-center justify-center text-center py-16 text-[#8c857f]">
+                                <Home className="w-8 h-8 text-[#b99881]/50 mb-2" />
+                                <p className="text-sm font-medium text-[#a69f99]">
+                                  Görüntülemek için bir daire seçin
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
+                      )
+                    })()
+                  ) : (
+                    /* KART GÖRÜNÜMÜ: Daireler Grid Matrisi */
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {currentUnits.map((unit) => {
+                        const isAvailable = unit.status === 'SATISTA'
+                        const isReserved = unit.status === 'REZERVE'
+                        const isSold = unit.status === 'SATILDI'
 
-                        <div className="space-y-1 text-xs text-[#a69f99] my-3">
-                          <div className="flex justify-between">
-                            <span>Tip / m²:</span>
-                            <span className="text-white font-medium">
-                              {unit.roomType} ({unit.grossSqm} m²{unit.netSqm ? ` / ${unit.netSqm} m² net` : ''})
-                            </span>
-                          </div>
-
-                          {unit.facade && (
-                            <div className="flex justify-between items-center text-xs">
-                              <span>Cephe:</span>
-                              <span className="text-[#f3efe9] font-medium">{unit.facade}</span>
-                            </div>
-                          )}
-
-                          <div className="flex justify-between items-center">
-                            <span>Liste Fiyatı:</span>
-                            <div className="flex items-center gap-1">
-                              <span className={`font-bold ${unit.price > 0 ? 'text-white text-sm' : 'text-[#8c857f] text-xs'}`}>
-                                {unit.price > 0 ? formatCurrency(unit.price) : 'Belirlenmedi'}
-                              </span>
-                              {canEditPrice && isAvailable && (
+                        return (
+                          <div
+                            key={unit.id}
+                            className={`p-4 rounded-[22px] border transition-all duration-200 ${
+                              isAvailable
+                                ? 'bg-[#282522] border-[#4a443f] hover:border-[#b99881]'
+                                : isReserved
+                                ? 'bg-amber-500/5 border-amber-500/30'
+                                : 'bg-[#24211f] border-rose-500/20 opacity-80'
+                            }`}
+                          >
+                            {/* Üst Kısım: Daire No, Kat, Durum Rozeti ve Düzenle Butonu */}
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-bold text-white">{unit.unitNumber}</span>
+                                <span className="text-[10px] text-[#8c857f] px-2 py-0.5 rounded-full bg-[#34302d]">
+                                  {unit.block || 'A Blok'} • {FLOOR_LABELS[Math.max(0, Math.min(2, unit.floor))]?.short || `${unit.floor}. Kat`}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <GlassBadge
+                                  size="sm"
+                                  variant={isAvailable ? 'primary' : isReserved ? 'warning' : 'danger'}
+                                >
+                                  {isAvailable ? 'Satışta' : isReserved ? 'Rezerve' : 'Satıldı'}
+                                </GlassBadge>
                                 <button
                                   type="button"
-                                  onClick={() => handleOpenPrice(unit)}
-                                  className="text-[#b99881] hover:text-white p-1 rounded-full cursor-pointer"
-                                  title="Fiyatı Belirle / Düzenle"
+                                  onClick={() => handleOpenEditUnit(unit)}
+                                  className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#a69f99] hover:text-[#282522] transition-all cursor-pointer"
+                                  title="Daire Bilgilerini Düzenle (Fiyat, Cephe, Açıklama vb.)"
                                 >
-                                  <TurkishLira className="w-3 h-3" />
+                                  <Edit2 className="w-3.5 h-3.5" />
                                 </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1 text-xs text-[#a69f99] my-3">
+                              <div className="flex justify-between">
+                                <span>Tip / m²:</span>
+                                <span className="text-white font-medium">
+                                  {unit.roomType} ({unit.grossSqm} m²{unit.netSqm ? ` / ${unit.netSqm} m² net` : ''})
+                                </span>
+                              </div>
+
+                              {unit.facade && (
+                                <div className="flex justify-between items-center text-xs">
+                                  <span>Cephe:</span>
+                                  <span className="text-[#f3efe9] font-medium">{unit.facade}</span>
+                                </div>
+                              )}
+
+                              <div className="flex justify-between items-center">
+                                <span>Liste Fiyatı:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className={`font-bold ${unit.price > 0 ? 'text-white text-sm' : 'text-[#8c857f] text-xs'}`}>
+                                    {unit.price > 0 ? formatCurrency(unit.price) : 'Belirlenmedi'}
+                                  </span>
+                                  {canEditPrice && isAvailable && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenPrice(unit)}
+                                      className="text-[#b99881] hover:text-white p-1 rounded-full cursor-pointer"
+                                      title="Fiyatı Belirle / Düzenle"
+                                    >
+                                      <TurkishLira className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {unit.description && (
+                                <p className="mt-1.5 text-[11px] text-[#c4bcb5] italic line-clamp-2">
+                                  "{unit.description}"
+                                </p>
+                              )}
+
+                              {/* Rezervasyon Ayrıntısı (Varsa) */}
+                              {isReserved && unit.reservation && (
+                                <div className="mt-2 pt-1 text-[11px] text-amber-300/90 space-y-0.5">
+                                  <div className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    <span>{unit.reservation.customerName}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-[10px] text-amber-400/70">
+                                    <Clock className="w-3 h-3" />
+                                    <span>Vade: {new Date(unit.reservation.expiresAt).toLocaleDateString('tr-TR')}</span>
+                                  </div>
+                                  <div className="text-[10px] text-[#8c857f]">
+                                    Danışman: {unit.reservation.reservedByUserName}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Satış Ayrıntısı (Varsa) */}
+                              {isSold && unit.sale && (
+                                <div className="mt-2 pt-1 text-[11px] text-rose-300/90 space-y-0.5">
+                                  <div className="flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                    <span>Müşteri: {unit.sale.customerName}</span>
+                                  </div>
+                                  <div className="text-[10px] text-[#8c857f]">
+                                    Sözleşme: {unit.sale.contractNo}
+                                  </div>
+                                </div>
                               )}
                             </div>
+
+                            {/* Eylemler */}
+                            <div className="flex items-center gap-1.5 pt-2">
+                              {isAvailable && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenReserve(unit)}
+                                    className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition-colors cursor-pointer"
+                                  >
+                                    Rezerve Et
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSell(unit)}
+                                    className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 transition-colors cursor-pointer"
+                                  >
+                                    Satış Yap
+                                  </button>
+                                </>
+                              )}
+
+                              {isReserved && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSell(unit)}
+                                    className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 transition-colors cursor-pointer"
+                                  >
+                                    Satışa Çevir
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCancelReserve(unit)}
+                                    className="py-1.5 px-3 text-xs font-medium rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                                    title="Rezervasyonu İptal Et"
+                                  >
+                                    İptal
+                                  </button>
+                                </>
+                              )}
+
+                              {isSold && (currentUser?.role === 'ADMIN' || currentUser?.isManager) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditUnit(unit)}
+                                  className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                                  title="Satışı Geri Al veya Daireyi Düzenle"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  <span>Satışı Düzenle</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenHistory(unit)}
+                                className="p-2 text-xs rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                                title="Durum Değişiklik Geçmişi (Audit Log)"
+                              >
+                                <History className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-
-                          {unit.description && (
-                            <p className="mt-1.5 text-[11px] text-[#c4bcb5] italic line-clamp-2">
-                              "{unit.description}"
-                            </p>
-                          )}
-
-                          {/* Rezervasyon Ayrıntısı (Varsa) */}
-                          {isReserved && unit.reservation && (
-                            <div className="mt-2 pt-1 text-[11px] text-amber-300/90 space-y-0.5">
-                              <div className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                <span>{unit.reservation.customerName}</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-[10px] text-amber-400/70">
-                                <Clock className="w-3 h-3" />
-                                <span>Vade: {new Date(unit.reservation.expiresAt).toLocaleDateString('tr-TR')}</span>
-                              </div>
-                              <div className="text-[10px] text-[#8c857f]">
-                                Danışman: {unit.reservation.reservedByUserName}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Satış Ayrıntısı (Varsa) */}
-                          {isSold && unit.sale && (
-                            <div className="mt-2 pt-1 text-[11px] text-rose-300/90 space-y-0.5">
-                              <div className="flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                                <span>Müşteri: {unit.sale.customerName}</span>
-                              </div>
-                              <div className="text-[10px] text-[#8c857f]">
-                                Sözleşme: {unit.sale.contractNo}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Eylemler */}
-                        <div className="flex items-center gap-1.5 pt-2">
-                          {isAvailable && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenReserve(unit)}
-                                className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition-colors cursor-pointer"
-                              >
-                                Rezerve Et
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenSell(unit)}
-                                className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 transition-colors cursor-pointer"
-                              >
-                                Satış Yap
-                              </button>
-                            </>
-                          )}
-
-                          {isReserved && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenSell(unit)}
-                                className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 transition-colors cursor-pointer"
-                              >
-                                Satışa Çevir
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleCancelReserve(unit)}
-                                className="py-1.5 px-3 text-xs font-medium rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
-                                title="Rezervasyonu İptal Et"
-                              >
-                                İptal
-                              </button>
-                            </>
-                          )}
-
-                          {isSold && (currentUser?.role === 'ADMIN' || currentUser?.isManager) && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditUnit(unit)}
-                              className="flex-1 py-1.5 px-3 text-xs font-semibold rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                              title="Satışı Geri Al veya Daireyi Düzenle"
-                            >
-                              <RotateCcw className="w-3 h-3" />
-                              <span>Satışı Düzenle</span>
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => handleOpenHistory(unit)}
-                            className="p-2 text-xs rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#a69f99] hover:text-white transition-colors cursor-pointer"
-                            title="Durum Değişiklik Geçmişi (Audit Log)"
-                          >
-                            <History className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
                 )}
               </div>
@@ -1425,7 +1760,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
             <div className="flex items-center justify-between gap-2">
               <label className="text-xs font-bold text-[#f3efe9] flex items-center gap-1.5">
                 <FileSpreadsheet className="w-4 h-4 text-[#b99881]" />
-                <span>Planı Yükle</span>
+                <span>Plan Yükle</span>
               </label>
               {isParsingNewProjectDoc && (
                 <span className="text-[11px] font-semibold text-[#b99881]">Okunuyor...</span>
@@ -1518,10 +1853,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 </select>
               </div>
 
-              {/* Kat Başına Daire Sayısı */}
+              {/* Kat Başına Hazır Daire Sayısı (4, 5, 6, 12 — manuel de eklenebilir) */}
               <div>
                 <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
-                  Kat Başına Daire Sayısı
+                  Kat Başına Hazır Daire Sayısı
                 </label>
                 <select
                   value={newProject.unitsPerFloor}
@@ -1536,12 +1871,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                   }}
                   className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
                 >
-                  <option value={1}>Kat Başına 1 Bağımsız Bölüm</option>
-                  <option value={2}>Kat Başına 2 Daire</option>
-                  <option value={3}>Kat Başına 3 Daire</option>
-                  <option value={4}>Kat Başına 4 Daire</option>
-                  <option value={6}>Kat Başına 6 Daire</option>
-                  <option value={8}>Kat Başına 8 Daire</option>
+                  <option value={4}>4 Daire</option>
+                  <option value={5}>5 Daire</option>
+                  <option value={6}>6 Daire</option>
+                  <option value={12}>12 Daire</option>
                 </select>
               </div>
             </div>

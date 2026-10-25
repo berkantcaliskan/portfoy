@@ -119,10 +119,10 @@ export const ApprovalsView: React.FC = () => {
 
       {/* Talep Listesi */}
       {filtered.length === 0 ? (
-        <div className="p-12 text-center rounded-[24px] bg-[#282522] border border-[#4a443f]">
+        <div className="py-20 text-center flex flex-col items-center justify-center">
           <FileCheck2 className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
           <h3 className="text-sm font-semibold text-white">Onay talebi bulunamadı</h3>
-          <p className="text-xs text-[#8c857f] mt-1">
+          <p className="text-xs text-[#8c857f] mt-1 max-w-sm mx-auto">
             Seçili kriterde onay bekleyen işlem bulunmuyor.
           </p>
         </div>
