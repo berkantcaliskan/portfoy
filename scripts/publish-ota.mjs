@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import zlib from 'zlib'
+import os from 'os'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
 
@@ -9,19 +10,69 @@ const __dirname = path.dirname(__filename)
 const rootDir = path.resolve(__dirname, '..')
 const distDir = path.join(rootDir, 'dist')
 const electronDir = path.join(rootDir, 'electron')
+const dataDir = path.join(rootDir, 'data')
 
-const SUPABASE_URL = 'https://qspefqddkddxobfxxmqa.supabase.co'
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzcGVmcWRka2RkeG9iZnh4bXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzI4NjksImV4cCI6MjA5MDU0ODg2OX0.f1A3WG3-efXbjb8-D326227-j-0m27441V5yT2I2tPg'
+function exportSharedCompanyDb() {
+  const appDataDir = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming')
+  const dbPath = path.join(appDataDir, 'DemirturkPortfoy', 'demirturk_persistent_db.json')
+  if (!fs.existsSync(dbPath)) return null
+
+  try {
+    const rawDb = JSON.parse(fs.readFileSync(dbPath, 'utf-8'))
+    const sharedDb = {}
+    const skipKeys = new Set(['demirturk_active_user_v2', 'demirturk_logged_out'])
+    for (const [k, v] of Object.entries(rawDb)) {
+      if (!skipKeys.has(k) && typeof v === 'string') {
+        sharedDb[k] = v
+      }
+    }
+
+    // 1. Write data/cloud_db.json for live multi-PC GitHub sync
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true })
+    }
+    fs.writeFileSync(
+      path.join(dataDir, 'cloud_db.json'),
+      JSON.stringify(sharedDb, null, 2),
+      'utf-8'
+    )
+
+    // 2. Write dist/shared-db.json so bundled/OTA dist also has it
+    if (fs.existsSync(distDir)) {
+      fs.writeFileSync(
+        path.join(distDir, 'shared-db.json'),
+        JSON.stringify(sharedDb),
+        'utf-8'
+      )
+    }
+
+    // 3. Keep src/services/seedCompanyData.ts up to date
+    const seedTsPath = path.join(rootDir, 'src', 'services', 'seedCompanyData.ts')
+    fs.writeFileSync(
+      seedTsPath,
+      'export const SEED_COMPANY_DB: Record<string, string> = ' +
+        JSON.stringify(sharedDb, null, 2) +
+        '\n',
+      'utf-8'
+    )
+
+    return sharedDb
+  } catch (err) {
+    console.warn('[OTA] Warning exporting shared company DB:', err.message)
+    return null
+  }
+}
 
 function collectDistFiles() {
   const files = {}
 
-  // 1. index.html
-  const indexHtmlPath = path.join(distDir, 'index.html')
-  if (fs.existsSync(indexHtmlPath)) {
-    const raw = fs.readFileSync(indexHtmlPath)
-    files['index.html'] = zlib.gzipSync(raw, { level: 9 }).toString('base64')
+  // 1. index.html & shared-db.json
+  for (const topFile of ['index.html', 'shared-db.json']) {
+    const fullPath = path.join(distDir, topFile)
+    if (fs.existsSync(fullPath)) {
+      const raw = fs.readFileSync(fullPath)
+      files[topFile] = zlib.gzipSync(raw, { level: 9 }).toString('base64')
+    }
   }
 
   // 2. assets/*
@@ -39,49 +90,13 @@ function collectDistFiles() {
   return files
 }
 
-async function upsertSupabaseKey(key, value) {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates',
-      },
-      body: JSON.stringify({
-        key,
-        value,
-        updated_at: new Date().toISOString(),
-      }),
-    })
-    return res.ok
-  } catch (err) {
-    console.warn(`[OTA] Supabase upload warning for ${key}:`, err.message)
-    return false
-  }
-}
-
-function readGitCredentialToken() {
-  try {
-    const out = execSync('git credential fill', {
-      cwd: rootDir,
-      input: 'protocol=https\nhost=github.com\n\n',
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'ignore'],
-    })
-    const match = out.match(/password=([^\r\n]+)/)
-    return match ? match[1].trim() : ''
-  } catch {
-    return ''
-  }
-}
-
 async function main() {
   if (!fs.existsSync(distDir)) {
     console.error('[OTA] dist/ directory not found. Run vite build first.')
     process.exit(1)
   }
+
+  exportSharedCompanyDb()
 
   const buildTime = Date.now()
   const buildIso = new Date(buildTime).toISOString()
@@ -132,10 +147,10 @@ async function main() {
   // Commit & push to GitHub (origin main)
   if (process.argv.includes('--push')) {
     try {
-      console.log('[OTA] Pushing update to GitHub (berkantcaliskan/portfoy)...')
+      console.log('[OTA] Pushing update & cloud DB to GitHub (berkantcaliskan/portfoy)...')
       execSync('git add -A', { cwd: rootDir, stdio: 'inherit' })
       try {
-        execSync(`git commit -m "chore(ota): auto-update release ${versionId}"`, {
+        execSync(`git commit -m "chore(ota): auto-update release ${versionId} with synced users & db"`, {
           cwd: rootDir,
           stdio: 'inherit',
         })

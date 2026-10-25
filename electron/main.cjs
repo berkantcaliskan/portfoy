@@ -23,19 +23,56 @@ let diskStoreCache = null
 
 function loadDiskStore() {
   if (diskStoreCache !== null) return diskStoreCache
+  let localObj = {}
   try {
     if (fs.existsSync(persistentDbPath)) {
       const raw = fs.readFileSync(persistentDbPath, 'utf-8')
       const parsed = JSON.parse(raw)
       if (parsed && typeof parsed === 'object') {
-        diskStoreCache = parsed
-        return diskStoreCache
+        localObj = parsed
       }
     }
   } catch (err) {
     console.error('Failed to read persistent disk store:', err)
   }
-  diskStoreCache = {}
+
+  // Also merge bundled/OTA shared-db.json so any new PC immediately has all users & company data
+  const seedCandidates = [
+    path.join(permanentUserDataDir, 'ota-dist', 'shared-db.json'),
+    path.join(__dirname, '../dist/shared-db.json'),
+  ]
+  for (const seedPath of seedCandidates) {
+    try {
+      if (fs.existsSync(seedPath)) {
+        const seedParsed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'))
+        if (seedParsed && typeof seedParsed === 'object') {
+          for (const [k, v] of Object.entries(seedParsed)) {
+            if (k === 'demirturk_active_user_v2' || k === 'demirturk_logged_out') continue
+            if (!(k in localObj) || localObj[k] === '[]' || localObj[k] === '') {
+              localObj[k] = v
+            } else if (k === 'demirturk_users_v2') {
+              try {
+                const curUsers = JSON.parse(localObj[k] || '[]')
+                const seedUsers = JSON.parse(v || '[]')
+                if (Array.isArray(curUsers) && Array.isArray(seedUsers)) {
+                  const byUsername = new Map()
+                  seedUsers.forEach((u) => {
+                    if (u && u.username) byUsername.set(String(u.username).toLowerCase(), u)
+                  })
+                  curUsers.forEach((u) => {
+                    if (u && u.username) byUsername.set(String(u.username).toLowerCase(), u)
+                  })
+                  localObj[k] = JSON.stringify(Array.from(byUsername.values()))
+                }
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  diskStoreCache = localObj
   return diskStoreCache
 }
 

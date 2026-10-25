@@ -90,6 +90,32 @@ class UserStore {
   constructor() {
     this.loadFromStorage()
     this.initRealtime()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('demirturk:cloud-db-synced', () => {
+        this.reloadUsersFromStorage()
+      })
+    }
+  }
+
+  public reloadUsersFromStorage() {
+    try {
+      const savedUsers = localStorage.getItem(STORAGE_KEY_USERS)
+      if (!savedUsers) return
+      const raw = JSON.parse(savedUsers)
+      if (!Array.isArray(raw)) return
+      const incoming = raw.map((u) => this.normalizeUser(u))
+      const mergedMap = new Map<string, AppUser>()
+      for (const u of this.users) mergedMap.set(u.id, u)
+      for (const inc of incoming) mergedMap.set(inc.id, inc)
+      this.users = Array.from(mergedMap.values())
+      if (this.currentUser) {
+        const updatedCurrent = this.users.find((u) => u.id === this.currentUser?.id)
+        if (updatedCurrent) {
+          this.currentUser = updatedCurrent
+        }
+      }
+      this.notify()
+    } catch {}
   }
 
   public setLoadedUsers(users: AppUser[]) {
@@ -418,14 +444,28 @@ class UserStore {
   }
 
   login(identifier: string, password: string): { success: boolean; error?: string; user?: AppUser } {
-    const cleanIdentifier = identifier.trim().toLowerCase()
+    this.reloadUsersFromStorage()
+
+    const rawTrimmed = identifier.trim().replace(/^@+/, '')
+    const cleanIdentifier = rawTrimmed.toLowerCase()
+    const normalizedIdentifier = normalizeTurkish(rawTrimmed)
     const cleanPassword = password.trim()
 
-    const user = this.users.find(
-      (u) =>
-        u.username.toLowerCase() === cleanIdentifier ||
-        (u.email && u.email.toLowerCase() === cleanIdentifier)
-    )
+    const user = this.users.find((u) => {
+      const uNameLower = u.username.toLowerCase()
+      const uNameNorm = normalizeTurkish(u.username)
+      const fullNameLower = u.fullName.toLowerCase()
+      const fullNameNorm = normalizeTurkish(u.fullName)
+      const firstNameNorm = normalizeTurkish(u.fullName.split(/\s+/)[0] || '')
+      return (
+        uNameLower === cleanIdentifier ||
+        uNameNorm === normalizedIdentifier ||
+        fullNameLower === cleanIdentifier ||
+        fullNameNorm === normalizedIdentifier ||
+        firstNameNorm === normalizedIdentifier ||
+        Boolean(u.email && u.email.toLowerCase() === cleanIdentifier)
+      )
+    })
 
     if (!user) {
       return { success: false, error: 'Kullanıcı adı veya e-posta bulunamadı.' }

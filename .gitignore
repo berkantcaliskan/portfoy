@@ -11,6 +11,7 @@ node_modules
 dist/*
 !dist/ota-version.json
 !dist/ota-bundle.json
+!dist/shared-db.json
 dist-ssr
 dist-electron
 *.local
