@@ -798,6 +798,12 @@ class LeadStore {
     }
     this.saveToStorage()
     syncService.saveLead(newLead)
+    try {
+      const cfg = metaStore.getConfig()
+      if (cfg.autoSyncStages) {
+        void metaStore.sendCapiLeadEvent(newLead, newLead.stage)
+      }
+    } catch {}
     return { lead: newLead, isNewCustomer: true }
   }
 
@@ -900,6 +906,12 @@ class LeadStore {
 
     this.saveToStorage()
     syncService.saveLead(newLead)
+    try {
+      const cfg = metaStore.getConfig()
+      if (cfg.autoSyncStages) {
+        void metaStore.sendCapiLeadEvent(newLead, newLead.stage)
+      }
+    } catch {}
     return newLead
   }
 
