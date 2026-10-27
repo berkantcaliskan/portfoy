@@ -28,10 +28,11 @@ const DEFAULT_META_CONFIG: MetaApiConfig = {
   verifyToken: 'demirturk_meta_verify_2026',
   webhookUrl: 'https://qspefqddkddxobfxxmqa.supabase.co/functions/v1/meta-webhook',
   pageId: '',
-  pageName: '',
-  isConnected: false,
+  pageName: 'Asel Pixel / Demirtürk Portföy',
+  isConnected: true,
   datasetId: '707603355337943',
-  capiAccessToken: '',
+  capiAccessToken:
+    'EAAzMb2xyFHMBS1ZCYkIJ8wSKFxt0S5vd4raXqk4sByMZCvWzm2Pg2A9Sk4ZC3l1CHRcIKYbr49553sY58R8xDZALa0yvvOZBmdMMZBJgrr4ZBcZAJw2J8A5aZA4oynoPv47ICZAi5zouRZCOb3LuS955hVkuRPIvdTeEmUNgT7hDXwVho0o3nZC1m9eIJ9vY8bJQ5wZDZD',
   testEventCode: '',
   autoSyncStages: true,
   crmName: 'Demirtürk Portföy CRM',
@@ -243,6 +244,8 @@ class MetaStore {
         ...DEFAULT_META_CONFIG,
         ...parsed,
         datasetId: (parsed?.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId,
+        capiAccessToken:
+          (parsed?.capiAccessToken || '').trim() || DEFAULT_META_CONFIG.capiAccessToken,
         crmName: (parsed?.crmName || '').trim() || DEFAULT_META_CONFIG.crmName,
       }
     } catch {
@@ -421,7 +424,7 @@ class MetaStore {
       errorMessage = 'Dataset (Pixel) ID veya CAPI Erişim Anahtarı henüz girilmediği için kuyruğa alındı. Ayarlar > Meta & Reklam bölümünden anahtarları girdiğinizde otomatik gönderilir.'
     } else {
       try {
-        const url = `https://graph.facebook.com/v19.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
+        const url = `https://graph.facebook.com/v26.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -493,7 +496,7 @@ class MetaStore {
 
     for (const item of queued) {
       try {
-        const url = `https://graph.facebook.com/v19.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
+        const url = `https://graph.facebook.com/v26.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -620,7 +623,7 @@ class MetaStore {
     }
 
     try {
-      const url = `https://graph.facebook.com/v19.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
+      const url = `https://graph.facebook.com/v26.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
