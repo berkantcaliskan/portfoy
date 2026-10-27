@@ -470,12 +470,19 @@ class LeadStore {
    * Yerel mağazada en son kaydedilmiş lead'in createdAt tarihinden sonra oluşturulmuş
    * yeni lead verilerini Supabase'den sorgular, ekler ve yeni gelen sayısını döner.
    */
-  public async pullLatestLeads(): Promise<{
+  public async pullLatestLeads(options?: {
+    startDate?: Date
+    endDate?: Date
+  }): Promise<{
     newCount: number
     updatedCount: number
     latestTime?: string
+    needsPageToken?: boolean
     error?: string
   }> {
+    const endDate = options?.endDate || new Date()
+    const startDate = options?.startDate || new Date(Date.now() - 48 * 60 * 60 * 1000)
+
     const beforeIds = new Set(this.leads.map((l) => l.id))
     const beforeSnapshot = new Map(this.leads.map((l) => [l.id, l.updatedAt]))
 
@@ -486,6 +493,15 @@ class LeadStore {
         this.reloadFromCloudMirror()
         this.notify()
       }
+    } catch {}
+
+    // Meta Graph API üzerinden seçili tarih aralığındaki (varsayılan son 48 saat) form başvurularını çek
+    let metaResult: { newCount: number; mergedCount: number; needsPageToken?: boolean; error?: string } = {
+      newCount: 0,
+      mergedCount: 0,
+    }
+    try {
+      metaResult = await metaStore.fetchLeadsFromMeta(startDate, endDate)
     } catch {}
 
     if (!isSupabaseConfigured()) {
@@ -499,9 +515,11 @@ class LeadStore {
         }
       }
       return {
-        newCount,
-        updatedCount,
+        newCount: Math.max(newCount, metaResult.newCount),
+        updatedCount: Math.max(updatedCount, metaResult.mergedCount),
         latestTime: new Date().toISOString(),
+        needsPageToken: metaResult.needsPageToken,
+        error: newCount === 0 && updatedCount === 0 && !metaResult.needsPageToken ? metaResult.error : undefined,
       }
     }
 
@@ -650,6 +668,7 @@ class LeadStore {
     owner?: string
     aiSuggestion?: string
     metaAnswers?: { question: string; answer: string }[]
+    createdAt?: string
   }): { lead: Lead; isNewCustomer: boolean } {
     const cleanPhone = cleanPhoneNumber(data.phone)
     const existingIndex = this.leads.findIndex(
@@ -779,7 +798,7 @@ class LeadStore {
         },
       ],
       aiEvaluation: initialAi,
-      createdAt: new Date().toISOString(),
+      createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
 

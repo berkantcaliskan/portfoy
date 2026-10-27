@@ -776,6 +776,327 @@ class MetaStore {
     this.listeners.forEach((cb) => cb())
     return result.lead
   }
+
+  /**
+   * Fetch Lead Ads submissions directly from Meta Graph API for a given date range
+   */
+  public async fetchLeadsFromMeta(
+    startDate: Date,
+    endDate: Date
+  ): Promise<{
+    newCount: number
+    mergedCount: number
+    needsPageToken?: boolean
+    error?: string
+  }> {
+    const pageToken = (this.config.pageAccessToken || '').trim()
+    const fallbackToken = (this.config.capiAccessToken || '').trim()
+    const token = pageToken || fallbackToken
+
+    if (!token) {
+      return {
+        newCount: 0,
+        mergedCount: 0,
+        needsPageToken: true,
+        error: 'Meta Sayfa Erişim Anahtarı (Page Access Token) tanımlı değil.',
+      }
+    }
+
+    const startUnix = Math.floor(startDate.getTime() / 1000)
+    const endUnix = Math.floor(endDate.getTime() / 1000)
+
+    try {
+      const formsToFetch: { id: string; name: string; accessToken: string }[] = []
+
+      // 1. Try /me/accounts (if User / System User Token)
+      const accRes = await fetch(
+        `https://graph.facebook.com/v26.0/me/accounts?fields=id,name,access_token,leadgen_forms{id,name,status}&access_token=${encodeURIComponent(token)}`
+      )
+      const accJson = await accRes.json().catch(() => ({}))
+
+      if (Array.isArray(accJson?.data) && accJson.data.length > 0) {
+        for (const page of accJson.data) {
+          const pToken = page.access_token || token
+          const pageForms = page?.leadgen_forms?.data || []
+          for (const f of pageForms) {
+            if (f?.id) {
+              formsToFetch.push({
+                id: String(f.id),
+                name: f.name || page.name || 'Meta Lead Formu',
+                accessToken: pToken,
+              })
+            }
+          }
+        }
+      }
+
+      // 2. Also try /me/leadgen_forms directly (if token is already a Page Access Token)
+      if (formsToFetch.length === 0) {
+        const directFormsRes = await fetch(
+          `https://graph.facebook.com/v26.0/me/leadgen_forms?fields=id,name,status&access_token=${encodeURIComponent(token)}`
+        )
+        const directFormsJson = await directFormsRes.json().catch(() => ({}))
+        if (Array.isArray(directFormsJson?.data) && directFormsJson.data.length > 0) {
+          for (const f of directFormsJson.data) {
+            if (f?.id) {
+              formsToFetch.push({
+                id: String(f.id),
+                name: f.name || 'Meta Lead Formu',
+                accessToken: token,
+              })
+            }
+          }
+        } else if (directFormsJson?.error || (Array.isArray(accJson?.data) && accJson.data.length === 0)) {
+          return {
+            newCount: 0,
+            mergedCount: 0,
+            needsPageToken: true,
+            error:
+              'Mevcut token yalnızca CAPI (Olay Gönderimi) yetkisine sahip. Meta reklam formlarını çekmek için Ayarlar > Meta & Reklam bölümüne "leads_retrieval" yetkili Sayfa Erişim Anahtarı girin veya sağ tık menüsünden CSV yükleyin.',
+          }
+        }
+      }
+
+      let newCount = 0
+      let mergedCount = 0
+
+      const filteringParam = JSON.stringify([
+        { field: 'time_created', operator: 'GREATER_THAN', value: startUnix - 1 },
+        { field: 'time_created', operator: 'LESS_THAN', value: endUnix + 1 },
+      ])
+
+      for (const form of formsToFetch) {
+        const leadsUrl = `https://graph.facebook.com/v26.0/${encodeURIComponent(form.id)}/leads?filtering=${encodeURIComponent(filteringParam)}&fields=id,created_time,campaign_name,ad_name,form_id,field_data&limit=200&access_token=${encodeURIComponent(form.accessToken)}`
+        const leadsRes = await fetch(leadsUrl)
+        const leadsJson = await leadsRes.json().catch(() => ({}))
+        const items = Array.isArray(leadsJson?.data) ? leadsJson.data : []
+
+        for (const item of items) {
+          const fieldData: { name: string; values: string[] }[] = Array.isArray(item.field_data)
+            ? item.field_data
+            : []
+
+          let fullName = ''
+          let phone = ''
+          let email = ''
+          let preferredHousingType = ''
+          const metaAnswers: { question: string; answer: string }[] = []
+
+          for (const fd of fieldData) {
+            const key = (fd.name || '').toLowerCase()
+            const val = Array.isArray(fd.values) ? fd.values.join(', ').trim() : ''
+            if (!val) continue
+
+            if (
+              key.includes('full_name') ||
+              key.includes('ad_soyad') ||
+              key.includes('isim') ||
+              key === 'name' ||
+              key === 'first_name'
+            ) {
+              fullName = fullName ? `${fullName} ${val}` : val
+            } else if (
+              key.includes('phone') ||
+              key.includes('telefon') ||
+              key.includes('numara') ||
+              key.includes('tel')
+            ) {
+              phone = val
+            } else if (key.includes('email') || key.includes('e-posta') || key.includes('mail')) {
+              email = val
+            } else {
+              metaAnswers.push({ question: fd.name, answer: val })
+              if (
+                key.includes('konut') ||
+                key.includes('daire') ||
+                key.includes('tip') ||
+                val.includes('1+1') ||
+                val.includes('2+1') ||
+                val.includes('3+1') ||
+                val.toLowerCase().includes('villa')
+              ) {
+                preferredHousingType = val
+              }
+            }
+          }
+
+          if (!fullName && !phone) continue
+
+          const createdIso = item.created_time
+            ? new Date(item.created_time).toISOString()
+            : new Date().toISOString()
+
+          const intake = leadStore.addOrMergeInquiry({
+            fullName: fullName || 'Meta Müşteri Adayı',
+            phone: phone || '',
+            whatsappPhone: phone || '',
+            email: email || undefined,
+            source: 'META_ADS',
+            formName: form.name,
+            campaignName: item.campaign_name || item.ad_name || form.name,
+            channel: 'Meta Lead Ads',
+            metaLeadgenId: String(item.id || ''),
+            preferredHousingType: preferredHousingType || undefined,
+            metaAnswers: metaAnswers.length > 0 ? metaAnswers : undefined,
+            createdAt: createdIso,
+          })
+
+          if (intake.isNewCustomer) {
+            newCount++
+          } else {
+            mergedCount++
+          }
+        }
+      }
+
+      return { newCount, mergedCount }
+    } catch (err: any) {
+      return {
+        newCount: 0,
+        mergedCount: 0,
+        error: err?.message || 'Meta Graph API bağlantı hatası.',
+      }
+    }
+  }
+
+  /**
+   * Parse and import Meta Lead Ads CSV / TSV file (exported from Meta Ads Manager / Business Suite)
+   */
+  public importLeadsFromMetaCsvText(
+    rawText: string,
+    startDate?: Date,
+    endDate?: Date
+  ): { newCount: number; mergedCount: number } {
+    const lines = rawText
+      .replace(/^\uFEFF/, '')
+      .split(/\r?\n/)
+      .filter((l) => l.trim().length > 0)
+
+    if (lines.length < 2) return { newCount: 0, mergedCount: 0 }
+
+    const delimiter = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ','
+
+    const splitLine = (line: string): string[] => {
+      const result: string[] = []
+      let current = ''
+      let inQuotes = false
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i]
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"'
+            i++
+          } else {
+            inQuotes = !inQuotes
+          }
+        } else if (ch === delimiter && !inQuotes) {
+          result.push(current.trim())
+          current = ''
+        } else {
+          current += ch
+        }
+      }
+      result.push(current.trim())
+      return result
+    }
+
+    const headers = splitLine(lines[0]).map((h) => h.replace(/^"|"$/g, '').trim())
+    let newCount = 0
+    let mergedCount = 0
+
+    for (let r = 1; r < lines.length; r++) {
+      const cols = splitLine(lines[r])
+      if (cols.length < 2) continue
+
+      let leadId = ''
+      let createdTime = ''
+      let formName = 'Meta Ads Formu'
+      let campaignName = ''
+      let fullName = ''
+      let phone = ''
+      let email = ''
+      let preferredHousingType = ''
+      const metaAnswers: { question: string; answer: string }[] = []
+
+      headers.forEach((h, idx) => {
+        const val = (cols[idx] || '').replace(/^"|"$/g, '').trim()
+        if (!val) return
+        const hl = h.toLowerCase()
+
+        if (hl === 'id' || hl === 'lead_id') {
+          leadId = val.replace(/^l:/i, '').trim()
+        } else if (hl.includes('created_time') || hl.includes('tarih')) {
+          createdTime = val
+        } else if (hl.includes('form_name') || hl === 'form') {
+          formName = val
+        } else if (hl.includes('campaign_name') || hl.includes('ad_name') || hl.includes('kampanya')) {
+          campaignName = campaignName || val
+        } else if (
+          hl.includes('full_name') ||
+          hl.includes('ad_soyad') ||
+          hl.includes('isim') ||
+          hl === 'name' ||
+          hl.includes('adınız')
+        ) {
+          fullName = fullName ? `${fullName} ${val}` : val
+        } else if (
+          hl.includes('phone') ||
+          hl.includes('telefon') ||
+          hl.includes('numara') ||
+          hl.includes('tel')
+        ) {
+          phone = val.replace(/^p:/i, '').trim()
+        } else if (hl.includes('email') || hl.includes('e-posta') || hl.includes('mail')) {
+          email = val
+        } else if (
+          !['ad_id', 'adset_id', 'adset_name', 'campaign_id', 'form_id', 'is_organic', 'platform', 'lead_status'].includes(hl)
+        ) {
+          metaAnswers.push({ question: h, answer: val })
+          if (
+            hl.includes('konut') ||
+            hl.includes('daire') ||
+            val.includes('1+1') ||
+            val.includes('2+1') ||
+            val.includes('3+1') ||
+            val.toLowerCase().includes('villa')
+          ) {
+            preferredHousingType = val
+          }
+        }
+      })
+
+      if (!fullName && !phone) continue
+
+      const parsedDate = createdTime ? new Date(createdTime) : new Date()
+      const validDate = !isNaN(parsedDate.getTime()) ? parsedDate : new Date()
+
+      if (startDate && validDate.getTime() < startDate.getTime()) continue
+      if (endDate && validDate.getTime() > endDate.getTime()) continue
+
+      const res = leadStore.addOrMergeInquiry({
+        fullName: fullName || 'Meta Müşterisi',
+        phone: phone || '',
+        whatsappPhone: phone || '',
+        email: email || undefined,
+        source: 'META_ADS',
+        formName,
+        campaignName: campaignName || formName,
+        channel: 'Meta Lead Ads',
+        metaLeadgenId: leadId || undefined,
+        preferredHousingType: preferredHousingType || undefined,
+        metaAnswers: metaAnswers.length > 0 ? metaAnswers : undefined,
+        createdAt: validDate.toISOString(),
+      })
+
+      if (res.isNewCustomer) {
+        newCount++
+      } else {
+        mergedCount++
+      }
+    }
+
+    return { newCount, mergedCount }
+  }
 }
 
 export const metaStore = new MetaStore()
