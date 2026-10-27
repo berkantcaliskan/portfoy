@@ -30,7 +30,7 @@ const DEFAULT_META_CONFIG: MetaApiConfig = {
   pageId: '',
   pageName: '',
   isConnected: false,
-  datasetId: '',
+  datasetId: '707603355337943',
   capiAccessToken: '',
   testEventCode: '',
   autoSyncStages: true,
@@ -224,10 +224,27 @@ class MetaStore {
   private capiLogs: MetaCapiEventLog[] = this.loadCapiLogs()
   private listeners: Set<Listener> = new Set()
 
+  constructor() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('demirturk:cloud-db-synced', () => {
+        this.config = this.loadConfig()
+        this.capiLogs = this.loadCapiLogs()
+        this.notify()
+      })
+    }
+  }
+
   private loadConfig(): MetaApiConfig {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_META_CONFIG)
-      return saved ? { ...DEFAULT_META_CONFIG, ...JSON.parse(saved) } : DEFAULT_META_CONFIG
+      if (!saved) return DEFAULT_META_CONFIG
+      const parsed = JSON.parse(saved)
+      return {
+        ...DEFAULT_META_CONFIG,
+        ...parsed,
+        datasetId: (parsed?.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId,
+        crmName: (parsed?.crmName || '').trim() || DEFAULT_META_CONFIG.crmName,
+      }
     } catch {
       return DEFAULT_META_CONFIG
     }
