@@ -18,6 +18,7 @@ const STAGES: { stage: LeadStage; label: string }[] = [
   { stage: 'QUALIFIED', label: 'Nitelikli (Sıcak Portföy)' },
   { stage: 'APPOINTMENT', label: 'Randevu Planlandı' },
   { stage: 'OFFER', label: 'Teklif Aşamasında' },
+  { stage: 'WON', label: 'Dönüşüm (Satış)' },
 ]
 
 export const HOUSING_TYPES = [

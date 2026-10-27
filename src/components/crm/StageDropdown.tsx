@@ -18,7 +18,7 @@ const STAGE_OPTIONS: { id: LeadStage; label: string; dotColor: string }[] = [
   { id: 'NO_INTENT', label: 'Satın Alma Niyeti Yok', dotColor: '#a8a29e' },
   { id: 'QUALIFIED', label: 'Nitelikli', dotColor: '#2dd4bf' },
   { id: 'APPOINTMENT', label: 'Randevu Planlandı', dotColor: '#818cf8' },
-  { id: 'WON', label: 'Satış / Anlaşma', dotColor: '#34d399' },
+  { id: 'WON', label: 'Dönüşüm (Satış)', dotColor: '#34d399' },
   { id: 'LOST', label: 'Pasif', dotColor: '#f43f5e' },
 ]
 

@@ -219,6 +219,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     } else if (filterStage === 'ASSIGNED') {
       // Satışa atananlar
       if (!l.assignedToUserId) return false
+    } else if (filterStage === 'CONVERTED') {
+      // Dönüşüm (Satış olanlar)
+      if (l.stage !== 'WON') return false
     } else if (filterStage.startsWith('custom-')) {
       const customTab = customTabs.find((t) => t.id === filterStage)
       if (customTab) {
@@ -345,6 +348,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   ).length
   const qualifiedCount = dateFilteredLeads.filter((l) => l.isQualified || l.stage === 'QUALIFIED').length
   const assignedCount = dateFilteredLeads.filter((l) => Boolean(l.assignedToUserId)).length
+  const convertedCount = dateFilteredLeads.filter((l) => l.stage === 'WON').length
 
   return (
     <div className="space-y-6">
@@ -453,6 +457,18 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             }`}
           >
             Satışa Atanan ({assignedCount})
+          </button>
+
+          {/* 4. Sekme: Dönüşüm (Satış Olanlar) */}
+          <button
+            onClick={() => setFilterStage('CONVERTED')}
+            className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+              filterStage === 'CONVERTED'
+                ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+            }`}
+          >
+            Dönüşüm ({convertedCount})
           </button>
 
           {/* 4. Sekme: Tümü */}

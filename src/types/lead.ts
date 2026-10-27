@@ -86,7 +86,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   WON: {
     id: 'WON',
-    label: 'Satış / Anlaşma',
+    label: 'Dönüşüm (Satış)',
     color: 'text-emerald-400',
     borderColor: 'border-emerald-500/30',
     bgLight: 'bg-emerald-500/10',

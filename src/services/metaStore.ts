@@ -196,8 +196,8 @@ export function mapStageOrSignalToMetaEvent(stageOrSignal: LeadStage | MetaCapiE
     case 'WON':
       return {
         eventName: 'Purchase',
-        signalLabel: 'Satış / Anlaşma Tamamlandı',
-        stageLabel: 'Satış / Anlaşma',
+        signalLabel: 'Dönüşüm (Satış Tamamlandı)',
+        stageLabel: 'Dönüşüm (Satış)',
       }
     case 'Contact':
     case 'CONTACTED':
