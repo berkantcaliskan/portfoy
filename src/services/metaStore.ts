@@ -1,4 +1,4 @@
-﻿import { MetaFormSummary, MetaWebhookEvent, MetaCapiEventLog, MetaCapiEventName } from '@/types/meta'
+import { MetaFormSummary, MetaWebhookEvent, MetaCapiEventLog, MetaCapiEventName } from '@/types/meta'
 import { Lead, LeadStage } from '@/types/lead'
 import { leadStore } from './leadStore'
 
@@ -12,7 +12,7 @@ export interface MetaApiConfig {
   pageName: string
   isConnected: boolean
   lastCheckedAt?: string
-  // Meta Conversions API (CAPI for CRM)
+  // Meta Conversions API (CAPI for CRM) + Dataset Quality API
   datasetId: string
   capiAccessToken: string
   testEventCode: string
@@ -23,19 +23,21 @@ export interface MetaApiConfig {
 const STORAGE_KEY_META_CONFIG = 'demirturk_meta_api_config'
 const STORAGE_KEY_META_CAPI_LOGS = 'demirturk_meta_capi_logs_v1'
 
+const DEFAULT_CAPI_TOKEN =
+  'EAAzMb2xyFHMBS5395SsmZB0y9fgPGhVRMIdhYlaYQdyoLVnFeYZClzkNJwfz5EV6yEg0ZAfBHGSdDyTMiOwoRTSiSiMPmISkcPX8UgyDbw0vv97kNWPZAM3vzjkrhgncYcAsZAPjHFZC2gS5TPymeMV7oLgquOpyq9z2EfYlTIkxRyCxiiaXqYFT2lz4kZChQZDZD'
+
 const DEFAULT_META_CONFIG: MetaApiConfig = {
   pageAccessToken: '',
   verifyToken: 'demirturk_meta_verify_2026',
   webhookUrl: 'https://qspefqddkddxobfxxmqa.supabase.co/functions/v1/meta-webhook',
   pageId: '',
-  pageName: 'Asel Pixel / DemirtÃ¼rk PortfÃ¶y',
+  pageName: 'Portföy Piksel (707603355337943)',
   isConnected: true,
   datasetId: '707603355337943',
-  capiAccessToken:
-    'EAAzMb2xyFHMBS1ZCYkIJ8wSKFxt0S5vd4raXqk4sByMZCvWzm2Pg2A9Sk4ZC3l1CHRcIKYbr49553sY58R8xDZALa0yvvOZBmdMMZBJgrr4ZBcZAJw2J8A5aZA4oynoPv47ICZAi5zouRZCOb3LuS955hVkuRPIvdTeEmUNgT7hDXwVho0o3nZC1m9eIJ9vY8bJQ5wZDZD',
+  capiAccessToken: DEFAULT_CAPI_TOKEN,
   testEventCode: '',
   autoSyncStages: true,
-  crmName: 'DemirtÃ¼rk PortfÃ¶y CRM',
+  crmName: 'Demirtürk Portföy CRM',
 }
 
 type Listener = () => void
@@ -167,7 +169,7 @@ export function mapStageOrSignalToMetaEvent(stageOrSignal: LeadStage | MetaCapiE
     case 'QUALIFIED':
       return {
         eventName: 'QualifiedLead',
-        signalLabel: 'Olumlu / Nitelikli MÃ¼ÅŸteri',
+        signalLabel: 'Olumlu / Nitelikli Müşteri',
         stageLabel: 'Nitelikli (Olumlu)',
       }
     case 'DisqualifiedLead':
@@ -176,7 +178,7 @@ export function mapStageOrSignalToMetaEvent(stageOrSignal: LeadStage | MetaCapiE
       return {
         eventName: 'DisqualifiedLead',
         signalLabel: 'Olumsuz / Niteliksiz',
-        stageLabel: stageOrSignal === 'NO_INTENT' ? 'SatÄ±n Alma Niyeti Yok' : 'Pasif / Olumsuz',
+        stageLabel: stageOrSignal === 'NO_INTENT' ? 'Satın Alma Niyeti Yok' : 'Pasif / Olumsuz',
       }
     case 'Schedule':
     case 'APPOINTMENT':
@@ -184,36 +186,36 @@ export function mapStageOrSignalToMetaEvent(stageOrSignal: LeadStage | MetaCapiE
     case 'OFFER':
       return {
         eventName: 'Schedule',
-        signalLabel: 'Randevu / Teklif PlanlandÄ±',
+        signalLabel: 'Randevu / Teklif Planlandı',
         stageLabel:
           stageOrSignal === 'PRESENTATION'
-            ? 'PortfÃ¶y Sunumu'
+            ? 'Portföy Sunumu'
             : stageOrSignal === 'OFFER'
-            ? 'Teklif AÅŸamasÄ±nda'
-            : 'Randevu PlanlandÄ±',
+            ? 'Teklif Aşamasında'
+            : 'Randevu Planlandı',
       }
     case 'Purchase':
     case 'WON':
       return {
         eventName: 'Purchase',
-        signalLabel: 'DÃ¶nÃ¼ÅŸÃ¼m (SatÄ±ÅŸ TamamlandÄ±)',
-        stageLabel: 'DÃ¶nÃ¼ÅŸÃ¼m (SatÄ±ÅŸ)',
+        signalLabel: 'Dönüşüm (Satış Tamamlandı)',
+        stageLabel: 'Dönüşüm (Satış)',
       }
     case 'Contact':
     case 'CONTACTED':
     case 'UNDECIDED':
       return {
         eventName: 'Contact',
-        signalLabel: 'Ä°letiÅŸime GeÃ§ildi (ArandÄ±)',
-        stageLabel: stageOrSignal === 'UNDECIDED' ? 'KararsÄ±z' : 'ArandÄ±',
+        signalLabel: 'İletişime Geçildi (Arandı)',
+        stageLabel: stageOrSignal === 'UNDECIDED' ? 'Kararsız' : 'Arandı',
       }
     case 'Lead':
     case 'NEW':
     default:
       return {
         eventName: 'Lead',
-        signalLabel: 'Yeni Potansiyel MÃ¼ÅŸteri',
-        stageLabel: 'GiriÅŸ (Yeni)',
+        signalLabel: 'Yeni Potansiyel Müşteri',
+        stageLabel: 'Giriş (Yeni)',
       }
   }
 }
@@ -240,12 +242,17 @@ class MetaStore {
       const saved = localStorage.getItem(STORAGE_KEY_META_CONFIG)
       if (!saved) return DEFAULT_META_CONFIG
       const parsed = JSON.parse(saved)
+      const savedToken = (parsed?.capiAccessToken || '').trim()
+      // Upgrade older initial token to the Dataset Quality API token
+      const effectiveToken =
+        !savedToken || savedToken.startsWith('EAAzMb2xyFHMBS1ZCYk')
+          ? DEFAULT_CAPI_TOKEN
+          : savedToken
       return {
         ...DEFAULT_META_CONFIG,
         ...parsed,
         datasetId: (parsed?.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId,
-        capiAccessToken:
-          (parsed?.capiAccessToken || '').trim() || DEFAULT_META_CONFIG.capiAccessToken,
+        capiAccessToken: effectiveToken,
         crmName: (parsed?.crmName || '').trim() || DEFAULT_META_CONFIG.crmName,
       }
     } catch {
@@ -298,18 +305,18 @@ class MetaStore {
 
   public async testConnection(token: string): Promise<{ success: boolean; pageName?: string; error?: string }> {
     if (!token || token.trim().length < 10) {
-      return { success: false, error: 'LÃ¼tfen geÃ§erli bir Meta Page Access Token girin.' }
+      return { success: false, error: 'Lütfen geçerli bir Meta Page Access Token girin.' }
     }
     try {
       const res = await fetch(`https://graph.facebook.com/v19.0/me?access_token=${token.trim()}`)
       if (res.ok) {
         const data = await res.json()
-        const pageName = data.name || 'DemirtÃ¼rk SayfasÄ±'
+        const pageName = data.name || 'Demirtürk Sayfası'
         this.saveConfig({ pageAccessToken: token.trim(), isConnected: true, pageName, lastCheckedAt: new Date().toISOString() })
         return { success: true, pageName }
       } else {
         const errData = await res.json().catch(() => ({}))
-        const errorMsg = errData?.error?.message || 'Meta API doÄŸrulanamadÄ±. Token sÃ¼resi dolmuÅŸ veya yetkileri eksik olabilir.'
+        const errorMsg = errData?.error?.message || 'Meta API doğrulanamadı. Token süresi dolmuş veya yetkileri eksik olabilir.'
         return { success: false, error: errorMsg }
       }
     } catch {
@@ -376,7 +383,7 @@ class MetaStore {
 
     const customData: Record<string, any> = {
       event_source: 'crm',
-      lead_event_source: this.config.crmName || 'DemirtÃ¼rk PortfÃ¶y CRM',
+      lead_event_source: this.config.crmName || 'Demirtürk Portföy CRM',
       crm_stage: stageLabel,
       lead_status: signalLabel,
     }
@@ -424,7 +431,7 @@ class MetaStore {
 
     if (!datasetId || !accessToken) {
       status = 'QUEUED'
-      errorMessage = 'Dataset (Pixel) ID veya CAPI EriÅŸim AnahtarÄ± henÃ¼z girilmediÄŸi iÃ§in kuyruÄŸa alÄ±ndÄ±. Ayarlar > Meta & Reklam bÃ¶lÃ¼mÃ¼nden anahtarlarÄ± girdiÄŸinizde otomatik gÃ¶nderilir.'
+      errorMessage = 'Dataset (Pixel) ID veya CAPI Erişim Anahtarı henüz girilmediği için kuyruğa alındı. Ayarlar > Meta & Reklam bölümünden anahtarları girdiğinizde otomatik gönderilir.'
     } else {
       try {
         const url = `https://graph.facebook.com/v26.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
@@ -440,12 +447,12 @@ class MetaStore {
           fbtraceId = json?.fbtrace_id
         } else {
           status = 'FAILED'
-          errorMessage = json?.error?.message || `HTTP ${res.status}: Meta CAPI hatasÄ±`
+          errorMessage = json?.error?.message || `HTTP ${res.status}: Meta CAPI hatası`
           fbtraceId = json?.error?.fbtrace_id
         }
       } catch (err: any) {
         status = 'FAILED'
-        errorMessage = err?.message || 'AÄŸ hatasÄ±: Meta Graph API sunucusuna ulaÅŸÄ±lamadÄ±.'
+        errorMessage = err?.message || 'Ağ hatası: Meta Graph API sunucusuna ulaşılamadı.'
       }
     }
 
@@ -519,7 +526,7 @@ class MetaStore {
         }
       } catch (err: any) {
         item.status = 'FAILED'
-        item.errorMessage = err?.message || 'AÄŸ hatasÄ±'
+        item.errorMessage = err?.message || 'Ağ hatası'
         failedCount++
       }
 
@@ -558,13 +565,13 @@ class MetaStore {
     if (!datasetId) {
       return {
         success: false,
-        message: 'LÃ¼tfen Ã¶nce Meta Veri Seti KimliÄŸi (Dataset / Pixel ID) girin.',
+        message: 'Lütfen önce Meta Veri Seti Kimliği (Dataset / Pixel ID) girin.',
       }
     }
     if (!accessToken || accessToken.length < 10) {
       return {
         success: false,
-        message: 'LÃ¼tfen geÃ§erli bir DÃ¶nÃ¼ÅŸÃ¼mler API (CAPI) EriÅŸim AnahtarÄ± girin.',
+        message: 'Lütfen geçerli bir Dönüşümler API (CAPI) Erişim Anahtarı girin.',
       }
     }
 
@@ -586,7 +593,7 @@ class MetaStore {
           action_source: 'system_generated',
           custom_data: {
             event_source: 'crm',
-            lead_event_source: this.config.crmName || 'DemirtÃ¼rk PortfÃ¶y CRM',
+            lead_event_source: this.config.crmName || 'Demirtürk Portföy CRM',
           },
           event_name: 'Lead',
           event_time: nowSec,
@@ -603,9 +610,9 @@ class MetaStore {
           action_source: 'system_generated',
           custom_data: {
             event_source: 'crm',
-            lead_event_source: this.config.crmName || 'DemirtÃ¼rk PortfÃ¶y CRM',
+            lead_event_source: this.config.crmName || 'Demirtürk Portföy CRM',
             crm_stage: 'Nitelikli (Olumlu)',
-            lead_status: 'Olumlu / Nitelikli MÃ¼ÅŸteri',
+            lead_status: 'Olumlu / Nitelikli Müşteri',
           },
           event_name: 'QualifiedLead',
           event_time: nowSec,
@@ -637,10 +644,10 @@ class MetaStore {
         const logEntry: MetaCapiEventLog = {
           id: 'capi-test-' + Date.now(),
           leadId: 'test-lead',
-          leadName: 'Test MÃ¼ÅŸteri (CAPI DoÄŸrulama)',
+          leadName: 'Test Müşteri (CAPI Doğrulama)',
           phone: '+90 532 000 00 00',
           eventName: 'QualifiedLead',
-          signalLabel: 'Test: Olumlu / Nitelikli MÃ¼ÅŸteri',
+          signalLabel: 'Test: Olumlu / Nitelikli Müşteri',
           stage: 'Nitelikli (Test)',
           sentAt: new Date().toISOString(),
           status: 'SENT',
@@ -653,21 +660,21 @@ class MetaStore {
         this.notify()
         return {
           success: true,
-          message: `Meta CAPI baÄŸlantÄ±sÄ± doÄŸrulandÄ±! (${json?.events_received ?? 1} olay iletildi â€¢ Trace ID: ${json?.fbtrace_id || 'OK'})`,
+          message: `Meta CAPI bağlantısı doğrulandı! (${json?.events_received ?? 1} olay iletildi • Trace ID: ${json?.fbtrace_id || 'OK'})`,
           fbtraceId: json?.fbtrace_id,
         }
       } else {
         const errMsg =
-          json?.error?.message || `HTTP ${res.status}: Dataset ID veya Token doÄŸrulanamadÄ±.`
+          json?.error?.message || `HTTP ${res.status}: Dataset ID veya Token doğrulanamadı.`
         return {
           success: false,
-          message: `Meta API HatasÄ±: ${errMsg}`,
+          message: `Meta API Hatası: ${errMsg}`,
         }
       }
     } catch (err: any) {
       return {
         success: false,
-        message: `BaÄŸlantÄ± hatasÄ±: ${err?.message || 'Meta Graph API sunucusuna eriÅŸilemedi.'}`,
+        message: `Bağlantı hatası: ${err?.message || 'Meta Graph API sunucusuna erişilemedi.'}`,
       }
     }
   }
@@ -708,19 +715,19 @@ class MetaStore {
   }) {
     const targetForm = this.forms.find((f) => f.name === leadData.formName)
     const campaignName =
-      leadData.campaignName || targetForm?.campaignName || 'DemirtÃ¼rk Rezidans & Villa LansmanÄ±'
+      leadData.campaignName || targetForm?.campaignName || 'Demirtürk Rezidans & Villa Lansmanı'
 
     const answers = leadData.metaAnswers || [
-      { question: 'Ä°lgilendiÄŸiniz Konut Tipi', answer: leadData.preferredHousingType || '2+1 Rezidans' },
+      { question: 'İlgilendiğiniz Konut Tipi', answer: leadData.preferredHousingType || '2+1 Rezidans' },
       {
-        question: 'BÃ¼tÃ§e AralÄ±ÄŸÄ±nÄ±z',
+        question: 'Bütçe Aralığınız',
         answer: leadData.budget
           ? leadData.budget.toLocaleString('tr-TR') + ' TL'
           : '7.500.000 TL - 10.000.000 TL',
       },
-      { question: 'AlÄ±m AmacÄ±nÄ±z', answer: leadData.investmentPurpose || 'YatÄ±rÄ±m & YÃ¼ksek Kira Getirisi' },
-      { question: 'TaÅŸÄ±nma / SatÄ±n Alma SÃ¼resi', answer: leadData.moveInTiming || 'Hemen (1-3 Ay Ä°Ã§inde)' },
-      { question: 'Ã–deme Tercihiniz', answer: 'PeÅŸin + Lansman Esnek Vadeli Plan' },
+      { question: 'Alım Amacınız', answer: leadData.investmentPurpose || 'Yatırım & Yüksek Kira Getirisi' },
+      { question: 'Taşınma / Satın Alma Süresi', answer: leadData.moveInTiming || 'Hemen (1-3 Ay İçinde)' },
+      { question: 'Ödeme Tercihiniz', answer: 'Peşin + Lansman Esnek Vadeli Plan' },
     ]
 
     const simulatedLeadgenId = String(1000000000000000 + Math.floor(Math.random() * 899999999999999))
@@ -741,7 +748,7 @@ class MetaStore {
       budget: leadData.budget,
       preferredHousingType: leadData.preferredHousingType,
       metaAnswers: answers,
-      notes: `Meta Ads Formu (${leadData.formName}) Ã¼zerinden canlÄ± webhook ile kaydedildi. MÃ¼ÅŸteri yanÄ±tlarÄ± incelenebilir.`,
+      notes: `Meta Ads Formu (${leadData.formName}) üzerinden canlı webhook ile kaydedildi. Müşteri yanıtları incelenebilir.`,
     })
 
     // 2. Add to webhook logs
@@ -779,4 +786,3 @@ class MetaStore {
 }
 
 export const metaStore = new MetaStore()
-
