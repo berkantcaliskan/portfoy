@@ -556,24 +556,43 @@ class MetaStore {
     const fnHash = await sha256Hex('test')
     const lnHash = await sha256Hex('musteri')
 
+    const nowSec = Math.floor(Date.now() / 1000)
     const payload: Record<string, any> = {
       data: [
         {
-          event_name: 'QualifiedLead',
-          event_time: Math.floor(Date.now() / 1000),
-          event_id: `test_capi_${Date.now()}`,
           action_source: 'system_generated',
+          custom_data: {
+            event_source: 'crm',
+            lead_event_source: this.config.crmName || 'Demirtürk Portföy CRM',
+          },
+          event_name: 'Lead',
+          event_time: nowSec,
+          event_id: `test_capi_lead_${Date.now()}`,
           user_data: {
-            ph: [phHash],
             em: [emHash],
+            lead_id: 1234567890123456,
+            ph: [phHash],
             fn: [fnHash],
             ln: [lnHash],
           },
+        },
+        {
+          action_source: 'system_generated',
           custom_data: {
             event_source: 'crm',
             lead_event_source: this.config.crmName || 'Demirtürk Portföy CRM',
             crm_stage: 'Nitelikli (Olumlu)',
             lead_status: 'Olumlu / Nitelikli Müşteri',
+          },
+          event_name: 'QualifiedLead',
+          event_time: nowSec,
+          event_id: `test_capi_qualified_${Date.now()}`,
+          user_data: {
+            em: [emHash],
+            lead_id: 1234567890123456,
+            ph: [phHash],
+            fn: [fnHash],
+            ln: [lnHash],
           },
         },
       ],
