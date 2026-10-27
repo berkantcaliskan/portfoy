@@ -220,11 +220,30 @@ class UserStore {
     const scope: AccessScope = user.scope || (role === 'ADMIN' ? 'ALL' : (isManager ? 'DEPARTMENT' : 'ASSIGNED_ONLY'))
 
     const defaultPermissions: UserPermissions = {
+      canPullLeads:
+        role === 'ADMIN' ||
+        normalizedDept === 'Yönetim' ||
+        (normalizedDept === 'Pazarlama' && isManager),
+      canAddCustomer: true,
+      canDeleteCustomer:
+        role === 'ADMIN' ||
+        normalizedDept === 'Yönetim' ||
+        (normalizedDept === 'Pazarlama' && isManager),
+      canAssignConsultant:
+        role === 'ADMIN' ||
+        normalizedDept === 'Yönetim' ||
+        isManager ||
+        normalizedDept === 'Müşteri İlişkileri',
+      canChangeStage: true,
+      canManageMetaConfig:
+        role === 'ADMIN' ||
+        normalizedDept === 'Yönetim' ||
+        (normalizedDept === 'Pazarlama' && isManager),
       canEditProjectPrice: role === 'ADMIN' || (role === 'MANAGER' && normalizedDept === 'Yönetim'),
       canChangeFlatStatus: role === 'ADMIN' || normalizedDept === 'Satış' || normalizedDept === 'Yönetim',
       canApproveDiscounts: role === 'ADMIN' || normalizedDept === 'Yönetim',
       canRefundDeposit: role === 'ADMIN' || normalizedDept === 'Muhasebe' || normalizedDept === 'Yönetim',
-      canManageTeam: role === 'ADMIN' || normalizedDept === 'Yönetim',
+      canManageTeam: role === 'ADMIN' || normalizedDept === 'Yönetim' || isManager,
       canReshareFiles: true,
       ...user.permissions,
     }

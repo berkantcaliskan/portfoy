@@ -28,6 +28,7 @@ import { CallCenterStatus } from '@/types/lead'
 import { leadStore } from '@/services/leadStore'
 import { metaStore } from '@/services/metaStore'
 import { userStore, AppUser } from '@/services/userStore'
+import { permissionService } from '@/services/permissionService'
 import { formatCurrency, formatDate, formatDateOnly, formatTimeOnly, formatPhoneDisplay, generateWhatsAppUrl } from '@/utils/formatters'
 import { DateRangePicker, DateRange } from '@/components/ui/DateRangePicker'
 import { loadSavedDateRange, saveDateRange, checkDayRollover } from '@/services/dateFilterService'
@@ -476,7 +477,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <span>{isPulling ? 'Veriler Alınıyor...' : 'Verileri Al'}</span>
           </button>
 
-          {callCenterUsers.length > 0 && (
+          {callCenterUsers.length > 0 && permissionService.canAssignConsultant(currentUser ?? null) && (
             <button
               onClick={handleManualAutoAssign}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm"
@@ -487,7 +488,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             </button>
           )}
 
-          {onOpenNewLead && (
+          {onOpenNewLead && permissionService.canAddCustomer(currentUser ?? null) && (
             <GlassButton
               variant="gold"
               size="sm"

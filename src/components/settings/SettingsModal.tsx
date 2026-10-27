@@ -42,6 +42,8 @@ import { AppUser, Department, generateInitialPassword, generateUsername, userSto
 import { metaStore } from '@/services/metaStore'
 import { CANONICAL_DEPARTMENTS } from '@/types/department'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { PermissionsMatrixPanel } from './PermissionsMatrixPanel'
+import { permissionService } from '@/services/permissionService'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -53,6 +55,7 @@ export type SettingsTab =
   | 'account'
   | 'appearance'
   | 'company'
+  | 'permissions'
   | 'dept-meta'
   | 'dept-leads'
   | 'dept-notifications'
@@ -606,6 +609,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <Building2 className="w-4 h-4 shrink-0" />
                   <span className="truncate">Şirket ve departman</span>
                 </button>
+
+                {permissionService.canManagePermissions(currentUser) && (
+                  <button
+                    onClick={() => setActiveTab('permissions')}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
+                      activeTab === 'permissions'
+                        ? 'bg-[#b99881] text-white font-bold is-active-aside-btn'
+                        : 'hover:bg-white/12 font-medium'
+                    }`}
+                  >
+                    <Shield className="w-4 h-4 shrink-0" />
+                    <span className="truncate">Yetkiler</span>
+                  </button>
+                )}
               </nav>
             </div>
 
@@ -1807,11 +1824,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {activeTab.startsWith('dept-admin-') && (
+            {(activeTab === 'permissions' || activeTab === 'dept-admin-permissions') && (
+              <div className="animate-in fade-in duration-200">
+                <PermissionsMatrixPanel />
+              </div>
+            )}
+
+            {activeTab.startsWith('dept-admin-') && activeTab !== 'dept-admin-permissions' && (
               <div className="space-y-4 animate-in fade-in duration-200">
                 <h3 className="text-sm font-bold text-white">Yönetim ve Güvenlik Yapılandırması</h3>
                 <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
-                  <div className="text-xs text-white">Yetkilendirme matrisi ve denetim logları aktif.</div>
+                  <div className="text-xs text-white">İskonto sınırları ve denetim logları aktif.</div>
                   <GlassButton variant="gold" size="sm" onClick={() => handleSaveDeptConfig()} className="rounded-full px-5">
                     Kaydet
                   </GlassButton>

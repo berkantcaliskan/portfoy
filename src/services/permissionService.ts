@@ -149,6 +149,61 @@ export class PermissionService {
     return Boolean(user.role === 'ADMIN' || user.permissions.canRefundDeposit || user.department === 'Muhasebe')
   }
 
+  /**
+   * Verileri Al (Meta / Bulut Veri Çekme) Yetkisi:
+   * Müşteri İlişkileri departmanı veri çekemez.
+   * Yalnızca Yönetim ve yetki verilmiş Pazarlama çalışanları veri çekebilir.
+   */
+  public canPullLeads(user: AppUser | null): boolean {
+    if (!user) return false
+    if (user.role === 'ADMIN' || user.department === 'Yönetim') return true
+    if (user.department === 'Müşteri İlişkileri') return false
+    if (user.department === 'Pazarlama' || user.departments?.includes('Pazarlama')) {
+      return Boolean(user.permissions?.canPullLeads)
+    }
+    return Boolean(user.permissions?.canPullLeads)
+  }
+
+  public canAddCustomer(user: AppUser | null): boolean {
+    if (!user) return false
+    if (user.role === 'ADMIN' || user.department === 'Yönetim') return true
+    return user.permissions?.canAddCustomer !== false
+  }
+
+  public canDeleteCustomer(user: AppUser | null): boolean {
+    if (!user) return false
+    if (user.role === 'ADMIN' || user.department === 'Yönetim') return true
+    return Boolean(user.permissions?.canDeleteCustomer)
+  }
+
+  public canAssignConsultant(user: AppUser | null): boolean {
+    if (!user) return false
+    if (user.role === 'ADMIN' || user.department === 'Yönetim' || user.isManager) return true
+    return user.permissions?.canAssignConsultant !== false
+  }
+
+  public canChangeStage(user: AppUser | null): boolean {
+    if (!user) return false
+    if (user.role === 'ADMIN' || user.department === 'Yönetim') return true
+    return user.permissions?.canChangeStage !== false
+  }
+
+  public canManageMetaConfig(user: AppUser | null): boolean {
+    if (!user) return false
+    if (user.role === 'ADMIN' || user.department === 'Yönetim') return true
+    return Boolean(user.permissions?.canManageMetaConfig)
+  }
+
+  public canManagePermissions(user: AppUser | null): boolean {
+    if (!user) return false
+    return Boolean(
+      user.role === 'ADMIN' ||
+        user.department === 'Yönetim' ||
+        user.isManager ||
+        user.permissions?.canManageTeam
+    )
+  }
+
   public canManageTeam(user: AppUser | null): boolean {
     if (!user) return false
     return Boolean(user.role === 'ADMIN' || user.permissions.canManageTeam || (user.isManager && user.department === 'Yönetim'))

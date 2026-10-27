@@ -17,6 +17,12 @@ export type UserRole = 'ADMIN' | 'MANAGER' | 'SPECIALIST' | 'REPRESENTATIVE' | '
 export type AccessScope = 'ALL' | 'DEPARTMENT' | 'ASSIGNED_ONLY'
 
 export interface UserPermissions {
+  canPullLeads?: boolean
+  canAddCustomer?: boolean
+  canDeleteCustomer?: boolean
+  canAssignConsultant?: boolean
+  canChangeStage?: boolean
+  canManageMetaConfig?: boolean
   canEditProjectPrice?: boolean
   canChangeFlatStatus?: boolean
   canApproveDiscounts?: boolean

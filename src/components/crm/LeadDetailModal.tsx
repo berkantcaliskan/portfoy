@@ -30,6 +30,7 @@ import { PhoneInput } from '@/components/common/PhoneInput'
 import { portfolioStore } from '@/services/portfolioStore'
 import { leadStore } from '@/services/leadStore'
 import { userStore } from '@/services/userStore'
+import { permissionService } from '@/services/permissionService'
 import {
   formatCurrency,
   formatDate,
@@ -122,10 +123,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   }
 
   const currentUser = userStore.getCurrentUser()
-  const canDeleteLead =
-    currentUser?.department === 'Pazarlama' ||
-    currentUser?.departments?.includes('Pazarlama') ||
-    currentUser?.role === 'ADMIN'
+  const canDeleteLead = permissionService.canDeleteCustomer(currentUser)
 
   const handleSendCapiSignal = async (signal: MetaCapiEventName) => {
     setSendingCapi(signal)
