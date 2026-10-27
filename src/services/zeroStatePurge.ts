@@ -5,8 +5,10 @@
 import { SEED_COMPANY_DB } from './seedCompanyData'
 
 const CLEAN_SLATE_VERSION_KEY = 'demirturk_clean_slate_v7_demo_ready'
+const DELETED_IDS_KEY = 'demirturk_deleted_ids_v1'
 
 const ARRAY_MERGE_KEYS = new Set([
+  DELETED_IDS_KEY,
   'demirturk_users_v2',
   'demirturk_leads_v2',
   'demirturk_shared_projects_v2',
@@ -58,38 +60,69 @@ const LOCAL_MACHINE_ONLY_KEYS = new Set([
   'demirturk_start_menu_grid',
 ])
 
-function mergeJsonArrayStrings(baseStr: string | undefined, incomingStr: string | undefined, key: string): string {
-  if (!baseStr && !incomingStr) return '[]'
-  if (!baseStr) return incomingStr || '[]'
-  if (!incomingStr) return baseStr || '[]'
+function getArrayItemKey(item: any, idx: number, key: string): string {
+  if (typeof item === 'string') return item
+  if (!item || typeof item !== 'object') return String(idx)
+  if (key === 'demirturk_users_v2' && item.username) {
+    return String(item.username).toLowerCase()
+  }
+  if (key === 'demirturk_leads_v2') {
+    const cleanPhone = String(item.phone || '').replace(/\D/g, '').slice(-10)
+    if (cleanPhone && cleanPhone.length >= 7) {
+      return `phone:${cleanPhone}`
+    }
+  }
+  return String(item.id || item.username || idx)
+}
+
+function parseDeletedSet(rawJson: string | undefined): Set<string> {
   try {
-    const baseArr = JSON.parse(baseStr)
-    const incArr = JSON.parse(incomingStr)
-    if (!Array.isArray(baseArr)) return incomingStr
-    if (!Array.isArray(incArr)) return baseStr
+    const arr = JSON.parse(rawJson || '[]')
+    if (Array.isArray(arr)) {
+      return new Set(arr.filter((x) => typeof x === 'string'))
+    }
+  } catch {}
+  return new Set()
+}
+
+function isItemDeleted(item: any, idx: number, key: string, deletedSet?: Set<string>): boolean {
+  if (!deletedSet || deletedSet.size === 0 || key === DELETED_IDS_KEY) return false
+  if (!item || typeof item !== 'object') return false
+  if (item.id && deletedSet.has(String(item.id))) return true
+  const itemKey = getArrayItemKey(item, idx, key)
+  if (itemKey && deletedSet.has(itemKey)) return true
+  return false
+}
+
+function mergeJsonArrayStrings(
+  baseStr: string | undefined,
+  incomingStr: string | undefined,
+  key: string,
+  deletedSet?: Set<string>
+): string {
+  if (!baseStr && !incomingStr) return '[]'
+  if (key === DELETED_IDS_KEY) {
+    const s1 = parseDeletedSet(baseStr)
+    const s2 = parseDeletedSet(incomingStr)
+    s2.forEach((v) => s1.add(v))
+    return JSON.stringify(Array.from(s1))
+  }
+  try {
+    const baseArrRaw = baseStr ? JSON.parse(baseStr) : []
+    const incArrRaw = incomingStr ? JSON.parse(incomingStr) : []
+    const baseArr = Array.isArray(baseArrRaw)
+      ? baseArrRaw.filter((item, i) => !isItemDeleted(item, i, key, deletedSet))
+      : []
+    const incArr = Array.isArray(incArrRaw)
+      ? incArrRaw.filter((item, i) => !isItemDeleted(item, i, key, deletedSet))
+      : []
 
     const byKey = new Map<string, any>()
-    const getItemKey = (item: any, idx: number) => {
-      if (!item || typeof item !== 'object') return String(idx)
-      if (key === 'demirturk_users_v2' && item.username) {
-        return String(item.username).toLowerCase()
-      }
-      if (key === 'demirturk_leads_v2') {
-        // Dedup by id; if both PCs created "lead-1" independently with different phones, keep both!
-        const cleanPhone = String(item.phone || '').replace(/\D/g, '').slice(-10)
-        if (cleanPhone && cleanPhone.length >= 7) {
-          return `phone:${cleanPhone}`
-        }
-      }
-      return String(item.id || item.username || idx)
-    }
-
-    baseArr.forEach((item, i) => byKey.set(getItemKey(item, i), item))
+    baseArr.forEach((item, i) => byKey.set(getArrayItemKey(item, i, key), item))
     incArr.forEach((item, i) => {
-      const k = getItemKey(item, i)
+      const k = getArrayItemKey(item, i, key)
       const existing = byKey.get(k)
       if (!existing) {
-        // Ensure unique id if two different leads had the same legacy "lead-1" id
         if (
           key === 'demirturk_leads_v2' &&
           Array.from(byKey.values()).some((x) => x.id === item.id)
@@ -112,7 +145,11 @@ function mergeJsonArrayStrings(baseStr: string | undefined, incomingStr: string 
   }
 }
 
-function mergeActivitiesObjectStrings(baseStr: string | undefined, incomingStr: string | undefined): string {
+function mergeActivitiesObjectStrings(
+  baseStr: string | undefined,
+  incomingStr: string | undefined,
+  deletedSet?: Set<string>
+): string {
   if (!baseStr && !incomingStr) return '{}'
   if (!baseStr) return incomingStr || '{}'
   if (!incomingStr) return baseStr || '{}'
@@ -122,8 +159,13 @@ function mergeActivitiesObjectStrings(baseStr: string | undefined, incomingStr: 
     if (!baseObj || typeof baseObj !== 'object') return incomingStr
     if (!incObj || typeof incObj !== 'object') return baseStr
 
-    const out: Record<string, any[]> = { ...baseObj }
+    const out: Record<string, any[]> = {}
+    for (const [leadId, baseList] of Object.entries(baseObj)) {
+      if (deletedSet?.has(leadId)) continue
+      if (Array.isArray(baseList)) out[leadId] = baseList
+    }
     for (const [leadId, incList] of Object.entries(incObj)) {
+      if (deletedSet?.has(leadId)) continue
       if (!Array.isArray(incList)) continue
       const existingList = Array.isArray(out[leadId]) ? out[leadId] : []
       const byId = new Map<string, any>()
@@ -142,17 +184,30 @@ function mergeStoresNonDestructively(
   source: Record<string, string>
 ): boolean {
   let changed = false
+
+  // First merge DELETED_IDS_KEY so deleted tombstones are applied to all arrays
+  const mergedDeletedJson = mergeJsonArrayStrings(
+    target[DELETED_IDS_KEY],
+    source[DELETED_IDS_KEY],
+    DELETED_IDS_KEY
+  )
+  if (mergedDeletedJson !== (target[DELETED_IDS_KEY] || '[]')) {
+    target[DELETED_IDS_KEY] = mergedDeletedJson
+    changed = true
+  }
+  const deletedSet = parseDeletedSet(mergedDeletedJson)
+
   for (const [k, srcVal] of Object.entries(source)) {
-    if (LOCAL_MACHINE_ONLY_KEYS.has(k) || typeof srcVal !== 'string') continue
+    if (LOCAL_MACHINE_ONLY_KEYS.has(k) || k === DELETED_IDS_KEY || typeof srcVal !== 'string') continue
     const curVal = target[k]
     if (ARRAY_MERGE_KEYS.has(k)) {
-      const merged = mergeJsonArrayStrings(curVal, srcVal, k)
+      const merged = mergeJsonArrayStrings(curVal, srcVal, k, deletedSet)
       if (merged !== curVal) {
         target[k] = merged
         changed = true
       }
     } else if (OBJECT_MAP_MERGE_KEYS.has(k)) {
-      const merged = mergeActivitiesObjectStrings(curVal, srcVal)
+      const merged = mergeActivitiesObjectStrings(curVal, srcVal, deletedSet)
       if (merged !== curVal) {
         target[k] = merged
         changed = true
@@ -164,6 +219,19 @@ function mergeStoresNonDestructively(
       }
     }
   }
+
+  // Also ensure existing target arrays have any newly discovered deleted items stripped
+  if (deletedSet.size > 0) {
+    for (const k of ARRAY_MERGE_KEYS) {
+      if (k === DELETED_IDS_KEY || !target[k]) continue
+      const cleaned = mergeJsonArrayStrings(target[k], '[]', k, deletedSet)
+      if (cleaned !== target[k]) {
+        target[k] = cleaned
+        changed = true
+      }
+    }
+  }
+
   return changed
 }
 
@@ -313,6 +381,23 @@ try {
       }
     }
 
+    const writeSingleKeyToDisk = (key: string, strVal: string) => {
+      if (electronAPI?.writeDiskStoreKey) {
+        try {
+          electronAPI.writeDiskStoreKey(key, strVal)
+        } catch {}
+      } else if (isLocalhostServer) {
+        try {
+          fetch('/__demirturk_disk_db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'set', key, value: strVal }),
+            keepalive: true,
+          }).catch(() => {})
+        } catch {}
+      }
+    }
+
     if (pushedNewKeys && diskAvailable) {
       persistFullStoreToDisk(diskStore)
     }
@@ -365,12 +450,29 @@ try {
       let localUpdated = false
       let remoteMissingLocalData = false
 
-      // 1. Merge remote keys into local memoryMirror
+      // 0. Merge DELETED_IDS_KEY first so tombstones are honored across all PCs
+      const localDelStr = memoryMirror.get(DELETED_IDS_KEY)
+      const remoteDelStr = remoteStore[DELETED_IDS_KEY]
+      const mergedDelStr = mergeJsonArrayStrings(localDelStr, remoteDelStr, DELETED_IDS_KEY)
+      if (mergedDelStr !== (localDelStr || '[]')) {
+        memoryMirror.set(DELETED_IDS_KEY, mergedDelStr)
+        diskStore[DELETED_IDS_KEY] = mergedDelStr
+        try {
+          rawSetItem(DELETED_IDS_KEY, mergedDelStr)
+        } catch {}
+        localUpdated = true
+      }
+      if (mergedDelStr !== (remoteDelStr || '[]') && mergedDelStr !== '[]') {
+        remoteMissingLocalData = true
+      }
+      const deletedSet = parseDeletedSet(mergedDelStr)
+
+      // 1. Merge remote keys into local memoryMirror while honoring deletedSet
       for (const [k, remoteVal] of Object.entries(remoteStore)) {
-        if (!isCloudSyncedBusinessKey(k) || typeof remoteVal !== 'string') continue
+        if (!isCloudSyncedBusinessKey(k) || k === DELETED_IDS_KEY || typeof remoteVal !== 'string') continue
         const localVal = memoryMirror.get(k)
         if (ARRAY_MERGE_KEYS.has(k)) {
-          const merged = mergeJsonArrayStrings(localVal, remoteVal, k)
+          const merged = mergeJsonArrayStrings(localVal, remoteVal, k, deletedSet)
           if (merged !== localVal) {
             memoryMirror.set(k, merged)
             diskStore[k] = merged
@@ -383,7 +485,7 @@ try {
             remoteMissingLocalData = true
           }
         } else if (OBJECT_MAP_MERGE_KEYS.has(k)) {
-          const merged = mergeActivitiesObjectStrings(localVal, remoteVal)
+          const merged = mergeActivitiesObjectStrings(localVal, remoteVal, deletedSet)
           if (merged !== localVal) {
             memoryMirror.set(k, merged)
             diskStore[k] = merged
@@ -451,7 +553,7 @@ try {
             }
           }
 
-          // First merge remote into local so we never lose another PC's records
+          // First merge remote into local so we never lose another PC's records (honoring deletedSet)
           const { localUpdated } = applyRemoteStoreAndCheckUnpushedLocal(remoteStore)
           if (localUpdated) {
             persistFullStoreToDisk(diskStore)
@@ -625,22 +727,86 @@ try {
       const strVal = String(value)
       if (this === window.localStorage) {
         const prevVal = memoryMirror.get(key)
-        memoryMirror.set(key, strVal)
-        diskStore[key] = strVal
-        if (electronAPI?.writeDiskStoreKey) {
+
+        // Track item deletions and re-additions automatically in DELETED_IDS_KEY
+        if (
+          prevVal !== strVal &&
+          ARRAY_MERGE_KEYS.has(key) &&
+          key !== DELETED_IDS_KEY
+        ) {
           try {
-            electronAPI.writeDiskStoreKey(key, strVal)
-          } catch {}
-        } else if (isLocalhostServer) {
-          try {
-            fetch('/__demirturk_disk_db', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'set', key, value: strVal }),
-              keepalive: true,
-            }).catch(() => {})
+            const oldArr = prevVal ? JSON.parse(prevVal) : []
+            const newArr = JSON.parse(strVal)
+            if (Array.isArray(oldArr) && Array.isArray(newArr)) {
+              const newIds = new Set<string>()
+              const newKeys = new Set<string>()
+              newArr.forEach((item, i) => {
+                if (item && typeof item === 'object') {
+                  if (item.id) newIds.add(String(item.id))
+                  newKeys.add(getArrayItemKey(item, i, key))
+                }
+              })
+
+              const oldIds = new Set<string>()
+              const oldKeys = new Set<string>()
+              oldArr.forEach((item, i) => {
+                if (item && typeof item === 'object') {
+                  if (item.id) oldIds.add(String(item.id))
+                  oldKeys.add(getArrayItemKey(item, i, key))
+                }
+              })
+
+              const deletedSet = parseDeletedSet(memoryMirror.get(DELETED_IDS_KEY))
+              let delChanged = false
+
+              // Any item that was in oldArr and is missing from newArr was deleted by the user
+              oldArr.forEach((item, i) => {
+                if (!item || typeof item !== 'object') return
+                const idStr = item.id ? String(item.id) : ''
+                const kStr = getArrayItemKey(item, i, key)
+                const stillExists =
+                  (idStr && newIds.has(idStr)) || (kStr && newKeys.has(kStr))
+                if (!stillExists) {
+                  if (idStr && !deletedSet.has(idStr)) {
+                    deletedSet.add(idStr)
+                    delChanged = true
+                  }
+                  if (kStr && !deletedSet.has(kStr)) {
+                    deletedSet.add(kStr)
+                    delChanged = true
+                  }
+                }
+              })
+
+              // Any item that was newly added to newArr is un-deleted if its phone/id was previously in deletedSet
+              newArr.forEach((item, i) => {
+                if (!item || typeof item !== 'object') return
+                const idStr = item.id ? String(item.id) : ''
+                const kStr = getArrayItemKey(item, i, key)
+                const wasInOld =
+                  (idStr && oldIds.has(idStr)) || (kStr && oldKeys.has(kStr))
+                if (!wasInOld) {
+                  if (idStr && deletedSet.delete(idStr)) delChanged = true
+                  if (kStr && deletedSet.delete(kStr)) delChanged = true
+                }
+              })
+
+              if (delChanged) {
+                const delJson = JSON.stringify(Array.from(deletedSet))
+                memoryMirror.set(DELETED_IDS_KEY, delJson)
+                diskStore[DELETED_IDS_KEY] = delJson
+                writeSingleKeyToDisk(DELETED_IDS_KEY, delJson)
+                try {
+                  rawSetItem(DELETED_IDS_KEY, delJson)
+                } catch {}
+              }
+            }
           } catch {}
         }
+
+        memoryMirror.set(key, strVal)
+        diskStore[key] = strVal
+        writeSingleKeyToDisk(key, strVal)
         if (prevVal !== strVal && isCloudSyncedBusinessKey(key)) {
           scheduleCloudPush(key)
         }

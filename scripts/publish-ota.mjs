@@ -12,8 +12,11 @@ const distDir = path.join(rootDir, 'dist')
 const electronDir = path.join(rootDir, 'electron')
 const dataDir = path.join(rootDir, 'data')
 
+const DELETED_IDS_KEY = 'demirturk_deleted_ids_v1'
+
 const BUSINESS_KEYS = new Set([
   'demirturk_clean_slate_v7_demo_ready',
+  DELETED_IDS_KEY,
   'demirturk_users_v2',
   'demirturk_leads_v2',
   'demirturk_activities_v2',
@@ -41,25 +44,52 @@ function isBusinessKey(k) {
   )
 }
 
-function mergeJsonArrays(aStr, bStr, key) {
+function getArrayItemKey(item, i, key) {
+  if (typeof item === 'string') return item
+  if (!item || typeof item !== 'object') return String(i)
+  if (key === 'demirturk_users_v2' && item.username) return String(item.username).toLowerCase()
+  if (key === 'demirturk_leads_v2') {
+    const ph = String(item.phone || '').replace(/\D/g, '').slice(-10)
+    if (ph && ph.length >= 7) return `phone:${ph}`
+  }
+  return String(item.id || item.username || i)
+}
+
+function parseDeletedSet(rawJson) {
   try {
-    const a = JSON.parse(aStr || '[]')
-    const b = JSON.parse(bStr || '[]')
-    if (!Array.isArray(a)) return bStr || '[]'
-    if (!Array.isArray(b)) return aStr || '[]'
+    const arr = JSON.parse(rawJson || '[]')
+    if (Array.isArray(arr)) return new Set(arr.filter((x) => typeof x === 'string'))
+  } catch {}
+  return new Set()
+}
+
+function isItemDeleted(item, i, key, deletedSet) {
+  if (!deletedSet || deletedSet.size === 0 || key === DELETED_IDS_KEY) return false
+  if (!item || typeof item !== 'object') return false
+  if (item.id && deletedSet.has(String(item.id))) return true
+  const k = getArrayItemKey(item, i, key)
+  if (k && deletedSet.has(k)) return true
+  return false
+}
+
+function mergeJsonArrays(aStr, bStr, key, deletedSet) {
+  if (key === DELETED_IDS_KEY) {
+    const s1 = parseDeletedSet(aStr)
+    const s2 = parseDeletedSet(bStr)
+    s2.forEach((v) => s1.add(v))
+    return JSON.stringify(Array.from(s1))
+  }
+  try {
+    const aRaw = JSON.parse(aStr || '[]')
+    const bRaw = JSON.parse(bStr || '[]')
+    if (!Array.isArray(aRaw)) return bStr || '[]'
+    if (!Array.isArray(bRaw)) return aStr || '[]'
+    const a = aRaw.filter((x, i) => !isItemDeleted(x, i, key, deletedSet))
+    const b = bRaw.filter((x, i) => !isItemDeleted(x, i, key, deletedSet))
     const map = new Map()
-    const getK = (item, i) => {
-      if (!item || typeof item !== 'object') return String(i)
-      if (key === 'demirturk_users_v2' && item.username) return String(item.username).toLowerCase()
-      if (key === 'demirturk_leads_v2') {
-        const ph = String(item.phone || '').replace(/\D/g, '').slice(-10)
-        if (ph && ph.length >= 7) return `phone:${ph}`
-      }
-      return String(item.id || item.username || i)
-    }
-    a.forEach((x, i) => map.set(getK(x, i), x))
+    a.forEach((x, i) => map.set(getArrayItemKey(x, i, key), x))
     b.forEach((x, i) => {
-      const k = getK(x, i)
+      const k = getArrayItemKey(x, i, key)
       const ex = map.get(k)
       if (!ex) map.set(k, x)
       else map.set(k, { ...ex, ...x })
@@ -89,13 +119,21 @@ function exportSharedCompanyDb() {
     }
   } catch {}
 
+  const mergedDeletedJson = mergeJsonArrays(
+    existingCloud[DELETED_IDS_KEY],
+    localDb[DELETED_IDS_KEY],
+    DELETED_IDS_KEY
+  )
+  const deletedSet = parseDeletedSet(mergedDeletedJson)
+
   const sharedDb = {
     demirturk_clean_slate_v7_demo_ready: 'true',
+    [DELETED_IDS_KEY]: mergedDeletedJson,
   }
 
   const allKeys = new Set([...Object.keys(existingCloud), ...Object.keys(localDb)])
   for (const k of allKeys) {
-    if (!isBusinessKey(k)) continue
+    if (!isBusinessKey(k) || k === DELETED_IDS_KEY) continue
     const vCloud = existingCloud[k]
     const vLocal = localDb[k]
     if (k.endsWith('_v2') || k.endsWith('_v1')) {
@@ -103,7 +141,7 @@ function exportSharedCompanyDb() {
         (typeof vCloud === 'string' && vCloud.trim().startsWith('[')) ||
         (typeof vLocal === 'string' && vLocal.trim().startsWith('['))
       ) {
-        sharedDb[k] = mergeJsonArrays(vCloud, vLocal, k)
+        sharedDb[k] = mergeJsonArrays(vCloud, vLocal, k, deletedSet)
         continue
       }
     }
