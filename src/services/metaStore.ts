@@ -169,16 +169,16 @@ export function mapStageOrSignalToMetaEvent(stageOrSignal: LeadStage | MetaCapiE
     case 'QUALIFIED':
       return {
         eventName: 'QualifiedLead',
-        signalLabel: 'Olumlu / Nitelikli Müşteri',
-        stageLabel: 'Nitelikli (Olumlu)',
+        signalLabel: 'Nitelikli',
+        stageLabel: 'Nitelikli',
       }
     case 'DisqualifiedLead':
     case 'LOST':
     case 'NO_INTENT':
       return {
         eventName: 'DisqualifiedLead',
-        signalLabel: 'Olumsuz / Niteliksiz',
-        stageLabel: stageOrSignal === 'NO_INTENT' ? 'Satın Alma Niyeti Yok' : 'Pasif / Olumsuz',
+        signalLabel: 'Potansiyel Değil',
+        stageLabel: 'Potansiyel Değil',
       }
     case 'Schedule':
     case 'APPOINTMENT':
@@ -186,36 +186,31 @@ export function mapStageOrSignalToMetaEvent(stageOrSignal: LeadStage | MetaCapiE
     case 'OFFER':
       return {
         eventName: 'Schedule',
-        signalLabel: 'Randevu / Teklif Planlandı',
-        stageLabel:
-          stageOrSignal === 'PRESENTATION'
-            ? 'Portföy Sunumu'
-            : stageOrSignal === 'OFFER'
-            ? 'Teklif Aşamasında'
-            : 'Randevu Planlandı',
+        signalLabel: 'Teklif',
+        stageLabel: 'Teklif',
       }
     case 'Purchase':
     case 'WON':
       return {
         eventName: 'Purchase',
-        signalLabel: 'Dönüşüm (Satış Tamamlandı)',
-        stageLabel: 'Dönüşüm (Satış)',
+        signalLabel: 'Dönüşüm',
+        stageLabel: 'Dönüşüm',
       }
     case 'Contact':
     case 'CONTACTED':
     case 'UNDECIDED':
       return {
         eventName: 'Contact',
-        signalLabel: 'İletişime Geçildi (Arandı)',
-        stageLabel: stageOrSignal === 'UNDECIDED' ? 'Kararsız' : 'Arandı',
+        signalLabel: 'İletişim',
+        stageLabel: 'İletişim',
       }
     case 'Lead':
     case 'NEW':
     default:
       return {
         eventName: 'Lead',
-        signalLabel: 'Yeni Potansiyel Müşteri',
-        stageLabel: 'Giriş (Yeni)',
+        signalLabel: 'Potansiyel Müşteri',
+        stageLabel: 'Potansiyel Müşteri',
       }
   }
 }
@@ -395,12 +390,10 @@ class MetaStore {
       customData.content_category = lead.preferredHousingType
     }
 
-    const monetaryValue = options?.value ?? lead.budget
+    // Dönüşüm (Purchase) aşaması için kullanıcıdan para/TRY girişi istenmez;
+    // sadece Meta sunucu doğrulamasının hata vermemesi için teknik olarak sembolik 1 TRY gönderilir.
     if (eventName === 'Purchase') {
-      customData.value = monetaryValue && monetaryValue > 0 ? monetaryValue : 5000000
-      customData.currency = 'TRY'
-    } else if (eventName === 'QualifiedLead' && monetaryValue && monetaryValue > 0) {
-      customData.value = monetaryValue
+      customData.value = 1
       customData.currency = 'TRY'
     }
 

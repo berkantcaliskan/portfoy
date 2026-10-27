@@ -23,6 +23,8 @@ import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassSelect } from '@/components/ui/GlassSelect'
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { StageDropdown } from './StageDropdown'
+import { CallStatusDropdown } from './CallStatusDropdown'
+import { CallCenterStatus } from '@/types/lead'
 import { leadStore } from '@/services/leadStore'
 import { userStore, AppUser } from '@/services/userStore'
 import { formatCurrency, formatDate, formatDateOnly, formatTimeOnly, formatPhoneDisplay, generateWhatsAppUrl } from '@/utils/formatters'
@@ -297,6 +299,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     leadStore.updateStage(leadId, newStage, currentUser)
   }
 
+  const handleCallStatusChange = (leadId: string, newCallStatus: CallCenterStatus) => {
+    leadStore.updateCallStatus(leadId, newCallStatus, currentUser)
+  }
+
   // Toggle [✓] Nitelikli checkbox
   const handleToggleQualified = (lead: Lead, checked: boolean) => {
     leadStore.toggleLeadQualified(lead.id, checked, currentUser)
@@ -568,7 +574,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   {/* 6. Kolon: İşlemler */}
                   <th className="py-3 px-4">İşlemler</th>
                   {/* 7. Kolon: Aşama & Nitelik */}
-                  <th className="py-3 px-4">Aşama & Nitelik</th>
+                  <th className="py-3 px-4">Bilgi & Aşama</th>
                 </tr>
               </thead>
               <tbody className="text-[#f3efe9]">
@@ -713,43 +719,20 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         </div>
                       </td>
 
-                      {/* 7. Kolon: Aşama & Nitelik (Açılır menü + Estetik Çember Toggle) */}
+                      {/* 7. Kolon: Bilgi (Call Center) & Aşama (Meta) */}
                       <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          {/* Özel Temalı Açılır Menü (Aşama) */}
+                        <div className="flex items-center gap-2.5">
+                          {/* Call Center Bilgi Ayarı (Arandı, Tekrar Ara, Bilgi Verildi vb.) */}
+                          <CallStatusDropdown
+                            value={lead.callStatus || 'WAITING'}
+                            onChange={(newCallStatus) => handleCallStatusChange(lead.id, newCallStatus)}
+                          />
+
+                          {/* Meta Hunisi Aşaması (Potansiyel Müşteri, İletişim, Nitelikli, Teklif, Dönüşüm, Potansiyel Değil) */}
                           <StageDropdown
                             value={lead.stage}
                             onChange={(newStage) => handleStageChange(lead.id, newStage)}
                           />
-
-                          {/* Estetik Nitelikli Çember Toggle Butonu (Seçilmediğinde içi Şeffaf Çember) */}
-                          <button
-                            type="button"
-                            onClick={() => handleToggleQualified(lead, !isQualifiedLead)}
-                            className={`group flex items-center gap-2 px-3 py-1.5 rounded-full transition-all cursor-pointer select-none border ${
-                              isQualifiedLead
-                                ? 'bg-teal-500/15 border-teal-500/30 text-teal-300 hover:bg-teal-500/25'
-                                : 'bg-transparent border-[#4a443f] hover:border-[#b99881]/70 text-[#a69f99] hover:text-white hover:bg-[#34302d]/40'
-                            }`}
-                            title={isQualifiedLead ? 'Nitelikli (Kaldırmak için tıklayın)' : 'Nitelikli olarak işaretleyin'}
-                          >
-                            {/* Çember: Seçilmediğinde içi ŞEFFAF */}
-                            <div
-                              className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${
-                                isQualifiedLead
-                                  ? 'bg-teal-400 text-[#1c1a18]'
-                                  : 'bg-transparent border-[1.5px] border-[#8c857f] group-hover:border-[#b99881]'
-                              }`}
-                            >
-                              {isQualifiedLead && (
-                                <Check className="w-2.5 h-2.5 stroke-[3.5]" />
-                              )}
-                            </div>
-
-                            <span className="text-xs font-semibold">
-                              Nitelikli
-                            </span>
-                          </button>
                         </div>
                       </td>
                     </tr>

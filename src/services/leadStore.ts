@@ -1,5 +1,7 @@
 import {
   Lead,
+  CallCenterStatus,
+  CALL_STATUS_OPTIONS,
   LeadActivity,
   LeadStage,
   CustomerInquiry,
@@ -1037,7 +1039,28 @@ class LeadStore {
   }
 
   public updateStage(id: string, newStage: LeadStage, changedByUser?: AppUser | null): void {
-    this.update(id, { stage: newStage }, changedByUser)
+    const isQual = newStage === 'QUALIFIED' ? true : newStage === 'LOST' ? false : undefined
+    this.update(
+      id,
+      {
+        stage: newStage,
+        ...(isQual !== undefined ? { isQualified: isQual } : {}),
+      },
+      changedByUser
+    )
+  }
+
+  public updateCallStatus(id: string, callStatus: CallCenterStatus | string, changedByUser?: AppUser | null): void {
+    const lead = this.getById(id)
+    if (!lead) return
+    const label = CALL_STATUS_OPTIONS.find((o) => o.id === callStatus)?.label || String(callStatus)
+    this.update(id, { callStatus }, changedByUser)
+    this.addActivity(
+      id,
+      'CALL',
+      `Çağrı / Bilgi durumu güncellendi: ${label}`,
+      changedByUser?.fullName || 'Danışman'
+    )
   }
 
   /**

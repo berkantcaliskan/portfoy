@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Check } from 'lucide-react'
-import { LeadStage, STAGE_CONFIGS } from '@/types/lead'
+import { LeadStage } from '@/types/lead'
 
 interface StageDropdownProps {
   value: LeadStage
@@ -11,15 +11,13 @@ interface StageDropdownProps {
   className?: string
 }
 
-const STAGE_OPTIONS: { id: LeadStage; label: string; dotColor: string }[] = [
-  { id: 'NEW', label: 'Giriş (Yeni)', dotColor: '#f59e0b' },
-  { id: 'CONTACTED', label: 'Arandı', dotColor: '#38bdf8' },
-  { id: 'UNDECIDED', label: 'Kararsız', dotColor: '#fcd34d' },
-  { id: 'NO_INTENT', label: 'Satın Alma Niyeti Yok', dotColor: '#a8a29e' },
+export const STAGE_OPTIONS: { id: LeadStage; label: string; dotColor: string }[] = [
+  { id: 'NEW', label: 'Potansiyel Müşteri', dotColor: '#f59e0b' },
+  { id: 'CONTACTED', label: 'İletişim', dotColor: '#38bdf8' },
   { id: 'QUALIFIED', label: 'Nitelikli', dotColor: '#2dd4bf' },
-  { id: 'APPOINTMENT', label: 'Randevu Planlandı', dotColor: '#818cf8' },
-  { id: 'WON', label: 'Dönüşüm (Satış)', dotColor: '#34d399' },
-  { id: 'LOST', label: 'Pasif', dotColor: '#f43f5e' },
+  { id: 'OFFER', label: 'Teklif', dotColor: '#dfb76c' },
+  { id: 'WON', label: 'Dönüşüm', dotColor: '#34d399' },
+  { id: 'LOST', label: 'Potansiyel Değil', dotColor: '#f43f5e' },
 ]
 
 export const StageDropdown: React.FC<StageDropdownProps> = ({
@@ -38,15 +36,25 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
     width: 0,
   })
 
+  // Map legacy stage values to the 6 standard Meta funnel stages
+  const normalizedValue: LeadStage =
+    value === 'APPOINTMENT' || value === 'PRESENTATION'
+      ? 'OFFER'
+      : value === 'UNDECIDED'
+        ? 'CONTACTED'
+        : value === 'NO_INTENT'
+          ? 'LOST'
+          : value
+
   const currentOption =
-    STAGE_OPTIONS.find((opt) => opt.id === value) ||
+    STAGE_OPTIONS.find((opt) => opt.id === normalizedValue) ||
     STAGE_OPTIONS[0]
 
   const updatePosition = () => {
     if (!buttonRef.current) return
     const rect = buttonRef.current.getBoundingClientRect()
     const spaceBelow = window.innerHeight - rect.bottom
-    const dropdownHeight = 310 // estimated height of 8 options
+    const dropdownHeight = 260
 
     let top = rect.bottom + 4
     const isUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight
@@ -116,7 +124,7 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
         className={`px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
           isOpen ? 'border-[#b99881] ring-1 ring-[#b99881]/40' : ''
         } ${className}`}
-        title="Aşama Seç"
+        title="Meta Hunisi Aşaması Seç"
       >
         <div className="flex items-center gap-2">
           <span
@@ -164,7 +172,7 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               {STAGE_OPTIONS.map((opt) => {
-                const isSelected = opt.id === value
+                const isSelected = opt.id === normalizedValue
                 return (
                   <button
                     key={opt.id}

@@ -1,14 +1,35 @@
 export type LeadStage =
-  | 'NEW'             // Giriş / Yeni Başvuru (Pazarlama / Web / Doğrudan)
-  | 'CONTACTED'       // Arandı (Müşteri İlişkileri Görüşmesi)
+  | 'NEW'             // Potansiyel Müşteri (Meta: Lead)
+  | 'CONTACTED'       // İletişim (Meta: Contact)
+  | 'UNDECIDED'       // Legacy: Kararsız
+  | 'NO_INTENT'       // Legacy: Satın Alma Niyeti Yok
+  | 'QUALIFIED'       // Nitelikli (Meta: QualifiedLead)
+  | 'APPOINTMENT'     // Legacy: Randevu / Teklif (Meta: Schedule)
+  | 'PRESENTATION'    // Legacy: Sunum
+  | 'OFFER'           // Teklif (Meta: Schedule)
+  | 'WON'             // Dönüşüm (Meta: Purchase)
+  | 'LOST'            // Potansiyel Değil (Meta: DisqualifiedLead)
+
+export type CallCenterStatus =
+  | 'WAITING'         // Bekliyor
+  | 'CALLED'          // Arandı
+  | 'CALL_AGAIN'      // Tekrar Ara
+  | 'UNREACHABLE'     // Ulaşılamadı
+  | 'INFO_GIVEN'      // Bilgi Verildi
   | 'UNDECIDED'       // Kararsız
+  | 'APPOINTMENT_SET' // Randevu Alındı
   | 'NO_INTENT'       // Satın Alma Niyeti Yok
-  | 'QUALIFIED'       // Nitelikli Müşteri (Müşteri İlişkileri Tarafından Onaylandı)
-  | 'APPOINTMENT'     // Randevu Planlandı (Satış Temsilcisi ile)
-  | 'PRESENTATION'    // Portföy / Proje Sunumu Yapıldı
-  | 'OFFER'           // Teklif / Rezervasyon Aşamasında
-  | 'WON'             // Satış / Anlaşma (Muhasebeye Tahsilat Aktarımı)
-  | 'LOST'            // Pasif / Olumsuz
+
+export const CALL_STATUS_OPTIONS: { id: CallCenterStatus; label: string; dotColor: string }[] = [
+  { id: 'WAITING', label: 'Bekliyor', dotColor: '#f59e0b' },
+  { id: 'CALLED', label: 'Arandı', dotColor: '#38bdf8' },
+  { id: 'CALL_AGAIN', label: 'Tekrar Ara', dotColor: '#fb923c' },
+  { id: 'UNREACHABLE', label: 'Ulaşılamadı', dotColor: '#94a3b8' },
+  { id: 'INFO_GIVEN', label: 'Bilgi Verildi', dotColor: '#2dd4bf' },
+  { id: 'UNDECIDED', label: 'Kararsız', dotColor: '#fcd34d' },
+  { id: 'APPOINTMENT_SET', label: 'Randevu Alındı', dotColor: '#818cf8' },
+  { id: 'NO_INTENT', label: 'Satın Alma Niyeti Yok', dotColor: '#f43f5e' },
+]
 
 export interface StageConfig {
   id: LeadStage
@@ -22,7 +43,7 @@ export interface StageConfig {
 export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   NEW: {
     id: 'NEW',
-    label: 'Giriş (Yeni)',
+    label: 'Potansiyel Müşteri',
     color: 'text-amber-400',
     borderColor: 'border-amber-500/30',
     bgLight: 'bg-amber-500/10',
@@ -30,7 +51,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   CONTACTED: {
     id: 'CONTACTED',
-    label: 'Arandı',
+    label: 'İletişim',
     color: 'text-sky-400',
     borderColor: 'border-sky-500/30',
     bgLight: 'bg-sky-500/10',
@@ -38,7 +59,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   UNDECIDED: {
     id: 'UNDECIDED',
-    label: 'Kararsız',
+    label: 'İletişim',
     color: 'text-amber-300',
     borderColor: 'border-amber-400/30',
     bgLight: 'bg-amber-400/10',
@@ -46,7 +67,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   NO_INTENT: {
     id: 'NO_INTENT',
-    label: 'Satın Alma Niyeti Yok',
+    label: 'Potansiyel Değil',
     color: 'text-stone-400',
     borderColor: 'border-stone-500/30',
     bgLight: 'bg-stone-500/10',
@@ -62,7 +83,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   APPOINTMENT: {
     id: 'APPOINTMENT',
-    label: 'Randevu Planlandı',
+    label: 'Teklif',
     color: 'text-indigo-400',
     borderColor: 'border-indigo-500/30',
     bgLight: 'bg-indigo-500/10',
@@ -70,7 +91,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   PRESENTATION: {
     id: 'PRESENTATION',
-    label: 'Portföy Sunumu',
+    label: 'Teklif',
     color: 'text-purple-400',
     borderColor: 'border-purple-500/30',
     bgLight: 'bg-purple-500/10',
@@ -78,7 +99,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   OFFER: {
     id: 'OFFER',
-    label: 'Teklif Aşamasında',
+    label: 'Teklif',
     color: 'text-brand-gold',
     borderColor: 'border-brand-gold/40',
     bgLight: 'bg-brand-gold/10',
@@ -86,7 +107,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   WON: {
     id: 'WON',
-    label: 'Dönüşüm (Satış)',
+    label: 'Dönüşüm',
     color: 'text-emerald-400',
     borderColor: 'border-emerald-500/30',
     bgLight: 'bg-emerald-500/10',
@@ -94,7 +115,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   LOST: {
     id: 'LOST',
-    label: 'Pasif',
+    label: 'Potansiyel Değil',
     color: 'text-rose-400',
     borderColor: 'border-rose-500/30',
     bgLight: 'bg-rose-500/10',
@@ -144,8 +165,8 @@ export interface StageHistoryEntry {
 }
 
 export interface AiEvaluation {
-  suggestion: string // e.g. "Yüksek Yatırım Potansiyeli", "2+1 Daire İlgisi"
-  confidence: number // 0 - 100
+  suggestion: string
+  confidence: number
   rationale: string
   humanVerified: boolean
   verifiedByUserId?: string
@@ -184,14 +205,15 @@ export interface Lead {
   formName: string
   channel: string
   stage: LeadStage
-  owner: string // Legacy or display owner name
+  callStatus?: CallCenterStatus | string
+  owner: string
   tags: string[]
   budget?: number
   preferredHousingType?: string
   notes?: string
   metaLeadId?: string
   metaCapiStatus?: LeadMetaCapiStatus
-  
+
   // Enterprise Unified Customer Pool Extensions
   assignedToUserId?: string
   assignedToUserName?: string
@@ -203,7 +225,7 @@ export interface Lead {
   qualifiedByUserName?: string
   qualifiedAt?: string
   metaAnswers?: MetaAnswer[]
-  
+
   createdAt: string
   updatedAt: string
 }

@@ -3,7 +3,7 @@ import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassInput } from '@/components/ui/GlassInput'
 import { PhoneInput } from '@/components/common/PhoneInput'
-import { Lead, LeadStage } from '@/types/lead'
+import { Lead, LeadStage, CallCenterStatus, CALL_STATUS_OPTIONS } from '@/types/lead'
 import { userStore } from '@/services/userStore'
 
 interface LeadAddModalProps {
@@ -13,12 +13,12 @@ interface LeadAddModalProps {
 }
 
 const STAGES: { stage: LeadStage; label: string }[] = [
-  { stage: 'NEW', label: 'Giriş (Yeni Aday)' },
-  { stage: 'CONTACTED', label: 'İlk Görüşme Yapıldı' },
-  { stage: 'QUALIFIED', label: 'Nitelikli (Sıcak Portföy)' },
-  { stage: 'APPOINTMENT', label: 'Randevu Planlandı' },
-  { stage: 'OFFER', label: 'Teklif Aşamasında' },
-  { stage: 'WON', label: 'Dönüşüm (Satış)' },
+  { stage: 'NEW', label: 'Potansiyel Müşteri' },
+  { stage: 'CONTACTED', label: 'İletişim' },
+  { stage: 'QUALIFIED', label: 'Nitelikli' },
+  { stage: 'OFFER', label: 'Teklif' },
+  { stage: 'WON', label: 'Dönüşüm' },
+  { stage: 'LOST', label: 'Potansiyel Değil' },
 ]
 
 export const HOUSING_TYPES = [
@@ -47,6 +47,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
+    callStatus: 'WAITING' as CallCenterStatus,
     stage: 'NEW' as LeadStage,
     assignedUserId: '',
     preferredHousingType: '2+1 Konut',
@@ -62,6 +63,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
     setFormData({
       fullName: '',
       phone: '',
+      callStatus: 'WAITING',
       stage: 'NEW',
       assignedUserId: '',
       preferredHousingType: '2+1 Konut',
@@ -106,6 +108,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       formName: 'Manuel Kayıt',
       channel: 'Manuel Kayıt',
       stage: formData.stage,
+      callStatus: formData.callStatus,
       isQualified: formData.stage === 'QUALIFIED',
       owner: assignedUser ? assignedUser.fullName : 'Atanmamış',
       assignedToUserId: assignedUser?.id,
@@ -152,11 +155,30 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
           required
         />
 
-        {/* Müşteri Durumu & Danışman Ata */}
+        {/* Bilgi (Call Center) & Aşama (Meta) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-[#f3efe9]">
-              Müşteri Durumu
+              Bilgi (Call Center)
+            </label>
+            <select
+              value={formData.callStatus}
+              onChange={(e) =>
+                setFormData({ ...formData, callStatus: e.target.value as CallCenterStatus })
+              }
+              className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+            >
+              {CALL_STATUS_OPTIONS.map((cs) => (
+                <option key={cs.id} value={cs.id} className="bg-[#24211f] text-white">
+                  {cs.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-[#f3efe9]">
+              Aşama (Meta)
             </label>
             <select
               value={formData.stage}
@@ -170,7 +192,10 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
               ))}
             </select>
           </div>
+        </div>
 
+        {/* Danışman Ata & Konut Tipi Tercihi */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-[#f3efe9]">
               Danışman Ata
@@ -190,26 +215,25 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
               ))}
             </select>
           </div>
-        </div>
 
-        {/* Konut Tipi Tercihi */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-[#f3efe9]">
-            Konut Tipi Tercihi
-          </label>
-          <select
-            value={formData.preferredHousingType}
-            onChange={(e) =>
-              setFormData({ ...formData, preferredHousingType: e.target.value })
-            }
-            className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
-          >
-            {HOUSING_TYPES.map((type) => (
-              <option key={type} value={type} className="bg-[#24211f] text-white">
-                {type}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-[#f3efe9]">
+              Konut Tipi Tercihi
+            </label>
+            <select
+              value={formData.preferredHousingType}
+              onChange={(e) =>
+                setFormData({ ...formData, preferredHousingType: e.target.value })
+              }
+              className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+            >
+              {HOUSING_TYPES.map((type) => (
+                <option key={type} value={type} className="bg-[#24211f] text-white">
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* İlk Görüşme / Talep Notu */}

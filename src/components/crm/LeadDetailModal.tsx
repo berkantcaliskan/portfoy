@@ -21,6 +21,7 @@ import {
 import { Lead, LeadStage } from '@/types/lead'
 import { MetaCapiEventName } from '@/types/meta'
 import { StageDropdown } from './StageDropdown'
+import { CallStatusDropdown } from './CallStatusDropdown'
 import { HOUSING_TYPES } from './LeadAddModal'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassInput } from '@/components/ui/GlassInput'
@@ -286,15 +287,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Orta ve Sağ: Bütçe, Temsilci, Bilgileri Düzenle & Aşama Değiştirici */}
+          {/* Orta ve Sağ: Temsilci, Bilgileri Düzenle, Bilgi (Call Center) & Aşama (Meta) */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="px-3.5 py-1 rounded-full bg-transparent border border-[#4a443f] flex items-center gap-1.5">
-              <span className="text-[10.5px] text-[#8c857f]">Bütçe:</span>
-              <span className="text-xs font-bold text-emerald-700 font-mono">
-                {liveLead.budget ? formatCurrency(liveLead.budget) : 'Belirtilmedi'}
-              </span>
-            </div>
-
             <div className="px-3.5 py-1 rounded-full bg-transparent border border-[#4a443f] flex items-center gap-1.5">
               <span className="text-[10.5px] text-[#8c857f]">Danışman:</span>
               <span className="text-xs font-semibold text-[#f3efe9]">
@@ -310,11 +304,19 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   ? 'bg-[#b99881] text-white border-[#b99881]'
                   : 'bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border-[#4a443f]'
               }`}
-              title="Müşteri Bilgilerini Düzenle (Bütçe, İkincil Telefon, E-posta vb.)"
+              title="Müşteri Bilgilerini Düzenle (İkincil Telefon, E-posta vb.)"
             >
               <Edit3 className="w-3 h-3" />
               <span>Müşteri Bilgilerini Düzenle</span>
             </button>
+
+            <div className="flex items-center gap-1.5 pl-1">
+              <span className="text-xs font-semibold text-[#a69f99]">Bilgi:</span>
+              <CallStatusDropdown
+                value={liveLead.callStatus || 'WAITING'}
+                onChange={(newCallStatus) => leadStore.updateCallStatus(liveLead.id, newCallStatus, currentUser)}
+              />
+            </div>
 
             <div className="flex items-center gap-1.5 pl-1">
               <span className="text-xs font-semibold text-[#a69f99]">Aşama:</span>
@@ -470,10 +472,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               disabled={sendingCapi !== null}
               onClick={() => handleSendCapiSignal('QualifiedLead')}
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-teal-500/12 hover:bg-teal-500/25 text-teal-300 border border-teal-500/35 transition-colors cursor-pointer flex items-center gap-1"
-              title="Meta'ya bu adayın Olumlu / Nitelikli (QualifiedLead) olduğunu bildir"
+              title="Meta'ya Nitelikli (QualifiedLead) sinyali gönder"
             >
               <CheckCircle2 className="w-3 h-3" />
-              <span>{sendingCapi === 'QualifiedLead' ? 'Gönderiliyor...' : 'Olumlu / Nitelikli'}</span>
+              <span>{sendingCapi === 'QualifiedLead' ? 'Gönderiliyor...' : 'Nitelikli'}</span>
             </button>
 
             <button
@@ -481,10 +483,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               disabled={sendingCapi !== null}
               onClick={() => handleSendCapiSignal('Schedule')}
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-indigo-500/12 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/35 transition-colors cursor-pointer flex items-center gap-1"
-              title="Meta'ya Randevu / Sunum (Schedule) sinyali gönder"
+              title="Meta'ya Teklif (Schedule) sinyali gönder"
             >
               <Calendar className="w-3 h-3" />
-              <span>{sendingCapi === 'Schedule' ? 'Gönderiliyor...' : 'Randevu'}</span>
+              <span>{sendingCapi === 'Schedule' ? 'Gönderiliyor...' : 'Teklif'}</span>
             </button>
 
             <button
@@ -492,10 +494,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               disabled={sendingCapi !== null}
               onClick={() => handleSendCapiSignal('Purchase')}
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-emerald-500/12 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 transition-colors cursor-pointer flex items-center gap-1"
-              title="Meta'ya Satış (Purchase) sinyali gönder"
+              title="Meta'ya Dönüşüm (Purchase) sinyali gönder"
             >
               <Award className="w-3 h-3" />
-              <span>{sendingCapi === 'Purchase' ? 'Gönderiliyor...' : 'Satış'}</span>
+              <span>{sendingCapi === 'Purchase' ? 'Gönderiliyor...' : 'Dönüşüm'}</span>
             </button>
 
             <button
@@ -503,10 +505,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               disabled={sendingCapi !== null}
               onClick={() => handleSendCapiSignal('DisqualifiedLead')}
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-rose-500/12 hover:bg-rose-500/25 text-rose-300 border border-rose-500/35 transition-colors cursor-pointer flex items-center gap-1"
-              title="Meta'ya bu adayın Olumsuz / Niteliksiz (DisqualifiedLead) olduğunu bildir"
+              title="Meta'ya Potansiyel Değil (DisqualifiedLead) sinyali gönder"
             >
               <XCircle className="w-3 h-3" />
-              <span>{sendingCapi === 'DisqualifiedLead' ? 'Gönderiliyor...' : 'Olumsuz'}</span>
+              <span>{sendingCapi === 'DisqualifiedLead' ? 'Gönderiliyor...' : 'Potansiyel Değil'}</span>
             </button>
           </div>
         </div>
