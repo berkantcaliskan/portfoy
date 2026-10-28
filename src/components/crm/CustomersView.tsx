@@ -150,13 +150,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
     try {
       const result = await leadStore.pullLatestLeads({ startDate: start, endDate: end })
-      // Tablonun tarih filtresini çekilen aralığı kapsayacak şekilde güncelle
-      setDateRange({
-        presetKey: 'CUSTOM',
-        presetLabel: rangeLabel,
-        startDate: start,
-        endDate: end,
-      })
+      // Yalnızca sağ tık ile özel tarih seçildiğinde tablo tarih filtresini o aralığa sabitle
+      if (customRange) {
+        setDateRange({
+          presetKey: 'CUSTOM',
+          presetLabel: rangeLabel,
+          startDate: start,
+          endDate: end,
+        })
+      }
 
       if (result.error) {
         setPullFeedback({
@@ -684,10 +686,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         >
                           {lead.fullName}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
                           <span className="text-[10px] text-[#8c857f]">
                             {lead.preferredHousingType || 'Konut'}
                           </span>
+                          {(lead.source === 'WEBSITE' || lead.tags?.includes('Tanıtım Turu')) && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-semibold">
+                              {lead.tags?.includes('Tanıtım Turu') || lead.formName?.toLowerCase().includes('tur') ? 'Web • Tanıtım Turu' : 'Web Sitesi'}
+                            </span>
+                          )}
                           {inquiryCount > 1 && (
                             <button
                               onClick={() => setSelectedInquiryHistoryLead(lead)}

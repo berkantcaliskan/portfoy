@@ -43,7 +43,7 @@ export class PermissionService {
     if (user.scope === 'DEPARTMENT') {
       // Pazarlama sees all new/marketing leads
       if (user.department === 'Pazarlama') {
-        return lead.source === 'META_ADS' || lead.channel.includes('Facebook') || lead.channel.includes('Instagram') || lead.stage === 'NEW'
+        return lead.source === 'META_ADS' || lead.source === 'WEBSITE' || lead.channel.includes('Facebook') || lead.channel.includes('Instagram') || lead.channel.includes('Web') || lead.stage === 'NEW'
       }
       // Müşteri İlişkileri manages all customer records, inquiries, and sales handover tracking
       if (user.department === 'Müşteri İlişkileri') {

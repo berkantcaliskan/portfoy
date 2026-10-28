@@ -79,7 +79,7 @@ function parseDeletedSet(rawJson: string | undefined): Set<string> {
   try {
     const arr = JSON.parse(rawJson || '[]')
     if (Array.isArray(arr)) {
-      return new Set(arr.filter((x) => typeof x === 'string'))
+      return new Set(arr.filter((x) => typeof x === 'string' && !x.startsWith('phone:')))
     }
   } catch {}
   return new Set()
@@ -136,7 +136,14 @@ function mergeJsonArrayStrings(
       } else {
         const tExisting = new Date(existing.updatedAt || existing.createdAt || 0).getTime() || 0
         const tIncoming = new Date(item.updatedAt || item.createdAt || 0).getTime() || 0
-        byKey.set(k, tIncoming >= tExisting ? { ...existing, ...item } : { ...item, ...existing })
+        const mergedObj = tIncoming >= tExisting ? { ...existing, ...item } : { ...item, ...existing }
+        if (key === 'demirturk_leads_v2' && (Array.isArray(existing.inquiries) || Array.isArray(item.inquiries))) {
+          const inqMap = new Map<string, any>()
+          for (const inq of item.inquiries || []) if (inq?.id) inqMap.set(inq.id, inq)
+          for (const inq of existing.inquiries || []) if (inq?.id && !inqMap.has(inq.id)) inqMap.set(inq.id, inq)
+          mergedObj.inquiries = Array.from(inqMap.values())
+        }
+        byKey.set(k, mergedObj)
       }
     })
     return JSON.stringify(Array.from(byKey.values()))
