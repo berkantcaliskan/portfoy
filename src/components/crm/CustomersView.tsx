@@ -4,7 +4,6 @@ import {
   Search,
   Plus,
   Phone,
-  MessageSquare,
   Layers,
   Sparkles,
   UserCheck,
@@ -929,12 +928,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   <th className="py-3 px-3 w-[170px] min-w-[170px]">İletişim</th>
                   {/* 4. Kolon: Atanan Danışman */}
                   <th className="py-3 px-4">Atanan Danışman</th>
-                  {/* 5. Kolon: Açıklama */}
+                  {/* 5. Kolon: Bilgi */}
+                  <th className="py-3 px-4">Bilgi</th>
+                  {/* 6. Kolon: Aşama */}
+                  <th className="py-3 px-4">Aşama</th>
+                  {/* 7. Kolon: Açıklama */}
                   <th className="py-3 px-4">Açıklama</th>
-                  {/* 6. Kolon: İşlemler */}
+                  {/* 8. Kolon: İşlemler */}
                   <th className="py-3 px-4">İşlemler</th>
-                  {/* 7. Kolon: Aşama & Nitelik */}
-                  <th className="py-3 px-4">Bilgi & Aşama</th>
                 </tr>
               </thead>
               <tbody className="text-[#f3efe9]">
@@ -983,7 +984,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         </div>
                       </td>
 
-                      {/* 3. Kolon: İletişim */}
+                      {/* 3. Kolon: İletişim & WhatsApp İkonu */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <div className="flex items-center justify-between w-[150px]">
                           <span className="font-mono text-xs text-[#f3efe9] select-all tracking-wide">
@@ -997,7 +998,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                               className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 transition-colors flex items-center justify-center shrink-0 ml-2"
                               title="WhatsApp Mesajı Gönder"
                             >
-                              <MessageSquare className="w-3.5 h-3.5" />
+                              <svg
+                                className="w-3.5 h-3.5 shrink-0"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                <path d="M12.031 2.01c-5.518 0-9.998 4.48-9.998 9.998 0 1.763.46 3.485 1.334 5.003L2 22l5.122-1.343a9.956 9.956 0 0 0 4.909 1.298h.004c5.517 0 9.997-4.48 9.997-9.998 0-2.671-1.04-5.182-2.928-7.07A9.935 9.935 0 0 0 12.031 2.01Zm5.847 14.307c-.246.693-1.434 1.326-1.997 1.41-.513.076-1.163.109-1.878-.118-.433-.138-.988-.321-1.7-.628-2.993-1.292-4.947-4.306-5.097-4.505-.149-.2-1.216-1.618-1.216-3.086 0-1.468.769-2.19 1.042-2.489.274-.298.597-.373.796-.373.199 0 .398.002.572.01.183.009.429-.07.671.512.248.597.845 2.065.92 2.214.075.15.124.324.025.523-.099.199-.149.323-.298.497-.15.174-.314.389-.448.523-.149.149-.304.311-.131.609.174.298.773 1.275 1.66 2.065 1.14.996 2.101 1.305 2.4 1.454.298.15.472.125.646-.075.174-.199.746-.87.945-1.169.199-.298.398-.248.671-.149.274.1 1.741.821 2.039.97.298.149.497.224.572.348.075.125.075.722-.171 1.415Z" />
+                              </svg>
                             </a>
                           ) : (
                             <span className="w-6 h-6" />
@@ -1025,7 +1032,23 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         )}
                       </td>
 
-                      {/* 5. Kolon: Açıklama (Call center notu / Açıklama ekle) */}
+                      {/* 5. Kolon: Bilgi (Call Center) */}
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <CallStatusDropdown
+                          value={lead.callStatus || 'WAITING'}
+                          onChange={(newCallStatus) => handleCallStatusChange(lead.id, newCallStatus)}
+                        />
+                      </td>
+
+                      {/* 6. Kolon: Aşama (Meta Hunisi) */}
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <StageDropdown
+                          value={lead.stage}
+                          onChange={(newStage) => handleStageChange(lead.id, newStage)}
+                        />
+                      </td>
+
+                      {/* 7. Kolon: Açıklama (Call center notu / Açıklama ekle) */}
                       <td className="py-3 px-3">
                         {lead.notes && lead.notes.trim() ? (
                           <div
@@ -1051,7 +1074,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         )}
                       </td>
 
-                      {/* 6. Kolon: İşlemler */}
+                      {/* 8. Kolon: İşlemler */}
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-1.5">
                           <a
@@ -1076,23 +1099,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                             <UserPlus className="w-3 h-3 text-amber-400" />
                             <span>Satışa Devret</span>
                           </button>
-                        </div>
-                      </td>
-
-                      {/* 7. Kolon: Bilgi (Call Center) & Aşama (Meta) */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          {/* Call Center Bilgi Ayarı (Arandı, Tekrar Ara, Bilgi Verildi vb.) */}
-                          <CallStatusDropdown
-                            value={lead.callStatus || 'WAITING'}
-                            onChange={(newCallStatus) => handleCallStatusChange(lead.id, newCallStatus)}
-                          />
-
-                          {/* Meta Hunisi Aşaması (Potansiyel Müşteri, İletişim, Nitelikli, Teklif, Dönüşüm, Potansiyel Değil) */}
-                          <StageDropdown
-                            value={lead.stage}
-                            onChange={(newStage) => handleStageChange(lead.id, newStage)}
-                          />
                         </div>
                       </td>
                     </tr>
