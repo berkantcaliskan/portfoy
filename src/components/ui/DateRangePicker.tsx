@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -33,6 +33,10 @@ const MONTH_NAMES_TR = [
 ]
 
 const WEEKDAY_NAMES_TR = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz']
+
+const POPOVER_DESKTOP_WIDTH = 684
+const MIN_VIEWPORT_LEFT = 92 // Sol menü (sidebar) üzerine binmesini engeller
+const VIEWPORT_RIGHT_MARGIN = 24
 
 function isSameDay(d1?: Date | null, d2?: Date | null): boolean {
   if (!d1 || !d2) return false
@@ -73,6 +77,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [popoverCoords, setPopoverCoords] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: MIN_VIEWPORT_LEFT,
+  })
 
   const now = new Date()
 
@@ -99,6 +107,47 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       setActivePreset('ALL')
     }
   }, [value.presetKey, value.startDate, value.endDate])
+
+  // Popover açıldığında konumunu bir kez hesapla ve ekran/sidebar sınırlarına sabitle.
+  // Tarih seçimi değiştiğinde buton genişliği değişse bile yatay konumu sabit tutar (kaymayı önler).
+  useLayoutEffect(() => {
+    if (!isOpen || !containerRef.current) return
+
+    const computeInitialPosition = () => {
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const vw = window.innerWidth
+      const effectiveWidth = Math.min(POPOVER_DESKTOP_WIDTH, vw - MIN_VIEWPORT_LEFT - VIEWPORT_RIGHT_MARGIN)
+
+      const desiredLeft =
+        align === 'right' ? rect.right - effectiveWidth : rect.left
+
+      const maxLeft = Math.max(MIN_VIEWPORT_LEFT, vw - effectiveWidth - VIEWPORT_RIGHT_MARGIN)
+      const clampedLeft = Math.max(MIN_VIEWPORT_LEFT, Math.min(desiredLeft, maxLeft))
+
+      setPopoverCoords({
+        top: Math.round(rect.bottom + 8),
+        left: Math.round(clampedLeft),
+      })
+    }
+
+    const updateTopOnScroll = () => {
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      setPopoverCoords((prev) => ({
+        ...prev,
+        top: Math.round(rect.bottom + 8),
+      }))
+    }
+
+    computeInitialPosition()
+    window.addEventListener('resize', computeInitialPosition)
+    window.addEventListener('scroll', updateTopOnScroll, true)
+    return () => {
+      window.removeEventListener('resize', computeInitialPosition)
+      window.removeEventListener('scroll', updateTopOnScroll, true)
+    }
+  }, [isOpen, align])
 
   // Outside click & escape handler
   useEffect(() => {
@@ -267,7 +316,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     }
 
     return (
-      <div className="w-[248px] select-none">
+      <div className="w-[248px] shrink-0 select-none">
         {/* Month Title */}
         <div className="text-center font-bold text-white text-xs py-1 uppercase tracking-wide">
           {MONTH_NAMES_TR[month]} {year}
@@ -365,7 +414,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         />
       </button>
 
-      {/* Floating Meta-Style Date Range Picker Panel */}
+      {/* Floating Meta-Style Date Range Picker Panel (Sabit Genişlik ve Sabit Koordinat) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -373,12 +422,17 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className={`dropdown-panel popover-panel absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 rounded-[24px] z-50 bg-[#1a1715] border border-[#4a443f] shadow-[0_24px_60px_rgba(0,0,0,0.95)] p-0 overflow-hidden`}
+            style={{
+              position: 'fixed',
+              top: `${popoverCoords.top}px`,
+              left: `${popoverCoords.left}px`,
+            }}
+            className="dropdown-panel popover-panel w-[684px] max-w-[calc(100vw-108px)] rounded-[24px] z-[90] bg-[#1a1715] border border-[#4a443f] shadow-[0_24px_60px_rgba(0,0,0,0.95)] p-0 overflow-hidden"
           >
             {/* Header / Content Split */}
             <div className="flex flex-col md:flex-row">
               {/* Sol Sütun: Hazır Tarihler (Katmansız, Düz ve Sade Metin) */}
-              <div className="w-full md:w-36 py-4 px-4 flex flex-col justify-between select-none">
+              <div className="w-full md:w-36 shrink-0 py-4 px-4 flex flex-col justify-between select-none">
                 <div className="space-y-2.5">
                   {PRESETS.map((p) => {
                     const isSelected = activePreset === p.id
@@ -413,10 +467,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               </div>
 
               {/* Dikey İnce Ayırıcı Çizgi */}
-              <div className="hidden md:block border-l border-[#4a443f]/50 my-3" />
+              <div className="hidden md:block border-l border-[#4a443f]/50 my-3 shrink-0" />
 
               {/* Sağ Alan: İki Ay Yan Yana Takvim Görünümü */}
-              <div className="p-4 space-y-3">
+              <div className="flex-1 min-w-0 p-4 space-y-3">
                 {/* Ay Değiştirme Butonları */}
                 <div className="flex items-center justify-between px-2">
                   <button
@@ -443,29 +497,29 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 </div>
 
                 {/* İki Ay Yan Yana */}
-                <div className="flex flex-col sm:flex-row gap-5 items-start">
+                <div className="flex flex-col sm:flex-row gap-5 items-start justify-center">
                   {renderMonthCalendar(month1Year, month1Month)}
-                  <div className="hidden sm:block h-56 border-l border-[#4a443f]/50" />
+                  <div className="hidden sm:block h-56 border-l border-[#4a443f]/50 shrink-0" />
                   {renderMonthCalendar(month2Year, month2Month)}
                 </div>
 
                 {/* Footer Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#4a443f]/50 text-xs">
-                  <div className="text-[11px] text-[#a69f99]">
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#4a443f]/50 text-xs">
+                  <div className="text-[11px] text-[#a69f99] truncate min-w-0 flex-1">
                     {value.startDate && value.endDate ? (
                       <span>
                         Seçili: <strong className="text-white">{formatDateDisplay(value.startDate)}</strong> – <strong className="text-white">{formatDateDisplay(value.endDate)}</strong>
                       </span>
                     ) : value.startDate ? (
                       <span>
-                        Başlangıç: <strong className="text-white">{formatDateDisplay(value.startDate)}</strong> (Bitiş için bir gün daha seçin)
+                        Başlangıç: <strong className="text-white">{formatDateDisplay(value.startDate)}</strong> (Bitiş gününü seçin)
                       </span>
                     ) : (
                       <span>Tüm zamanlar görüntüleniyor</span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => handlePresetSelect('ALL')}
