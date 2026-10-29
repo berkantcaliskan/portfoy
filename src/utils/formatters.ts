@@ -111,6 +111,29 @@ export function toTitleCase(str: string): string {
   return str.replace(/(?:^|\s)\S/g, (char) => char.toLocaleUpperCase('tr-TR'))
 }
 
+/**
+ * Formats customer explanations / notes so that even if the user types starting with lowercase
+ * and without ending punctuation, it is saved starting with an uppercase letter and ending with a period.
+ */
+export function formatSentenceNote(raw?: string | null): string {
+  if (!raw) return ''
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  return trimmed
+    .split(/\r?\n/)
+    .map((line) => {
+      const l = line.trim()
+      if (!l) return ''
+      const capitalized = (l.charAt(0).toLocaleUpperCase('tr-TR') + l.slice(1)).replace(
+        /([.!?…]\s+)([a-zçğıöşü])/g,
+        (_m, p1, p2) => p1 + p2.toLocaleUpperCase('tr-TR')
+      )
+      return /[.!?…:;]$/.test(capitalized) ? capitalized : `${capitalized}.`
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
 export function formatAppointmentDate(dateStr: string, timeStr?: string): string {
   if (!dateStr) return ''
   try {

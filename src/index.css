@@ -1506,3 +1506,21 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold p {
   color: #ffffff !important;
 }
+
+/* ==========================================================================
+   MÜŞTERİ TABLOSU SATIR VURGUSU (HOVER & AÇIK MENÜ DURUMU)
+   Üstüne gelinen veya sağdaki Bilgi/Aşama menüsü açık olan müşteri satırını
+   vurgu renginin hafif şeffaf versiyonuyla vurgular.
+   ========================================================================== */
+tr.customer-table-row {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+tr.customer-table-row:hover,
+tr.customer-table-row:has([data-dropdown-open="true"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main tr.customer-table-row:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main tr.customer-table-row:has([data-dropdown-open="true"]) {
+  background: color-mix(in srgb, var(--accent-color, #5c6ac4) 14%, transparent) !important;
+  background-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 14%, transparent) !important;
+  box-shadow: inset 3px 0 0 0 var(--accent-color, #5c6ac4);
+}

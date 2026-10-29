@@ -19,6 +19,7 @@ import { rowToLead, rowToActivity } from './dbMapper'
 import { metaStore } from './metaStore'
 
 import { playNewLeadChime } from '@/utils/audioAlert'
+import { formatSentenceNote } from '@/utils/formatters'
 
 const STORAGE_KEY_LEADS = 'demirturk_leads_v2'
 const STORAGE_KEY_ACTIVITIES = 'demirturk_activities_v2'
@@ -700,19 +701,31 @@ class LeadStore {
     }
   }
 
-  /**
-   * Return all leads without security filter (internal use)
-   */
-  public getAllRaw(): Lead[] {
-    return [...this.leads]
+  private sortNewestFirst(list: Lead[]): Lead[] {
+    return [...list].sort((a, b) => {
+      const tA = new Date(a.createdAt || 0).getTime()
+      const tB = new Date(b.createdAt || 0).getTime()
+      if (!isNaN(tA) && !isNaN(tB) && tB !== tA) {
+        return tB - tA
+      }
+      return (b.leadNumber || 0) - (a.leadNumber || 0)
+    })
   }
 
   /**
-   * Return leads filtered by current user's role and scope
+   * Return all leads without security filter (internal use), sorted newest to oldest by default
+   */
+  public getAllRaw(): Lead[] {
+    return this.sortNewestFirst(this.leads)
+  }
+
+  /**
+   * Return leads filtered by current user's role and scope, sorted newest to oldest by default
    */
   public getAll(user?: AppUser | null): Lead[] {
-    if (!user) return [...this.leads]
-    return permissionService.filterLeads(user, this.leads)
+    const sorted = this.sortNewestFirst(this.leads)
+    if (!user) return sorted
+    return permissionService.filterLeads(user, sorted)
   }
 
   public getById(id: string, user?: AppUser | null): Lead | undefined {
@@ -1276,7 +1289,7 @@ class LeadStore {
     notes: string,
     changedByUser?: AppUser | null
   ): Lead | undefined {
-    const cleanNotes = notes.trim()
+    const cleanNotes = formatSentenceNote(notes)
     const updated = this.update(id, { notes: cleanNotes }, changedByUser)
     if (updated) {
       this.addActivity(

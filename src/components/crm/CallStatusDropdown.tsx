@@ -101,6 +101,7 @@ export const CallStatusDropdown: React.FC<CallStatusDropdownProps> = ({
         ref={buttonRef}
         type="button"
         disabled={disabled}
+        data-dropdown-open={isOpen ? 'true' : undefined}
         onClick={handleToggle}
         className={`px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
           isOpen ? 'border-[#b99881] ring-1 ring-[#b99881]/40' : ''

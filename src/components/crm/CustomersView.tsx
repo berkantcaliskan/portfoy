@@ -16,6 +16,9 @@ import {
   FolderPlus,
   Edit3,
   DownloadCloud,
+  ArrowUpDown,
+  ArrowDown,
+  ArrowUp,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -29,7 +32,7 @@ import { leadStore } from '@/services/leadStore'
 import { metaStore } from '@/services/metaStore'
 import { userStore, AppUser } from '@/services/userStore'
 import { permissionService } from '@/services/permissionService'
-import { formatCurrency, formatDate, formatDateOnly, formatTimeOnly, formatPhoneDisplay, generateWhatsAppUrl } from '@/utils/formatters'
+import { formatCurrency, formatDate, formatDateOnly, formatTimeOnly, formatPhoneDisplay, generateWhatsAppUrl, formatSentenceNote } from '@/utils/formatters'
 import { DateRangePicker, DateRange } from '@/components/ui/DateRangePicker'
 import { loadSavedDateRange, saveDateRange, checkDayRollover } from '@/services/dateFilterService'
 import { PaginationBar } from '@/components/common/PaginationBar'
@@ -59,6 +62,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('')
   // "İletişimde" ilk sekme ve varsayılan
   const [filterStage, setFilterStage] = useState<string>('UNCONTACTED')
+
+  // Sıralama (Varsayılan: NEWEST - Yeniden Eskiye)
+  const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC'>('NEWEST')
 
   // Sayfalama (Pagination) Durumu - Varsayılan 20, Seçenekler 20, 50, 100
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -119,13 +125,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
   const handleOpenNoteEdit = (lead: Lead) => {
     setSelectedLeadForNoteEdit(lead)
-    setEditingNoteText(lead.notes || '')
+    setEditingNoteText(lead.notes ? formatSentenceNote(lead.notes) : '')
   }
 
   const handleSaveNote = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedLeadForNoteEdit) return
-    leadStore.updateNotes(selectedLeadForNoteEdit.id, editingNoteText, currentUser)
+    const formatted = formatSentenceNote(editingNoteText)
+    leadStore.updateNotes(selectedLeadForNoteEdit.id, formatted, currentUser)
     setSelectedLeadForNoteEdit(null)
   }
 
@@ -329,12 +336,32 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     )
   })
 
-  // Filtreler veya arama değiştiğinde 1. sayfaya dön
+  // Sıralama uygula (Varsayılan: Yeniden eskiye)
+  const sortedLeads = [...filteredLeads].sort((a, b) => {
+    if (sortOrder === 'NAME_ASC') {
+      return (a.fullName || '').localeCompare(b.fullName || '', 'tr-TR')
+    }
+    if (sortOrder === 'NAME_DESC') {
+      return (b.fullName || '').localeCompare(a.fullName || '', 'tr-TR')
+    }
+    const tA = new Date(a.createdAt || 0).getTime()
+    const tB = new Date(b.createdAt || 0).getTime()
+    const validA = !isNaN(tA) ? tA : 0
+    const validB = !isNaN(tB) ? tB : 0
+    if (validA !== validB) {
+      return sortOrder === 'OLDEST' ? validA - validB : validB - validA
+    }
+    return sortOrder === 'OLDEST'
+      ? (a.leadNumber || 0) - (b.leadNumber || 0)
+      : (b.leadNumber || 0) - (a.leadNumber || 0)
+  })
+
+  // Filtreler, arama veya sıralama değiştiğinde 1. sayfaya dön
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterStage, searchQuery, dateRange])
+  }, [filterStage, searchQuery, dateRange, sortOrder])
 
-  const paginatedLeads = filteredLeads.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginatedLeads = sortedLeads.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // Add custom tab
   const handleCreateCustomTab = (e: React.FormEvent) => {
@@ -622,6 +649,24 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             />
           </div>
 
+          {/* Sıralama Seçimi (Varsayılan: Yeniden eskiye) */}
+          <div className="relative flex items-center">
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <select
+              value={sortOrder}
+              onChange={(e) =>
+                setSortOrder(e.target.value as 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC')
+              }
+              className="pl-8 pr-7 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs font-semibold text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+              title="Müşteri sıralama ölçütü"
+            >
+              <option value="NEWEST">Sırala: Yeniden eskiye</option>
+              <option value="OLDEST">Sırala: Eskiden yeniye</option>
+              <option value="NAME_ASC">Sırala: İsim (A - Z)</option>
+              <option value="NAME_DESC">Sırala: İsim (Z - A)</option>
+            </select>
+          </div>
+
           {/* Tarih Seçimi (Meta Stili Date Range Picker) */}
           <DateRangePicker
             value={dateRange}
@@ -648,9 +693,47 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               <thead>
                 <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
                   {/* 1. Kolon: Tarih */}
-                  <th className="py-3 px-4">Tarih</th>
+                  <th className="py-3 px-4">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSortOrder((prev) => (prev === 'NEWEST' ? 'OLDEST' : 'NEWEST'))
+                      }
+                      className="no-layer-btn inline-flex items-center gap-1 text-[11px] font-semibold text-[#8c857f] hover:text-white cursor-pointer select-none"
+                      title={
+                        sortOrder === 'OLDEST'
+                          ? 'Şu an: Eskiden yeniye (Yeniden eskiye sıralamak için tıklayın)'
+                          : 'Şu an: Yeniden eskiye (Eskiden yeniye sıralamak için tıklayın)'
+                      }
+                    >
+                      <span>Tarih</span>
+                      {sortOrder === 'OLDEST' ? (
+                        <ArrowUp className="w-3 h-3 text-[#b99881]" />
+                      ) : (
+                        <ArrowDown className="w-3 h-3 text-[#b99881]" />
+                      )}
+                    </button>
+                  </th>
                   {/* 2. Kolon: Müşteri */}
-                  <th className="py-3 px-4">Müşteri</th>
+                  <th className="py-3 px-4">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSortOrder((prev) => (prev === 'NAME_ASC' ? 'NAME_DESC' : 'NAME_ASC'))
+                      }
+                      className="no-layer-btn inline-flex items-center gap-1 text-[11px] font-semibold text-[#8c857f] hover:text-white cursor-pointer select-none"
+                      title="İsme göre sırala"
+                    >
+                      <span>Müşteri</span>
+                      {(sortOrder === 'NAME_ASC' || sortOrder === 'NAME_DESC') && (
+                        sortOrder === 'NAME_ASC' ? (
+                          <ArrowUp className="w-3 h-3 text-[#b99881]" />
+                        ) : (
+                          <ArrowDown className="w-3 h-3 text-[#b99881]" />
+                        )
+                      )}
+                    </button>
+                  </th>
                   {/* 3. Kolon: İletişim */}
                   <th className="py-3 px-3 w-[170px] min-w-[170px]">İletişim</th>
                   {/* 4. Kolon: Atanan Danışman */}
@@ -672,7 +755,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                 return (
                   <tr
                     key={lead.id}
-                    className="hover:bg-white/[0.03] transition-colors border-b border-[#4a443f]/60 last:border-b-0"
+                    className="customer-table-row transition-colors border-b border-[#4a443f]/60 last:border-b-0"
                   >
                       {/* 1. Kolon: Tarih & Saat */}
                       <td className="py-3 px-3 text-[#d6beae] whitespace-nowrap">
@@ -765,7 +848,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                             title="Açıklamayı düzenlemek için tıklayın"
                           >
                             <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] truncate transition-colors select-text">
-                              {lead.notes}
+                              {formatSentenceNote(lead.notes)}
                             </span>
                             <Edit3 className="w-3 h-3 text-[#8c857f] group-hover:text-[#b99881] opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
                           </div>
@@ -1177,7 +1260,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       <GlassModal
         isOpen={selectedLeadForNoteEdit !== null}
         onClose={() => setSelectedLeadForNoteEdit(null)}
-        title={`Açıklama - ${selectedLeadForNoteEdit?.fullName}`}
+        title={`Açıklama: ${selectedLeadForNoteEdit?.fullName}`}
       >
         <form onSubmit={handleSaveNote} className="space-y-4">
           <div>

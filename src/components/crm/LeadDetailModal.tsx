@@ -36,6 +36,7 @@ import {
   formatDate,
   formatPhoneDisplay,
   generateWhatsAppUrl,
+  formatSentenceNote,
 } from '@/utils/formatters'
 
 interface LeadDetailModalProps {
@@ -193,7 +194,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newNote.trim()) return
-    leadStore.addActivity(lead.id, 'NOTE', newNote.trim(), currentUser?.fullName || 'Danışman')
+    const formatted = formatSentenceNote(newNote)
+    leadStore.addActivity(lead.id, 'NOTE', formatted, currentUser?.fullName || 'Danışman')
     setNewNote('')
   }
 
