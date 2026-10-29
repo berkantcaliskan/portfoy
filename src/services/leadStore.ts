@@ -905,12 +905,7 @@ class LeadStore {
       this.saveToStorage()
     }
     syncService.saveLead(newLead)
-    try {
-      const cfg = metaStore.getConfig()
-      if (cfg.autoSyncStages) {
-        void metaStore.sendCapiLeadEvent(newLead, newLead.stage)
-      }
-    } catch {}
+    // Not: Meta'ya otomatik veri gönderimi kapatıldı. Yalnızca Pazarlama > Kampanyalar > "Veriyi Gönder" ile manuel gönderilir.
     return { lead: newLead, isNewCustomer: true }
   }
 
@@ -1013,12 +1008,7 @@ class LeadStore {
 
     this.saveToStorage()
     syncService.saveLead(newLead)
-    try {
-      const cfg = metaStore.getConfig()
-      if (cfg.autoSyncStages) {
-        void metaStore.sendCapiLeadEvent(newLead, newLead.stage)
-      }
-    } catch {}
+    // Not: Meta'ya otomatik veri gönderimi kapatıldı. Yalnızca Pazarlama > Kampanyalar > "Veriyi Gönder" ile manuel gönderilir.
     return newLead
   }
 
@@ -1058,15 +1048,8 @@ class LeadStore {
     this.saveToStorage()
     syncService.saveLead(updatedLead)
 
-    // Otomatik Meta Dönüşümler API'si (CAPI) Sinyali Gönderimi
-    if (stageChanged && updates.stage) {
-      try {
-        const cfg = metaStore.getConfig()
-        if (cfg.autoSyncStages) {
-          void metaStore.sendCapiLeadEvent(updatedLead, updates.stage)
-        }
-      } catch {}
-    }
+    // Not: Aşama değiştiğinde Meta'ya otomatik veri gönderimi yapılmaz.
+    // Yalnızca Pazarlama > Kampanyalar > "Veriyi Gönder" butonu ile manuel gönderilir.
 
     return updatedLead
   }
@@ -1272,13 +1255,7 @@ class LeadStore {
 
     const updated = this.update(id, updates, changedByUser)
 
-    if (updated && !updates.stage && isQualified) {
-      try {
-        if (metaStore.getConfig().autoSyncStages) {
-          void metaStore.sendCapiLeadEvent(updated, 'QualifiedLead')
-        }
-      } catch {}
-    }
+    // Not: Nitelikli durumunda Meta'ya otomatik veri gönderilmez; Pazarlama > Kampanyalar > "Veriyi Gönder" ile manuel gönderilir.
 
     this.addActivity(
       id,

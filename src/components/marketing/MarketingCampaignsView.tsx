@@ -16,12 +16,18 @@ import {
   Layers,
   Share2,
   MessageCircle,
+  Send,
+  RefreshCw,
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
-import { metaStore } from '@/services/metaStore'
+import {
+  metaStore,
+  getLeadTargetMetaEvent,
+  isLeadPendingMetaSync,
+} from '@/services/metaStore'
 import {
   googleAdsStore,
   GoogleCampaignItem,
@@ -64,6 +70,42 @@ export const MarketingCampaignsView: React.FC = () => {
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [isSendingToMeta, setIsSendingToMeta] = useState(false)
+  const [sendingSingleLeadId, setSendingSingleLeadId] = useState<string | null>(null)
+
+  const pendingMetaLeads = allLeads.filter((l) => isLeadPendingMetaSync(l))
+
+  const handleManualSendToMeta = async (leadIds?: string[]) => {
+    if (isSendingToMeta) return
+    if (leadIds && leadIds.length === 1) {
+      setSendingSingleLeadId(leadIds[0])
+    } else {
+      setIsSendingToMeta(true)
+    }
+    try {
+      const res = await metaStore.syncLeadsToMetaManual(leadIds)
+      setCapiLogs(metaStore.getCapiLogs())
+      setAllLeads(leadStore.getAllRaw())
+      if (res.totalCount === 0) {
+        showToast('Gönderilecek müşteri kaydı bulunamadı.')
+      } else if (res.sentCount > 0) {
+        showToast(
+          `${res.sentCount} müşterinin güncel durumu ve aşama bilgisi Meta'ya başarıyla gönderildi.`
+        )
+      } else if (res.queuedCount > 0) {
+        showToast(
+          `${res.queuedCount} müşteri verisi Meta gönderim kuyruğuna alındı (Dataset / CAPI anahtarını kontrol edin).`
+        )
+      } else {
+        showToast(
+          `Meta'ya veri gönderilirken hata oluştu (${res.failedCount} başarısız). Dataset ID ve CAPI anahtarını kontrol edin.`
+        )
+      }
+    } finally {
+      setIsSendingToMeta(false)
+      setSendingSingleLeadId(null)
+    }
+  }
 
   const showToast = (msg: string) => {
     setSuccessMsg(msg)
@@ -351,6 +393,27 @@ export const MarketingCampaignsView: React.FC = () => {
           {(activePlatform === 'all' || activePlatform === 'meta') && (
             <>
               <GlassButton
+                variant="gold"
+                size="sm"
+                icon={
+                  isSendingToMeta ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )
+                }
+                disabled={isSendingToMeta || allLeads.length === 0}
+                onClick={() => void handleManualSendToMeta()}
+                className="rounded-full px-4 text-xs font-semibold"
+                title="Potansiyel müşteri durumu ve aşama bilgilerini Meta'ya manuel gönder"
+              >
+                {isSendingToMeta
+                  ? "Meta'ya Gönderiliyor..."
+                  : pendingMetaLeads.length > 0
+                  ? `Veriyi Gönder (${pendingMetaLeads.length})`
+                  : 'Veriyi Gönder'}
+              </GlassButton>
+              <GlassButton
                 variant="subtle"
                 size="sm"
                 icon={<Upload className="w-3.5 h-3.5" />}
@@ -360,14 +423,14 @@ export const MarketingCampaignsView: React.FC = () => {
                 Meta CSV Yükle
               </GlassButton>
               <GlassButton
-                variant="gold"
+                variant="subtle"
                 size="sm"
                 icon={<Zap className="w-3.5 h-3.5" />}
                 onClick={() => {
                   if (!selectedFormName && forms[0]?.name) setSelectedFormName(forms[0].name)
                   setIsSimulateOpen(true)
                 }}
-                className="rounded-full px-4 text-xs font-semibold"
+                className="rounded-full px-3.5 text-xs font-semibold"
               >
                 Meta Webhook Simülasyonu
               </GlassButton>
@@ -525,6 +588,51 @@ export const MarketingCampaignsView: React.FC = () => {
             </GlassCard>
           </div>
 
+          {/* Meta'ya Manuel Veri Gönderimi Kısa Kontrol Kartı */}
+          <GlassCard className="p-4 bg-[#282522] border-[#4a443f] flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Send className="w-3.5 h-3.5 text-[#b99881]" />
+                  <span>Meta'ya Potansiyel Müşteri Durumu ve Aşaması Gönderimi</span>
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  Manuel Gönderim Modu (Otomatik Gönderim Kapalı)
+                </span>
+              </div>
+              <p className="text-xs text-[#a69f99]">
+                Müşteri aşaması ve durumu (PM, İletişim, Nitelikli, Teklif, Dönüşüm, Potansiyel Değil) Meta'ya otomatik gönderilmez; yalnızca{' '}
+                <strong className="text-white">Veriyi Gönder</strong> butonuna bastığınızda iletilir.
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs text-[#d6beae]">
+                Gönderim Bekleyen:{' '}
+                <strong className="text-white">{pendingMetaLeads.length}</strong> müşteri
+              </span>
+              <GlassButton
+                variant="gold"
+                size="sm"
+                icon={
+                  isSendingToMeta ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )
+                }
+                disabled={isSendingToMeta || allLeads.length === 0}
+                onClick={() => void handleManualSendToMeta()}
+                className="rounded-full px-4 text-xs font-semibold"
+              >
+                {isSendingToMeta
+                  ? 'Gönderiliyor...'
+                  : pendingMetaLeads.length > 0
+                  ? `Veriyi Gönder (${pendingMetaLeads.length})`
+                  : 'Veriyi Gönder'}
+              </GlassButton>
+            </div>
+          </GlassCard>
+
           {/* All Active Forms & Campaigns */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -669,36 +777,117 @@ export const MarketingCampaignsView: React.FC = () => {
             </GlassCard>
           </div>
 
-          {/* Meta Dönüşümler API (CAPI) Sinyalleri */}
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-[#b99881]" />
-                  <span>
-                    Meta Dönüşümler API'si (CAPI) — Olumlu / Olumsuz Müşteri Sinyalleri
+          {/* Meta'ya Manuel Veri Gönderimi & Dönüşümler API (CAPI) Sinyalleri */}
+          <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Send className="w-4 h-4 text-[#b99881]" />
+                    <span>
+                      Meta'ya Veri Gönderimi — Potansiyel Müşteri Durumu ve Aşaması
+                    </span>
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    Sadece Manuel Gönderim (Otomatik Kapalı)
                   </span>
-                </h3>
-                <p className="text-xs text-[#a69f99] mt-0.5">
-                  CRM'de aşaması değişen veya Nitelikli (QualifiedLead) / Olumsuz (DisqualifiedLead) olarak işaretlenen müşterilerin Meta'ya aktarım kaydı.
+                </div>
+                <p className="text-xs text-[#a69f99]">
+                  Müşterilerin aşama ve durum değişiklikleri (Potansiyel Müşteri, İletişim, Nitelikli, Teklif, Dönüşüm, Potansiyel Değil) Meta'ya otomatik olarak gönderilmez. Yalnızca sağdaki{' '}
+                  <strong className="text-white">Veriyi Gönder</strong> butonuna tıkladığınızda Meta'ya iletilir.
                 </p>
               </div>
-              {capiLogs.some((l) => l.status === 'QUEUED') && (
+
+              <div className="flex flex-wrap items-center gap-2">
+                {capiLogs.some((l) => l.status === 'QUEUED') && (
+                  <GlassButton
+                    variant="subtle"
+                    size="sm"
+                    onClick={() => void metaStore.flushQueuedCapiEvents()}
+                    className="rounded-full px-3.5 text-xs font-semibold"
+                  >
+                    Kuyruktaki Sinyalleri Gönder
+                  </GlassButton>
+                )}
                 <GlassButton
-                  variant="subtle"
+                  variant="gold"
                   size="sm"
-                  onClick={() => metaStore.flushQueuedCapiEvents()}
-                  className="rounded-full px-3.5 text-xs font-semibold"
+                  icon={
+                    isSendingToMeta ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )
+                  }
+                  disabled={isSendingToMeta || allLeads.length === 0}
+                  onClick={() => void handleManualSendToMeta()}
+                  className="rounded-full px-4 text-xs font-semibold"
                 >
-                  Kuyruktaki Sinyalleri Gönder
+                  {isSendingToMeta
+                    ? "Meta'ya Gönderiliyor..."
+                    : pendingMetaLeads.length > 0
+                    ? `Veriyi Gönder (${pendingMetaLeads.length} Müşteri)`
+                    : 'Veriyi Gönder (Tümünü Güncelle)'}
                 </GlassButton>
+              </div>
+            </div>
+
+            {/* Gönderim Bekleyen Müşteri Durumları */}
+            <div className="p-3.5 rounded-2xl bg-[#24211f] border border-[#4a443f] space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-white">
+                  Meta'ya Gönderilmeyi Bekleyen Güncel Aşama & Durumlar ({pendingMetaLeads.length})
+                </span>
+                <span className="text-[11px] text-[#a69f99]">
+                  Toplam CRM Adayı: {allLeads.length}
+                </span>
+              </div>
+
+              {pendingMetaLeads.length === 0 ? (
+                <div className="py-3 text-xs text-emerald-400 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>
+                    Tüm müşterilerin mevcut durum ve aşama bilgileri Meta ile senkronize. Yine de yukarıdaki <strong>Veriyi Gönder</strong> butonuyla tümünü tekrar iletebilirsiniz.
+                  </span>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#4a443f]/50 max-h-[210px] overflow-y-auto pr-1">
+                  {pendingMetaLeads.slice(0, 25).map((lead) => {
+                    const target = getLeadTargetMetaEvent(lead)
+                    const isRowSending = sendingSingleLeadId === lead.id
+                    return (
+                      <div
+                        key={lead.id}
+                        className="py-2 flex flex-wrap items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <span className="font-bold text-white truncate">{lead.fullName}</span>
+                          <span className="text-[11px] text-[#8c857f] font-mono">{lead.phone}</span>
+                          <span className="text-[#8c857f]">➔</span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#34302d] text-[#d6beae] border border-[#4a443f]">
+                            {target.signalLabel} ({target.eventName})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isSendingToMeta || isRowSending}
+                          onClick={() => void handleManualSendToMeta([lead.id])}
+                          className="px-3 py-1 rounded-full bg-[#b99881]/15 hover:bg-[#b99881] text-[#d6beae] hover:text-white border border-[#b99881]/40 text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>{isRowSending ? 'Gönderiliyor...' : 'Veriyi Gönder'}</span>
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
 
             {capiLogs.length === 0 ? (
-              <div className="py-6 text-center text-xs text-[#8c857f] border border-dashed border-[#4a443f] rounded-2xl">
-                Henüz Meta'ya gönderilmiş bir dönüşüm sinyali yok. Müşteri detayından{' '}
-                <strong>Olumlu / Nitelikli</strong> veya <strong>Olumsuz</strong> butonuna tıkladığınızda ya da müşteri aşamasını değiştirdiğinizde burada listelenir.
+              <div className="py-5 text-center text-xs text-[#8c857f] border border-dashed border-[#4a443f] rounded-2xl">
+                Henüz Meta'ya gönderilmiş bir dönüşüm sinyali yok. Yukarıdaki{' '}
+                <strong>Veriyi Gönder</strong> butonuna tıkladığınızda müşteri durumu ve aşaması Meta'ya iletilir ve burada listelenir.
               </div>
             ) : (
               <div className="divide-y divide-[#4a443f]/50 max-h-[220px] overflow-y-auto pr-1">

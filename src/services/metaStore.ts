@@ -36,7 +36,7 @@ const DEFAULT_META_CONFIG: MetaApiConfig = {
   datasetId: '707603355337943',
   capiAccessToken: DEFAULT_CAPI_TOKEN,
   testEventCode: '',
-  autoSyncStages: true,
+  autoSyncStages: false,
   crmName: 'Demirtürk Portföy CRM',
 }
 
@@ -215,6 +215,29 @@ export function mapStageOrSignalToMetaEvent(stageOrSignal: LeadStage | MetaCapiE
   }
 }
 
+export function getLeadTargetMetaEvent(lead: Lead): {
+  eventName: MetaCapiEventName
+  signalLabel: string
+  stageLabel: string
+  effectiveStage: LeadStage
+} {
+  const effectiveStage: LeadStage =
+    lead.stage === 'NEW' && lead.isQualified ? 'QUALIFIED' : lead.stage
+  return {
+    ...mapStageOrSignalToMetaEvent(effectiveStage),
+    effectiveStage,
+  }
+}
+
+export function isLeadPendingMetaSync(lead: Lead): boolean {
+  const target = getLeadTargetMetaEvent(lead)
+  if (!lead.metaCapiStatus) return true
+  if (lead.metaCapiStatus.status !== 'SENT') return true
+  if (lead.metaCapiStatus.lastEventName !== target.eventName) return true
+  if (lead.metaCapiStatus.label !== target.signalLabel) return true
+  return false
+}
+
 class MetaStore {
   private forms: MetaFormSummary[] = INITIAL_FORMS
   private config: MetaApiConfig = this.loadConfig()
@@ -246,6 +269,7 @@ class MetaStore {
       return {
         ...DEFAULT_META_CONFIG,
         ...parsed,
+        autoSyncStages: false,
         datasetId: (parsed?.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId,
         capiAccessToken: effectiveToken,
         crmName: (parsed?.crmName || '').trim() || DEFAULT_META_CONFIG.crmName,
@@ -540,6 +564,60 @@ class MetaStore {
     this.saveCapiLogs()
     this.notify()
     return { sentCount, failedCount }
+  }
+
+  /**
+   * Returns leads whose current stage / status has not yet been sent to Meta CAPI
+   */
+  public getPendingMetaSyncLeads(): Lead[] {
+    const allLeads = leadStore.getAllRaw()
+    return allLeads.filter((l) => isLeadPendingMetaSync(l))
+  }
+
+  /**
+   * Manually send customer status & stage data (PM, İletişim, Nitelikli, Teklif, Dönüşüm, Potansiyel Değil) to Meta CAPI.
+   * Only runs when explicitly triggered by the user clicking "Veriyi Gönder" in Marketing.
+   */
+  public async syncLeadsToMetaManual(leadIds?: string[]): Promise<{
+    sentCount: number
+    failedCount: number
+    queuedCount: number
+    totalCount: number
+  }> {
+    const allLeads = leadStore.getAllRaw()
+    let targetLeads: Lead[] = []
+
+    if (leadIds && leadIds.length > 0) {
+      const idSet = new Set(leadIds)
+      targetLeads = allLeads.filter((l) => idSet.has(l.id))
+    } else {
+      const pending = allLeads.filter((l) => isLeadPendingMetaSync(l))
+      targetLeads = pending.length > 0 ? pending : allLeads
+    }
+
+    if (targetLeads.length === 0) {
+      return { sentCount: 0, failedCount: 0, queuedCount: 0, totalCount: 0 }
+    }
+
+    let sentCount = 0
+    let failedCount = 0
+    let queuedCount = 0
+
+    for (const lead of targetLeads) {
+      const target = getLeadTargetMetaEvent(lead)
+      const log = await this.sendCapiLeadEvent(lead, target.effectiveStage)
+      if (log.status === 'SENT') sentCount++
+      else if (log.status === 'QUEUED') queuedCount++
+      else failedCount++
+    }
+
+    this.notify()
+    return {
+      sentCount,
+      failedCount,
+      queuedCount,
+      totalCount: targetLeads.length,
+    }
   }
 
   /**
