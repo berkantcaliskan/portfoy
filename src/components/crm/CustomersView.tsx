@@ -139,6 +139,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   })
   const [pullEndDate, setPullEndDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
   const [quickPageToken, setQuickPageToken] = useState<string>(() => metaStore.getConfig().pageAccessToken || '')
+  const [quickPageId, setQuickPageId] = useState<string>(() => metaStore.getConfig().pageId || '')
   const csvFileInputRef = React.useRef<HTMLInputElement>(null)
 
   const handlePullData = async (customRange?: { startDate: Date; endDate: Date; label?: string }) => {

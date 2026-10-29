@@ -13,6 +13,10 @@ import {
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { StageDropdown } from '@/components/crm/StageDropdown'
 import { leadStore } from '@/services/leadStore'
+import { metaStore } from '@/services/metaStore'
+import { userStore } from '@/services/userStore'
+import { permissionService } from '@/services/permissionService'
+import { GlassModal } from '@/components/ui/GlassModal'
 import { PortfolioItem, PropertyStatus } from '@/types/portfolio'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -73,33 +77,59 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
     }
   }, [dateRange])
 
-  // Manuel Verileri Al (Artımlı / Incremental Sync) Durumu
+  // Manuel Verileri Al (Sol tık: Son 48 Saat, Sağ tık: Tarih Seçme & Meta Bağlantı Penceresi)
+  const currentUser = userStore.getCurrentUser()
   const [isPulling, setIsPulling] = useState(false)
   const [pullFeedback, setPullFeedback] = useState<{ message: string; isNew: boolean } | null>(null)
+  const [isPullDateModalOpen, setIsPullDateModalOpen] = useState(false)
+  const [pullStartDate, setPullStartDate] = useState<string>(() => {
+    const d = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    return d.toISOString().slice(0, 10)
+  })
+  const [pullEndDate, setPullEndDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
+  const [quickPageToken, setQuickPageToken] = useState<string>(() => metaStore.getConfig().pageAccessToken || '')
+  const [quickPageId, setQuickPageId] = useState<string>(() => metaStore.getConfig().pageId || '')
+  const csvFileInputRef = React.useRef<HTMLInputElement>(null)
 
-  const handlePullData = async () => {
+  const handlePullData = async (customRange?: { startDate: Date; endDate: Date; label?: string }) => {
     if (isPulling) return
     setIsPulling(true)
+    const start = customRange?.startDate || new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const end = customRange?.endDate || new Date()
+    const rangeLabel = customRange?.label || 'Son 48 Saat'
+
     try {
-      const result = await leadStore.pullLatestLeads()
-      if (result.error) {
-        setPullFeedback({
-          message: result.error,
-          isNew: false,
+      const result = await leadStore.pullLatestLeads({ startDate: start, endDate: end })
+      if (customRange) {
+        setDateRange({
+          presetKey: 'CUSTOM',
+          presetLabel: rangeLabel,
+          startDate: start,
+          endDate: end,
         })
+      }
+
+      if (result.error) {
+        setPullFeedback({ message: result.error, isNew: false })
       } else if (result.newCount > 0) {
         setPullFeedback({
-          message: `${result.newCount} yeni müşteri başarıyla alındı!`,
+          message: `${rangeLabel}: ${result.newCount} yeni müşteri başarıyla alındı!`,
           isNew: true,
         })
       } else if (result.updatedCount > 0) {
         setPullFeedback({
-          message: `${result.updatedCount} müşteri kaydı güncellendi.`,
+          message: `${rangeLabel}: ${result.updatedCount} müşteri kaydı güncellendi.`,
           isNew: true,
+        })
+      } else if (result.needsPageToken) {
+        setIsPullDateModalOpen(true)
+        setPullFeedback({
+          message: 'Meta reklam formlarını çekmek için Sayfa Erişim Anahtarı (leads_retrieval) veya CSV seçin.',
+          isNew: false,
         })
       } else {
         setPullFeedback({
-          message: 'Tüm veriler güncel. Yeni veri bulunamadı.',
+          message: `${rangeLabel} verileri kontrol edildi. Tüm veriler güncel.`,
           isNew: false,
         })
       }
@@ -112,8 +142,58 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
       setIsPulling(false)
       setTimeout(() => {
         setPullFeedback(null)
-      }, 4500)
+      }, 5500)
     }
+  }
+
+  const handleExecuteCustomRangePull = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (quickPageToken.trim() || quickPageId.trim()) {
+      metaStore.saveConfig({
+        pageAccessToken: quickPageToken.trim() || metaStore.getConfig().pageAccessToken,
+        pageId: quickPageId.trim() || metaStore.getConfig().pageId,
+        isConnected: true,
+      })
+    }
+    const start = pullStartDate ? new Date(pullStartDate + 'T00:00:00') : new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const end = pullEndDate ? new Date(pullEndDate + 'T23:59:59') : new Date()
+    setIsPullDateModalOpen(false)
+    await handlePullData({
+      startDate: start,
+      endDate: end,
+      label: `${pullStartDate} – ${pullEndDate}`,
+    })
+  }
+
+  const handleImportMetaCsvFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const text = String(reader.result || '')
+      const start = pullStartDate ? new Date(pullStartDate + 'T00:00:00') : undefined
+      const end = pullEndDate ? new Date(pullEndDate + 'T23:59:59') : undefined
+      const imported = metaStore.importLeadsFromMetaCsvText(text, start, end)
+      setIsPullDateModalOpen(false)
+      if (start && end) {
+        setDateRange({
+          presetKey: 'CUSTOM',
+          presetLabel: `${pullStartDate} – ${pullEndDate}`,
+          startDate: start,
+          endDate: end,
+        })
+      }
+      setPullFeedback({
+        message:
+          imported.newCount > 0 || imported.mergedCount > 0
+            ? `Meta dosyasından ${imported.newCount} yeni müşteri (${imported.mergedCount} güncelleme) aktarıldı!`
+            : 'Seçilen tarih aralığında dosyada yeni müşteri bulunamadı.',
+        isNew: imported.newCount > 0 || imported.mergedCount > 0,
+      })
+      setTimeout(() => setPullFeedback(null), 5500)
+    }
+    reader.readAsText(file, 'utf-8')
+    e.target.value = ''
   }
 
   // Filter leads based on stage, housing type, search query, and date range
@@ -213,15 +293,21 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
             </span>
           )}
 
-          <button
-            onClick={handlePullData}
-            disabled={isPulling}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm disabled:opacity-50"
-            title="En son çekilen veriden sonraki yeni lead'leri buluttan anında çeker"
-          >
-            <DownloadCloud className={`w-3.5 h-3.5 text-[#b99881] ${isPulling ? 'animate-bounce text-amber-400' : ''}`} />
-            <span>{isPulling ? 'Veriler Alınıyor...' : 'Verileri Al'}</span>
-          </button>
+          {permissionService.canPullLeads(currentUser) && (
+            <button
+              onClick={() => handlePullData()}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setIsPullDateModalOpen(true)
+              }}
+              disabled={isPulling}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm disabled:opacity-50 select-none"
+              title="Sol Tık: Son 48 saatin verisini al • Sağ Tık: Tarih aralığı seç"
+            >
+              <DownloadCloud className={`w-3.5 h-3.5 text-[#b99881] ${isPulling ? 'animate-bounce text-amber-400' : ''}`} />
+              <span>{isPulling ? 'Veriler Alınıyor...' : 'Verileri Al'}</span>
+            </button>
+          )}
 
           <GlassButton
             variant="gold"
@@ -598,6 +684,139 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
           </div>
         )
       )}
+
+      {/* SAĞ TIK / META BAĞLANTI: VERİLERİ AL TARİH SEÇME PENCERESİ */}
+      <GlassModal
+        isOpen={isPullDateModalOpen}
+        onClose={() => setIsPullDateModalOpen(false)}
+        title="Verileri Al — Tarih Aralığı & Meta Bağlantısı"
+        maxWidth="md"
+      >
+        <form onSubmit={handleExecuteCustomRangePull} className="space-y-4">
+          <p className="text-xs text-[#a69f99]">
+            Hızlı aralık seçebilir veya özel başlangıç ve bitiş tarihi belirleyerek o döneme ait müşteri verilerini çekebilirsiniz.
+          </p>
+
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: 'Son 24 Saat', hours: 24 },
+              { label: 'Son 48 Saat', hours: 48 },
+              { label: 'Son 7 Gün', hours: 24 * 7 },
+              { label: 'Son 14 Gün', hours: 24 * 14 },
+              { label: 'Son 30 Gün', hours: 24 * 30 },
+            ].map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => {
+                  const end = new Date()
+                  const start = new Date(Date.now() - preset.hours * 60 * 60 * 1000)
+                  setPullStartDate(start.toISOString().slice(0, 10))
+                  setPullEndDate(end.toISOString().slice(0, 10))
+                }}
+                className="px-3 py-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-xs font-semibold text-[#d6beae] hover:text-white border border-[#4a443f] transition-colors cursor-pointer"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                Başlangıç Tarihi
+              </label>
+              <input
+                type="date"
+                required
+                value={pullStartDate}
+                onChange={(e) => setPullStartDate(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                Bitiş Tarihi
+              </label>
+              <input
+                type="date"
+                required
+                value={pullEndDate}
+                onChange={(e) => setPullEndDate(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              />
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white">Meta Lead Ads Form Bağlantısı</span>
+              <button
+                type="button"
+                onClick={() => csvFileInputRef.current?.click()}
+                className="px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[11px] font-semibold text-[#b99881] hover:text-white cursor-pointer transition-colors"
+              >
+                CSV / Tablo Yükle
+              </button>
+              <input
+                ref={csvFileInputRef}
+                type="file"
+                accept=".csv,.tsv,.txt"
+                onChange={handleImportMetaCsvFile}
+                className="hidden"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-[#a69f99] mb-1">
+                Sayfa Erişim Anahtarı (Page Access Token - leads_retrieval yetkili)
+              </label>
+              <input
+                type="password"
+                placeholder="Meta for Developers > Sayfa Tokenı (leads_retrieval yetkili)"
+                value={quickPageToken}
+                onChange={(e) => setQuickPageToken(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs font-mono text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-[#a69f99] mb-1">
+                Facebook Sayfa ID (İsteğe Bağlı)
+              </label>
+              <input
+                type="text"
+                placeholder="Örn: 104829384756 (Sayfa Hakkında kısmındaki Sayfa Kimliği)"
+                value={quickPageId}
+                onChange={(e) => setQuickPageId(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs font-mono text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
+              />
+            </div>
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-200 leading-relaxed space-y-1">
+              <div className="font-semibold text-amber-300">Neden Meta Verisi Gelmedi?</div>
+              <div>
+                Sistemdeki mevcut anahtar yalnızca <strong>CAPI (Olay Gönderimi)</strong> yetkisine sahiptir. Geçmiş reklam formlarını çekmek için <strong>Meta Graph API Explorer</strong> üzerinden <code>leads_retrieval</code> ve <code>pages_read_engagement</code> yetkili <strong>Page Access Token</strong> yapıştırın veya sağ üstteki <strong>CSV / Tablo Yükle</strong> butonunu kullanın.
+              </div>
+              <div className="pt-1 text-[10px] text-[#d6beae] font-mono break-all">
+                Canlı Webhook URL: https://www.demirturkinsaat.com/api/meta-webhook (Verify: demirturk_meta_verify_2026)
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-2">
+            <GlassButton
+              variant="subtle"
+              size="sm"
+              type="button"
+              onClick={() => setIsPullDateModalOpen(false)}
+            >
+              İptal
+            </GlassButton>
+            <GlassButton variant="gold" size="sm" type="submit" className="px-5 font-bold">
+              Seçili Tarihteki Verileri Al
+            </GlassButton>
+          </div>
+        </form>
+      </GlassModal>
     </div>
   )
 }

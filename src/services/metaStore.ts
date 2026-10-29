@@ -29,7 +29,7 @@ const DEFAULT_CAPI_TOKEN =
 const DEFAULT_META_CONFIG: MetaApiConfig = {
   pageAccessToken: '',
   verifyToken: 'demirturk_meta_verify_2026',
-  webhookUrl: 'https://qspefqddkddxobfxxmqa.supabase.co/functions/v1/meta-webhook',
+  webhookUrl: 'https://www.demirturkinsaat.com/api/meta-webhook',
   pageId: '',
   pageName: 'Portföy Piksel (707603355337943)',
   isConnected: true,
@@ -249,6 +249,10 @@ class MetaStore {
         datasetId: (parsed?.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId,
         capiAccessToken: effectiveToken,
         crmName: (parsed?.crmName || '').trim() || DEFAULT_META_CONFIG.crmName,
+        webhookUrl:
+          !parsed?.webhookUrl || parsed.webhookUrl.includes('supabase.co')
+            ? DEFAULT_META_CONFIG.webhookUrl
+            : parsed.webhookUrl,
       }
     } catch {
       return DEFAULT_META_CONFIG
@@ -789,6 +793,7 @@ class MetaStore {
     needsPageToken?: boolean
     error?: string
   }> {
+    this.config = this.loadConfig()
     const pageToken = (this.config.pageAccessToken || '').trim()
     const fallbackToken = (this.config.capiAccessToken || '').trim()
     const token = pageToken || fallbackToken
@@ -802,25 +807,27 @@ class MetaStore {
       }
     }
 
-    const startUnix = Math.floor(startDate.getTime() / 1000)
-    const endUnix = Math.floor(endDate.getTime() / 1000)
+    const startMs = startDate.getTime() - 60 * 1000
+    const endMs = endDate.getTime() + 60 * 1000
 
     try {
-      const formsToFetch: { id: string; name: string; accessToken: string }[] = []
-
-      // 1. Try /me/accounts (if User / System User Token)
-      const accRes = await fetch(
-        `https://graph.facebook.com/v26.0/me/accounts?fields=id,name,access_token,leadgen_forms{id,name,status}&access_token=${encodeURIComponent(token)}`
-      )
-      const accJson = await accRes.json().catch(() => ({}))
-
-      if (Array.isArray(accJson?.data) && accJson.data.length > 0) {
-        for (const page of accJson.data) {
-          const pToken = page.access_token || token
+      const formsMap = new Map<string, { id: string; name: string; accessToken: string }>()
+      const addFormsFromPages = (pages: any[]) => {
+        if (!Array.isArray(pages)) return
+        for (const page of pages) {
+          const pToken = page?.access_token || token
+          if (page?.id && !this.config.pageId) {
+            this.saveConfig({
+              pageId: String(page.id),
+              pageName: page.name || this.config.pageName,
+              pageAccessToken: page?.access_token || this.config.pageAccessToken,
+              isConnected: true,
+            })
+          }
           const pageForms = page?.leadgen_forms?.data || []
           for (const f of pageForms) {
             if (f?.id) {
-              formsToFetch.push({
+              formsMap.set(String(f.id), {
                 id: String(f.id),
                 name: f.name || page.name || 'Meta Lead Formu',
                 accessToken: pToken,
@@ -830,48 +837,107 @@ class MetaStore {
         }
       }
 
-      // 2. Also try /me/leadgen_forms directly (if token is already a Page Access Token)
-      if (formsToFetch.length === 0) {
-        const directFormsRes = await fetch(
-          `https://graph.facebook.com/v26.0/me/leadgen_forms?fields=id,name,status&access_token=${encodeURIComponent(token)}`
+      // 1. Try /me/accounts (User Token or System User Token)
+      const accRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,leadgen_forms{id,name,status,leads_count}&limit=50&access_token=${encodeURIComponent(token)}`
+      )
+      const accJson = await accRes.json().catch(() => ({}))
+      if (Array.isArray(accJson?.data)) {
+        addFormsFromPages(accJson.data)
+      }
+
+      // 2. Try /me/assigned_pages (Business System User Token)
+      if (formsMap.size === 0) {
+        const asgRes = await fetch(
+          `https://graph.facebook.com/v21.0/me/assigned_pages?fields=id,name,access_token,leadgen_forms{id,name,status,leads_count}&limit=50&access_token=${encodeURIComponent(token)}`
         )
-        const directFormsJson = await directFormsRes.json().catch(() => ({}))
-        if (Array.isArray(directFormsJson?.data) && directFormsJson.data.length > 0) {
-          for (const f of directFormsJson.data) {
+        const asgJson = await asgRes.json().catch(() => ({}))
+        if (Array.isArray(asgJson?.data)) {
+          addFormsFromPages(asgJson.data)
+        }
+      }
+
+      // 3. Try /{pageId}/leadgen_forms if pageId is configured
+      if (formsMap.size === 0 && this.config.pageId) {
+        const pageFormsRes = await fetch(
+          `https://graph.facebook.com/v21.0/${encodeURIComponent(this.config.pageId.trim())}/leadgen_forms?fields=id,name,status,leads_count&limit=100&access_token=${encodeURIComponent(token)}`
+        )
+        const pageFormsJson = await pageFormsRes.json().catch(() => ({}))
+        if (Array.isArray(pageFormsJson?.data)) {
+          for (const f of pageFormsJson.data) {
             if (f?.id) {
-              formsToFetch.push({
+              formsMap.set(String(f.id), {
                 id: String(f.id),
                 name: f.name || 'Meta Lead Formu',
                 accessToken: token,
               })
             }
           }
-        } else if (directFormsJson?.error || (Array.isArray(accJson?.data) && accJson.data.length === 0)) {
-          return {
-            newCount: 0,
-            mergedCount: 0,
-            needsPageToken: true,
-            error:
-              'Mevcut token yalnızca CAPI (Olay Gönderimi) yetkisine sahip. Meta reklam formlarını çekmek için Ayarlar > Meta & Reklam bölümüne "leads_retrieval" yetkili Sayfa Erişim Anahtarı girin veya sağ tık menüsünden CSV yükleyin.',
-          }
         }
       }
+
+      // 4. Try /me/leadgen_forms directly (if token is already a Page Access Token)
+      let directFormsError: any = null
+      if (formsMap.size === 0) {
+        const directFormsRes = await fetch(
+          `https://graph.facebook.com/v21.0/me/leadgen_forms?fields=id,name,status,leads_count&limit=100&access_token=${encodeURIComponent(token)}`
+        )
+        const directFormsJson = await directFormsRes.json().catch(() => ({}))
+        if (Array.isArray(directFormsJson?.data) && directFormsJson.data.length > 0) {
+          for (const f of directFormsJson.data) {
+            if (f?.id) {
+              formsMap.set(String(f.id), {
+                id: String(f.id),
+                name: f.name || 'Meta Lead Formu',
+                accessToken: token,
+              })
+            }
+          }
+        } else {
+          directFormsError = directFormsJson?.error
+        }
+      }
+
+      if (formsMap.size === 0) {
+        return {
+          newCount: 0,
+          mergedCount: 0,
+          needsPageToken: true,
+          error:
+            directFormsError?.message && pageToken
+              ? `Meta API Hatası: ${directFormsError.message}`
+              : 'Mevcut anahtar yalnızca CAPI (Olay Gönderimi) yetkisine sahip. Meta reklam formlarını çekmek için "leads_retrieval" yetkili Sayfa Erişim Anahtarı (Page Access Token) girin veya CSV yükleyin.',
+        }
+      }
+
+      const formsToFetch = Array.from(formsMap.values())
+
+      // Update active forms list in store
+      this.forms = formsToFetch.map((f) => ({
+        id: f.id,
+        name: f.name,
+        campaignName: f.name,
+        status: 'ACTIVE',
+        leadCount: 0,
+        conversionRate: 18,
+        lastLeadAt: new Date().toISOString(),
+      }))
 
       let newCount = 0
       let mergedCount = 0
 
-      const filteringParam = JSON.stringify([
-        { field: 'time_created', operator: 'GREATER_THAN', value: startUnix - 1 },
-        { field: 'time_created', operator: 'LESS_THAN', value: endUnix + 1 },
-      ])
-
       for (const form of formsToFetch) {
-        const leadsUrl = `https://graph.facebook.com/v26.0/${encodeURIComponent(form.id)}/leads?filtering=${encodeURIComponent(filteringParam)}&fields=id,created_time,campaign_name,ad_name,form_id,field_data&limit=200&access_token=${encodeURIComponent(form.accessToken)}`
+        const leadsUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(form.id)}/leads?fields=id,created_time,campaign_name,ad_name,form_id,field_data&limit=250&access_token=${encodeURIComponent(form.accessToken)}`
         const leadsRes = await fetch(leadsUrl)
         const leadsJson = await leadsRes.json().catch(() => ({}))
         const items = Array.isArray(leadsJson?.data) ? leadsJson.data : []
 
         for (const item of items) {
+          const createdMs = item.created_time ? new Date(item.created_time).getTime() : Date.now()
+          if (!isNaN(createdMs) && (createdMs < startMs || createdMs > endMs)) {
+            continue
+          }
+
           const fieldData: { name: string; values: string[] }[] = Array.isArray(item.field_data)
             ? item.field_data
             : []
@@ -890,6 +956,7 @@ class MetaStore {
             if (
               key.includes('full_name') ||
               key.includes('ad_soyad') ||
+              key.includes('adi_soyadi') ||
               key.includes('isim') ||
               key === 'name' ||
               key === 'first_name'
@@ -901,7 +968,7 @@ class MetaStore {
               key.includes('numara') ||
               key.includes('tel')
             ) {
-              phone = val
+              phone = val.replace(/^p:/i, '').trim()
             } else if (key.includes('email') || key.includes('e-posta') || key.includes('mail')) {
               email = val
             } else {
@@ -949,6 +1016,7 @@ class MetaStore {
         }
       }
 
+      this.notify()
       return { newCount, mergedCount }
     } catch (err: any) {
       return {
