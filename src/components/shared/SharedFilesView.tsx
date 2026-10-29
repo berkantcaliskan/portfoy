@@ -5,19 +5,21 @@ import {
   Trash2,
   Search,
   Check,
-  Plus,
   FileText,
   FileSpreadsheet,
   Film,
   Image as ImageIcon,
   Archive,
-  Lock,
   AlertCircle,
   Folder,
   Upload,
   Music,
   File as FileGenericIcon,
   X,
+  ArrowUpDown,
+  List,
+  LayoutGrid,
+  Grid,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassModal } from '@/components/ui/GlassModal'
@@ -29,6 +31,10 @@ import {
 } from '@/services/sharedFileStore'
 import { userStore, AppUser } from '@/services/userStore'
 import { Department, CANONICAL_DEPARTMENTS } from '@/types/department'
+import { formatDateOnly } from '@/utils/formatters'
+
+type FileViewMode = 'LIST' | 'LARGE' | 'SMALL'
+type FileSortOrder = 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC' | 'SIZE_DESC' | 'SIZE_ASC'
 
 interface PendingUploadItem {
   id: string
@@ -52,6 +58,18 @@ function formatBytes(bytes: number): string {
   }
   const gb = mb / 1024
   return `${gb.toFixed(2)} GB`
+}
+
+function parseSizeToBytes(sizeStr?: string): number {
+  if (!sizeStr) return 0
+  const m = sizeStr.trim().match(/^([\d.,]+)\s*(KB|MB|GB|B)/i)
+  if (!m) return 0
+  const num = parseFloat(m[1].replace(',', '.')) || 0
+  const unit = m[2].toUpperCase()
+  if (unit === 'GB') return num * 1024 * 1024 * 1024
+  if (unit === 'MB') return num * 1024 * 1024
+  if (unit === 'KB') return num * 1024
+  return num
 }
 
 function detectSharedFileType(file: File): SharedFile['type'] {
@@ -119,6 +137,9 @@ export const SharedFilesView: React.FC = () => {
   const [files, setFiles] = useState<SharedFile[]>(() => sharedFileStore.getFilesForUser(currentUser))
   const [selectedFolder, setSelectedFolder] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState<FileViewMode>('LARGE')
+  const [sortOrder, setSortOrder] = useState<FileSortOrder>('NEWEST')
+
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [downloadSuccessMessage, setDownloadSuccessMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -165,6 +186,24 @@ export const SharedFilesView: React.FC = () => {
     if (selectedFolder !== 'ALL' && f.folder !== selectedFolder) return false
     if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
     return true
+  })
+
+  const sortedFiles = [...filteredFiles].sort((a, b) => {
+    if (sortOrder === 'NAME_ASC') {
+      return (a.name || '').localeCompare(b.name || '', 'tr-TR')
+    }
+    if (sortOrder === 'NAME_DESC') {
+      return (b.name || '').localeCompare(a.name || '', 'tr-TR')
+    }
+    if (sortOrder === 'SIZE_DESC') {
+      return parseSizeToBytes(b.size) - parseSizeToBytes(a.size)
+    }
+    if (sortOrder === 'SIZE_ASC') {
+      return parseSizeToBytes(a.size) - parseSizeToBytes(b.size)
+    }
+    const tA = new Date(a.createdAt || 0).getTime()
+    const tB = new Date(b.createdAt || 0).getTime()
+    return sortOrder === 'OLDEST' ? tA - tB : tB - tA
   })
 
   const processSelectedFiles = async (fileList: FileList | File[]) => {
@@ -219,7 +258,6 @@ export const SharedFilesView: React.FC = () => {
       return
     }
 
-    // Trigger real browser/desktop download
     try {
       const link = document.createElement('a')
       if (file.fileDataUrl) {
@@ -306,24 +344,24 @@ export const SharedFilesView: React.FC = () => {
     setTimeout(() => setDownloadSuccessMessage(null), 3500)
   }
 
-  const getFileIcon = (type: SharedFile['type']) => {
+  const getFileIcon = (type: SharedFile['type'], sizeClass = 'w-5 h-5') => {
     switch (type) {
       case 'pdf':
-        return <FileText className="w-5 h-5 text-rose-400" />
+        return <FileText className={`${sizeClass} text-rose-400 shrink-0`} />
       case 'excel':
-        return <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+        return <FileSpreadsheet className={`${sizeClass} text-emerald-400 shrink-0`} />
       case 'video':
-        return <Film className="w-5 h-5 text-sky-400" />
+        return <Film className={`${sizeClass} text-sky-400 shrink-0`} />
       case 'image':
-        return <ImageIcon className="w-5 h-5 text-purple-400" />
+        return <ImageIcon className={`${sizeClass} text-purple-400 shrink-0`} />
       case 'audio':
-        return <Music className="w-5 h-5 text-pink-400" />
+        return <Music className={`${sizeClass} text-pink-400 shrink-0`} />
       case 'archive':
-        return <Archive className="w-5 h-5 text-amber-400" />
+        return <Archive className={`${sizeClass} text-amber-400 shrink-0`} />
       case 'doc':
-        return <FileText className="w-5 h-5 text-blue-400" />
+        return <FileText className={`${sizeClass} text-blue-400 shrink-0`} />
       default:
-        return <FileGenericIcon className="w-5 h-5 text-[#b99881]" />
+        return <FileGenericIcon className={`${sizeClass} text-[#b99881] shrink-0`} />
     }
   }
 
@@ -388,8 +426,9 @@ export const SharedFilesView: React.FC = () => {
         </div>
       )}
 
-      {/* Kategori ve Filtre Çubuğu */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Kategori, Arama, Sıralama ve Görünüm Çubuğu */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Sol: Klasör Sekmeleri */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
             onClick={() => setSelectedFolder('ALL')}
@@ -420,21 +459,85 @@ export const SharedFilesView: React.FC = () => {
           })}
         </div>
 
-        {/* Yerel Arama */}
-        <div className="relative w-full sm:w-60">
-          <Search className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Dosyalarda ara..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
-          />
+        {/* Sağ: Arama + Sıralama + Görünüm Modları */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Arama */}
+          <div className="relative w-full sm:w-52">
+            <Search className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Dosyalarda ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
+            />
+          </div>
+
+          {/* Sıralama Seçici */}
+          <div className="relative flex items-center">
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as FileSortOrder)}
+              className="pl-8 pr-6 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs font-semibold text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
+              title="Dosyaları sırala"
+            >
+              <option value="NEWEST">Sırala: Yeniden eskiye</option>
+              <option value="OLDEST">Sırala: Eskiden yeniye</option>
+              <option value="NAME_ASC">Sırala: İsim (A - Z)</option>
+              <option value="NAME_DESC">Sırala: İsim (Z - A)</option>
+              <option value="SIZE_DESC">Sırala: Boyut (Büyükten küçüğe)</option>
+              <option value="SIZE_ASC">Sırala: Boyut (Küçükten büyüğe)</option>
+            </select>
+          </div>
+
+          {/* Görünüm Seçici: Liste / Büyük / Küçük */}
+          <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#282522] border border-[#4a443f]">
+            <button
+              type="button"
+              onClick={() => setViewMode('LIST')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'LIST'
+                  ? 'bg-[#b99881] text-white shadow-sm'
+                  : 'no-layer-btn text-[#a69f99] hover:text-white'
+              }`}
+              title="Liste Görünümü"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>Liste</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('LARGE')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'LARGE'
+                  ? 'bg-[#b99881] text-white shadow-sm'
+                  : 'no-layer-btn text-[#a69f99] hover:text-white'
+              }`}
+              title="Büyük Kart Görünümü"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Büyük</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('SMALL')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'SMALL'
+                  ? 'bg-[#b99881] text-white shadow-sm'
+                  : 'no-layer-btn text-[#a69f99] hover:text-white'
+              }`}
+              title="Küçük Kompakt Görünüm"
+            >
+              <Grid className="w-3.5 h-3.5" />
+              <span>Küçük</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Dosya Listesi */}
-      {filteredFiles.length === 0 ? (
+      {/* Dosya Listesi / Kartları */}
+      {sortedFiles.length === 0 ? (
         <div className="py-20 text-center flex flex-col items-center justify-center">
           <Folder className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
           <h3 className="text-sm font-semibold text-white">Henüz paylaşılan dosya yok</h3>
@@ -442,36 +545,130 @@ export const SharedFilesView: React.FC = () => {
             Sağ üstteki "Dosya Yükle & Paylaş" butonuna tıklayarak bilgisayarınızdan her türlü dosyayı yükleyebilirsiniz.
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'LIST' ? (
+        /* 1. LİSTE GÖRÜNÜMÜ */
+        <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] overflow-hidden shadow-sm">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
+                  <th className="py-3 px-4">Dosya Adı</th>
+                  <th className="py-3 px-4">Kategori</th>
+                  <th className="py-3 px-4">Erişim Hedefi</th>
+                  <th className="py-3 px-4">Boyut</th>
+                  <th className="py-3 px-4">Yükleyen</th>
+                  <th className="py-3 px-4">Tarih</th>
+                  <th className="py-3 px-4 text-right">İşlem</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#4a443f]/50">
+                {sortedFiles.map((file) => {
+                  const isOwner =
+                    file.uploadedByUserId === currentUser?.id ||
+                    currentUser?.role === 'ADMIN' ||
+                    currentUser?.isManager
+                  return (
+                    <tr
+                      key={file.id}
+                      className="customer-table-row transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {getFileIcon(file.type, 'w-4 h-4')}
+                          <span className="font-bold text-white truncate max-w-[260px]" title={file.name}>
+                            {file.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-[#d6beae] whitespace-nowrap">{file.folder}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {getTargetBadge(file)}
+                          {file.permissions.canEdit && (
+                            <span className="text-[10px] text-emerald-400 font-medium">Düzenlenebilir</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-[#a69f99] whitespace-nowrap">{file.size}</td>
+                      <td className="py-3 px-4 text-white whitespace-nowrap">{file.uploadedByUserName}</td>
+                      <td className="py-3 px-4 text-[#8c857f] whitespace-nowrap">
+                        {formatDateOnly(file.createdAt)}
+                      </td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(file)}
+                            className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#b99881] hover:text-[#282522] transition-colors cursor-pointer"
+                            title="Dosyayı İndir"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                          {isOwner && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(file)}
+                              className="p-1.5 rounded-full bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                              title="Dosyayı Sil"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : viewMode === 'LARGE' ? (
+        /* 2. BÜYÜK GÖRÜNÜM (Geniş Kartlar & Görsel Önizleme) */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFiles.map((file) => {
+          {sortedFiles.map((file) => {
             const isOwner =
               file.uploadedByUserId === currentUser?.id ||
               currentUser?.role === 'ADMIN' ||
               currentUser?.isManager
+            const isImagePreview =
+              file.type === 'image' && file.fileDataUrl && file.fileDataUrl.startsWith('data:image/')
 
             return (
               <div
                 key={file.id}
-                className="p-4 rounded-[20px] bg-[#282522] border border-[#4a443f] hover:border-[#b99881]/70 transition-all duration-200 flex flex-col justify-between space-y-3"
+                className="p-5 rounded-[22px] bg-[#282522] border border-[#4a443f] hover:border-[#b99881]/70 transition-all duration-200 flex flex-col justify-between space-y-3.5"
               >
-                <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {getFileIcon(file.type)}
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-white truncate" title={file.name}>
-                          {file.name}
-                        </h4>
-                        <div className="text-[10px] text-[#8c857f] mt-0.5">
-                          {file.size} • {file.folder}
-                        </div>
+                <div className="space-y-3">
+                  {/* Üst Önizleme Kutusu */}
+                  <div className="h-28 rounded-[16px] bg-[#34302d] flex items-center justify-center overflow-hidden relative">
+                    {isImagePreview ? (
+                      <img
+                        src={file.fileDataUrl}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5">
+                        {getFileIcon(file.type, 'w-9 h-9')}
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8c857f]">
+                          {file.type} • {file.size}
+                        </span>
                       </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-white truncate" title={file.name}>
+                      {file.name}
+                    </h4>
+                    <div className="text-[11px] text-[#8c857f] mt-0.5">
+                      {file.folder} • {formatDateOnly(file.createdAt)}
                     </div>
                   </div>
 
                   {/* Hedef ve Yetki Etiketleri */}
-                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     {getTargetBadge(file)}
                     {file.permissions.canEdit && (
                       <span className="text-[10px] text-emerald-400 font-medium">Düzenlenebilir</span>
@@ -480,8 +677,8 @@ export const SharedFilesView: React.FC = () => {
                 </div>
 
                 <div className="pt-2 flex items-center justify-between text-[11px] text-[#8c857f]">
-                  <span>Yükleyen: {file.uploadedByUserName}</span>
-                  <div className="flex items-center gap-1.5">
+                  <span className="truncate">Yükleyen: {file.uploadedByUserName}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleDownload(file)}
@@ -498,6 +695,62 @@ export const SharedFilesView: React.FC = () => {
                         title="Dosyayı Sil"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        /* 3. KÜÇÜK GÖRÜNÜM (Kompakt Çoklu Izgara) */
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {sortedFiles.map((file) => {
+            const isOwner =
+              file.uploadedByUserId === currentUser?.id ||
+              currentUser?.role === 'ADMIN' ||
+              currentUser?.isManager
+
+            return (
+              <div
+                key={file.id}
+                className="p-3.5 rounded-[18px] bg-[#282522] border border-[#4a443f] hover:border-[#b99881]/70 transition-all duration-200 flex flex-col justify-between space-y-2.5"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    {getFileIcon(file.type, 'w-5 h-5')}
+                    <span className="text-[10px] font-mono text-[#8c857f]">{file.size}</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white truncate" title={file.name}>
+                      {file.name}
+                    </h4>
+                    <div className="text-[10px] text-[#8c857f] truncate mt-0.5">
+                      {file.folder}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-1 flex items-center justify-between gap-1">
+                  <div className="truncate">{getTargetBadge(file)}</div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(file)}
+                      className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#b99881] hover:text-[#282522] transition-colors cursor-pointer"
+                      title="Dosyayı İndir"
+                    >
+                      <Download className="w-3 h-3" />
+                    </button>
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(file)}
+                        className="p-1.5 rounded-full bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                        title="Dosyayı Sil"
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     )}
                   </div>
