@@ -55,6 +55,13 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
   const handleItemClick = (n: AppNotification) => {
     notificationStore.markNotificationAsRead(n.id)
     onNavigate(n.targetTab)
+    if (n.referenceId === 'CALL_AGAIN' || n.id.startsWith('notif-call-again-')) {
+      window.setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('demirturk:switch-customer-stage-tab', { detail: 'CALL_AGAIN' })
+        )
+      }, 60)
+    }
     onClose()
   }
 

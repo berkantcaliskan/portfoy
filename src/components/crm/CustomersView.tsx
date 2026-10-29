@@ -37,6 +37,23 @@ import { loadSavedDateRange, saveDateRange, checkDayRollover } from '@/services/
 import { PaginationBar } from '@/components/common/PaginationBar'
 import { BookLogo } from '@/components/common/BookLogo'
 import { requestStore } from '@/services/requestStore'
+import { notificationStore } from '@/services/notificationStore'
+
+function isCallAgainLead(l: Lead): boolean {
+  if (
+    l.stage === 'QUALIFIED' ||
+    l.stage === 'OFFER' ||
+    l.stage === 'APPOINTMENT' ||
+    l.stage === 'PRESENTATION' ||
+    l.stage === 'WON' ||
+    l.stage === 'LOST' ||
+    l.stage === 'NO_INTENT' ||
+    l.callStatus === 'NO_INTENT'
+  ) {
+    return false
+  }
+  return l.callStatus === 'CALL_AGAIN' || l.callStatus === 'UNREACHABLE'
+}
 
 function isWebLead(l: Lead): boolean {
   return Boolean(
@@ -123,6 +140,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   useEffect(() => {
     setFilterStage(isMarketingView ? 'ALL' : 'UNCONTACTED')
   }, [isMarketingView])
+
+  useEffect(() => {
+    const handleSwitchTab = (e: Event) => {
+      const customEv = e as CustomEvent<string>
+      if (customEv.detail) {
+        setFilterStage(customEv.detail)
+      }
+    }
+    window.addEventListener('demirturk:switch-customer-stage-tab', handleSwitchTab)
+    return () => window.removeEventListener('demirturk:switch-customer-stage-tab', handleSwitchTab)
+  }, [])
 
   // Sıralama (Varsayılan: NEWEST - Yeniden Eskiye)
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC'>('NEWEST')
@@ -409,13 +437,16 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     } else if (filterStage === 'CHANNEL_WEB') {
       if (!isWebLead(l)) return false
     } else if (filterStage === 'UNCONTACTED') {
-      // İletişim: 3 Ekim ve sonrası yeni (NEW) veya İletişim (CONTACTED / UNDECIDED) aşamasındakiler (Potansiyel olmayanlar hariç)
-      if (l.callStatus === 'NO_INTENT') return false
+      // İletişim: 3 Ekim ve sonrası yeni (NEW) veya İletişim (CONTACTED / UNDECIDED) aşamasındakiler (Tekrar Ara ve Potansiyel olmayanlar hariç)
+      if (l.callStatus === 'NO_INTENT' || isCallAgainLead(l)) return false
       const isNewAfterOct3 =
         l.stage === 'NEW' &&
         new Date(l.createdAt).getTime() >= new Date('2026-10-02T21:00:00.000Z').getTime()
       const isContactedStage = l.stage === 'CONTACTED' || l.stage === 'UNDECIDED'
       if (!isNewAfterOct3 && !isContactedStage) return false
+    } else if (filterStage === 'CALL_AGAIN') {
+      // Tekrar Ara: Bilgi alanında "Tekrar ara" veya "Ulaşılamadı" seçilenler
+      if (!isCallAgainLead(l)) return false
     } else if (filterStage === 'QUALIFIED') {
       // Nitelikli
       const isQual =
@@ -593,10 +624,12 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   const uncontactedCount = dateFilteredLeads.filter(
     (l) =>
       l.callStatus !== 'NO_INTENT' &&
+      !isCallAgainLead(l) &&
       ((l.stage === 'NEW' && new Date(l.createdAt).getTime() >= oct3Start) ||
         l.stage === 'CONTACTED' ||
         l.stage === 'UNDECIDED')
   ).length
+  const callAgainCount = dateFilteredLeads.filter(isCallAgainLead).length
   const qualifiedCount = dateFilteredLeads.filter(
     (l) =>
       l.stage === 'QUALIFIED' ||
@@ -769,7 +802,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             </button>
           </div>
         ) : (
-          /* MÜŞTERİ İLİŞKİLERİ SEKMELERİ: İletişim (Varsayılan) -> Nitelikli -> Teklif -> Dönüşüm -> Diğer (Potansiyel Olmayanlar) -> Tümü -> Custom Tabs -> [+] */
+          /* MÜŞTERİ İLİŞKİLERİ SEKMELERİ: İletişim (Varsayılan) -> Tekrar Ara -> Nitelikli -> Teklif -> Dönüşüm -> Diğer (Potansiyel Olmayanlar) -> Tümü -> Custom Tabs -> [+] */
           <div className="flex items-center gap-1.5 overflow-x-auto py-1">
             {/* 1. Sekme: İletişim */}
             <button
@@ -783,7 +816,20 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               İletişim ({uncontactedCount})
             </button>
 
-            {/* 2. Sekme: Nitelikli */}
+            {/* 2. Sekme: Tekrar Ara (Tekrar ara + Ulaşılamadı bilgisi seçilenler, Saatlik hatırlatmalı) */}
+            <button
+              onClick={() => setFilterStage('CALL_AGAIN')}
+              title="Tekrar ara ve Ulaşılamadı bilgisi seçilen müşteriler (Saatlik hatırlatma aktif)"
+              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CALL_AGAIN'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              }`}
+            >
+              Tekrar Ara ({callAgainCount})
+            </button>
+
+            {/* 3. Sekme: Nitelikli */}
             <button
               onClick={() => setFilterStage('QUALIFIED')}
               className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
@@ -918,6 +964,29 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           />
         </div>
       </div>
+
+      {filterStage === 'CALL_AGAIN' && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-[#282522]/90 border border-[#b99881]/35 text-xs text-[#d6beae]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+            <span>
+              <strong className="text-white">Saatlik Hatırlatma Aktif:</strong> Bilgi durumu{' '}
+              <strong className="text-white">Tekrar ara</strong> veya{' '}
+              <strong className="text-white">Ulaşılamadı</strong> olan müşteriler bu sekmede toplanır ve her saat başı bildirim gönderilir.
+            </span>
+          </div>
+          {callAgainCount > 0 && (
+            <button
+              type="button"
+              onClick={() => notificationStore.triggerCallAgainHourlyReminder(true)}
+              className="px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[11px] font-semibold text-[#b99881] hover:text-white transition-colors cursor-pointer shrink-0"
+              title="Saatlik tekrar arama hatırlatma bildirimini şimdi gönder"
+            >
+              Şimdi Hatırlat
+            </button>
+          )}
+        </div>
+      )}
 
       {/* MÜŞTERİ TABLOSU: Katman & Kontür Çerçeve (Boşken Katmansız ve Ortalı) */}
       {filteredLeads.length === 0 ? (

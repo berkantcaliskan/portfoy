@@ -1,7 +1,11 @@
 import { leadStore } from './leadStore'
 import { requestStore } from './requestStore'
+import { userStore } from './userStore'
 import { Lead } from '@/types/lead'
 import { NavPageId } from '@/types/department'
+import { playNewLeadChime } from '@/utils/audioAlert'
+
+const STORAGE_KEY_CALL_AGAIN_REMINDER_TS = 'demirturk_last_call_again_reminder_ts'
 
 export interface AppNotification {
   id: string
@@ -161,7 +165,84 @@ class NotificationStore {
       window.addEventListener('demirturk:new-lead', () => {
         this.notify()
       })
+      this.initHourlyCallAgainReminder()
     }
+  }
+
+  public getCallAgainLeads(): Lead[] {
+    const currentUser = userStore.getCurrentUser()
+    const all = leadStore.getAll(currentUser)
+    return all.filter((l) => {
+      if (
+        l.stage === 'QUALIFIED' ||
+        l.stage === 'OFFER' ||
+        l.stage === 'APPOINTMENT' ||
+        l.stage === 'PRESENTATION' ||
+        l.stage === 'WON' ||
+        l.stage === 'LOST' ||
+        l.stage === 'NO_INTENT' ||
+        l.callStatus === 'NO_INTENT'
+      ) {
+        return false
+      }
+      return l.callStatus === 'CALL_AGAIN' || l.callStatus === 'UNREACHABLE'
+    })
+  }
+
+  public triggerCallAgainHourlyReminder(force = false): AppNotification | null {
+    const callAgainLeads = this.getCallAgainLeads()
+    if (callAgainLeads.length === 0) return null
+
+    const now = Date.now()
+    if (!force) {
+      let lastTs = 0
+      try {
+        lastTs = Number(localStorage.getItem(STORAGE_KEY_CALL_AGAIN_REMINDER_TS) || '0')
+      } catch {}
+      // En az 1 saat (3600000 ms) geçmiş olmalı
+      if (now - lastTs < 60 * 60 * 1000) return null
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY_CALL_AGAIN_REMINDER_TS, String(now))
+    } catch {}
+
+    const namesPreview = callAgainLeads
+      .slice(0, 3)
+      .map((l) => l.fullName)
+      .join(', ')
+    const extraCount = callAgainLeads.length > 3 ? ` +${callAgainLeads.length - 3} kişi` : ''
+    const subtitle = `Tekrar aranacak: ${namesPreview}${extraCount}`
+    const hourKey = Math.floor(now / (60 * 60 * 1000))
+
+    playNewLeadChime()
+
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(`Tekrar Arama Hatırlatması (${callAgainLeads.length} Müşteri)`, {
+          body: subtitle,
+          icon: '/icon.png',
+        })
+      } catch {}
+    }
+
+    return this.pushNotification({
+      id: `notif-call-again-${force ? now : hourKey}`,
+      type: 'LEAD',
+      title: `Tekrar Arama Hatırlatması (${callAgainLeads.length} Müşteri)`,
+      subtitle,
+      targetTab: 'customers',
+      referenceId: 'CALL_AGAIN',
+    })
+  }
+
+  private initHourlyCallAgainReminder() {
+    // Her dakika kontrol et; son hatırlatmadan bu yana 1 saat geçtiyse ve Tekrar Ara havuzunda müşteri varsa bildirim gönder
+    window.setInterval(() => {
+      try {
+        this.triggerCallAgainHourlyReminder(false)
+      } catch {}
+    }, 60 * 1000)
   }
 
   /**

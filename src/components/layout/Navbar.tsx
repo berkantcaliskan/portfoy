@@ -581,6 +581,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => {
                   notificationStore.markNotificationAsRead(previewNotif.id)
                   onTabChange(previewNotif.targetTab)
+                  if (
+                    previewNotif.referenceId === 'CALL_AGAIN' ||
+                    previewNotif.id.startsWith('notif-call-again-')
+                  ) {
+                    window.setTimeout(() => {
+                      window.dispatchEvent(
+                        new CustomEvent('demirturk:switch-customer-stage-tab', {
+                          detail: 'CALL_AGAIN',
+                        })
+                      )
+                    }, 60)
+                  }
                   triggerFlyToBell()
                 }}
                 className="top-utility-pill h-10 max-w-[360px] lg:max-w-[420px] pl-2 pr-3 rounded-full border border-[#4a443f]/60 bg-white flex items-center gap-2.5 cursor-pointer shadow-md hover:border-[#b99881]/60 transition-colors pointer-events-auto"
