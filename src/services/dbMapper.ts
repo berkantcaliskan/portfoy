@@ -591,19 +591,26 @@ export function sharedFileToRow(f: SharedFile) {
     share_target: f.shareTarget,
     target_departments: f.targetDepartments || [],
     target_member_ids: f.targetMemberIds || [],
-    permissions: f.permissions,
+    permissions: {
+      ...f.permissions,
+      mimeType: f.mimeType,
+      fileDataUrl: f.fileDataUrl,
+    },
     download_count: f.downloadCount,
     downloads_audit: f.downloadsAudit || [],
   }
 }
 
 export function rowToSharedFile(r: any): SharedFile {
+  const perms = r.permissions || { canView: true, canEdit: false, canReshare: true }
   return {
     id: r.id,
     name: r.name,
     folder: r.folder,
-    size: r.size || '4.2 MB',
-    type: r.type || 'pdf',
+    size: r.size || '1.0 MB',
+    type: r.type || 'other',
+    mimeType: perms.mimeType || undefined,
+    fileDataUrl: perms.fileDataUrl || undefined,
     uploadedByUserId: r.uploaded_by_user_id,
     uploadedByUserName: r.uploaded_by_user_name,
     createdAt: r.created_at,
@@ -611,7 +618,11 @@ export function rowToSharedFile(r: any): SharedFile {
     shareTarget: r.share_target || 'ALL_TEAM',
     targetDepartments: Array.isArray(r.target_departments) ? r.target_departments : [],
     targetMemberIds: Array.isArray(r.target_member_ids) ? r.target_member_ids : [],
-    permissions: r.permissions || { canView: true, canEdit: false, canReshare: true },
+    permissions: {
+      canView: perms.canView ?? true,
+      canEdit: Boolean(perms.canEdit),
+      canReshare: perms.canReshare ?? true,
+    },
     downloadCount: r.download_count || 0,
     downloadsAudit: Array.isArray(r.downloads_audit) ? r.downloads_audit : [],
   }

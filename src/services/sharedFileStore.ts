@@ -18,7 +18,9 @@ export interface SharedFile {
   name: string
   folder: FileCategory
   size: string
-  type: 'pdf' | 'excel' | 'video' | 'image' | 'archive' | 'doc'
+  type: 'pdf' | 'excel' | 'video' | 'image' | 'archive' | 'doc' | 'audio' | 'other'
+  mimeType?: string
+  fileDataUrl?: string
   uploadedByUserId: string
   uploadedByUserName: string
   createdAt: string
@@ -158,6 +160,8 @@ class SharedFileStore {
       folder: FileCategory
       size?: string
       type?: SharedFile['type']
+      mimeType?: string
+      fileDataUrl?: string
       shareTarget: ShareTarget
       targetDepartments?: Department[]
       targetMemberIds?: string[]
@@ -170,11 +174,13 @@ class SharedFileStore {
     user: AppUser
   ): SharedFile {
     const newFile: SharedFile = {
-      id: 'f-' + Date.now(),
+      id: 'f-' + Date.now() + '-' + Math.floor(100 + Math.random() * 900),
       name: data.name.trim(),
       folder: data.folder,
-      size: data.size || '4.2 MB',
-      type: data.type || 'pdf',
+      size: data.size || '1.0 MB',
+      type: data.type || 'other',
+      mimeType: data.mimeType,
+      fileDataUrl: data.fileDataUrl,
       uploadedByUserId: user.id,
       uploadedByUserName: user.fullName,
       createdAt: new Date().toISOString(),
