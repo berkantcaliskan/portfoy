@@ -12,7 +12,6 @@ import {
   X,
   UserPlus,
   ArrowRight,
-  RefreshCw,
   FolderPlus,
   Edit3,
 } from 'lucide-react'
@@ -132,13 +131,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   const callCenterUsers = allUsers.filter(
     (u) => u.department === 'Müşteri İlişkileri' && u.role !== 'ADMIN' && !u.isManager
   )
-
-  const handleManualAutoAssign = () => {
-    if (callCenterUsers.length === 0) {
-      return
-    }
-    leadStore.autoAssignCallCenterLeads(callCenterUsers)
-  }
 
   // 1. Date Range Filter
   const dateFilteredLeads = leads.filter((l) => {
@@ -330,17 +322,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-
-          {callCenterUsers.length > 0 && permissionService.canAssignConsultant(currentUser ?? null) && (
-            <button
-              onClick={handleManualAutoAssign}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm"
-              title="Atanmamış tüm müşteri adaylarını çağrı merkezi ekibine eşit paylaştırır"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-[#b99881]" />
-              <span>Çağrı Merkezi Eşit Dağıtımı Yap</span>
-            </button>
-          )}
 
           {onOpenNewLead && permissionService.canAddCustomer(currentUser ?? null) && (
             <GlassButton
