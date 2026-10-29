@@ -168,24 +168,24 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     : (liveLead.inquiries && liveLead.inquiries[0]?.metaAnswers && liveLead.inquiries[0].metaAnswers.length > 0)
       ? liveLead.inquiries[0].metaAnswers
       : [
-          ...(liveLead.preferredHousingType ? [{ question: 'İlgilendiğiniz Konut Tipi', answer: liveLead.preferredHousingType }] : []),
-          ...(liveLead.budget ? [{ question: 'Bütçe Beklentisi', answer: formatCurrency(liveLead.budget) }] : []),
-          ...(liveLead.secondaryPhone ? [{ question: 'İkincil Telefon', answer: formatPhoneDisplay(liveLead.secondaryPhone) }] : []),
-          ...(liveLead.email ? [{ question: 'E-posta Adresi', answer: liveLead.email }] : []),
-          ...(liveLead.notes ? [{ question: 'Form Notu / Talep', answer: liveLead.notes }] : []),
+          ...(liveLead.preferredHousingType ? [{ question: 'İlgilendiğiniz konut tipi', answer: liveLead.preferredHousingType }] : []),
+          ...(liveLead.budget ? [{ question: 'Bütçe beklentisi', answer: formatCurrency(liveLead.budget) }] : []),
+          ...(liveLead.secondaryPhone ? [{ question: 'İkincil telefon', answer: formatPhoneDisplay(liveLead.secondaryPhone) }] : []),
+          ...(liveLead.email ? [{ question: 'E-posta adresi', answer: liveLead.email }] : []),
+          ...(liveLead.notes ? [{ question: 'Form notu / talep', answer: liveLead.notes }] : []),
         ]
 
   const quickMsgTemplates = [
     {
-      title: 'Tanışma & İlk İletişim',
+      title: 'Tanışma ve ilk iletişim',
       msg: `Merhaba Sayın ${lead.fullName}, Demirtürk Portföy'den arıyorum. Konut ve yatırım projelerimiz hakkında bıraktığınız form ile ilgili detaylı bilgi vermek için iletişime geçtim. Ne zaman müsait olursunuz?`,
     },
     {
-      title: 'Randevu & Sunum Daveti',
+      title: 'Randevu ve sunum daveti',
       msg: `Sayın ${lead.fullName}, Demirtürk Portföy projemizin örnek dairesini ve kat planlarını birlikte incelemek üzere sizi satış ofisimize kahveye davet etmek isteriz. Hangi gün size uygun olur?`,
     },
     {
-      title: 'Teklif & Portföy Özeti',
+      title: 'Teklif ve portföy özeti',
       msg: `Sayın ${lead.fullName}, ilgilendiğiniz konut seçeneğine ait güncel fiyat listesi ve esnek ödeme planını ekte paylaşıyorum. Detayları inceledikten sonra değerlendirebiliriz.`,
     },
   ]
@@ -235,11 +235,11 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 {isWebLead ? (
                   <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-amber-500/12 text-amber-700 border border-amber-500/40 flex items-center gap-1">
                     <Globe className="w-2.5 h-2.5 text-amber-600" />
-                    Web Sitesi
+                    Web sitesi
                   </span>
                 ) : liveLead.source === 'DIRECT' ? (
                   <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/12 text-emerald-700 border border-emerald-500/40">
-                    Manuel Kayıt
+                    Manuel kayıt
                   </span>
                 ) : (
                   <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-blue-500/12 text-blue-700 border border-blue-500/40">
@@ -302,10 +302,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   ? 'bg-[#b99881] text-white border-[#b99881]'
                   : 'bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border-[#4a443f]'
               }`}
-              title="Müşteri Bilgilerini Düzenle (İkincil Telefon, E-posta vb.)"
+              title="Müşteri bilgilerini düzenle (ikincil telefon, e-posta vb.)"
             >
               <Edit3 className="w-3 h-3" />
-              <span>Müşteri Bilgilerini Düzenle</span>
+              <span>Müşteri bilgilerini düzenle</span>
             </button>
 
             <div className="flex items-center gap-1.5 pl-1">
@@ -333,9 +333,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             className="p-4 rounded-[22px] bg-transparent border border-[#b99881]/50 space-y-3.5"
           >
             <div className="flex items-center justify-between">
-              <h5 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <h5 className="text-xs font-bold text-white tracking-wide flex items-center gap-1.5">
                 <Edit3 className="w-3.5 h-3.5 text-[#b99881]" />
-                <span>Müşteri Bilgilerini Düzenle</span>
+                <span>Müşteri bilgilerini düzenle</span>
               </h5>
               <span className="text-[11px] text-[#8c857f]">
                 Bütçe beklentisi, ikincil telefon, e-posta ve danışman bilgilerini güncelleyin
@@ -344,21 +344,21 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               <GlassInput
-                label="Adı ve Soyadı *"
+                label="Adı ve soyadı *"
                 value={editForm.fullName}
                 onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
                 placeholder="Örn: Mehmet Demir"
               />
 
               <PhoneInput
-                label="Telefon Numarası *"
+                label="Telefon numarası *"
                 value={editForm.phone}
                 onChange={(val) => setEditForm({ ...editForm, phone: val })}
                 required
               />
 
               <GlassInput
-                label="İkincil Telefon (İsteğe Bağlı)"
+                label="İkincil telefon (isteğe bağlı)"
                 type="tel"
                 placeholder="Örn: 0532 000 00 00"
                 value={editForm.secondaryPhone}
@@ -366,7 +366,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               />
 
               <GlassInput
-                label="E-posta Adresi (İsteğe Bağlı)"
+                label="E-posta adresi (isteğe bağlı)"
                 type="email"
                 placeholder="Örn: mehmet@gmail.com"
                 value={editForm.email}
@@ -374,7 +374,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               />
 
               <GlassInput
-                label="Bütçe Beklentisi (₺)"
+                label="Bütçe beklentisi (₺)"
                 type="number"
                 placeholder="Örn: 5000000"
                 value={editForm.budget}
@@ -383,7 +383,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-[#f3efe9]">
-                  Konut Tipi Tercihi
+                  Konut tipi tercihi
                 </label>
                 <select
                   value={editForm.preferredHousingType}
@@ -400,7 +400,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-[#f3efe9]">
-                  Danışman Ata
+                  Danışman ata
                 </label>
                 <select
                   value={editForm.assignedUserId}
@@ -429,7 +429,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 Vazgeç
               </GlassButton>
               <GlassButton variant="gold" size="sm" type="submit" className="px-5 font-bold">
-                Değişiklikleri Kaydet
+                Değişiklikleri kaydet
               </GlassButton>
             </div>
           </form>
@@ -506,7 +506,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               title="Meta'ya Potansiyel Değil (DisqualifiedLead) sinyali gönder"
             >
               <XCircle className="w-3 h-3" />
-              <span>{sendingCapi === 'DisqualifiedLead' ? 'Gönderiliyor...' : 'Potansiyel Değil'}</span>
+              <span>{sendingCapi === 'DisqualifiedLead' ? 'Gönderiliyor...' : 'Potansiyel değil'}</span>
             </button>
           </div>
         </div>
@@ -536,8 +536,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#b99881]" />
                   <div>
-                    <h5 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Form Bilgileri & Yanıtlar
+                    <h5 className="text-xs font-bold text-white tracking-wide">
+                      Form bilgileri ve yanıtlar
                     </h5>
                   </div>
                 </div>
@@ -547,7 +547,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                     className="text-[10.5px] px-2.5 py-0.5 rounded-full bg-transparent text-[#f3efe9] border border-[#4a443f] font-semibold truncate max-w-[200px]"
                     title={lead.formName}
                   >
-                    {lead.formName || 'İletişim Formu'}
+                    {lead.formName || 'İletişim formu'}
                   </span>
                   {lead.inquiries && lead.inquiries.length > 1 && (
                     <span className="text-[10px] text-[#b99881] font-bold bg-transparent px-2 py-0.5 rounded-full border border-[#b99881]/40">
@@ -566,7 +566,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span
-                        className="text-[10px] font-bold text-[#8c857f] uppercase tracking-wide truncate"
+                        className="text-[10px] font-bold text-[#8c857f] tracking-wide truncate"
                         title={item.question}
                       >
                         {item.question}
@@ -595,9 +595,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             {/* Önerilen Portföy Seçenekleri: Şeffaf, yalnızca konturlu */}
             {matchingProperties.length > 0 && (
               <div className="p-3 rounded-[20px] bg-transparent border border-[#4a443f] space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#f3efe9] uppercase tracking-wide">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#f3efe9] tracking-wide">
                   <Sparkles className="w-3.5 h-3.5 text-[#b99881]" />
-                  <span>Önerilen Portföy Seçenekleri ({matchingProperties.length})</span>
+                  <span>Önerilen portföy seçenekleri ({matchingProperties.length})</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {matchingProperties.slice(0, 2).map((prop) => {
@@ -631,7 +631,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                               rel="noopener noreferrer"
                               className="text-[9.5px] font-semibold text-emerald-700 hover:text-emerald-800 underline"
                             >
-                              WhatsApp ile Paylaş
+                              WhatsApp ile paylaş
                             </a>
                           </div>
                         </div>
@@ -648,9 +648,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             {/* WhatsApp Hızlı Mesajlaşma Merkezi: Şeffaf, yalnızca konturlu */}
             <div className="p-3.5 rounded-[22px] bg-transparent border border-[#4a443f] space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wide">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 tracking-wide">
                   <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Hızlı WhatsApp Mesajı</span>
+                  <span>Hızlı WhatsApp mesajı</span>
                 </div>
                 <a
                   href={currentWaUrl}
@@ -658,7 +658,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   rel="noopener noreferrer"
                   className="whatsapp-action-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-all shadow-sm cursor-pointer"
                 >
-                  <span>WhatsApp'ta Aç</span>
+                  <span>WhatsApp'ta aç</span>
                   <ExternalLink className="w-3 h-3 text-white" />
                 </a>
               </div>
@@ -689,12 +689,12 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             {/* Görüşme Notları & Takip Geçmişi: Şeffaf, yalnızca konturlu */}
             <div className="p-3.5 rounded-[22px] bg-transparent border border-[#4a443f] space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-white uppercase tracking-wide">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white tracking-wide">
                   <Clock className="w-3.5 h-3.5 text-[#b99881]" />
-                  <span>Görüşme Notları & Takip</span>
+                  <span>Görüşme notları ve takip</span>
                 </div>
                 <span className="text-[10px] text-[#8c857f] font-mono">
-                  {activities.length} Aktivite
+                  {activities.length} aktivite
                 </span>
               </div>
 
@@ -751,10 +751,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsConfirmingDelete(true)}
-                    className="w-full py-1.5 px-3 rounded-full text-[11px] font-semibold text-rose-700 hover:text-white bg-transparent hover:bg-rose-600 border border-rose-500/35 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    className="delete-lead-btn w-full py-1.5 px-3 rounded-full text-[11px] font-bold text-red-600 hover:text-white bg-red-500/12 hover:bg-red-600 border border-red-500/50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <Trash2 className="w-3 h-3 text-rose-600" />
-                    <span>Müşteri Kaydını Sil (Pazarlama)</span>
+                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                    <span>Müşteri kaydını sil</span>
                   </button>
                 ) : (
                   <div className="p-2.5 rounded-[16px] bg-transparent border border-rose-500/45 space-y-1.5">
@@ -778,7 +778,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                         }}
                         className="px-3 py-1 rounded-full text-[10.5px] font-bold text-white bg-rose-600 hover:bg-rose-500 cursor-pointer"
                       >
-                        Evet, Sil
+                        Evet, sil
                       </button>
                     </div>
                   </div>

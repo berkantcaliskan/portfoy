@@ -885,11 +885,21 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 /* Dolgulu yeşil/kırmızı aksiyon butonlarında (örn. WhatsApp'ta Aç) yazı ve ikon beyaz kalmalı */
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-emerald-600"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-emerald-600"] *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-rose-600"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-rose-600"] * {
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-emerald-600"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-emerald-600"] *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-rose-600"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-rose-600"] *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-red-600"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-red-600"] *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn:hover * {
   color: #ffffff !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn span,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn svg {
+  color: #dc2626 !important;
 }
 
 /* Açıklama & Yardımcı Metinler: #292d2b tonunda hafif yumuşatılmış */
@@ -915,6 +925,8 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#2a2622]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#34302d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3a3430]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#181614]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#1f1c19]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
   background: #ffffff !important;
   background-color: #ffffff !important;
@@ -1002,6 +1014,8 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1c1a]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1d1b]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1a1715]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#181614]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1c19]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-navy-900"] {
   background: #ebece9 !important;
   background-color: #ebece9 !important;

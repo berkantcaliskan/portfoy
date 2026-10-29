@@ -23,12 +23,12 @@ export type CallCenterStatus =
 export const CALL_STATUS_OPTIONS: { id: CallCenterStatus; label: string; dotColor: string }[] = [
   { id: 'WAITING', label: 'Bekliyor', dotColor: '#f59e0b' },
   { id: 'CALLED', label: 'Arandı', dotColor: '#38bdf8' },
-  { id: 'CALL_AGAIN', label: 'Tekrar Ara', dotColor: '#fb923c' },
+  { id: 'CALL_AGAIN', label: 'Tekrar ara', dotColor: '#fb923c' },
   { id: 'UNREACHABLE', label: 'Ulaşılamadı', dotColor: '#94a3b8' },
-  { id: 'INFO_GIVEN', label: 'Bilgi Verildi', dotColor: '#2dd4bf' },
+  { id: 'INFO_GIVEN', label: 'Bilgi verildi', dotColor: '#2dd4bf' },
   { id: 'UNDECIDED', label: 'Kararsız', dotColor: '#fcd34d' },
-  { id: 'APPOINTMENT_SET', label: 'Randevu Alındı', dotColor: '#818cf8' },
-  { id: 'NO_INTENT', label: 'Satın Alma Niyeti Yok', dotColor: '#f43f5e' },
+  { id: 'APPOINTMENT_SET', label: 'Randevu alındı', dotColor: '#818cf8' },
+  { id: 'NO_INTENT', label: 'Satın alma niyeti yok', dotColor: '#f43f5e' },
 ]
 
 export interface StageConfig {
@@ -43,7 +43,7 @@ export interface StageConfig {
 export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   NEW: {
     id: 'NEW',
-    label: 'Potansiyel Müşteri',
+    label: 'Potansiyel müşteri',
     color: 'text-amber-400',
     borderColor: 'border-amber-500/30',
     bgLight: 'bg-amber-500/10',
@@ -67,7 +67,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   NO_INTENT: {
     id: 'NO_INTENT',
-    label: 'Potansiyel Değil',
+    label: 'Potansiyel değil',
     color: 'text-stone-400',
     borderColor: 'border-stone-500/30',
     bgLight: 'bg-stone-500/10',
@@ -115,7 +115,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
   LOST: {
     id: 'LOST',
-    label: 'Potansiyel Değil',
+    label: 'Potansiyel değil',
     color: 'text-rose-400',
     borderColor: 'border-rose-500/30',
     bgLight: 'bg-rose-500/10',
