@@ -383,11 +383,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     onChange={(e) => setDepartment(e.target.value as Department)}
                     className="w-full bg-[#1e1b19] border border-[#443d37] focus:border-[#b99881] rounded-2xl px-3 py-2.5 text-xs text-[#f3efe9] focus:outline-none cursor-pointer"
                   >
-                    <option value="Yönetim">Yönetim</option>
-                    <option value="Pazarlama">Pazarlama</option>
                     <option value="Satış">Satış</option>
+                    <option value="Pazarlama">Pazarlama</option>
+                    <option value="Kreatif">Kreatif</option>
                     <option value="Müşteri İlişkileri">Müşteri İlişkileri</option>
                     <option value="Muhasebe">Muhasebe</option>
+                    <option value="Yönetim">Yönetim</option>
                   </select>
                 </div>
               </div>

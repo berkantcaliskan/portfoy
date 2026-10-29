@@ -23,6 +23,10 @@ import { formatPhoneNumber } from '@/utils/formatters'
 // Department-Specific Views
 import { MarketingCampaignsView } from '@/components/marketing/MarketingCampaignsView'
 import { MarketingReportsView } from '@/components/marketing/MarketingReportsView'
+import { CreativeScheduleView } from '@/components/creative/CreativeScheduleView'
+import { CreativesGalleryView } from '@/components/creative/CreativesGalleryView'
+import { CreativeBriefsView } from '@/components/creative/CreativeBriefsView'
+import { BrandKitView } from '@/components/creative/BrandKitView'
 import { AppointmentsView } from '@/components/appointments/AppointmentsView'
 import { SalesPerformanceView } from '@/components/sales/SalesPerformanceView'
 import { CustomersView } from '@/components/crm/CustomersView'
@@ -414,6 +418,12 @@ export function App() {
             )}
             {activeTab === 'marketing-campaigns' && <MarketingCampaignsView />}
             {activeTab === 'marketing-reports' && <MarketingReportsView leads={filteredLeads} />}
+
+            {/* KREATİF SAYFALARI */}
+            {activeTab === 'creative-schedule' && <CreativeScheduleView />}
+            {activeTab === 'creatives' && <CreativesGalleryView />}
+            {activeTab === 'creative-briefs' && <CreativeBriefsView />}
+            {activeTab === 'brand-kit' && <BrandKitView />}
 
             {/* SATIŞ SAYFALARI */}
             {activeTab === 'crm' && (

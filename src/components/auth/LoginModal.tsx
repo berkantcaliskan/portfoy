@@ -589,11 +589,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                         onChange={(e) => setAdminDept(e.target.value as Department)}
                         className="w-full bg-[#24211f] border border-[#4a443f] focus:border-[#b99881] rounded-full px-3 py-2 text-xs text-[#f3efe9] focus:outline-none cursor-pointer"
                       >
-                        <option value="Yönetim">Yönetim</option>
                         <option value="Satış">Satış</option>
                         <option value="Pazarlama">Pazarlama</option>
+                        <option value="Kreatif">Kreatif</option>
                         <option value="Müşteri İlişkileri">Müşteri İlişkileri</option>
                         <option value="Muhasebe">Muhasebe</option>
+                        <option value="Yönetim">Yönetim</option>
                       </select>
                     </div>
                   </div>

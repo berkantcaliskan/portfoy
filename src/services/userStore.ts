@@ -3,6 +3,7 @@ import {
   UserRole,
   AccessScope,
   UserPermissions,
+  CANONICAL_DEPARTMENTS,
   normalizeDepartmentName,
 } from '@/types/department'
 import { supabase, isSupabaseConfigured } from './supabaseClient'
@@ -216,10 +217,10 @@ class UserStore {
     const normalizedDept = normalizeDepartmentName(user.department || 'Yönetim')
     const isAdmin = user.role === 'ADMIN'
     const rawDepts =
-      Array.isArray(user.departments) && user.departments.length > 0
+      isAdmin
+        ? CANONICAL_DEPARTMENTS
+        : Array.isArray(user.departments) && user.departments.length > 0
         ? user.departments
-        : isAdmin
-        ? ['Pazarlama', 'Satış', 'Müşteri İlişkileri', 'Muhasebe', 'Yönetim']
         : [normalizedDept]
     const departments: Department[] = Array.from(new Set(rawDepts.map(normalizeDepartmentName)))
 
@@ -384,7 +385,7 @@ class UserStore {
     const normalizedDept = normalizeDepartmentName(data.department || 'Yönetim')
     const depts = data.departments && data.departments.length > 0
       ? Array.from(new Set(data.departments.map(normalizeDepartmentName)))
-      : ['Yönetim', 'Satış', 'Pazarlama', 'Müşteri İlişkileri', 'Muhasebe'] as Department[]
+      : [...CANONICAL_DEPARTMENTS]
 
     const newAdmin: AppUser = {
       id: 'usr-' + Date.now(),

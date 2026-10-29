@@ -22,6 +22,11 @@ import {
   Inbox,
   Megaphone,
   Layers,
+  Palette,
+  Sparkles,
+  MessageSquare,
+  Send,
+  Calendar,
 } from 'lucide-react'
 import { Lead, STAGE_CONFIGS } from '@/types/lead'
 import { PortfolioItem } from '@/types/portfolio'
@@ -36,6 +41,8 @@ import { projectStore } from '@/services/projectStore'
 import { approvalStore } from '@/services/approvalStore'
 import { requestStore } from '@/services/requestStore'
 import { metaStore } from '@/services/metaStore'
+import { creativeStore, CommentBadgeType } from '@/services/creativeStore'
+import { CREATIVE_STATUS_META } from '@/components/creative/CreativesGalleryView'
 
 interface DashboardViewProps {
   leads: Lead[]
@@ -62,6 +69,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const approvals = approvalStore.getAll()
   const requests = requestStore.getAll()
   const metaForms = metaStore.getForms()
+
+  // Kreatif departmanı canlı verileri
+  const [creativeSchedule, setCreativeSchedule] = useState(() => creativeStore.getSchedule())
+  const [creativesList, setCreativesList] = useState(() => creativeStore.getCreatives())
+  const [creativeComments, setCreativeComments] = useState(() => creativeStore.getComments())
+  const [quickCommentCreativeId, setQuickCommentCreativeId] = useState<string>(() => {
+    const first = creativeStore.getCreatives()[0]
+    return first ? first.id : ''
+  })
+  const [quickCommentType, setQuickCommentType] = useState<CommentBadgeType>('YORUM')
+  const [quickCommentText, setQuickCommentText] = useState('')
+
+  useEffect(() => {
+    const unsubCreative = creativeStore.subscribe(() => {
+      setCreativeSchedule(creativeStore.getSchedule())
+      setCreativesList(creativeStore.getCreatives())
+      setCreativeComments(creativeStore.getComments())
+    })
+    return unsubCreative
+  }, [])
 
   // Focal chart & filter states
   const [chartRange, setChartRange] = useState<'7d' | '30d' | 'month'>('7d')
@@ -1133,7 +1160,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <ShieldCheck className="w-4 h-4 text-[#b99881] shrink-0" />
             </div>
             <div className="text-[20px] sm:text-[22px] font-semibold text-white mt-2 leading-none truncate">
-              5 Departman Aktif
+              6 Departman Aktif
             </div>
             <div className="text-[11.5px] font-normal text-[#a69f99] mt-1.5 truncate">
               Yetki modeli devrede
@@ -1149,11 +1176,462 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     )
   }
 
+
+  // 6. KREATİF BAŞLANGIÇ (Yaklaşan Özel Günler Çizelgesi Hızlı Bakışı, Kreatifler Hızlı Bakışı, Kreatif Yorumları)
+  const renderCreativeDashboard = () => {
+    const upcomingSpecialDays = creativeSchedule.filter((s) => s.daysLeft >= -1)
+    const nextSpecialDay = upcomingSpecialDays[0]
+    const inReviewOrRevise = creativesList.filter(
+      (c) => c.status === 'INCELEMEDE' || c.status === 'REVIZE'
+    )
+    const unresolvedComments = creativeComments.filter((cm) => !cm.isResolved)
+    const activePublishedOrApproved = creativesList.filter(
+      (c) => c.status === 'YAYINDA' || c.status === 'ONAYLANDI'
+    )
+
+    const handleQuickCommentSubmit = (e: React.FormEvent) => {
+      e.preventDefault()
+      const targetId = quickCommentCreativeId || creativesList[0]?.id
+      if (!targetId || !quickCommentText.trim()) return
+      creativeStore.addComment({
+        creativeId: targetId,
+        authorName: currentUser?.fullName || 'Kreatif Ekip',
+        authorDepartment: currentUser?.department || 'Kreatif',
+        content: quickCommentText.trim(),
+        type: quickCommentType,
+      })
+      setQuickCommentText('')
+    }
+
+    return (
+      <div className="space-y-5">
+        {/* ÜST KPI KARTLARI */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Yaklaşan Özel Günler
+              </span>
+              <Calendar className="w-4 h-4 text-[#b99881] shrink-0" />
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {upcomingSpecialDays.length}
+              </span>
+              {nextSpecialDay && (
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 truncate max-w-[130px]">
+                  {nextSpecialDay.daysLeft <= 0
+                    ? 'Bugün!'
+                    : `${nextSpecialDay.daysLeft} gün kaldı`}
+                </span>
+              )}
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              {nextSpecialDay ? nextSpecialDay.title : 'Resmi bayram & kampanya takvimi'}
+            </div>
+          </GlassCard>
+
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Aktif Kreatifler
+              </span>
+              <Palette className="w-4 h-4 text-[#b99881] shrink-0" />
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {creativesList.length}
+              </span>
+              <span className="text-[11px] font-medium text-[#d6beae]">
+                {inReviewOrRevise.length} inceleme/revize
+              </span>
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              Reels, Story, Karusel ve 3D Render
+            </div>
+          </GlassCard>
+
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Kreatif Yorum & Revize
+              </span>
+              <MessageSquare className="w-4 h-4 text-[#b99881] shrink-0" />
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {creativeComments.length}
+              </span>
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30">
+                {unresolvedComments.length} açık not
+              </span>
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              Ekip ve yönetim geri bildirimleri
+            </div>
+          </GlassCard>
+
+          <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[13.5px] font-medium text-[#d6beae] truncate">
+                Onaylı & Yayında
+              </span>
+              <Sparkles className="w-4 h-4 text-[#b99881] shrink-0" />
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[32px] sm:text-[34px] font-semibold text-white font-mono leading-none tracking-tight">
+                {activePublishedOrApproved.length}
+              </span>
+              <span className="text-[11px] font-medium text-emerald-400">Aktif</span>
+            </div>
+            <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
+              Meta Ads & Sosyal Medya yayında
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* ANA 3 BÖLÜM: Yaklaşan Özel Günler Çizelgesi Hızlı Bakışı + Kreatifler Hızlı Bakışı + Kreatif Yorumları */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Sol Sütun (7/12): 1) Yaklaşan Özel Günler Çizelgesi Hızlı Bakışı & 2) Kreatifler Hızlı Bakışı */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* 1. YAKLAŞAN ÖZEL GÜNLER ÇİZELGESİ HIZLI BAKIŞI */}
+            <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+              <div className="flex items-center justify-between gap-3 mb-3.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#b99881]" />
+                    <h3 className="text-[15px] font-semibold text-white">
+                      Yaklaşan Özel Günler Çizelgesi Hızlı Bakışı
+                    </h3>
+                  </div>
+                  <p className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+                    Resmi bayramlar, anma günleri ve kampanya takvimi hazırlık durumu
+                  </p>
+                </div>
+
+                {onNavigateToTab && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToTab('creative-schedule')}
+                    className="px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[11.5px] font-medium text-white inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                  >
+                    <span>Tüm Çizelge</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-[#b99881]" />
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2.5">
+                {upcomingSpecialDays.slice(0, 5).map((item) => {
+                  const dateObj = new Date(item.date + 'T12:00:00')
+                  const dayNum = dateObj.getDate()
+                  const monthShort = dateObj.toLocaleDateString('tr-TR', { month: 'short' })
+                  const fullDateStr = dateObj.toLocaleDateString('tr-TR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+
+                  const statusMap: Record<string, { label: string; cls: string }> = {
+                    PLANLANDI: {
+                      label: 'Planlandı',
+                      cls: 'bg-white/10 text-slate-300 border-white/15',
+                    },
+                    TASARIMDA: {
+                      label: 'Tasarımda',
+                      cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                    },
+                    ONAY_BEKLIYOR: {
+                      label: 'Onay Bekliyor',
+                      cls: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+                    },
+                    HAZIR: {
+                      label: 'Yayına Hazır',
+                      cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                    },
+                    YAYINLANDI: {
+                      label: 'Yayınlandı',
+                      cls: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                    },
+                  }
+                  const st = statusMap[item.status] || statusMap.PLANLANDI
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => onNavigateToTab && onNavigateToTab('creative-schedule')}
+                      className="p-3 rounded-2xl bg-[#34302d] hover:bg-[#3d3733] transition-colors cursor-pointer flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-[#282522] border border-[#4a443f] flex flex-col items-center justify-center shrink-0">
+                          <span className="text-[9px] font-bold uppercase text-[#b99881]">
+                            {monthShort}
+                          </span>
+                          <span className="text-[15px] font-bold text-white leading-tight font-mono">
+                            {dayNum}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-medium text-white truncate">
+                            {item.title}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-[#a69f99] mt-0.5 flex-wrap">
+                            <span>{fullDateStr}</span>
+                            <span>•</span>
+                            <span className="text-[#d6beae]">{item.project}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold border ${
+                            item.daysLeft <= 0
+                              ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                              : item.daysLeft <= 14
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                              : 'bg-white/5 text-[#d6beae] border-white/10'
+                          }`}
+                        >
+                          {item.daysLeft === 0
+                            ? 'BUGÜN'
+                            : item.daysLeft < 0
+                            ? `${Math.abs(item.daysLeft)}g önce`
+                            : `${item.daysLeft} gün kaldı`}
+                        </span>
+
+                        <span
+                          className={`hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10.5px] font-medium border ${st.cls}`}
+                        >
+                          {st.label}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </GlassCard>
+
+            {/* 2. KREATİFLER HIZLI BAKIŞI */}
+            <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+              <div className="flex items-center justify-between gap-3 mb-3.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-[#b99881]" />
+                    <h3 className="text-[15px] font-semibold text-white">
+                      Kreatifler Hızlı Bakışı
+                    </h3>
+                  </div>
+                  <p className="text-[11.5px] font-normal text-[#a69f99] mt-0.5">
+                    Son üretilen reklam kreatifleri, sosyal medya tasarımları ve onay durumları
+                  </p>
+                </div>
+
+                {onNavigateToTab && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToTab('creatives')}
+                    className="px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[11.5px] font-medium text-white inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                  >
+                    <span>Kreatif Stüdyo</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-[#b99881]" />
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {creativesList.slice(0, 4).map((crt) => {
+                  const stMeta = CREATIVE_STATUS_META[crt.status]
+                  const cmtCount = creativeComments.filter((c) => c.creativeId === crt.id).length
+
+                  return (
+                    <div
+                      key={crt.id}
+                      onClick={() => onNavigateToTab && onNavigateToTab('creatives')}
+                      className="rounded-2xl bg-[#34302d] hover:bg-[#3d3733] border border-white/[0.05] overflow-hidden cursor-pointer transition-all flex flex-col justify-between"
+                    >
+                      <div
+                        className={`h-24 bg-gradient-to-br ${crt.accentGradient} p-3 flex flex-col justify-between relative`}
+                      >
+                        <div className="absolute inset-0 bg-black/35" />
+                        <div className="relative z-10 flex items-center justify-between gap-1.5">
+                          <span className="px-2 py-0.5 rounded bg-black/60 text-[10px] font-bold text-white">
+                            {crt.code} • {crt.version}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${stMeta.badgeClass}`}
+                          >
+                            {stMeta.label}
+                          </span>
+                        </div>
+                        <div className="relative z-10">
+                          <p className="text-[11px] font-bold text-white truncate">
+                            {crt.headline}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 space-y-1.5">
+                        <div className="text-[12.5px] font-medium text-white truncate">
+                          {crt.title}
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-[#a69f99]">
+                          <span>
+                            {crt.project} • {crt.format}
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[#d6beae]">
+                            <MessageSquare className="w-3 h-3 text-[#b99881]" />
+                            {cmtCount}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </GlassCard>
+          </div>
+
+          {/* Sağ Sütun (5/12): 3) KREATİF YORUMLARI & HIZLI GERİ BİLDİRİM */}
+          <div className="lg:col-span-5 space-y-5">
+            <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#b99881]" />
+                  <h3 className="text-[15px] font-semibold text-white">Kreatif Yorumları</h3>
+                </div>
+                <span className="text-[11.5px] font-mono font-medium text-[#d6beae]">
+                  {unresolvedComments.length} Açık / {creativeComments.length} Toplam
+                </span>
+              </div>
+              <p className="text-[11.5px] font-normal text-[#a69f99] mb-3.5">
+                Tasarımlar ve videolar için iletilen son revize notları ve yorumlar
+              </p>
+
+              {/* Hızlı Yorum / Revize Ekleme Formu */}
+              <form
+                onSubmit={handleQuickCommentSubmit}
+                className="p-3 rounded-2xl bg-[#34302d] border border-[#4a443f] space-y-2.5 mb-3.5"
+              >
+                <div className="flex items-center gap-2">
+                  <select
+                    value={quickCommentCreativeId}
+                    onChange={(e) => setQuickCommentCreativeId(e.target.value)}
+                    className="flex-1 px-2.5 py-1.5 rounded-xl bg-[#282522] border border-[#4a443f] text-[11.5px] text-white focus:outline-none truncate"
+                  >
+                    {creativesList.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} — {c.title}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={quickCommentType}
+                    onChange={(e) => setQuickCommentType(e.target.value as CommentBadgeType)}
+                    className="px-2.5 py-1.5 rounded-xl bg-[#282522] border border-[#4a443f] text-[11.5px] text-white focus:outline-none shrink-0"
+                  >
+                    <option value="YORUM">💬 Yorum</option>
+                    <option value="REVIZE">🛠️ Revize</option>
+                    <option value="ONAY">✅ Onay</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={quickCommentText}
+                    onChange={(e) => setQuickCommentText(e.target.value)}
+                    placeholder="Seçili kreatife hızlı yorum veya revize yazın..."
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-[#282522] border border-[#4a443f] text-[12px] text-white placeholder:text-[#8c857f] focus:outline-none focus:border-[#b99881]"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#b99881] hover:bg-[#c7a892] text-[#282522] font-semibold text-[11.5px] inline-flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                  >
+                    <Send className="w-3 h-3" />
+                    <span>Yaz</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Yorum Akışı */}
+              <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                {creativeComments.slice(0, 6).map((cm) => (
+                  <div
+                    key={cm.id}
+                    className={`p-3 rounded-2xl bg-[#34302d] border transition-all ${
+                      cm.isResolved
+                        ? 'border-transparent opacity-65'
+                        : cm.type === 'REVIZE'
+                        ? 'border-amber-500/30'
+                        : 'border-white/[0.05]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-[#282522] text-[10px] font-bold text-[#d6beae]">
+                          {cm.creativeCode}
+                        </span>
+                        <span className="text-[12px] font-semibold text-white">
+                          {cm.authorName}
+                        </span>
+                        <span className="text-[10.5px] text-[#a69f99]">
+                          ({cm.authorDepartment})
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            cm.type === 'REVIZE'
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : cm.type === 'ONAY'
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : 'bg-sky-500/20 text-sky-300'
+                          }`}
+                        >
+                          {cm.type === 'REVIZE'
+                            ? 'Revize'
+                            : cm.type === 'ONAY'
+                            ? 'Onay'
+                            : 'Yorum'}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => creativeStore.toggleCommentResolved(cm.id)}
+                        className={`text-[10px] px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
+                          cm.isResolved
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-[#282522] text-[#a69f99] hover:text-white'
+                        }`}
+                      >
+                        {cm.isResolved ? '✓ Çözüldü' : 'Çözüldü İşaretle'}
+                      </button>
+                    </div>
+
+                    <div className="text-[11px] font-medium text-[#b99881] truncate mb-1">
+                      {cm.creativeTitle}
+                      {cm.pinNote ? ` • 📍 ${cm.pinNote}` : ''}
+                    </div>
+
+                    <p className="text-[12px] text-slate-200 leading-relaxed">{cm.content}</p>
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full">
       {renderHeader()}
 
       {department === 'Pazarlama' && renderMarketingDashboard()}
+      {department === 'Kreatif' && renderCreativeDashboard()}
       {department === 'Satış' && renderSalesDashboard()}
       {department === 'Müşteri İlişkileri' && renderCustomerRelationsDashboard()}
       {department === 'Muhasebe' && renderAccountingDashboard()}

@@ -24,6 +24,10 @@ const ARRAY_MERGE_KEYS = new Set([
   'demirturk_team_asset_logs_v1',
   'demirturk_team_leaves_v1',
   'demirturk_meta_capi_logs_v1',
+  'demirturk_creatives_v1',
+  'demirturk_creative_schedule_v1',
+  'demirturk_creative_comments_v1',
+  'demirturk_creative_briefs_v1',
 ])
 
 const OBJECT_MAP_MERGE_KEYS = new Set([

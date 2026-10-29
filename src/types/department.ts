@@ -1,13 +1,15 @@
 export type Department =
-  | 'Pazarlama'
   | 'Satış'
+  | 'Pazarlama'
+  | 'Kreatif'
   | 'Müşteri İlişkileri'
   | 'Muhasebe'
   | 'Yönetim'
 
 export const CANONICAL_DEPARTMENTS: Department[] = [
-  'Pazarlama',
   'Satış',
+  'Pazarlama',
+  'Kreatif',
   'Müşteri İlişkileri',
   'Muhasebe',
   'Yönetim',
@@ -37,6 +39,11 @@ export type NavPageId =
   | 'portfolio'
   | 'marketing-campaigns'
   | 'marketing-reports'
+  // Kreatif
+  | 'creative-schedule'
+  | 'creatives'
+  | 'creative-briefs'
+  | 'brand-kit'
   // Satış
   | 'crm'
   | 'appointments'
@@ -75,6 +82,16 @@ export interface DepartmentPageConfig {
  * Projeler (projects)
  */
 export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> = {
+  'Satış': [
+    { id: 'dashboard', label: 'Başlangıç' },
+    { id: 'crm', label: 'Satış' },
+    { id: 'appointments', label: 'Randevular' },
+    { id: 'requests', label: 'Talepler' },
+    { id: 'sales-performance', label: 'Performans' },
+    { id: 'teams', label: 'Ekipler' },
+    { id: 'shared', label: 'Paylaşılanlar' },
+    { id: 'projects', label: 'Projeler' },
+  ],
   'Pazarlama': [
     { id: 'dashboard', label: 'Başlangıç' },
     { id: 'portfolio', label: 'Müşteriler' },
@@ -84,12 +101,12 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
   ],
-  'Satış': [
+  'Kreatif': [
     { id: 'dashboard', label: 'Başlangıç' },
-    { id: 'crm', label: 'Satış' },
-    { id: 'appointments', label: 'Randevular' },
-    { id: 'requests', label: 'Talepler' },
-    { id: 'sales-performance', label: 'Performans' },
+    { id: 'creative-schedule', label: 'Çizelge' },
+    { id: 'creatives', label: 'Kreatifler' },
+    { id: 'creative-briefs', label: 'Brief & Talepler' },
+    { id: 'brand-kit', label: 'Marka & Materyal' },
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
@@ -126,8 +143,11 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
 export function normalizeDepartmentName(dept: string): Department {
   if (!dept) return 'Yönetim'
   const clean = dept.trim().toLowerCase()
-  if (clean.includes('pazarlama')) return 'Pazarlama'
   if (clean.includes('satış') || clean.includes('satis')) return 'Satış'
+  if (clean.includes('pazarlama')) return 'Pazarlama'
+  if (clean.includes('kreatif') || clean.includes('tasarım') || clean.includes('tasarim') || clean.includes('creative')) {
+    return 'Kreatif'
+  }
   if (clean.includes('ilişki') || clean.includes('iliski') || clean.includes('müşteri') || clean.includes('musteri')) {
     return 'Müşteri İlişkileri'
   }
@@ -148,6 +168,12 @@ export const PAGE_TO_DEPARTMENT_MAP: Record<NavPageId, Department | 'ALL'> = {
   portfolio: 'Pazarlama',
   'marketing-campaigns': 'Pazarlama',
   'marketing-reports': 'Pazarlama',
+
+  // Kreatif
+  'creative-schedule': 'Kreatif',
+  creatives: 'Kreatif',
+  'creative-briefs': 'Kreatif',
+  'brand-kit': 'Kreatif',
 
   // Satış
   crm: 'Satış',
@@ -177,10 +203,12 @@ export function getDepartmentForPage(pageId: NavPageId): Department | null {
 
 export function getPrimaryPageForDepartment(dept: Department): NavPageId {
   switch (dept) {
-    case 'Pazarlama':
-      return 'portfolio'
     case 'Satış':
       return 'crm'
+    case 'Pazarlama':
+      return 'portfolio'
+    case 'Kreatif':
+      return 'creatives'
     case 'Müşteri İlişkileri':
       return 'customers'
     case 'Muhasebe':
@@ -191,4 +219,3 @@ export function getPrimaryPageForDepartment(dept: Department): NavPageId {
       return 'dashboard'
   }
 }
-

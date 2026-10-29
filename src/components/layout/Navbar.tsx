@@ -37,6 +37,8 @@ import {
   PanelLeftOpen,
   ClipboardList,
   Headphones,
+  Palette,
+  Sparkles,
 } from 'lucide-react'
 import { AppUser, userStore } from '@/services/userStore'
 import {
@@ -100,6 +102,14 @@ export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?:
       return ShieldCheck
     case 'approvals':
       return CheckSquare
+    case 'creative-schedule':
+      return Calendar
+    case 'creatives':
+      return Palette
+    case 'creative-briefs':
+      return FileText
+    case 'brand-kit':
+      return Sparkles
     case 'contacts':
       return BookUser
     default:
@@ -111,6 +121,8 @@ export function getDepartmentIcon(dept: Department | string): React.ComponentTyp
   switch (dept) {
     case 'Pazarlama':
       return Megaphone
+    case 'Kreatif':
+      return Palette
     case 'Müşteri İlişkileri':
       return Headphones
     case 'Satış':
@@ -323,7 +335,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     currentUser?.role === 'ADMIN'
       ? CANONICAL_DEPARTMENTS
       : Array.isArray(currentUser?.departments) && currentUser.departments.length > 0
-      ? currentUser.departments
+      ? CANONICAL_DEPARTMENTS.filter((d) => currentUser.departments.includes(d))
       : [activeDept]
 
   // Yalnızca ADMIN veya birden fazla departman yetkisi verilenler departman seçicisini açabilir

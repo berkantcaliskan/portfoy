@@ -540,6 +540,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           { id: 'dept-admin-approvals' as SettingsTab, label: 'İskonto & Onay Sınırları', icon: Percent },
           { id: 'dept-admin-audit' as SettingsTab, label: 'Güvenlik & Denetim', icon: Lock },
         ]
+      case 'Kreatif':
+        return [
+          { id: 'dept-notifications' as SettingsTab, label: 'Özel Gün & Revize Bildirimleri', icon: Bell },
+          { id: 'dept-leads' as SettingsTab, label: 'Kreatif Onay & Brief Akışı', icon: FileText },
+        ]
       case 'Pazarlama':
       default:
         return [
