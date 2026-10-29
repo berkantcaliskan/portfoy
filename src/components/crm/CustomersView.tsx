@@ -786,7 +786,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       <GlassModal
         isOpen={selectedLeadForConsultantChange !== null}
         onClose={() => setSelectedLeadForConsultantChange(null)}
-        title={`Danışman Ata / Değiştir - ${selectedLeadForConsultantChange?.fullName}`}
+        title={`Danışman Ata / Değiştir: ${selectedLeadForConsultantChange?.fullName}`}
       >
         <form onSubmit={handleExecuteConsultantChange} className="space-y-4">
           <div>
@@ -821,7 +821,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       <GlassModal
         isOpen={selectedLeadForAssign !== null}
         onClose={() => setSelectedLeadForAssign(null)}
-        title={`Satış Danışmanına Ata - ${selectedLeadForAssign?.fullName}`}
+        title={`Satış Danışmanına Ata: ${selectedLeadForAssign?.fullName}`}
       >
         <form onSubmit={handleExecuteAssign} className="space-y-4">
           <div>
@@ -869,7 +869,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       <GlassModal
         isOpen={selectedInquiryHistoryLead !== null}
         onClose={() => setSelectedInquiryHistoryLead(null)}
-        title={`Başvuru & Kampanya Geçmişi - ${selectedInquiryHistoryLead?.fullName}`}
+        title={`Başvuru & Kampanya Geçmişi: ${selectedInquiryHistoryLead?.fullName}`}
       >
         <div className="space-y-3">
           <p className="text-xs text-[#8c857f]">
@@ -907,7 +907,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       <GlassModal
         isOpen={selectedLeadForNoteEdit !== null}
         onClose={() => setSelectedLeadForNoteEdit(null)}
-        title={`Açıklama - ${selectedLeadForNoteEdit?.fullName}`}
+        title={`Açıklama: ${selectedLeadForNoteEdit?.fullName}`}
       >
         <form onSubmit={handleSaveNote} className="space-y-4">
           <div>
