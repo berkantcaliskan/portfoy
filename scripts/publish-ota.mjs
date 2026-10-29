@@ -278,7 +278,7 @@ async function main() {
   const bundleSizeKb = Math.round(fs.statSync(bundlePath).size / 1024)
   console.log(`[OTA] Generated ${versionId} (${fileCount} files, ${bundleSizeKb} KB compressed)`)
 
-  // Sync dist/ and electron/ to local dist-electron & win-unpacked folders
+  // Sync dist/ and electron/ to local dist-electron, win-unpacked, and %APPDATA%\DemirturkPortfoy\ota-dist
   const appRoots = [
     path.join(rootDir, 'dist-electron', 'resources', 'app'),
     path.join(rootDir, 'dist-electron', 'win-unpacked', 'resources', 'app'),
@@ -293,6 +293,17 @@ async function main() {
     } catch (e) {
       console.warn(`[OTA] Could not sync ${appRoot}:`, e.message)
     }
+  }
+
+  try {
+    const appDataDir = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming')
+    const userOtaDistDir = path.join(appDataDir, 'DemirturkPortfoy', 'ota-dist')
+    if (fs.existsSync(userOtaDistDir)) {
+      fs.cpSync(distDir, userOtaDistDir, { recursive: true, force: true })
+      console.log(`[OTA] Synced dist -> ${userOtaDistDir}`)
+    }
+  } catch (e) {
+    console.warn('[OTA] Could not sync userOtaDistDir:', e.message)
   }
 
   // Commit & push to GitHub (origin main)
