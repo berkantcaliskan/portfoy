@@ -859,35 +859,35 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                         {/* Çok Katmanlı İlerleme Çubuğu */}
                         <div className="h-2 w-full bg-[#1e1b19] rounded-full overflow-hidden flex">
                           <div
-                            style={{ width: `${soldPct}%` }}
-                            className="bg-emerald-500 h-full transition-all"
-                            title={`Satılan: ${sold}`}
-                          />
-                          <div
                             style={{ width: `${availPct}%` }}
-                            className="bg-[#b99881] h-full transition-all"
+                            className="bg-emerald-500 h-full transition-all"
                             title={`Satışta: ${available}`}
                           />
                           <div
                             style={{ width: `${resPct}%` }}
-                            className="bg-amber-500 h-full transition-all"
-                            title={`Rezerve: ${reserved}`}
+                            className="bg-[#1e3a8a] h-full transition-all"
+                            title={`Kapora / Rezerve: ${reserved}`}
+                          />
+                          <div
+                            style={{ width: `${soldPct}%` }}
+                            className="bg-red-600 h-full transition-all"
+                            title={`Satılan: ${sold}`}
                           />
                         </div>
 
-                        {/* Mikro Durumlar (Satışta olanlar 2. sırada) */}
+                        {/* Mikro Durumlar */}
                         <div className="flex items-center justify-between text-[11px] text-[#8c857f] mt-2">
                           <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span>Satıldı: <strong className="text-emerald-400">{sold}</strong></span>
+                            <span>Satışta: <strong className="text-emerald-500">{available}</strong></span>
                           </span>
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-[#b99881]" />
-                            <span>Satışta: <strong className="text-white">{available}</strong></span>
+                            <span className="w-2 h-2 rounded-full bg-[#1e3a8a]" />
+                            <span>Kapora: <strong className="text-blue-700">{reserved}</strong></span>
                           </span>
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
-                            <span>Rezerve: <strong className="text-amber-400">{reserved}</strong></span>
+                            <span className="w-2 h-2 rounded-full bg-red-600" />
+                            <span>Satıldı: <strong className="text-red-600">{sold}</strong></span>
                           </span>
                         </div>
                       </div>

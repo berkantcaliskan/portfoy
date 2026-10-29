@@ -1819,7 +1819,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
 
   // Pointer / Touch move & up for moving and Apple-widget-style resizing
   useEffect(() => {
-    if (!interactionState) return
+    if (!interactionState || !isLayoutEditMode) return
 
     const updateSnapGuidesForBox = (box: UnitPlanBox, excludeId: string, isFree: boolean) => {
       if (isFree) {
@@ -2015,7 +2015,8 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
     targetType: 'unit' | 'area',
     targetId: string,
     currentBox: UnitPlanBox
-  ) => (
+  ) =>
+    !isLayoutEditMode ? null : (
     <div
       onMouseDown={(e) => {
         if (e.button !== 0) return
@@ -2142,72 +2143,66 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
             onChange={handleUploadFloorSpecific}
           />
 
-          <button
-            type="button"
-            onClick={() => fileInputUniversalRef.current?.click()}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#b99881] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
-            title="Plan Yükle"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>
-              {isParsingDoc ? 'Plan Okunuyor...' : 'Plan Yükle'}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => fileInputFloorRef.current?.click()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-xs font-medium text-[#f3efe9] transition-colors cursor-pointer"
-            title="İsteğe bağlı özel kat planı görsel altlığı yükle"
-          >
-            <Upload className="w-3.5 h-3.5 text-[#b99881]" />
-            <span>{specificFloorPlan ? 'Kat Altlığını Değiştir' : 'Kat Altlığı Yükle'}</span>
-          </button>
-
-          {activeFloorPlanUrl && (
-            <button
-              type="button"
-              onClick={() => handleRemovePlan(specificFloorPlan ? floorKey : 'DEFAULT')}
-              className="p-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
-              title="Yüklü Kat Planı Görselini Kaldır"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-
-          {/* Sıfırla butonu Düzenlemeyi Bitir'den önce çıkar */}
           {isLayoutEditMode && (
-            <button
-              type="button"
-              onClick={handleResetFloorBoxes}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#34302d] text-[11px] font-medium text-[#a69f99] hover:text-white cursor-pointer"
-              title="Bu kattaki daire konumlarını varsayılan şablona sıfırla"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Sıfırla</span>
-            </button>
-          )}
+            <>
+              <button
+                type="button"
+                onClick={() => fileInputUniversalRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#b99881] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                title="Plan Yükle"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>
+                  {isParsingDoc ? 'Plan Okunuyor...' : 'Plan Yükle'}
+                </span>
+              </button>
 
-          {/* SERBEST MOD (FREE MODE / CTRL) BUTONU */}
-          {(isLayoutEditMode || isCtrlPressed || isFreeMoveMode) && (
-            <button
-              type="button"
-              onClick={() => {
-                const nextFree = !isFreeMoveMode
-                setIsFreeMoveMode(nextFree)
-                if (nextFree && !isLayoutEditMode) {
-                  setIsLayoutEditMode(true)
-                }
-              }}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                isFreeMoveMode || isCtrlPressed
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
-              }`}
-              title="Ctrl tuşuna basılı tutarak veya bu butonla mıknatısı kapatıp Serbest Taşıma (Free Mod) açabilirsiniz"
-            >
-              <span>{isFreeMoveMode || isCtrlPressed ? 'Serbest Mod (Free): Açık' : 'Mıknatıs Aktif (Ctrl: Free Mod)'}</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => fileInputFloorRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-xs font-medium text-[#f3efe9] transition-colors cursor-pointer"
+                title="İsteğe bağlı özel kat planı görsel altlığı yükle"
+              >
+                <Upload className="w-3.5 h-3.5 text-[#b99881]" />
+                <span>{specificFloorPlan ? 'Kat Altlığını Değiştir' : 'Kat Altlığı Yükle'}</span>
+              </button>
+
+              {activeFloorPlanUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleRemovePlan(specificFloorPlan ? floorKey : 'DEFAULT')}
+                  className="p-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                  title="Yüklü Kat Planı Görselini Kaldır"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Sıfırla butonu Düzenlemeyi Bitir'den önce çıkar */}
+              <button
+                type="button"
+                onClick={handleResetFloorBoxes}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#34302d] text-[11px] font-medium text-[#a69f99] hover:text-white cursor-pointer"
+                title="Bu kattaki daire konumlarını varsayılan şablona sıfırla"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Sıfırla</span>
+              </button>
+
+              {/* SERBEST MOD (FREE MODE / CTRL) BUTONU */}
+              <button
+                type="button"
+                onClick={() => setIsFreeMoveMode(!isFreeMoveMode)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  isFreeMoveMode || isCtrlPressed
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
+                }`}
+                title="Ctrl tuşuna basılı tutarak veya bu butonla mıknatısı kapatıp Serbest Taşıma (Free Mod) açabilirsiniz"
+              >
+                <span>{isFreeMoveMode || isCtrlPressed ? 'Serbest Mod (Free): Açık' : 'Mıknatıs Aktif (Ctrl: Free Mod)'}</span>
+              </button>
+            </>
           )}
 
           {/* DÜZENLE / DÜZENLEMEYİ BİTİR Butonu (En Sağda - Ctrl ile basıldığında doğrudan Free Mod ile açılır) */}
@@ -2220,9 +2215,12 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                 setIsFreeMoveMode(true)
               } else if (!nextMode) {
                 setIsFreeMoveMode(false)
+                setInteractionState(null)
+                setActiveAreaId(null)
               }
               closeAllEditForms()
               setUnitContextMenu(null)
+              setAreaContextMenu(null)
             }}
             className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
               isLayoutEditMode
@@ -3481,8 +3479,8 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   ? 'bg-emerald-500/20 border-2 border-emerald-600/60 text-emerald-950'
                   : 'bg-white/75 border-2 border-black/25 text-[#292d2b]'
 
-                // Entrances and selected areas are movable; other areas movable in edit mode
-                const canDragThisArea = isLayoutEditMode || isCtrlPressed || isFreeMoveMode || isEntrance || isSelectedArea
+                // Areas are movable and editable ONLY when isLayoutEditMode is true
+                const canDragThisArea = isLayoutEditMode
                 const isVeryNarrowArea = !isBlockArea && area.box.w <= 7.8 && area.box.h > area.box.w * 1.3
                 const isVerticalTextArea =
                   area.textOrientation === 'vertical' ||
@@ -3492,6 +3490,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                 const openAreaContextMenu = (e: React.MouseEvent) => {
                   e.preventDefault()
                   e.stopPropagation()
+                  if (!isLayoutEditMode) return
                   setInteractionState(null)
                   setUnitContextMenu(null)
                   setActiveUnitId(null)
@@ -3538,26 +3537,21 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     }}
                     onMouseDown={(e) => {
                       if (e.button !== 0) return
+                      if (!isLayoutEditMode) return
                       setActiveAreaId(area.id)
-                      if (e.ctrlKey || e.metaKey) {
-                        setIsLayoutEditMode(true)
-                        setIsFreeMoveMode(true)
-                      }
-                      if (canDragThisArea || e.ctrlKey || e.metaKey) {
-                        e.stopPropagation()
-                        const blockChildren = isBlockArea
-                          ? captureBlockChildren(area.id, area.box)
-                          : undefined
-                        setInteractionState({
-                          targetType: 'area',
-                          targetId: area.id,
-                          mode: 'move',
-                          startX: e.clientX,
-                          startY: e.clientY,
-                          initialBox: area.box,
-                          blockChildren,
-                        })
-                      }
+                      e.stopPropagation()
+                      const blockChildren = isBlockArea
+                        ? captureBlockChildren(area.id, area.box)
+                        : undefined
+                      setInteractionState({
+                        targetType: 'area',
+                        targetId: area.id,
+                        mode: 'move',
+                        startX: e.clientX,
+                        startY: e.clientY,
+                        initialBox: area.box,
+                        blockChildren,
+                      })
                     }}
                     onContextMenu={openAreaContextMenu}
                     className={`absolute ${isEntrance ? 'rounded-lg' : 'rounded-[18px]'} flex ${
@@ -3637,12 +3631,14 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     {isBlockArea && (
                       <div
                         onMouseDown={(e) => {
-                          if (e.button !== 0) return
+                          if (e.button !== 0 || !isLayoutEditMode) return
                           setActiveAreaId(area.id)
                         }}
                         onContextMenu={openAreaContextMenu}
-                        className="px-2.5 py-0.5 rounded-full bg-[#282522] text-white text-[10px] font-bold uppercase tracking-wider shadow-xs select-none pointer-events-auto cursor-pointer"
-                        title="Blok ayarları için sağ tıklayın"
+                        className={`px-2.5 py-0.5 rounded-full bg-[#282522] text-white text-[10px] font-bold uppercase tracking-wider shadow-xs select-none ${
+                          isLayoutEditMode ? 'pointer-events-auto cursor-move' : 'pointer-events-none'
+                        }`}
+                        title={isLayoutEditMode ? 'Blok ayarları için sağ tıklayın' : undefined}
                       >
                         {area.label}
                       </div>
@@ -3702,8 +3698,8 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       </span>
                     )}
 
-                    {/* Apple Widget Sağ Alt Kıvrımlı Boyutlandırma Kulpu */}
-                    {(isLayoutEditMode || isEntrance || isSelectedArea) &&
+                    {/* Apple Widget Sağ Alt Kıvrımlı Boyutlandırma Kulpu (Yalnızca Düzenleme Modunda) */}
+                    {isLayoutEditMode &&
                       renderAppleCornerResizeHandle('area', area.id, area.box)}
                   </motion.div>
                 )
@@ -3799,11 +3795,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         setActiveUnitId(unit.id)
                         setActiveAreaId(null)
                         if (e.button !== 0) return
-                        if (e.ctrlKey || e.metaKey) {
-                          setIsLayoutEditMode(true)
-                          setIsFreeMoveMode(true)
-                        }
-                        if (isLayoutEditMode || isFreeMoveMode || isCtrlPressed || e.ctrlKey || e.metaKey) {
+                        if (isLayoutEditMode) {
                           e.stopPropagation()
                           setInteractionState({
                             targetType: 'unit',
@@ -3836,7 +3828,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         isUltraShort ? 'rounded-[10px]' : isShortBox ? 'rounded-[13px]' : 'rounded-[16px]'
                       } border-2 transition-colors backdrop-blur-[2px] overflow-hidden ${statusColorClasses} ${
                         isSelected ? 'ring-2 ring-[#5c6ac4] z-20' : 'z-10'
-                      } ${isLayoutEditMode || isCtrlPressed || isFreeMoveMode ? 'cursor-move' : 'cursor-pointer'} ${
+                      } ${isLayoutEditMode ? 'cursor-move' : 'cursor-pointer'} ${
                         isUltraShort
                           ? 'px-1.5 py-0.5'
                           : isVeryNarrowUnit
@@ -3987,8 +3979,8 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         </div>
                       )}
 
-                      {/* Apple Widget Sağ Alt Kıvrımlı Boyutlandırma Kulpu (Her zaman sağ altta tutulup çekilebilir!) */}
-                      {(isLayoutEditMode || isSelected) &&
+                      {/* Apple Widget Sağ Alt Kıvrımlı Boyutlandırma Kulpu (Yalnızca Düzenleme Modunda) */}
+                      {isLayoutEditMode &&
                         renderAppleCornerResizeHandle('unit', unit.id, box)}
                     </motion.div>
                   )
@@ -4044,7 +4036,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                 if (!ctxUnit) return null
 
                 const menuWidth = 248
-                const menuEstimatedHeight = 475
+                const menuEstimatedHeight = isLayoutEditMode ? 475 : 120
                 const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1440
                 const viewportH = typeof window !== 'undefined' ? window.innerHeight : 900
                 const safeBottomLimit = viewportH - 84 // Alt dock çubuğuna çarpmaması için güvenli sınır
@@ -4079,191 +4071,195 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       </span>
                     </div>
 
-                    {/* 1. İlk Haline Getir */}
-                    <button
-                      type="button"
-                      onClick={() => handleResetUnitToInitial(ctxUnit.id)}
-                      className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                      <span>İlk Haline Getir</span>
-                    </button>
+                    {isLayoutEditMode && (
+                      <>
+                        {/* 1. İlk Haline Getir */}
+                        <button
+                          type="button"
+                          onClick={() => handleResetUnitToInitial(ctxUnit.id)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                          <span>İlk Haline Getir</span>
+                        </button>
 
-                    {/* 2. Yatay / Dikey Çevir (90°) */}
-                    <button
-                      type="button"
-                      onClick={() => handleRotateUnitBox(ctxUnit.id)}
-                      className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
-                    >
-                      <Compass className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                      <span>Yatay / Dikey Çevir</span>
-                    </button>
+                        {/* 2. Yatay / Dikey Çevir (90°) */}
+                        <button
+                          type="button"
+                          onClick={() => handleRotateUnitBox(ctxUnit.id)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
+                        >
+                          <Compass className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                          <span>Yatay / Dikey Çevir</span>
+                        </button>
 
-                    {/* 3. Diğer Katlara da Uygula */}
-                    {floors.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleSyncUnitBoxToOtherFloors(ctxUnit.id)}
-                        className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
-                      >
-                        <Layers className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                        <span>Konumu Diğer Katlara Uygula</span>
-                      </button>
-                    )}
-
-                    {/* 4. Daire Bilgilerini & Fiyatı Düzenle */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUnitContextMenu(null)
-                        onEditUnit(ctxUnit)
-                      }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                      <span>Daire Bilgilerini Düzenle</span>
-                    </button>
-
-                    {canEditPrice && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUnitContextMenu(null)
-                          onEditPrice(ctxUnit)
-                        }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
-                      >
-                        <TurkishLira className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                        <span>Fiyatı Güncelle</span>
-                      </button>
-                    )}
-
-                    {/* 5. Daireyi Çoğalt */}
-                    <button
-                      type="button"
-                      onClick={() => handleDuplicateUnit(ctxUnit.id)}
-                      className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
-                    >
-                      <Copy className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                      <span>Daireyi Çoğalt</span>
-                    </button>
-
-                    <div className="my-1 border-t border-[#4a443f]/50" />
-
-                    {/* 6. Plan Ölçeği Seçimi (Sağ Tık Menüsünde: 1:1, 16:9, 9:16) */}
-                    <div className="px-2.5 py-0.5 text-[9px] font-semibold text-[#8c857f] uppercase">
-                      Plan Ölçeği
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 px-1.5 py-0.5">
-                      {SELECTABLE_SIZE_PRESETS.map((presetKey) => {
-                        const info = UNIT_SIZE_PRESETS[presetKey]
-                        const normalizedActivePreset =
-                          ctxUnit.sizePreset === 'square' || ctxUnit.sizePreset === '1x1'
-                            ? '1x1'
-                            : ctxUnit.sizePreset === 'narrow-v' || ctxUnit.sizePreset === '9x16'
-                            ? '9x16'
-                            : ctxUnit.sizePreset
-                            ? '16x9'
-                            : inferSizePresetFromBox(
-                                ctxUnit.planBox || { x: 0, y: 0, w: 21, h: 15 }
-                              )
-                        const isActive = normalizedActivePreset === presetKey
-                        return (
+                        {/* 3. Diğer Katlara da Uygula */}
+                        {floors.length > 1 && (
                           <button
-                            key={presetKey}
+                            type="button"
+                            onClick={() => handleSyncUnitBoxToOtherFloors(ctxUnit.id)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
+                          >
+                            <Layers className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                            <span>Konumu Diğer Katlara Uygula</span>
+                          </button>
+                        )}
+
+                        {/* 4. Daire Bilgilerini & Fiyatı Düzenle */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUnitContextMenu(null)
+                            onEditUnit(ctxUnit)
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                          <span>Daire Bilgilerini Düzenle</span>
+                        </button>
+
+                        {canEditPrice && (
+                          <button
                             type="button"
                             onClick={() => {
-                              handleApplyUnitSizePreset(ctxUnit, presetKey, Math.max(0, ctxUnitIdx))
                               setUnitContextMenu(null)
+                              onEditPrice(ctxUnit)
                             }}
-                            className={`py-1 px-2 rounded-md text-[10px] font-bold transition-all cursor-pointer text-center ${
-                              isActive
-                                ? 'bg-[#b99881] text-white'
-                                : 'bg-[#34302d] text-[#a69f99] hover:text-white'
-                            }`}
+                            className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
                           >
-                            {info.shortLabel}
+                            <TurkishLira className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                            <span>Fiyatı Güncelle</span>
                           </button>
-                        )
-                      })}
-                    </div>
+                        )}
 
-                    <div className="my-1 border-t border-[#4a443f]/50" />
+                        {/* 5. Daireyi Çoğalt */}
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateUnit(ctxUnit.id)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#f3efe9] hover:bg-[#b99881]/25 hover:text-white transition-colors cursor-pointer text-left"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                          <span>Daireyi Çoğalt</span>
+                        </button>
 
-                    {/* 7. Yön / Cephe Ayarları (Sağ Tık Menüsünde) */}
-                    <div className="px-2.5 py-0.5 flex items-center justify-between text-[9px] font-semibold text-[#8c857f] uppercase">
-                      <span>Yön / Cephe Ayarları</span>
-                      <span className="text-[#b99881] normal-case truncate max-w-[110px]">
-                        {ctxUnit.facade || 'Seçilmedi'}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1 px-1.5 py-0.5">
-                      {[
-                        'Kuzey',
-                        'Güney',
-                        'Doğu',
-                        'Batı',
-                        'Kuzeybatı',
-                        'Kuzeydoğu',
-                        'Güneybatı',
-                        'Güneydoğu',
-                        'Havuz Cephe',
-                        'Deniz Cephe',
-                        'Yol Cephe',
-                      ].map((dir) => {
-                        const currentParts = (ctxUnit.facade || '')
-                          .split(/[,•/|-]+/)
-                          .map((s) => s.trim().toLowerCase())
-                          .filter(Boolean)
-                        const hasTag = currentParts.includes(dir.toLowerCase())
-                        return (
+                        <div className="my-1 border-t border-[#4a443f]/50" />
+
+                        {/* 6. Plan Ölçeği Seçimi (Sağ Tık Menüsünde: 1:1, 16:9, 9:16) */}
+                        <div className="px-2.5 py-0.5 text-[9px] font-semibold text-[#8c857f] uppercase">
+                          Plan Ölçeği
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 px-1.5 py-0.5">
+                          {SELECTABLE_SIZE_PRESETS.map((presetKey) => {
+                            const info = UNIT_SIZE_PRESETS[presetKey]
+                            const normalizedActivePreset =
+                              ctxUnit.sizePreset === 'square' || ctxUnit.sizePreset === '1x1'
+                                ? '1x1'
+                                : ctxUnit.sizePreset === 'narrow-v' || ctxUnit.sizePreset === '9x16'
+                                ? '9x16'
+                                : ctxUnit.sizePreset
+                                ? '16x9'
+                                : inferSizePresetFromBox(
+                                    ctxUnit.planBox || { x: 0, y: 0, w: 21, h: 15 }
+                                  )
+                            const isActive = normalizedActivePreset === presetKey
+                            return (
+                              <button
+                                key={presetKey}
+                                type="button"
+                                onClick={() => {
+                                  handleApplyUnitSizePreset(ctxUnit, presetKey, Math.max(0, ctxUnitIdx))
+                                  setUnitContextMenu(null)
+                                }}
+                                className={`py-1 px-2 rounded-md text-[10px] font-bold transition-all cursor-pointer text-center ${
+                                  isActive
+                                    ? 'bg-[#b99881] text-white'
+                                    : 'bg-[#34302d] text-[#a69f99] hover:text-white'
+                                }`}
+                              >
+                                {info.shortLabel}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        <div className="my-1 border-t border-[#4a443f]/50" />
+
+                        {/* 7. Yön / Cephe Ayarları (Sağ Tık Menüsünde) */}
+                        <div className="px-2.5 py-0.5 flex items-center justify-between text-[9px] font-semibold text-[#8c857f] uppercase">
+                          <span>Yön / Cephe Ayarları</span>
+                          <span className="text-[#b99881] normal-case truncate max-w-[110px]">
+                            {ctxUnit.facade || 'Seçilmedi'}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 px-1.5 py-0.5">
+                          {[
+                            'Kuzey',
+                            'Güney',
+                            'Doğu',
+                            'Batı',
+                            'Kuzeybatı',
+                            'Kuzeydoğu',
+                            'Güneybatı',
+                            'Güneydoğu',
+                            'Havuz Cephe',
+                            'Deniz Cephe',
+                            'Yol Cephe',
+                          ].map((dir) => {
+                            const currentParts = (ctxUnit.facade || '')
+                              .split(/[,•/|-]+/)
+                              .map((s) => s.trim().toLowerCase())
+                              .filter(Boolean)
+                            const hasTag = currentParts.includes(dir.toLowerCase())
+                            return (
+                              <button
+                                key={dir}
+                                type="button"
+                                onClick={() => handleToggleUnitFacadeTag(dir, ctxUnit)}
+                                className={`px-1.5 py-0.5 rounded-md text-[9px] font-semibold transition-all cursor-pointer ${
+                                  hasTag
+                                    ? 'bg-[#b99881] text-white'
+                                    : 'bg-[#34302d] text-[#a69f99] hover:text-white'
+                                }`}
+                              >
+                                {hasTag ? `✓ ${dir}` : `+ ${dir}`}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <div className="flex items-center gap-1 px-1.5 pt-0.5 pb-1">
+                          <input
+                            type="text"
+                            value={customUnitFacadeInput}
+                            onChange={(e) => setCustomUnitFacadeInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && customUnitFacadeInput.trim()) {
+                                e.preventDefault()
+                                handleToggleUnitFacadeTag(customUnitFacadeInput.trim(), ctxUnit)
+                                setCustomUnitFacadeInput('')
+                              }
+                            }}
+                            placeholder="Özel yön/cephe..."
+                            className="flex-1 px-2 py-0.5 rounded-md bg-[#34302d] text-[9.5px] text-white focus:outline-none"
+                          />
                           <button
-                            key={dir}
                             type="button"
-                            onClick={() => handleToggleUnitFacadeTag(dir, ctxUnit)}
-                            className={`px-1.5 py-0.5 rounded-md text-[9px] font-semibold transition-all cursor-pointer ${
-                              hasTag
-                                ? 'bg-[#b99881] text-white'
-                                : 'bg-[#34302d] text-[#a69f99] hover:text-white'
-                            }`}
+                            onClick={() => {
+                              if (customUnitFacadeInput.trim()) {
+                                handleToggleUnitFacadeTag(customUnitFacadeInput.trim(), ctxUnit)
+                                setCustomUnitFacadeInput('')
+                              }
+                            }}
+                            className="px-2 py-0.5 rounded-md bg-[#34302d] hover:bg-[#b99881] hover:text-white text-[9.5px] font-semibold cursor-pointer"
                           >
-                            {hasTag ? `✓ ${dir}` : `+ ${dir}`}
+                            Ekle
                           </button>
-                        )
-                      })}
-                    </div>
-                    <div className="flex items-center gap-1 px-1.5 pt-0.5 pb-1">
-                      <input
-                        type="text"
-                        value={customUnitFacadeInput}
-                        onChange={(e) => setCustomUnitFacadeInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && customUnitFacadeInput.trim()) {
-                            e.preventDefault()
-                            handleToggleUnitFacadeTag(customUnitFacadeInput.trim(), ctxUnit)
-                            setCustomUnitFacadeInput('')
-                          }
-                        }}
-                        placeholder="Özel yön/cephe..."
-                        className="flex-1 px-2 py-0.5 rounded-md bg-[#34302d] text-[9.5px] text-white focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (customUnitFacadeInput.trim()) {
-                            handleToggleUnitFacadeTag(customUnitFacadeInput.trim(), ctxUnit)
-                            setCustomUnitFacadeInput('')
-                          }
-                        }}
-                        className="px-2 py-0.5 rounded-md bg-[#34302d] hover:bg-[#b99881] hover:text-white text-[9.5px] font-semibold cursor-pointer"
-                      >
-                        Ekle
-                      </button>
-                    </div>
+                        </div>
 
-                    <div className="my-1 border-t border-[#4a443f]/50" />
+                        <div className="my-1 border-t border-[#4a443f]/50" />
+                      </>
+                    )}
 
-                    {/* 8. Satış Durumu Hızlı Seçenekleri */}
+                    {/* 8. Satış Durumu Hızlı Seçenekleri (Her zaman kullanılabilir) */}
                     <div className="px-2.5 py-0.5 text-[9px] font-semibold text-[#8c857f] uppercase">
                       Satış Durumu
                     </div>
@@ -4302,17 +4298,21 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       </button>
                     </div>
 
-                    <div className="my-1 border-t border-[#4a443f]/50" />
+                    {isLayoutEditMode && (
+                      <>
+                        <div className="my-1 border-t border-[#4a443f]/50" />
 
-                    {/* 9. Daireyi Kaldır */}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteUnitQuick(ctxUnit.id)}
-                      className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-400 hover:bg-rose-500/20 hover:text-rose-200 transition-colors cursor-pointer text-left"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                      <span>Daireyi Kaldır</span>
-                    </button>
+                        {/* 9. Daireyi Kaldır */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteUnitQuick(ctxUnit.id)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-400 hover:bg-rose-500/20 hover:text-rose-200 transition-colors cursor-pointer text-left"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <span>Daireyi Kaldır</span>
+                        </button>
+                      </>
+                    )}
                   </motion.div>
                 )
               })()}
@@ -4853,7 +4853,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                               ? formatCurrency(activeUnit.price)
                               : 'Belirlenmedi'}
                           </span>
-                          {canEditPrice && activeUnit.status === 'SATISTA' && (
+                          {isLayoutEditMode && canEditPrice && activeUnit.status === 'SATISTA' && (
                             <button
                               type="button"
                               onClick={() => onEditPrice(activeUnit)}
@@ -4944,21 +4944,24 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     )}
 
                     <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onEditUnit(activeUnit)}
-                        className="flex-1 py-2 px-3 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-xs font-semibold whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                        <span>Daireyi Düzenle</span>
-                      </button>
+                      {isLayoutEditMode && (
+                        <button
+                          type="button"
+                          onClick={() => onEditUnit(activeUnit)}
+                          className="flex-1 py-2 px-3 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-xs font-semibold whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                          <span>Daireyi Düzenle</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => onOpenHistory(activeUnit)}
-                        className="w-9 h-9 shrink-0 rounded-full bg-[#34302d] hover:bg-[#3d3733] flex items-center justify-center cursor-pointer transition-colors"
+                        className={`${isLayoutEditMode ? 'w-9 h-9 shrink-0' : 'w-full py-2 px-3 gap-1.5 text-xs font-semibold'} rounded-full bg-[#34302d] hover:bg-[#3d3733] flex items-center justify-center cursor-pointer transition-colors`}
                         title="Durum Değişiklik Geçmişi"
                       >
                         <History className="w-4 h-4 text-[#b99881]" />
+                        {!isLayoutEditMode && <span>Durum Geçmişi</span>}
                       </button>
                     </div>
                   </div>
