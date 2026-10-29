@@ -1452,7 +1452,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       className="rounded-2xl bg-[#34302d] hover:bg-[#3d3733] border border-white/[0.05] overflow-hidden cursor-pointer transition-all flex flex-col justify-between"
                     >
                       <div
-                        className={`h-24 bg-gradient-to-br ${crt.accentGradient} p-3 flex flex-col justify-between relative`}
+                        className={`dark-preview-canvas h-24 bg-gradient-to-br ${crt.accentGradient} p-3 flex flex-col justify-between relative`}
                       >
                         <div className="absolute inset-0 bg-black/35" />
                         <div className="relative z-10 flex items-center justify-between gap-1.5">

@@ -3,12 +3,8 @@ import {
   Palette,
   Plus,
   MessageSquare,
-  CheckCircle2,
   AlertTriangle,
   Sparkles,
-  Film,
-  Image as ImageIcon,
-  Layers,
   Send,
   Search,
   Eye,
@@ -25,6 +21,8 @@ import {
   CommentBadgeType,
 } from '@/services/creativeStore'
 import { userStore } from '@/services/userStore'
+import { GlassCard } from '@/components/ui/GlassCard'
+import { GlassButton } from '@/components/ui/GlassButton'
 
 export const CREATIVE_STATUS_META: Record<
   CreativeStatus,
@@ -32,7 +30,7 @@ export const CREATIVE_STATUS_META: Record<
 > = {
   TASLAK: {
     label: 'Taslak',
-    badgeClass: 'bg-slate-500/15 text-slate-300 border-slate-500/30',
+    badgeClass: 'bg-[#34302d] text-[#d6beae] border-[#4a443f]',
     dotClass: 'bg-slate-400',
   },
   INCELEMEDE: {
@@ -52,8 +50,8 @@ export const CREATIVE_STATUS_META: Record<
   },
   YAYINDA: {
     label: 'Yayında',
-    badgeClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
-    dotClass: 'bg-purple-400',
+    badgeClass: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    dotClass: 'bg-blue-400',
   },
 }
 
@@ -191,34 +189,37 @@ export function CreativesGalleryView() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-3.5 sm:px-5 rounded-[22px] bg-[#282522] border border-[#4a443f] glass-card-static flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-fuchsia-500/15 border border-fuchsia-500/30 flex items-center justify-center text-fuchsia-400">
-            <Palette className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-2xl bg-[#34302d] border border-[#4a443f] flex items-center justify-center shrink-0">
+            <Palette className="w-4 h-4 text-[#b99881]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
+            <h1 className="text-base font-bold text-white tracking-tight">
               Kreatif Stüdyo & Onay Panosu
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[#a69f99]">
               Reklam kreatifleri, sosyal medya tasarımları, 3D renderlar ve ekip içi revize/yorum akışı
             </p>
           </div>
         </div>
 
-        <button
+        <GlassButton
+          type="button"
+          variant="gold"
+          size="sm"
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 text-slate-950 font-semibold text-xs transition-all shadow-lg shadow-fuchsia-500/20"
+          className="rounded-full px-4 py-2 text-xs font-bold"
         >
           <Plus className="w-4 h-4" />
-          Yeni Kreatif Yükle / Oluştur
-        </button>
+          <span>Yeni Kreatif Yükle / Oluştur</span>
+        </GlassButton>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#111520]/80 border border-white/[0.06] rounded-2xl p-3">
+      <div className="p-3.5 rounded-[22px] bg-[#282522] border border-[#4a443f] glass-card-static flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 flex-wrap">
           {[
             { id: 'ALL', label: `Tümü (${creatives.length})` },
@@ -245,11 +246,12 @@ export function CreativesGalleryView() {
           ].map((tab) => (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 statusFilter === tab.id
-                  ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                  ? 'bg-[#b99881] text-white border-[#b99881]'
+                  : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
               }`}
             >
               {tab.label}
@@ -258,13 +260,13 @@ export function CreativesGalleryView() {
         </div>
 
         <div className="relative min-w-[240px]">
-          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-[#8c857f] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="KRT kodu, proje veya başlık ara..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/30 border border-white/[0.07] text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-fuchsia-500/40"
+            className="w-full pl-9 pr-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white placeholder:text-[#8c857f] focus:outline-none"
           />
         </div>
       </div>
@@ -279,14 +281,14 @@ export function CreativesGalleryView() {
           ).length
 
           return (
-            <div
+            <GlassCard
               key={item.id}
               onClick={() => setSelectedCreativeId(item.id)}
-              className="group rounded-2xl bg-[#111520]/90 border border-white/[0.07] hover:border-fuchsia-500/40 transition-all overflow-hidden flex flex-col cursor-pointer"
+              className="group bg-[#282522] border-[#4a443f] overflow-hidden flex flex-col cursor-pointer p-0"
             >
               {/* Visual Mockup / Preview Banner */}
               <div
-                className={`relative h-48 bg-gradient-to-br ${item.accentGradient} p-4 flex flex-col justify-between overflow-hidden`}
+                className={`dark-preview-canvas relative h-48 bg-gradient-to-br ${item.accentGradient} p-4 flex flex-col justify-between overflow-hidden`}
               >
                 {item.previewImageUrl && (
                   <img
@@ -295,15 +297,15 @@ export function CreativesGalleryView() {
                     className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500"
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/20" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/25" />
 
                 {/* Top row inside preview */}
                 <div className="relative z-10 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-bold text-white border border-white/15">
+                    <span className="px-2.5 py-0.5 rounded-full bg-black/65 backdrop-blur-md text-[10px] font-bold text-white border border-white/15">
                       {item.code} • {item.version}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-black/50 backdrop-blur-md text-[10px] font-medium text-slate-200 border border-white/10">
+                    <span className="px-2.5 py-0.5 rounded-full bg-black/55 backdrop-blur-md text-[10px] font-medium text-white border border-white/10">
                       {item.format}
                     </span>
                   </div>
@@ -318,14 +320,14 @@ export function CreativesGalleryView() {
 
                 {/* Bottom row inside preview */}
                 <div className="relative z-10 space-y-1.5">
-                  <span className="inline-block text-[10px] uppercase tracking-wider font-bold text-amber-300">
+                  <span className="inline-block text-[10px] uppercase tracking-wider font-bold text-white/85">
                     DEMİRTÜRK İNŞAAT • {item.project}
                   </span>
                   <p className="text-xs font-extrabold text-white line-clamp-2 leading-snug drop-shadow">
                     {item.headline}
                   </p>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/15 backdrop-blur-md text-[10px] font-semibold text-white">
-                    <Sparkles className="w-3 h-3 text-amber-300" />
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md text-[10px] font-semibold text-white">
+                    <Sparkles className="w-3 h-3" />
                     {item.ctaText}
                   </div>
                 </div>
@@ -334,55 +336,63 @@ export function CreativesGalleryView() {
               {/* Card Body */}
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="flex items-center justify-between text-[11px] text-[#a69f99]">
                     <span>{item.platform}</span>
-                    <span>Teslim: {new Date(item.dueDate + 'T12:00:00').toLocaleDateString('tr-TR')}</span>
+                    <span>
+                      Teslim: {new Date(item.dueDate + 'T12:00:00').toLocaleDateString('tr-TR')}
+                    </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-white group-hover:text-fuchsia-300 transition-colors line-clamp-1">
+                  <h3 className="text-sm font-bold text-white line-clamp-1">
                     {item.title}
                   </h3>
-                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-[#a69f99] line-clamp-2 leading-relaxed">
                     {item.adCopy}
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between">
+                <div className="pt-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-300">
-                      <MessageSquare className="w-3.5 h-3.5 text-fuchsia-400" />
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#d6beae]">
+                      <MessageSquare className="w-3.5 h-3.5 text-[#b99881]" />
                       {itemComments.length} Yorum
                     </span>
                     {unresolvedReviseCount > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-semibold">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-semibold">
                         <AlertTriangle className="w-3 h-3" />
                         {unresolvedReviseCount} Açık Revize
                       </span>
                     )}
                   </div>
 
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-fuchsia-400 group-hover:translate-x-0.5 transition-transform">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#b99881] group-hover:translate-x-0.5 transition-transform">
                     <Eye className="w-3.5 h-3.5" />
                     İncele & Yorum Yaz
                   </span>
                 </div>
               </div>
-            </div>
+            </GlassCard>
           )
         })}
       </div>
 
-      {/* Selected Creative Detail & Comments Drawer/Modal */}
+      {/* Selected Creative Detail & Comments Modal */}
       {selectedCreative && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl max-h-[90vh] rounded-2xl bg-[#111522] border border-white/10 shadow-2xl overflow-hidden flex flex-col lg:flex-row">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setSelectedCreativeId(null)}
+        >
+          <div
+            className="glass-modal w-full max-w-4xl max-h-[90vh] rounded-[24px] bg-[#282522] border border-[#4a443f] shadow-2xl overflow-hidden flex flex-col lg:flex-row"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Left: Creative Visual & Metadata */}
-            <div className="lg:w-1/2 p-5 border-b lg:border-b-0 lg:border-r border-white/10 overflow-y-auto space-y-4">
+            <div className="lg:w-1/2 p-5 overflow-y-auto space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-lg bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30 text-xs font-bold">
+                  <span className="px-2.5 py-1 rounded-full bg-[#34302d] border border-[#4a443f] text-xs font-bold text-white">
                     {selectedCreative.code}
                   </span>
-                  <span className="text-xs text-slate-400">{selectedCreative.format}</span>
+                  <span className="text-xs text-[#a69f99]">{selectedCreative.format}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -394,9 +404,7 @@ export function CreativesGalleryView() {
                         e.target.value as CreativeStatus
                       )
                     }
-                    className={`px-3 py-1 rounded-xl text-xs font-semibold border bg-[#0c0f17] focus:outline-none ${
-                      CREATIVE_STATUS_META[selectedCreative.status].badgeClass
-                    }`}
+                    className="px-3 py-1 rounded-full text-xs font-semibold border border-[#4a443f] bg-[#34302d] text-white focus:outline-none"
                   >
                     <option value="TASLAK">Taslak</option>
                     <option value="INCELEMEDE">İncelemede</option>
@@ -406,12 +414,13 @@ export function CreativesGalleryView() {
                   </select>
 
                   <button
+                    type="button"
                     onClick={() => {
                       creativeStore.deleteCreative(selectedCreative.id)
                       setSelectedCreativeId(null)
                     }}
                     title="Kreatifi Sil"
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                    className="p-1.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-rose-400 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -420,7 +429,7 @@ export function CreativesGalleryView() {
 
               {/* Large Preview Box */}
               <div
-                className={`relative rounded-2xl bg-gradient-to-br ${selectedCreative.accentGradient} p-6 min-h-[240px] flex flex-col justify-between overflow-hidden border border-white/10`}
+                className={`dark-preview-canvas relative rounded-2xl bg-gradient-to-br ${selectedCreative.accentGradient} p-6 min-h-[240px] flex flex-col justify-between overflow-hidden border border-[#4a443f]`}
               >
                 {selectedCreative.previewImageUrl && (
                   <img
@@ -432,11 +441,11 @@ export function CreativesGalleryView() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20" />
 
                 <div className="relative z-10 flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/90">
                     DEMİRTÜRK İNŞAAT • {selectedCreative.project}
                   </span>
-                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 text-[11px] text-slate-200 border border-white/15 cursor-pointer transition-colors">
-                    <Upload className="w-3.5 h-3.5 text-fuchsia-400" />
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/65 hover:bg-black/80 text-[11px] text-white border border-white/15 cursor-pointer transition-colors">
+                    <Upload className="w-3.5 h-3.5" />
                     Görsel Değiştir
                     <input
                       type="file"
@@ -451,11 +460,11 @@ export function CreativesGalleryView() {
                   <h4 className="text-base font-extrabold text-white leading-snug">
                     {selectedCreative.headline}
                   </h4>
-                  <p className="text-xs text-slate-200 leading-relaxed">
+                  <p className="text-xs text-white/90 leading-relaxed">
                     {selectedCreative.adCopy}
                   </p>
                   <div className="pt-1">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/65 text-white text-xs font-bold border border-white/15">
                       {selectedCreative.ctaText}
                     </span>
                   </div>
@@ -463,20 +472,22 @@ export function CreativesGalleryView() {
               </div>
 
               {/* Metadata Details */}
-              <div className="space-y-2.5 bg-black/30 rounded-xl p-3.5 border border-white/[0.06] text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Başlık:</span>
-                  <span className="text-white font-medium text-right">{selectedCreative.title}</span>
+              <div className="space-y-2.5 bg-[#34302d] rounded-2xl p-3.5 border border-[#4a443f] text-xs">
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#a69f99]">Başlık:</span>
+                  <span className="text-white font-semibold text-right">
+                    {selectedCreative.title}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Proje & Platform:</span>
-                  <span className="text-slate-200">
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#a69f99]">Proje & Platform:</span>
+                  <span className="text-white">
                     {selectedCreative.project} • {selectedCreative.platform}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Sorumlu & Sürüm:</span>
-                  <span className="text-slate-200">
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#a69f99]">Sorumlu & Sürüm:</span>
+                  <span className="text-white">
                     {selectedCreative.designer} ({selectedCreative.version})
                   </span>
                 </div>
@@ -485,57 +496,52 @@ export function CreativesGalleryView() {
 
             {/* Right: Creative Comments & Revision Thread */}
             <div className="lg:w-1/2 p-5 flex flex-col justify-between max-h-[85vh]">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center justify-between pb-3">
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-fuchsia-400" />
+                    <MessageSquare className="w-4 h-4 text-[#b99881]" />
                     Kreatif Yorumları & Revize Notları ({selectedComments.length})
                   </h3>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-[#a69f99]">
                     Saniye/slayt belirterek revize isteyebilir veya onay verebilirsiniz
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSelectedCreativeId(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+                  className="p-1.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Comments Feed */}
-              <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1">
+              <div className="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1">
                 {selectedComments.length === 0 ? (
-                  <div className="text-center py-10 text-xs text-slate-500">
+                  <div className="text-center py-10 text-xs text-[#a69f99]">
                     Bu kreatif için henüz yorum veya revize notu girilmemiş.
                   </div>
                 ) : (
                   selectedComments.map((cm) => (
                     <div
                       key={cm.id}
-                      className={`rounded-xl p-3 border transition-all ${
-                        cm.isResolved
-                          ? 'bg-white/[0.02] border-white/[0.05] opacity-70'
-                          : cm.type === 'REVIZE'
-                          ? 'bg-amber-500/[0.07] border-amber-500/25'
-                          : cm.type === 'ONAY'
-                          ? 'bg-emerald-500/[0.07] border-emerald-500/25'
-                          : 'bg-white/[0.04] border-white/[0.08]'
+                      className={`rounded-2xl p-3 bg-[#34302d] border border-[#4a443f] transition-all ${
+                        cm.isResolved ? 'opacity-65' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-bold text-white">{cm.authorName}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-slate-300">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#282522] text-[#a69f99]">
                             {cm.authorDepartment}
                           </span>
                           <span
-                            className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                               cm.type === 'REVIZE'
-                                ? 'bg-amber-500/20 text-amber-300'
+                                ? 'bg-amber-500/20 text-amber-400'
                                 : cm.type === 'ONAY'
-                                ? 'bg-emerald-500/20 text-emerald-300'
-                                : 'bg-sky-500/20 text-sky-300'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'bg-sky-500/20 text-sky-400'
                             }`}
                           >
                             {cm.type === 'REVIZE'
@@ -545,40 +551,38 @@ export function CreativesGalleryView() {
                               : 'Yorum'}
                           </span>
                           {cm.pinNote && (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/25">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#282522] text-[#d6beae]">
                               📍 {cm.pinNote}
                             </span>
                           )}
                         </div>
 
                         <button
+                          type="button"
                           onClick={() => creativeStore.toggleCommentResolved(cm.id)}
-                          className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${
                             cm.isResolved
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                              : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
+                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                              : 'bg-[#282522] text-[#a69f99] border-[#4a443f] hover:text-white'
                           }`}
                         >
                           {cm.isResolved ? '✓ Çözüldü' : 'Çözüldü İşaretle'}
                         </button>
                       </div>
 
-                      <p className="text-xs text-slate-200 leading-relaxed">{cm.content}</p>
+                      <p className="text-xs text-white leading-relaxed">{cm.content}</p>
                     </div>
                   ))
                 )}
               </div>
 
               {/* Add Comment Form */}
-              <form
-                onSubmit={handlePostComment}
-                className="pt-3 border-t border-white/10 space-y-2.5"
-              >
+              <form onSubmit={handlePostComment} className="pt-3 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <select
                     value={commentType}
                     onChange={(e) => setCommentType(e.target.value as CommentBadgeType)}
-                    className="px-2.5 py-1.5 rounded-xl bg-[#0c0f17] border border-white/10 text-xs text-white focus:outline-none"
+                    className="px-3 py-1.5 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                   >
                     <option value="YORUM">💬 Yorum</option>
                     <option value="REVIZE">🛠️ Revize İste</option>
@@ -590,7 +594,7 @@ export function CreativesGalleryView() {
                     value={commentPin}
                     onChange={(e) => setCommentPin(e.target.value)}
                     placeholder="Konum / Saniye (Örn: 00:04 sn veya Slayt 2)"
-                    className="flex-1 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder:text-slate-500 focus:outline-none"
+                    className="flex-1 px-3.5 py-1.5 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white placeholder:text-[#8c857f] focus:outline-none"
                   />
                 </div>
 
@@ -601,15 +605,17 @@ export function CreativesGalleryView() {
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
                     placeholder="Kreatif hakkında yorum veya revize notunuzu yazın..."
-                    className="flex-1 px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-fuchsia-500/50"
+                    className="flex-1 px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white placeholder:text-[#8c857f] focus:outline-none"
                   />
-                  <button
+                  <GlassButton
                     type="submit"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 text-slate-950 font-semibold text-xs transition-colors"
+                    variant="gold"
+                    size="sm"
+                    className="rounded-full px-4 py-2 text-xs font-bold"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    Gönder
-                  </button>
+                    <span>Gönder</span>
+                  </GlassButton>
                 </div>
               </form>
             </div>
@@ -619,38 +625,47 @@ export function CreativesGalleryView() {
 
       {/* Create New Creative Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-[#121622] border border-white/10 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="glass-modal w-full max-w-lg rounded-[24px] bg-[#282522] border border-[#4a443f] p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white">Yeni Kreatif Oluştur / Yükle</h3>
               <button
+                type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="text-xs text-slate-400 hover:text-white"
+                className="p-1.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-white cursor-pointer"
               >
-                Kapat
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleCreateCreative} className="space-y-3.5">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Kreatif Başlığı</label>
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                  Kreatif Başlığı
+                </label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="Örn: Eksen-2 Havuz & Senet Avantajı Reels Kurgusu"
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none"
+                  className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Proje</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Proje</label>
                   <select
                     value={newProject}
                     onChange={(e) => setNewProject(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#0d1018] border border-white/10 text-xs text-white focus:outline-none"
+                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                   >
                     <option value="Eksen - 2">Eksen - 2</option>
                     <option value="Portre">Portre</option>
@@ -662,11 +677,11 @@ export function CreativesGalleryView() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Format</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Format</label>
                   <select
                     value={newFormat}
                     onChange={(e) => setNewFormat(e.target.value as CreativeFormat)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#0d1018] border border-white/10 text-xs text-white focus:outline-none"
+                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                   >
                     <option value="Reels / Video">Reels / Video</option>
                     <option value="Story (9:16)">Story (9:16)</option>
@@ -680,63 +695,75 @@ export function CreativesGalleryView() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Mecra / Platform</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                    Mecra / Platform
+                  </label>
                   <input
                     type="text"
                     value={newPlatform}
                     onChange={(e) => setNewPlatform(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none"
+                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Teslim / Yayın Tarihi</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                    Teslim / Yayın Tarihi
+                  </label>
                   <input
                     type="date"
                     value={newDueDate}
                     onChange={(e) => setNewDueDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none"
+                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Görsel Üstü Ana Başlık (Headline)</label>
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                  Görsel Üstü Ana Başlık (Headline)
+                </label>
                 <input
                   type="text"
                   value={newHeadline}
                   onChange={(e) => setNewHeadline(e.target.value)}
                   placeholder="Örn: 36 AY ELDEN SENETLE KARASU’DA DAİRE FIRSATI"
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none"
+                  className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Reklam Metni / Açıklama (Copy)</label>
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                  Reklam Metni / Açıklama (Copy)
+                </label>
                 <textarea
                   rows={2}
                   value={newAdCopy}
                   onChange={(e) => setNewAdCopy(e.target.value)}
                   placeholder="Reklam açıklaması veya kreatif kurgu özeti..."
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none"
+                  className="w-full px-3.5 py-2 rounded-2xl bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">CTA Buton Metni</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                    CTA Buton Metni
+                  </label>
                   <input
                     type="text"
                     value={newCtaText}
                     onChange={(e) => setNewCtaText(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none"
+                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Tema Rengi</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                    Tema Rengi
+                  </label>
                   <select
                     value={newGradient}
                     onChange={(e) => setNewGradient(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#0d1018] border border-white/10 text-xs text-white focus:outline-none"
+                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                   >
                     {GRADIENT_PRESETS.map((g) => (
                       <option key={g.value} value={g.value}>
@@ -748,14 +775,14 @@ export function CreativesGalleryView() {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">
-                  Önizleme Görseli (Opsiyonel)
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                  Önizleme Görseli Yükle (Opsiyonel)
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleImageFileChange(e)}
-                  className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-fuchsia-500/20 file:text-fuchsia-300 hover:file:bg-fuchsia-500/30"
+                  className="w-full text-xs text-[#a69f99]"
                 />
               </div>
 
@@ -763,16 +790,18 @@ export function CreativesGalleryView() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-white/5 text-xs text-slate-300 hover:bg-white/10"
+                  className="px-4 py-2 rounded-full glass-button-subtle border border-[#4a443f] text-xs text-[#a69f99] hover:text-white cursor-pointer"
                 >
-                  İptal
+                  Vazgeç
                 </button>
-                <button
+                <GlassButton
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-fuchsia-500 text-slate-950 font-semibold text-xs hover:bg-fuchsia-400"
+                  variant="gold"
+                  size="sm"
+                  className="rounded-full px-5 py-2 text-xs font-bold"
                 >
                   Kreatifi Kaydet
-                </button>
+                </GlassButton>
               </div>
             </form>
           </div>

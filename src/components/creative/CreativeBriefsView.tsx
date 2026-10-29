@@ -9,6 +9,7 @@ import {
   Target,
   Package,
   Building2,
+  X,
 } from 'lucide-react'
 import {
   creativeStore,
@@ -18,11 +19,13 @@ import {
   CreativeFormat,
 } from '@/services/creativeStore'
 import { userStore } from '@/services/userStore'
+import { GlassCard } from '@/components/ui/GlassCard'
+import { GlassButton } from '@/components/ui/GlassButton'
 
 const PRIORITY_META: Record<BriefPriority, { label: string; badgeClass: string }> = {
   ACIL: {
     label: 'Acil Öncelik',
-    badgeClass: 'bg-red-500/15 text-red-400 border-red-500/30',
+    badgeClass: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
   },
   YUKSEK: {
     label: 'Yüksek Öncelik',
@@ -30,7 +33,7 @@ const PRIORITY_META: Record<BriefPriority, { label: string; badgeClass: string }
   },
   NORMAL: {
     label: 'Normal',
-    badgeClass: 'bg-slate-500/15 text-slate-300 border-slate-500/30',
+    badgeClass: 'bg-[#34302d] text-[#d6beae] border-[#4a443f]',
   },
 }
 
@@ -98,98 +101,101 @@ export function CreativeBriefsView() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-3.5 sm:px-5 rounded-[22px] bg-[#282522] border border-[#4a443f] glass-card-static flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
-            <FileText className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-2xl bg-[#34302d] border border-[#4a443f] flex items-center justify-center shrink-0">
+            <FileText className="w-4 h-4 text-[#b99881]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
+            <h1 className="text-base font-bold text-white tracking-tight">
               Kreatif Brief & Tasarım Talepleri
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[#a69f99]">
               Pazarlama, Satış ve Yönetim departmanlarından gelen kreatif briefler ve teslimat takibi
             </p>
           </div>
         </div>
 
-        <button
+        <GlassButton
+          type="button"
+          variant="gold"
+          size="sm"
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-xs transition-all shadow-lg shadow-sky-500/20"
+          className="rounded-full px-4 py-2 text-xs font-bold"
         >
           <Plus className="w-4 h-4" />
-          Yeni Kreatif Brief Oluştur
-        </button>
+          <span>Yeni Kreatif Brief Oluştur</span>
+        </GlassButton>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="rounded-2xl bg-[#111520]/90 border border-white/[0.07] p-4 flex items-center justify-between">
-          <div>
-            <p className="text-[11px] text-slate-400">Yeni / Bekleyen Briefler</p>
-            <p className="text-2xl font-bold text-sky-400 mt-1">
-              {briefs.filter((b) => b.status === 'YENI_BRIEF').length}
-            </p>
+        <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[13px] font-medium text-[#d6beae]">
+              Yeni / Bekleyen Briefler
+            </span>
+            <AlertCircle className="w-4 h-4 text-[#b99881]" />
           </div>
-          <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center text-sky-400">
-            <AlertCircle className="w-5 h-5" />
+          <div className="text-[28px] sm:text-[32px] font-semibold text-white mt-1.5 font-mono leading-none">
+            {briefs.filter((b) => b.status === 'YENI_BRIEF').length}
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="rounded-2xl bg-[#111520]/90 border border-white/[0.07] p-4 flex items-center justify-between">
-          <div>
-            <p className="text-[11px] text-slate-400">Aktif Üretimdeki Briefler</p>
-            <p className="text-2xl font-bold text-amber-400 mt-1">
-              {briefs.filter((b) => b.status === 'URETIMDE').length}
-            </p>
+        <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[13px] font-medium text-[#d6beae]">
+              Aktif Üretimdeki Briefler
+            </span>
+            <Clock className="w-4 h-4 text-[#b99881]" />
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400">
-            <Clock className="w-5 h-5" />
+          <div className="text-[28px] sm:text-[32px] font-semibold text-white mt-1.5 font-mono leading-none">
+            {briefs.filter((b) => b.status === 'URETIMDE').length}
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="rounded-2xl bg-[#111520]/90 border border-white/[0.07] p-4 flex items-center justify-between">
-          <div>
-            <p className="text-[11px] text-slate-400">Teslim Edilen Briefler</p>
-            <p className="text-2xl font-bold text-emerald-400 mt-1">
-              {briefs.filter((b) => b.status === 'TESLIM_EDILDI').length}
-            </p>
+        <GlassCard className="py-3 px-4 bg-[#282522] border-[#4a443f]">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[13px] font-medium text-[#d6beae]">
+              Teslim Edilen Briefler
+            </span>
+            <CheckCircle2 className="w-4 h-4 text-[#b99881]" />
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="text-[28px] sm:text-[32px] font-semibold text-white mt-1.5 font-mono leading-none">
+            {briefs.filter((b) => b.status === 'TESLIM_EDILDI').length}
           </div>
-        </div>
+        </GlassCard>
       </div>
 
       {/* Brief Cards */}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {briefs.map((brief) => {
           const prio = PRIORITY_META[brief.priority]
           const stat = BRIEF_STATUS_META[brief.status]
 
           return (
-            <div
+            <GlassCard
               key={brief.id}
-              className="rounded-2xl bg-[#111520]/90 border border-white/[0.07] p-5 space-y-4 hover:border-white/[0.14] transition-all"
+              className="p-5 bg-[#282522] border-[#4a443f] space-y-4"
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`px-2.5 py-0.5 rounded-md text-[10px] font-semibold border ${prio.badgeClass}`}
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${prio.badgeClass}`}
                     >
                       {prio.label}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-medium bg-white/[0.05] text-slate-300 border border-white/[0.08]">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[#34302d] text-[#d6beae]">
                       {brief.format}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
-                      <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="inline-flex items-center gap-1 text-[11px] text-[#a69f99]">
+                      <Building2 className="w-3.5 h-3.5 text-[#b99881]" />
                       {brief.project}
                     </span>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-[#8c857f]">
                       • Talep Eden: {brief.requestedBy} ({brief.requesterDepartment})
                     </span>
                   </div>
@@ -197,9 +203,9 @@ export function CreativeBriefsView() {
                 </div>
 
                 <div className="flex items-center gap-3 self-end lg:self-center">
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-[#a69f99]">
                     Teslim Tarihi:{' '}
-                    <strong className="text-slate-200">
+                    <strong className="text-white">
                       {new Date(brief.deadline + 'T12:00:00').toLocaleDateString('tr-TR')}
                     </strong>
                   </span>
@@ -209,7 +215,7 @@ export function CreativeBriefsView() {
                     onChange={(e) =>
                       creativeStore.updateBriefStatus(brief.id, e.target.value as BriefStatus)
                     }
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border bg-[#0c0f17] focus:outline-none ${stat.badgeClass}`}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border bg-[#34302d] text-white focus:outline-none ${stat.badgeClass}`}
                   >
                     <option value="YENI_BRIEF">Yeni Brief</option>
                     <option value="URETIMDE">Üretimde</option>
@@ -218,70 +224,79 @@ export function CreativeBriefsView() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-white/[0.06]">
-                <div className="rounded-xl bg-black/25 p-3 border border-white/[0.05]">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1.5 mb-1">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                <div className="rounded-2xl bg-[#34302d] p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#b99881] flex items-center gap-1.5 mb-1">
                     <Target className="w-3.5 h-3.5" />
                     Hedef Kitle
                   </p>
-                  <p className="text-xs text-slate-300 leading-relaxed">{brief.targetAudience}</p>
+                  <p className="text-xs text-white leading-relaxed">{brief.targetAudience}</p>
                 </div>
 
-                <div className="rounded-xl bg-black/25 p-3 border border-white/[0.05]">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 mb-1">
+                <div className="rounded-2xl bg-[#34302d] p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#b99881] flex items-center gap-1.5 mb-1">
                     <Sparkles className="w-3.5 h-3.5" />
                     Ana Mesaj / Vurgu
                   </p>
-                  <p className="text-xs text-slate-300 leading-relaxed">{brief.keyMessage}</p>
+                  <p className="text-xs text-white leading-relaxed">{brief.keyMessage}</p>
                 </div>
 
-                <div className="rounded-xl bg-black/25 p-3 border border-white/[0.05]">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 mb-1">
+                <div className="rounded-2xl bg-[#34302d] p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#b99881] flex items-center gap-1.5 mb-1">
                     <Package className="w-3.5 h-3.5" />
                     İstenen Teslimatlar
                   </p>
-                  <p className="text-xs text-slate-300 leading-relaxed">{brief.deliverables}</p>
+                  <p className="text-xs text-white leading-relaxed">{brief.deliverables}</p>
                 </div>
               </div>
-            </div>
+            </GlassCard>
           )
         })}
       </div>
 
       {/* Add Brief Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-[#121622] border border-white/10 p-6 shadow-2xl space-y-4">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowAddModal(false)}
+        >
+          <div
+            className="glass-modal w-full max-w-lg rounded-[24px] bg-[#282522] border border-[#4a443f] p-6 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white">Yeni Kreatif Brief Oluştur</h3>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-xs text-slate-400 hover:text-white"
+                className="p-1.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-white cursor-pointer"
               >
-                Kapat
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleAddBrief} className="space-y-3.5">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Brief Başlığı</label>
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                  Brief Başlığı
+                </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Örn: Portre Projesi Lansman Reels & Story Paketi"
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none"
+                  className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Proje</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Proje</label>
                   <select
                     value={project}
                     onChange={(e) => setProject(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-[#0d1018] border border-white/10 text-xs text-white"
+                    className="w-full px-3 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
                   >
                     <option value="Eksen - 2">Eksen - 2</option>
                     <option value="Portre">Portre</option>
@@ -292,11 +307,11 @@ export function CreativeBriefsView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Öncelik</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Öncelik</label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as BriefPriority)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-[#0d1018] border border-white/10 text-xs text-white"
+                    className="w-full px-3 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
                   >
                     <option value="ACIL">Acil</option>
                     <option value="YUKSEK">Yüksek</option>
@@ -304,22 +319,24 @@ export function CreativeBriefsView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Teslim Tarihi</label>
+                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                    Teslim Tarihi
+                  </label>
                   <input
                     type="date"
                     value={deadline}
                     onChange={(e) => setDeadline(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white"
+                    className="w-full px-3 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Format</label>
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Format</label>
                 <select
                   value={format}
                   onChange={(e) => setFormat(e.target.value as CreativeFormat)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#0d1018] border border-white/10 text-xs text-white"
+                  className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
                 >
                   <option value="Reels / Video">Reels / Video</option>
                   <option value="Story (9:16)">Story (9:16)</option>
@@ -331,35 +348,41 @@ export function CreativeBriefsView() {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Hedef Kitle</label>
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                  Hedef Kitle
+                </label>
                 <input
                   type="text"
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="Örn: İstanbul ve Avrupa’da yaşayan konut yatırımcıları"
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white"
+                  className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Ana Mesaj / Vurgu</label>
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                  Ana Mesaj / Vurgu
+                </label>
                 <textarea
                   rows={2}
                   value={keyMessage}
                   onChange={(e) => setKeyMessage(e.target.value)}
                   placeholder="Vurgulanacak ödeme modeli, lokasyon veya kampanya mesajı..."
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white"
+                  className="w-full px-3.5 py-2 rounded-2xl bg-[#1e1c1a] border border-[#4a443f] text-xs text-white resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">İstenen Teslimatlar (Ölçü & Adet)</label>
+                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                  İstenen Teslimatlar (Ölçü & Adet)
+                </label>
                 <input
                   type="text"
                   value={deliverables}
                   onChange={(e) => setDeliverables(e.target.value)}
                   placeholder="Örn: 2 adet 9:16 Reels, 1 adet 4:5 Post"
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white"
+                  className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
                 />
               </div>
 
@@ -367,16 +390,18 @@ export function CreativeBriefsView() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl bg-white/5 text-xs text-slate-300 hover:bg-white/10"
+                  className="px-4 py-2 rounded-full glass-button-subtle border border-[#4a443f] text-xs text-[#a69f99] hover:text-white cursor-pointer"
                 >
-                  İptal
+                  Vazgeç
                 </button>
-                <button
+                <GlassButton
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-sky-500 text-slate-950 font-semibold text-xs hover:bg-sky-400"
+                  variant="gold"
+                  size="sm"
+                  className="rounded-full px-5 py-2 text-xs font-bold"
                 >
                   Briefi Gönder
-                </button>
+                </GlassButton>
               </div>
             </form>
           </div>

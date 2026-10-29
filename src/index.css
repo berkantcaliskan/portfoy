@@ -883,6 +883,8 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 /* Dolgulu yeşil/kırmızı aksiyon butonlarında (örn. WhatsApp'ta Aç) yazı ve ikon beyaz kalmalı */
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dark-preview-canvas,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dark-preview-canvas *,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn *,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-emerald-600"],
