@@ -82,6 +82,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     floor: number | string
     grossSqm: number | string
     netSqm: number | string
+    statusLabel: string
   }>({
     price: 0,
     facade: '',
@@ -91,6 +92,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     floor: 1,
     grossSqm: 100,
     netSqm: 80,
+    statusLabel: 'Satışta',
   })
 
   // Form states
@@ -322,6 +324,16 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
   const handleOpenEditUnit = (unit: FlatUnit) => {
     setSelectedUnit(unit)
     setEditingUnit(unit)
+    const initialStatusLabel =
+      unit.status === 'SATISTA'
+        ? 'Satışta'
+        : unit.status === 'REZERVE'
+        ? unit.statusLabel === 'Rezerve'
+          ? 'Rezerve'
+          : 'Kapora Alındı'
+        : unit.statusLabel === 'KAPALI'
+        ? 'KAPALI'
+        : 'SATILDI'
     setEditUnitForm({
       price: unit.price || 0,
       facade: unit.facade || '',
@@ -331,6 +343,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       floor: Math.max(0, Math.min(2, unit.floor ?? 0)),
       grossSqm: unit.grossSqm || 100,
       netSqm: unit.netSqm || 80,
+      statusLabel: initialStatusLabel,
     })
     setActionError(null)
     setIsEditUnitModalOpen(true)
@@ -341,6 +354,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     if (!editingUnit || !currentProject) return
 
     const parsedFloor = Math.max(0, Math.min(2, Number(editUnitForm.floor) || 0))
+    const nextStatus =
+      editUnitForm.statusLabel === 'SATILDI' || editUnitForm.statusLabel === 'KAPALI'
+        ? 'SATILDI'
+        : editUnitForm.statusLabel === 'Kapora Alındı' || editUnitForm.statusLabel === 'Rezerve'
+        ? 'REZERVE'
+        : 'SATISTA'
     const res = projectStore.updateUnitDetails(
       currentProject.id,
       editingUnit.id,
@@ -353,6 +372,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
         floor: parsedFloor,
         grossSqm: Number(editUnitForm.grossSqm) || 0,
         netSqm: Number(editUnitForm.netSqm) || 0,
+        status: nextStatus,
+        statusLabel: editUnitForm.statusLabel,
       },
       currentUser
     )
@@ -956,43 +977,40 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                           <div className="rounded-[22px] bg-[#282522] border border-[#4a443f] p-2.5 max-h-[640px] overflow-y-auto space-y-1.5">
                             {currentUnits.map((unit) => {
                               const isSelected = activeListUnit?.id === unit.id
-                              const isAvailable = unit.status === 'SATISTA'
-                              const isReserved = unit.status === 'REZERVE'
+                              const isReserved =
+                                unit.status === 'REZERVE' ||
+                                Boolean(unit.reservation?.depositAmount) ||
+                                /kapora|peşinat|pesinat|rezerve|opsiyon/i.test(unit.statusLabel || '')
+                              const isAvailable = unit.status === 'SATISTA' && !isReserved
                               const floorText =
                                 FLOOR_LABELS[Math.max(0, Math.min(2, unit.floor))]?.short ||
                                 `${unit.floor}. Kat`
+
+                              const rowStatusClass = isAvailable
+                                ? 'unit-card-available'
+                                : isReserved
+                                ? 'unit-card-deposit'
+                                : 'unit-card-sold'
 
                               return (
                                 <button
                                   key={unit.id}
                                   type="button"
                                   onClick={() => setActiveListUnitId(unit.id)}
-                                  className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl text-left transition-all cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-[#b99881] text-white'
-                                      : 'bg-[#34302d] text-[#f3efe9] hover:bg-[#3d3733]'
+                                  className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl text-left transition-all cursor-pointer ${rowStatusClass} ${
+                                    isSelected ? 'ring-2 ring-[#5c6ac4] shadow-md' : ''
                                   }`}
                                 >
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold text-white truncate">
+                                      <span className="text-xs font-bold truncate">
                                         {unit.unitNumber}
                                       </span>
-                                      <span
-                                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                          isSelected
-                                            ? 'bg-black/20 text-white'
-                                            : 'bg-[#282522] text-[#a69f99]'
-                                        }`}
-                                      >
+                                      <span className="unit-pill-light text-[10px] font-semibold px-2 py-0.5 rounded-full">
                                         {unit.roomType}
                                       </span>
                                     </div>
-                                    <div
-                                      className={`text-[11px] mt-0.5 truncate ${
-                                        isSelected ? 'text-white/85' : 'text-[#a69f99]'
-                                      }`}
-                                    >
+                                    <div className="text-[11px] mt-0.5 truncate opacity-90">
                                       {unit.block || 'A Blok'} • {floorText} • {unit.grossSqm} m²
                                     </div>
                                   </div>
@@ -1001,19 +1019,21 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                                     <span
                                       className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider ${
                                         isAvailable
-                                          ? 'bg-emerald-600 !text-white'
+                                          ? 'unit-badge-available'
                                           : isReserved
-                                          ? 'bg-amber-500 !text-white'
-                                          : 'bg-rose-600 !text-white'
+                                          ? 'unit-badge-deposit'
+                                          : 'unit-badge-sold'
                                       }`}
                                     >
                                       {isAvailable
                                         ? 'Satışta'
                                         : isReserved
-                                        ? 'Rezerve'
+                                        ? unit.statusLabel && !/^satışta$/i.test(unit.statusLabel)
+                                          ? unit.statusLabel
+                                          : 'Kapora / Rezerve'
                                         : unit.statusLabel || 'Satıldı'}
                                     </span>
-                                    <span className="text-xs font-bold font-mono text-white">
+                                    <span className="unit-pill-light px-2 py-0.5 rounded-full text-xs font-bold font-mono">
                                       {unit.price > 0 ? formatCurrency(unit.price) : 'Belirlenmedi'}
                                     </span>
                                   </div>
@@ -1245,36 +1265,50 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                     /* KART GÖRÜNÜMÜ: Daireler Grid Matrisi */
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {currentUnits.map((unit) => {
-                        const isAvailable = unit.status === 'SATISTA'
-                        const isReserved = unit.status === 'REZERVE'
-                        const isSold = unit.status === 'SATILDI'
+                        const isReserved =
+                          unit.status === 'REZERVE' ||
+                          Boolean(unit.reservation?.depositAmount) ||
+                          /kapora|peşinat|pesinat|rezerve|opsiyon/i.test(unit.statusLabel || '')
+                        const isAvailable = unit.status === 'SATISTA' && !isReserved
+                        const isSold = !isAvailable && !isReserved
 
                         return (
                           <div
                             key={unit.id}
                             className={`p-4 rounded-[22px] border transition-all duration-200 ${
                               isAvailable
-                                ? 'bg-[#282522] border-[#4a443f] hover:border-[#b99881]'
+                                ? 'unit-card-available'
                                 : isReserved
-                                ? 'bg-amber-500/5 border-amber-500/30'
-                                : 'bg-[#24211f] border-rose-500/20 opacity-80'
+                                ? 'unit-card-deposit'
+                                : 'unit-card-sold'
                             }`}
                           >
                             {/* Üst Kısım: Daire No, Kat, Durum Rozeti ve Düzenle Butonu */}
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-bold text-white">{unit.unitNumber}</span>
-                                <span className="text-[10px] text-[#8c857f] px-2 py-0.5 rounded-full bg-[#34302d]">
+                                <span className="text-sm font-bold">{unit.unitNumber}</span>
+                                <span className="unit-pill-light text-[10px] font-semibold px-2 py-0.5 rounded-full">
                                   {unit.block || 'A Blok'} • {FLOOR_LABELS[Math.max(0, Math.min(2, unit.floor))]?.short || `${unit.floor}. Kat`}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <GlassBadge
-                                  size="sm"
-                                  variant={isAvailable ? 'primary' : isReserved ? 'warning' : 'danger'}
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                    isAvailable
+                                      ? 'unit-badge-available'
+                                      : isReserved
+                                      ? 'unit-badge-deposit'
+                                      : 'unit-badge-sold'
+                                  }`}
                                 >
-                                  {isAvailable ? 'Satışta' : isReserved ? 'Rezerve' : 'Satıldı'}
-                                </GlassBadge>
+                                  {isAvailable
+                                    ? 'Satışta'
+                                    : isReserved
+                                    ? unit.statusLabel && !/^satışta$/i.test(unit.statusLabel)
+                                      ? unit.statusLabel
+                                      : 'Kapora / Rezerve'
+                                    : unit.statusLabel || 'Satıldı'}
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditUnit(unit)}
@@ -2067,7 +2101,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Daire No
@@ -2078,6 +2112,23 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 value={editingUnit?.unitNumber || ''}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#1e1b19] border border-[#3d3733] text-xs text-[#8c857f] cursor-not-allowed"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+                Satış Durumu
+              </label>
+              <select
+                value={editUnitForm.statusLabel}
+                onChange={(e) => setEditUnitForm({ ...editUnitForm, statusLabel: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
+              >
+                <option value="Satışta">Satışta (Şeffaf Yeşil)</option>
+                <option value="Kapora Alındı">Kapora / Peşinat (Navy Lacivert)</option>
+                <option value="Rezerve">Rezerve (Navy Lacivert)</option>
+                <option value="SATILDI">Satıldı (Kırmızı)</option>
+                <option value="KAPALI">Kapalı (Kırmızı)</option>
+              </select>
             </div>
 
             <div>

@@ -621,8 +621,16 @@ function parsePptxSpatialFloorPlan(
 
       const isKapali = /kapalı|kapali/i.test(lower)
       const isSatildi = /satıldı|satildi/i.test(lower)
-      const isRezerve = /rezerve|opsiyon/i.test(lower)
-      const isRedFill = Boolean(u.fill && u.fill.toUpperCase() === 'FF0000')
+      const isRezerve = /rezerve|opsiyon|kapora|peşinat|pesinat/i.test(lower)
+      const upperFill = (u.fill || '').toUpperCase()
+      const isRedFill = Boolean(upperFill === 'FF0000' || upperFill === 'C00000' || upperFill === 'DC2626')
+      const isNavyFill = Boolean(
+        upperFill === '002060' ||
+          upperFill === '1F497D' ||
+          upperFill === '000080' ||
+          upperFill === '1E3A8A' ||
+          upperFill === '172554'
+      )
 
       let status: FlatStatus = 'SATISTA'
       let statusLabel = 'Satışta'
@@ -632,9 +640,9 @@ function parsePptxSpatialFloorPlan(
       } else if (isSatildi || isRedFill) {
         status = 'SATILDI'
         statusLabel = 'SATILDI'
-      } else if (isRezerve) {
+      } else if (isRezerve || isNavyFill) {
         status = 'REZERVE'
-        statusLabel = 'REZERVE'
+        statusLabel = 'Kapora Alındı'
       }
 
       let price = slideRefPrice

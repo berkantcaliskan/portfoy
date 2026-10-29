@@ -2489,17 +2489,18 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       const st: FlatStatus =
                         lbl === 'SATILDI' || lbl === 'KAPALI'
                           ? 'SATILDI'
-                          : lbl === 'Rezerve'
+                          : lbl === 'Kapora Alındı' || lbl === 'Peşinat Alındı' || lbl === 'Rezerve'
                           ? 'REZERVE'
                           : 'SATISTA'
                       setNewUnitDraft({ ...newUnitDraft, status: st, statusLabel: lbl })
                     }}
                     className="w-full px-3 py-1.5 rounded-full bg-[#282522] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
                   >
-                    <option value="Satışta">Satışta (Açık)</option>
+                    <option value="Satışta">Satışta (Hafif Şeffaf Yeşil)</option>
+                    <option value="Kapora Alındı">Kapora / Peşinat (Navy Lacivert)</option>
+                    <option value="Rezerve">Rezerve (Navy Lacivert)</option>
                     <option value="SATILDI">SATILDI (Kırmızı)</option>
                     <option value="KAPALI">KAPALI (Kırmızı)</option>
-                    <option value="Rezerve">Rezerve (Sarı)</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -3067,22 +3068,22 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       {resCount > 0 && (
                         <span
                           className={`inline-flex items-center gap-0.5 font-bold ${
-                            isSelected ? 'text-white' : 'text-amber-500'
+                            isSelected ? 'text-white' : 'text-blue-800'
                           }`}
-                          title={`Rezerve: ${resCount}`}
+                          title={`Kapora / Peşinat: ${resCount}`}
                         >
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span className="w-2 h-2 rounded-full bg-[#1e3a8a]" />
                           {resCount}
                         </span>
                       )}
                       {soldCount > 0 && (
                         <span
                           className={`inline-flex items-center gap-0.5 font-bold ${
-                            isSelected ? 'text-white' : 'text-rose-500'
+                            isSelected ? 'text-white' : 'text-red-600'
                           }`}
                           title={`Satıldı / Kapalı: ${soldCount}`}
                         >
-                          <span className="w-2 h-2 rounded-full bg-rose-500" />
+                          <span className="w-2 h-2 rounded-full bg-red-600" />
                           {soldCount}
                         </span>
                       )}
@@ -3717,8 +3718,12 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   const isSelected = activeUnit?.id === unit.id
                   const isInteractingUnit =
                     interactionState?.targetType === 'unit' && interactionState.targetId === unit.id
-                  const isAvailable = unit.status === 'SATISTA'
-                  const isReserved = unit.status === 'REZERVE'
+                  const isDepositOrReserved =
+                    unit.status === 'REZERVE' ||
+                    Boolean(unit.reservation?.depositAmount) ||
+                    /kapora|peşinat|pesinat|rezerve|opsiyon/i.test(unit.statusLabel || '')
+                  const isAvailable = unit.status === 'SATISTA' && !isDepositOrReserved
+                  const isReserved = isDepositOrReserved
                   const isKapali = unit.statusLabel === 'KAPALI'
 
                   // Boyuta duyarlı adaptif görünüm ve çok dar elementlerde içe bakan dikey yazı
@@ -3737,28 +3742,34 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     : '[writing-mode:vertical-rl]'
 
                   const statusColorClasses = isAvailable
-                    ? 'bg-emerald-500/16 hover:bg-emerald-500/24 border-emerald-600/80 text-emerald-950'
+                    ? 'unit-box-available'
                     : isReserved
-                    ? 'bg-amber-500/18 hover:bg-amber-500/26 border-amber-500/85 text-amber-950'
-                    : 'bg-rose-500/20 hover:bg-rose-500/28 border-rose-600/80 text-rose-950'
+                    ? 'unit-box-deposit'
+                    : 'unit-box-sold'
 
                   const badgeClasses = isAvailable
-                    ? 'bg-emerald-600 !text-white'
+                    ? 'unit-badge-available'
                     : isReserved
-                    ? 'bg-amber-500 !text-white'
-                    : 'bg-rose-600 !text-white'
+                    ? 'unit-badge-deposit'
+                    : 'unit-badge-sold'
+
+                  const unitTitlePillClasses = isAvailable ? 'unit-pill-dark' : 'unit-pill-light'
 
                   const displayStatusText = isAvailable
                     ? 'Satışta'
                     : isReserved
-                    ? 'Rezerve'
+                    ? unit.statusLabel && !/^satışta$/i.test(unit.statusLabel)
+                      ? unit.statusLabel
+                      : unit.reservation?.depositAmount
+                      ? 'Kapora Alındı'
+                      : 'Kapora / Rezerve'
                     : isKapali
                     ? 'KAPALI'
                     : unit.statusLabel || 'SATILDI'
 
                   const boxShadowStyle = isSelected
-                    ? '0 4px 0 0 rgba(41, 45, 43, 0.20), 0 10px 18px -4px rgba(41, 45, 43, 0.16)'
-                    : '0 2px 0 0 rgba(41, 45, 43, 0.08), 0 4px 10px -4px rgba(41, 45, 43, 0.06)'
+                    ? '0 4px 0 0 rgba(41, 45, 43, 0.24), 0 10px 18px -4px rgba(41, 45, 43, 0.18)'
+                    : '0 2px 0 0 rgba(41, 45, 43, 0.10), 0 4px 10px -4px rgba(41, 45, 43, 0.08)'
 
                   return (
                     <motion.div
@@ -3773,6 +3784,16 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         width: `${box.w}%`,
                         height: `${box.h}%`,
                         boxShadow: boxShadowStyle,
+                        backgroundColor: isAvailable
+                          ? 'rgba(16, 185, 129, 0.22)'
+                          : isReserved
+                          ? 'rgba(23, 37, 84, 0.92)'
+                          : 'rgba(220, 38, 38, 0.88)',
+                        borderColor: isAvailable
+                          ? 'rgba(5, 150, 105, 0.85)'
+                          : isReserved
+                          ? '#1e40af'
+                          : '#b91c1c',
                       }}
                       onMouseDown={(e) => {
                         setActiveUnitId(unit.id)
@@ -3860,7 +3881,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         <div className="flex-1 flex items-center justify-between gap-1 min-w-0 overflow-hidden">
                           <span
                             style={{ fontFamily: "'Karla', sans-serif" }}
-                            className="text-[10px] font-extrabold text-[#282522] truncate leading-none"
+                            className="unit-inline-title text-[10px] font-extrabold truncate leading-none"
                           >
                             {unit.unitNumber}
                           </span>
@@ -3873,7 +3894,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                             {unit.price > 0 && (
                               <span
                                 style={{ fontFamily: "'Karla', sans-serif" }}
-                                className="text-[9px] font-bold text-[#282522] bg-white/85 px-1.5 py-0.2 rounded-full leading-tight"
+                                className="unit-pill-light text-[9px] font-bold px-1.5 py-0.2 rounded-full leading-tight"
                               >
                                 {formatCurrency(unit.price)}
                               </span>
@@ -3888,7 +3909,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           >
                             <span
                               style={{ fontFamily: "'Karla', sans-serif" }}
-                              className="px-1 py-1.5 rounded-full bg-[#282522] text-white text-[9.5px] font-bold tracking-tight leading-none"
+                              className={`px-1 py-1.5 rounded-full ${unitTitlePillClasses} text-[9.5px] font-bold tracking-tight leading-none`}
                             >
                               {unit.unitNumber}
                             </span>
@@ -3900,7 +3921,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                             {unit.price > 0 && (
                               <span
                                 style={{ fontFamily: "'Karla', sans-serif" }}
-                                className="text-[8.5px] font-bold text-[#282522] bg-white/85 px-1 py-1 rounded-full leading-none"
+                                className="unit-pill-light text-[8.5px] font-bold px-1 py-1 rounded-full leading-none"
                               >
                                 {formatCurrency(unit.price)}
                               </span>
@@ -3912,7 +3933,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         <div className="flex-1 flex flex-col items-center justify-between text-center gap-0.5 py-0.5 min-h-0 overflow-hidden">
                           <span
                             style={{ fontFamily: "'Karla', sans-serif" }}
-                            className="px-1.5 py-0.5 rounded-full bg-[#282522] text-white text-[10px] font-bold tracking-tight truncate max-w-full leading-tight"
+                            className={`px-1.5 py-0.5 rounded-full ${unitTitlePillClasses} text-[10px] font-bold tracking-tight truncate max-w-full leading-tight`}
                           >
                             {unit.unitNumber}
                           </span>
@@ -3924,7 +3945,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           {unit.price > 0 && (
                             <span
                               style={{ fontFamily: "'Karla', sans-serif" }}
-                              className="text-[9px] font-bold text-[#282522] bg-white/85 px-1.5 py-0.5 rounded-full truncate max-w-full leading-tight"
+                              className="unit-pill-light text-[9px] font-bold px-1.5 py-0.5 rounded-full truncate max-w-full leading-tight"
                             >
                               {formatCurrency(unit.price)}
                             </span>
@@ -3936,7 +3957,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           <div className="flex items-center justify-between gap-1 min-w-0">
                             <span
                               style={{ fontFamily: "'Karla', sans-serif" }}
-                              className={`px-2 py-0.5 rounded-full bg-[#282522] text-white ${
+                              className={`px-2 py-0.5 rounded-full ${unitTitlePillClasses} ${
                                 isShortBox ? 'text-[10px]' : 'text-xs'
                               } font-bold tracking-tight truncate shadow-2xs leading-tight`}
                             >
@@ -3955,9 +3976,9 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                             {unit.price > 0 && (
                               <span
                                 style={{ fontFamily: "'Karla', sans-serif" }}
-                                className={`${
+                                className={`unit-pill-light ${
                                   isShortBox ? 'text-[9.5px] px-1.5 py-0.2' : 'text-[11px] px-2.5 py-0.5'
-                                } font-bold text-[#282522] bg-white/90 rounded-full shadow-2xs truncate max-w-full leading-tight`}
+                                } font-bold rounded-full shadow-2xs truncate max-w-full leading-tight`}
                               >
                                 {formatCurrency(unit.price)}
                               </span>
@@ -4250,33 +4271,33 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       <button
                         type="button"
                         onClick={() => handleQuickSetStatus(ctxUnit.id, 'SATISTA', 'Satışta')}
-                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/15 cursor-pointer text-left"
+                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-emerald-500 hover:bg-emerald-500/15 cursor-pointer text-left"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                         <span>Satışta</span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleQuickSetStatus(ctxUnit.id, 'REZERVE', 'Rezerve')}
-                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium text-amber-400 hover:bg-amber-500/15 cursor-pointer text-left"
+                        onClick={() => handleQuickSetStatus(ctxUnit.id, 'REZERVE', 'Kapora Alındı')}
+                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-700 hover:bg-blue-900/15 cursor-pointer text-left"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                        <span>Rezerve</span>
+                        <span className="w-2 h-2 rounded-full bg-[#1e3a8a] shrink-0" />
+                        <span>Kapora / Peşinat</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleQuickSetStatus(ctxUnit.id, 'SATILDI', 'SATILDI')}
-                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium text-rose-400 hover:bg-rose-500/15 cursor-pointer text-left"
+                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-red-600 hover:bg-red-500/15 cursor-pointer text-left"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-red-600 shrink-0" />
                         <span>Satıldı</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleQuickSetStatus(ctxUnit.id, 'SATILDI', 'KAPALI')}
-                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium text-rose-300 hover:bg-rose-500/15 cursor-pointer text-left"
+                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-red-700 hover:bg-red-500/15 cursor-pointer text-left"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-red-800 shrink-0" />
                         <span>Kapalı</span>
                       </button>
                     </div>
@@ -4751,16 +4772,18 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                               activeUnit.status === 'SATISTA'
-                                ? 'bg-emerald-600 !text-white'
+                                ? 'unit-badge-available'
                                 : activeUnit.status === 'REZERVE'
-                                ? 'bg-amber-500 !text-white'
-                                : 'bg-rose-600 !text-white'
+                                ? 'unit-badge-deposit'
+                                : 'unit-badge-sold'
                             }`}
                           >
                             {activeUnit.status === 'SATISTA'
                               ? 'Satışta'
                               : activeUnit.status === 'REZERVE'
-                              ? 'Rezerve'
+                              ? activeUnit.statusLabel && !/^satışta$/i.test(activeUnit.statusLabel)
+                                ? activeUnit.statusLabel
+                                : 'Kapora / Rezerve'
                               : activeUnit.statusLabel || 'SATILDI'}
                           </span>
                           <button
@@ -4844,14 +4867,19 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Rezervasyon Bilgisi Varsa */}
+                    {/* Kapora / Peşinat / Rezervasyon Bilgisi Varsa */}
                     {activeUnit.status === 'REZERVE' && activeUnit.reservation && (
-                      <div className="p-2.5 rounded-2xl bg-amber-500/10 space-y-1 text-xs">
-                        <div className="font-semibold text-amber-500 flex items-center gap-1.5">
+                      <div className="p-2.5 rounded-2xl unit-card-deposit space-y-1 text-xs">
+                        <div className="font-semibold flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5" />
                           <span>{activeUnit.reservation.customerName}</span>
                         </div>
-                        <div className="text-[10px] text-[#a69f99] flex items-center gap-1.5">
+                        {activeUnit.reservation.depositAmount ? (
+                          <div className="text-[11px] font-mono font-bold">
+                            Kapora / Peşinat: {formatCurrency(activeUnit.reservation.depositAmount)}
+                          </div>
+                        ) : null}
+                        <div className="text-[10px] opacity-85 flex items-center gap-1.5">
                           <Clock className="w-3 h-3" />
                           <span>
                             Bitiş:{' '}
@@ -4882,9 +4910,9 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onReserveUnit(activeUnit)}
-                          className="py-2 px-2.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-xs font-semibold cursor-pointer transition-colors"
+                          className="py-2 px-2.5 rounded-full unit-badge-deposit text-xs font-semibold cursor-pointer transition-colors hover:opacity-95"
                         >
-                          Rezerve Et
+                          Kapora / Rezerve
                         </button>
                         <button
                           type="button"
@@ -5083,21 +5111,21 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
 
                     {/* Bağımsız Bölüm Durum Özeti */}
                     <div className="grid grid-cols-3 gap-1.5 pt-1">
-                      <div className="p-2 rounded-2xl bg-[#34302d] text-center">
-                        <div className="text-[10px] text-[#a69f99]">Satışta</div>
-                        <div className="text-sm font-bold text-emerald-400 font-mono">
+                      <div className="p-2 rounded-2xl unit-card-available text-center">
+                        <div className="text-[10px] font-semibold text-emerald-800">Satışta</div>
+                        <div className="text-sm font-bold text-emerald-700 font-mono">
                           {availTotal}
                         </div>
                       </div>
-                      <div className="p-2 rounded-2xl bg-[#34302d] text-center">
-                        <div className="text-[10px] text-[#a69f99]">Rezerve</div>
-                        <div className="text-sm font-bold text-amber-400 font-mono">
+                      <div className="p-2 rounded-2xl unit-card-deposit text-center">
+                        <div className="text-[10px] font-semibold">Kapora</div>
+                        <div className="text-sm font-bold font-mono">
                           {reservedTotal}
                         </div>
                       </div>
-                      <div className="p-2 rounded-2xl bg-[#34302d] text-center">
-                        <div className="text-[10px] text-[#a69f99]">Satılan</div>
-                        <div className="text-sm font-bold text-rose-400 font-mono">
+                      <div className="p-2 rounded-2xl unit-card-sold text-center">
+                        <div className="text-[10px] font-semibold">Satılan</div>
+                        <div className="text-sm font-bold font-mono">
                           {soldTotal}
                         </div>
                       </div>

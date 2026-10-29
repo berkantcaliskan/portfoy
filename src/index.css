@@ -1356,3 +1356,144 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 
+
+/* ==========================================================================
+   PROJE DAİRE DURUM RENKLERİ:
+   - Satışta Olanlar: Hafif Şeffaf Yeşil
+   - Kaporası / Peşinatı Alınanlar (Rezerve): Navy Lacivert
+   - Satılanlar: Kırmızı
+   ========================================================================== */
+.unit-box-available {
+  background: rgba(16, 185, 129, 0.22) !important;
+  background-color: rgba(16, 185, 129, 0.22) !important;
+  border-color: rgba(5, 150, 105, 0.85) !important;
+  color: #064e3b !important;
+}
+.unit-box-available:hover {
+  background: rgba(16, 185, 129, 0.32) !important;
+  background-color: rgba(16, 185, 129, 0.32) !important;
+}
+
+.unit-box-deposit {
+  background: rgba(23, 37, 84, 0.92) !important;
+  background-color: rgba(23, 37, 84, 0.92) !important;
+  border-color: #1e40af !important;
+  color: #ffffff !important;
+}
+.unit-box-deposit:hover {
+  background: rgba(30, 58, 138, 0.96) !important;
+  background-color: rgba(30, 58, 138, 0.96) !important;
+}
+
+.unit-box-sold {
+  background: rgba(220, 38, 38, 0.88) !important;
+  background-color: rgba(220, 38, 38, 0.88) !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+}
+.unit-box-sold:hover {
+  background: rgba(185, 28, 28, 0.94) !important;
+  background-color: rgba(185, 28, 28, 0.94) !important;
+}
+
+.unit-badge-available {
+  background: #059669 !important;
+  background-color: #059669 !important;
+  color: #ffffff !important;
+}
+
+.unit-badge-deposit {
+  background: #172554 !important;
+  background-color: #172554 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(147, 197, 253, 0.45) !important;
+}
+
+.unit-badge-sold {
+  background: #991b1b !important;
+  background-color: #991b1b !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(254, 202, 202, 0.45) !important;
+}
+
+.unit-pill-light {
+  background: rgba(255, 255, 255, 0.92) !important;
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  color: #1e293b !important;
+}
+
+.unit-pill-dark {
+  background: #1e293b !important;
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-available,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-available *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-deposit,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-deposit *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-sold,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-sold *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-dark,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-dark * {
+  color: #ffffff !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-light,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-light * {
+  color: #1e293b !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-deposit .unit-inline-title,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-sold .unit-inline-title {
+  color: #ffffff !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-available .unit-inline-title {
+  color: #064e3b !important;
+}
+
+/* Kart ve Liste Görünümü Daire Kartları */
+.unit-card-available {
+  background: rgba(16, 185, 129, 0.18) !important;
+  background-color: rgba(16, 185, 129, 0.18) !important;
+  border: 1.5px solid rgba(5, 150, 105, 0.65) !important;
+}
+.unit-card-available:hover {
+  background: rgba(16, 185, 129, 0.25) !important;
+  background-color: rgba(16, 185, 129, 0.25) !important;
+  border-color: #059669 !important;
+}
+
+.unit-card-deposit {
+  background: #172554 !important;
+  background-color: #172554 !important;
+  border: 1.5px solid #1e40af !important;
+  color: #ffffff !important;
+}
+.unit-card-deposit:hover {
+  background: #1e3a8a !important;
+  background-color: #1e3a8a !important;
+}
+
+.unit-card-sold {
+  background: #dc2626 !important;
+  background-color: #dc2626 !important;
+  border: 1.5px solid #991b1b !important;
+  color: #ffffff !important;
+}
+.unit-card-sold:hover {
+  background: #b91c1c !important;
+  background-color: #b91c1c !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit span:not(.unit-pill-light),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit div,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit p,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold span:not(.unit-pill-light),
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold div,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold p {
+  color: #ffffff !important;
+}

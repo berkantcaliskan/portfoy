@@ -865,7 +865,10 @@ class ProjectStore {
     const updatedUnit: FlatUnit = {
       ...targetUnit,
       status: 'REZERVE',
-      statusLabel: 'Rezerve',
+      statusLabel:
+        reservationData.depositAmount && reservationData.depositAmount > 0
+          ? 'Kapora Alındı'
+          : 'Rezerve',
       reservation: newReservation,
       history: [auditEntry, ...targetUnit.history],
     }
