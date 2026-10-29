@@ -72,6 +72,34 @@ function isItemDeleted(item, i, key, deletedSet) {
   return false
 }
 
+
+function repairLeadItem(l) {
+  if (!l || typeof l !== 'object') return l
+  let updatedFullName = l.fullName
+  let updatedCreatedAt = l.createdAt
+  const answers = Array.isArray(l.metaAnswers)
+    ? l.metaAnswers
+    : Array.isArray(l.inquiries?.[0]?.metaAnswers)
+    ? l.inquiries[0].metaAnswers
+    : []
+  for (const ans of answers) {
+    const q = String(ans?.question || '').toLowerCase().trim()
+    const val = String(ans?.answer || '').trim()
+    if (!val) continue
+    if (
+      (q === 'adı' || q === 'adi' || q === 'ad' || q === 'ad soyad' || q === 'isim' || q === 'full_name') &&
+      (!updatedFullName || updatedFullName === 'Meta Müşterisi' || updatedFullName === 'Meta Müşteri Adayı')
+    ) {
+      updatedFullName = val
+    } else if (q.includes('oluşturul') || q.includes('olusturul') || q.includes('created') || q === 'tarih') {
+      const cleaned = val.replace(/(\d)(am|pm)$/i, '$1 $2')
+      const d = new Date(cleaned)
+      if (!isNaN(d.getTime())) updatedCreatedAt = d.toISOString()
+    }
+  }
+  return { ...l, fullName: updatedFullName, createdAt: updatedCreatedAt }
+}
+
 function mergeJsonArrays(aStr, bStr, key, deletedSet) {
   if (key === DELETED_IDS_KEY) {
     const s1 = parseDeletedSet(aStr)

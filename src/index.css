@@ -1013,6 +1013,8 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211f]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211e]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1c1a18]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b18]"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b19]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1c1a]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1d1b]"],
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1a1715]"]:not(.dropdown-panel):not(.popover-panel),

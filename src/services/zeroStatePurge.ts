@@ -98,6 +98,34 @@ function isItemDeleted(item: any, idx: number, key: string, deletedSet?: Set<str
   return false
 }
 
+
+function repairLeadForSync(l: any): any {
+  if (!l || typeof l !== 'object') return l
+  let updatedFullName = l.fullName
+  let updatedCreatedAt = l.createdAt
+  const answers = Array.isArray(l.metaAnswers)
+    ? l.metaAnswers
+    : Array.isArray(l.inquiries?.[0]?.metaAnswers)
+    ? l.inquiries[0].metaAnswers
+    : []
+  for (const ans of answers) {
+    const q = String(ans?.question || '').toLowerCase().trim()
+    const val = String(ans?.answer || '').trim()
+    if (!val) continue
+    if (
+      (q === 'adı' || q === 'adi' || q === 'ad' || q === 'ad soyad' || q === 'isim' || q === 'full_name') &&
+      (!updatedFullName || updatedFullName === 'Meta Müşterisi' || updatedFullName === 'Meta Müşteri Adayı')
+    ) {
+      updatedFullName = val
+    } else if (q.includes('oluşturul') || q.includes('olusturul') || q.includes('created') || q === 'tarih') {
+      const cleaned = val.replace(/(\d)(am|pm)$/i, '$1 $2')
+      const d = new Date(cleaned)
+      if (!isNaN(d.getTime())) updatedCreatedAt = d.toISOString()
+    }
+  }
+  return { ...l, fullName: updatedFullName, createdAt: updatedCreatedAt }
+}
+
 function mergeJsonArrayStrings(
   baseStr: string | undefined,
   incomingStr: string | undefined,
@@ -141,6 +169,18 @@ function mergeJsonArrayStrings(
         const tExisting = new Date(existing.updatedAt || existing.createdAt || 0).getTime() || 0
         const tIncoming = new Date(item.updatedAt || item.createdAt || 0).getTime() || 0
         const mergedObj = tIncoming >= tExisting ? { ...existing, ...item } : { ...item, ...existing }
+        if (
+          key === 'demirturk_leads_v2' &&
+          (mergedObj.fullName === 'Meta Müşterisi' || mergedObj.fullName === 'Meta Müşteri Adayı')
+        ) {
+          const realName =
+            existing.fullName && existing.fullName !== 'Meta Müşterisi' && existing.fullName !== 'Meta Müşteri Adayı'
+              ? existing.fullName
+              : item.fullName
+          if (realName && realName !== 'Meta Müşterisi') {
+            mergedObj.fullName = realName
+          }
+        }
         if (key === 'demirturk_leads_v2' && (Array.isArray(existing.inquiries) || Array.isArray(item.inquiries))) {
           const inqMap = new Map<string, any>()
           for (const inq of item.inquiries || []) if (inq?.id) inqMap.set(inq.id, inq)
