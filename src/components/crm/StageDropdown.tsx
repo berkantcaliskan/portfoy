@@ -122,12 +122,12 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
         disabled={disabled}
         data-dropdown-open={isOpen ? 'true' : undefined}
         onClick={handleToggle}
-        className={`meta-stage-trigger-pill px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#b99881] hover:border-[#b99881] text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
+        className={`meta-stage-trigger-pill w-[164px] min-w-[164px] max-w-[164px] px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#b99881] hover:border-[#b99881] text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
           isOpen ? 'border-[#b99881] ring-2 ring-[#b99881]/40' : ''
         } ${className}`}
         title="Meta Hunisi Aşaması Seç"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0 truncate">
           <span
             className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: currentOption.dotColor }}

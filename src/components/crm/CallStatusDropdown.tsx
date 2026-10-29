@@ -103,12 +103,12 @@ export const CallStatusDropdown: React.FC<CallStatusDropdownProps> = ({
         disabled={disabled}
         data-dropdown-open={isOpen ? 'true' : undefined}
         onClick={handleToggle}
-        className={`px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
+        className={`w-[172px] min-w-[172px] max-w-[172px] px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
           isOpen ? 'border-[#b99881] ring-1 ring-[#b99881]/40' : ''
         } ${className}`}
         title="Çağrı Merkezi Bilgi Durumu Seç"
       >
-        <div className="flex items-center gap-2 truncate">
+        <div className="flex items-center gap-2 min-w-0 truncate">
           <span
             className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: currentOption.dotColor }}

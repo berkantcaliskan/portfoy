@@ -1001,11 +1001,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       ) : (
         <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] overflow-hidden shadow-sm backdrop-blur-sm">
           <div className="w-full overflow-x-auto">
-            <table className="w-full text-xs text-left">
+            <table className="w-full table-fixed min-w-[1320px] text-xs text-left">
               <thead>
                 <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
                   {/* 1. Kolon: Tarih */}
-                  <th className="py-3 px-4">
+                  <th className="py-3 px-3 w-[108px]">
                     <button
                       type="button"
                       onClick={() =>
@@ -1027,7 +1027,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     </button>
                   </th>
                   {/* 2. Kolon: Müşteri */}
-                  <th className="py-3 px-4">
+                  <th className="py-3 px-3 w-[195px]">
                     <button
                       type="button"
                       onClick={() =>
@@ -1047,17 +1047,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     </button>
                   </th>
                   {/* 3. Kolon: İletişim */}
-                  <th className="py-3 px-3 w-[170px] min-w-[170px]">İletişim</th>
+                  <th className="py-3 px-3 w-[166px]">İletişim</th>
                   {/* 4. Kolon: Atanan Danışman */}
-                  <th className="py-3 px-4">Atanan Danışman</th>
+                  <th className="py-3 px-3 w-[148px]">Atanan Danışman</th>
                   {/* 5. Kolon: Bilgi */}
-                  <th className="py-3 px-4">Bilgi</th>
+                  <th className="py-3 px-3 w-[188px]">Bilgi</th>
                   {/* 6. Kolon: Aşama */}
-                  <th className="py-3 px-4">Aşama</th>
+                  <th className="py-3 px-3 w-[180px]">Aşama</th>
                   {/* 7. Kolon: Açıklama */}
-                  <th className="py-3 px-4">Açıklama</th>
+                  <th className="py-3 px-3 w-[185px]">Açıklama</th>
                   {/* 8. Kolon: İşlemler */}
-                  <th className="py-3 px-4">İşlemler</th>
+                  <th className="py-3 px-3 w-[195px]">İşlemler</th>
                 </tr>
               </thead>
               <tbody className="text-[#f3efe9]">
@@ -1082,22 +1082,22 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                       </td>
 
                       {/* 2. Kolon: Müşteri */}
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 overflow-hidden">
                         <div
                           onClick={() => onSelectLead(lead)}
-                          className="font-bold text-white hover:text-[#b99881] cursor-pointer transition-colors text-xs select-text"
+                          className="font-bold text-white hover:text-[#b99881] cursor-pointer transition-colors text-xs select-text truncate"
                           title="Detayları Görüntüle"
                         >
                           {lead.fullName}
                         </div>
                         <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-[#8c857f]">
+                          <span className="text-[10px] text-[#8c857f] truncate">
                             {getLeadChannelLabel(lead)}
                           </span>
                           {inquiryCount > 1 && (
                             <button
                               onClick={() => setSelectedInquiryHistoryLead(lead)}
-                              className="px-1.5 py-0.5 rounded-full bg-[#b99881]/20 text-[#b99881] text-[9px] font-bold hover:bg-[#b99881]/30 cursor-pointer"
+                              className="px-1.5 py-0.5 rounded-full bg-[#b99881]/20 text-[#b99881] text-[9px] font-bold hover:bg-[#b99881]/30 cursor-pointer shrink-0"
                               title="Tüm Başvuru Geçmişini Görüntüle"
                             >
                               {inquiryCount} Başvuru
@@ -1108,7 +1108,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
                       {/* 3. Kolon: İletişim & WhatsApp İkonu */}
                       <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="flex items-center justify-between w-[150px]">
+                        <div className="flex items-center justify-between w-[146px]">
                           <span className="font-mono text-xs text-[#f3efe9] select-all tracking-wide">
                             {formatPhoneDisplay(lead.phone)}
                           </span>
@@ -1135,17 +1135,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                       </td>
 
                       {/* 4. Kolon: Atanan Danışman */}
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 overflow-hidden">
                         {lead.assignedToUserName ? (
                           <div
                             onClick={() => handleOpenConsultantChange(lead)}
-                            className="flex items-center gap-2 group cursor-pointer"
+                            className="flex items-center gap-2 group cursor-pointer min-w-0"
                             title="Danışmanı Değiştir"
                           >
                             <div className="w-6 h-6 rounded-full bg-[#b99881]/25 border border-[#b99881]/40 flex items-center justify-center text-[10px] font-bold text-white shrink-0 group-hover:border-[#b99881]">
                               {lead.assignedToUserName.charAt(0)}
                             </div>
-                            <div className="text-white font-medium text-xs group-hover:text-[#b99881] transition-colors">
+                            <div className="text-white font-medium text-xs group-hover:text-[#b99881] transition-colors truncate">
                               {lead.assignedToUserName}
                             </div>
                           </div>
@@ -1171,11 +1171,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                       </td>
 
                       {/* 7. Kolon: Açıklama (Call center notu / Açıklama ekle) */}
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 overflow-hidden">
                         {lead.notes && lead.notes.trim() ? (
                           <div
                             onClick={() => handleOpenNoteEdit(lead)}
-                            className="group flex items-center gap-2 cursor-pointer max-w-[200px]"
+                            className="group flex items-center gap-2 cursor-pointer max-w-full min-w-0"
                             title="Açıklamayı düzenlemek için tıklayın"
                           >
                             <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] truncate transition-colors select-text">
@@ -1187,38 +1187,38 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleOpenNoteEdit(lead)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d]/40 hover:bg-[#3d3733] border border-dashed border-[#4a443f] hover:border-[#b99881]/60 text-[#8c857f] hover:text-[#d6beae] text-[11px] font-medium transition-all cursor-pointer group"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d]/40 hover:bg-[#3d3733] border border-dashed border-[#4a443f] hover:border-[#b99881]/60 text-[#8c857f] hover:text-[#d6beae] text-[11px] font-medium transition-all cursor-pointer group whitespace-nowrap"
                             title="Açıklama Ekle"
                           >
-                            <Plus className="w-3 h-3 text-[#b99881] group-hover:scale-110 transition-transform" />
+                            <Plus className="w-3 h-3 text-[#b99881] group-hover:scale-110 transition-transform shrink-0" />
                             <span>Açıklama ekle</span>
                           </button>
                         )}
                       </td>
 
                       {/* 8. Kolon: İşlemler */}
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-1.5">
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
                           <a
                             href={`tel:${lead.phone}`}
-                            className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors flex items-center justify-center shadow-sm"
+                            className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors flex items-center justify-center shadow-sm shrink-0"
                             title="Telefonla Ara"
                           >
                             <Phone className="w-3.5 h-3.5 text-[#b99881]" />
                           </a>
                           <button
                             onClick={() => setSelectedInquiryHistoryLead(lead)}
-                            className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors cursor-pointer flex items-center justify-center shadow-sm"
+                            className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors cursor-pointer flex items-center justify-center shadow-sm shrink-0"
                             title="Başvuru Geçmişi & Notlar"
                           >
                             <Layers className="w-3.5 h-3.5 text-sky-400" />
                           </button>
                           <button
                             onClick={() => handleOpenAssign(lead)}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold cursor-pointer transition-colors shadow-sm"
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold cursor-pointer transition-colors shadow-sm whitespace-nowrap shrink-0"
                             title="Satış Ekibine Devret"
                           >
-                            <UserPlus className="w-3 h-3 text-amber-400" />
+                            <UserPlus className="w-3 h-3 text-amber-400 shrink-0" />
                             <span>Satışa Devret</span>
                           </button>
                         </div>
