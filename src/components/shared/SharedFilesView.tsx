@@ -508,7 +508,7 @@ export const SharedFilesView: React.FC = () => {
         </div>
       )}
 
-      {/* DOSYA YÜKLE & PAYLAŞ MODALI */}
+      {/* DOSYA YÜKLE & PAYLAŞ MODALI (Kompakt & Scrollsuz) */}
       <GlassModal
         isOpen={isUploadModalOpen}
         onClose={() => {
@@ -516,8 +516,9 @@ export const SharedFilesView: React.FC = () => {
           setPendingFiles([])
         }}
         title="Dosya Yükle ve Paylaş"
+        maxWidth="lg"
       >
-        <form onSubmit={handleUploadSubmit} className="space-y-4">
+        <form onSubmit={handleUploadSubmit} className="space-y-3">
           {/* Gizli File Input (Her türlü dosya kabul edilir) */}
           <input
             ref={fileInputRef}
@@ -527,7 +528,7 @@ export const SharedFilesView: React.FC = () => {
             className="hidden"
           />
 
-          {/* Sürükle-Bırak veya Bilgisayardan Seç Alanı */}
+          {/* Sürükle-Bırak veya Bilgisayardan Seç Alanı (Kompakt) */}
           <div
             onDragOver={(e) => {
               e.preventDefault()
@@ -541,39 +542,38 @@ export const SharedFilesView: React.FC = () => {
             }}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`p-6 rounded-[18px] border-2 border-dashed transition-all cursor-pointer text-center flex flex-col items-center justify-center gap-2 ${
+            className={`py-3 px-4 rounded-[16px] border-2 border-dashed transition-all cursor-pointer flex items-center justify-center gap-3 ${
               isDraggingOver
                 ? 'border-[#b99881] bg-[#b99881]/10'
                 : 'border-[#4a443f] hover:border-[#b99881]/70 bg-[#24211f]/60'
             }`}
           >
-            <div className="w-10 h-10 rounded-full bg-[#b99881]/15 flex items-center justify-center">
-              <Upload className="w-5 h-5 text-[#b99881]" />
+            <div className="w-8 h-8 rounded-full bg-[#b99881]/15 flex items-center justify-center shrink-0">
+              <Upload className="w-4 h-4 text-[#b99881]" />
             </div>
-            <div className="text-xs font-bold text-white">
-              {isReadingFiles
-                ? 'Dosyalar okunuyor...'
-                : 'Dosyaları buraya sürükleyip bırakın veya bilgisayarınızdan seçin'}
-            </div>
-            <div className="text-[11px] text-[#8c857f]">
-              PDF, Excel, Word, Görsel, Video, ZIP/RAR, DWG, PSD dahil her türlü dosya yüklenebilir
+            <div className="text-left">
+              <div className="text-xs font-bold text-white">
+                {isReadingFiles
+                  ? 'Dosyalar okunuyor...'
+                  : 'Dosyaları sürükleyip bırakın veya bilgisayarınızdan seçin'}
+              </div>
+              <div className="text-[10.5px] text-[#8c857f]">
+                PDF, Excel, Word, Görsel, Video, ZIP/RAR, DWG, PSD dahil her türlü dosya yüklenebilir
+              </div>
             </div>
           </div>
 
           {/* Seçilen Dosyalar Listesi */}
           {pendingFiles.length > 0 && (
-            <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
-              <div className="text-[11px] font-semibold text-[#d6beae]">
-                Yüklenecek Dosyalar ({pendingFiles.length}):
-              </div>
+            <div className="space-y-1.5 max-h-28 overflow-y-auto no-scrollbar">
               {pendingFiles.map((item) => (
                 <div
                   key={item.id}
-                  className="p-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] flex items-center justify-between gap-2.5"
+                  className="py-2 px-3 rounded-[12px] bg-[#24211f] border border-[#4a443f] flex items-center justify-between gap-2"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     {getFileIcon(item.detectedType)}
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
                       <input
                         type="text"
                         value={item.customName}
@@ -583,12 +583,12 @@ export const SharedFilesView: React.FC = () => {
                             prev.map((p) => (p.id === item.id ? { ...p, customName: val } : p))
                           )
                         }}
-                        className="w-full bg-transparent text-xs font-semibold text-white focus:outline-none border-b border-transparent focus:border-[#b99881]"
+                        className="w-full bg-transparent text-xs font-semibold text-white focus:outline-none border-b border-transparent focus:border-[#b99881] truncate"
                         title="Dosya adını düzenleyebilirsiniz"
                       />
-                      <div className="text-[10px] text-[#8c857f] mt-0.5">
+                      <span className="text-[10px] text-[#8c857f] shrink-0">
                         {item.sizeText}
-                      </div>
+                      </span>
                     </div>
                   </div>
                   <button
@@ -596,7 +596,7 @@ export const SharedFilesView: React.FC = () => {
                     onClick={() =>
                       setPendingFiles((prev) => prev.filter((p) => p.id !== item.id))
                     }
-                    className="p-1.5 rounded-full hover:bg-rose-500/15 text-[#8c857f] hover:text-rose-400 transition-colors cursor-pointer shrink-0"
+                    className="p-1 rounded-full hover:bg-rose-500/15 text-[#8c857f] hover:text-rose-400 transition-colors cursor-pointer shrink-0"
                     title="Listeden Kaldır"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -608,13 +608,13 @@ export const SharedFilesView: React.FC = () => {
 
           {/* Kategori Seçimi */}
           <div>
-            <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
+            <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
               Kategori / Klasör
             </label>
             <select
               value={folder}
               onChange={(e) => setFolder(e.target.value as FileCategory)}
-              className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
+              className="w-full px-3 py-1.5 rounded-[12px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
             >
               {categories.map((c) => (
                 <option key={c} value={c}>
@@ -626,14 +626,14 @@ export const SharedFilesView: React.FC = () => {
 
           {/* Hedef Seçimi (Tüm Ekip, Çoklu Departman, Yönetim) */}
           <div>
-            <label className="block text-xs font-semibold text-[#f3efe9] mb-2">
+            <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
               Paylaşım Hedefi *
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setShareTarget('ALL_TEAM')}
-                className={`p-2.5 rounded-[12px] text-xs font-medium border transition-colors cursor-pointer text-center ${
+                className={`py-2 px-2.5 rounded-[12px] text-xs font-medium border transition-colors cursor-pointer text-center ${
                   shareTarget === 'ALL_TEAM'
                     ? 'bg-[#b99881]/20 border-[#b99881] text-white font-bold'
                     : 'bg-[#24211f] border-[#4a443f] text-[#a69f99]'
@@ -644,7 +644,7 @@ export const SharedFilesView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShareTarget('DEPARTMENTS')}
-                className={`p-2.5 rounded-[12px] text-xs font-medium border transition-colors cursor-pointer text-center ${
+                className={`py-2 px-2.5 rounded-[12px] text-xs font-medium border transition-colors cursor-pointer text-center ${
                   shareTarget === 'DEPARTMENTS'
                     ? 'bg-[#b99881]/20 border-[#b99881] text-white font-bold'
                     : 'bg-[#24211f] border-[#4a443f] text-[#a69f99]'
@@ -655,7 +655,7 @@ export const SharedFilesView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShareTarget('MANAGEMENT')}
-                className={`p-2.5 rounded-[12px] text-xs font-medium border transition-colors cursor-pointer text-center ${
+                className={`py-2 px-2.5 rounded-[12px] text-xs font-medium border transition-colors cursor-pointer text-center ${
                   shareTarget === 'MANAGEMENT'
                     ? 'bg-[#b99881]/20 border-[#b99881] text-white font-bold'
                     : 'bg-[#24211f] border-[#4a443f] text-[#a69f99]'
@@ -666,19 +666,19 @@ export const SharedFilesView: React.FC = () => {
             </div>
           </div>
 
-          {/* Çoklu Departman Seçici (Eğer DEPARTMENTS seçildiyse) */}
+          {/* Çoklu Departman Seçici (3 sütunlu kompakt görünüm) */}
           {shareTarget === 'DEPARTMENTS' && (
-            <div className="p-3 rounded-[14px] bg-[#24211f] border border-[#4a443f] space-y-2">
+            <div className="p-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] space-y-1.5">
               <div className="text-[11px] font-semibold text-[#b99881]">
-                Erişebilecek Departmanları Seçin (Birden Fazla):
+                Erişebilecek Departmanlar:
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 {CANONICAL_DEPARTMENTS.map((dept) => {
                   const isChecked = selectedDepts.includes(dept)
                   return (
                     <label
                       key={dept}
-                      className="flex items-center gap-2 text-xs text-[#f3efe9] cursor-pointer"
+                      className="flex items-center gap-1.5 text-xs text-[#f3efe9] cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -686,29 +686,23 @@ export const SharedFilesView: React.FC = () => {
                         onChange={() => handleDeptToggle(dept)}
                         className="rounded border-[#4a443f] text-[#b99881] focus:ring-0"
                       />
-                      <span>{dept}</span>
+                      <span className="truncate">{dept}</span>
                     </label>
                   )
                 })}
               </div>
-              <div className="p-2.5 rounded-[10px] bg-[#34302d] border border-[#4a443f] text-[11px] text-[#a69f99] flex items-start gap-2">
-                <Lock className="w-3.5 h-3.5 text-[#b99881] shrink-0 mt-0.5" />
-                <span>
-                  <strong className="text-white font-medium">Departman İzolasyonu:</strong> Bu dosya yalnızca yukarıda işaretlediğiniz departman(lar)ın panellerinde görünür.
-                </span>
-              </div>
             </div>
           )}
 
-          {/* Yetkiler (Görüntüleme, Düzenleme, Yeniden Paylaşma) */}
-          <div className="p-3 rounded-[14px] bg-[#24211f] border border-[#4a443f] space-y-2">
-            <div className="text-[11px] font-semibold text-[#b99881]">
-              Ayrıştırılmış İzinler:
-            </div>
-            <div className="flex items-center gap-4 text-xs text-[#f3efe9]">
+          {/* Yetkiler (Tek satır kompakt) */}
+          <div className="py-2 px-3 rounded-[14px] bg-[#24211f] border border-[#4a443f] flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold text-[#b99881]">
+              İzinler:
+            </span>
+            <div className="flex items-center gap-3.5 text-xs text-[#f3efe9]">
               <label className="flex items-center gap-1.5 opacity-80">
                 <input type="checkbox" checked disabled className="rounded text-[#b99881]" />
-                <span>Görüntüleme (Zorunlu)</span>
+                <span>Görüntüleme</span>
               </label>
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -731,7 +725,7 @@ export const SharedFilesView: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-2 flex justify-end gap-2">
+          <div className="pt-1 flex justify-end gap-2">
             <button
               type="button"
               onClick={() => {
