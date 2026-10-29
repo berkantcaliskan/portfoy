@@ -1700,7 +1700,7 @@ class ProjectStore {
   public applyFloorReadyUnits(
     projectId: string,
     floor: number,
-    targetCount: 4 | 5 | 6 | 12,
+    targetCount: 4 | 5 | 6 | 8 | 12,
     blockName = 'A Blok'
   ): { success: boolean } {
     const project = this.getById(projectId)
@@ -1710,7 +1710,7 @@ class ProjectStore {
     const otherFloorUnits = (project.units || []).filter((u) => u.floor !== clampedFloor)
     const currentFloorUnits = (project.units || []).filter((u) => u.floor === clampedFloor)
 
-    const buildPresetBox = (idx: number, count: 4 | 5 | 6 | 12): UnitPlanBox => {
+    const buildPresetBox = (idx: number, count: 4 | 5 | 6 | 8 | 12): UnitPlanBox => {
       if (count === 4) {
         const boxes: UnitPlanBox[] = [
           { x: 10.0, y: 12.0, w: 17.5, h: 16.0 },
@@ -1740,6 +1740,16 @@ class ProjectStore {
           { x: 80.2, y: 31.0, w: 8.8, h: 24.0 },
         ]
         return boxes[idx % 6]
+      }
+      if (count === 8) {
+        const col = idx % 4
+        const row = Math.floor(idx / 4)
+        return {
+          x: Number((9.0 + col * 20.5).toFixed(1)),
+          y: Number((12.0 + row * 21.0).toFixed(1)),
+          w: 18.0,
+          h: 16.5,
+        }
       }
       // 12 units (2 rows of 6 or compact grid)
       const col = idx % 6

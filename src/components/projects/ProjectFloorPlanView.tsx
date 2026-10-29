@@ -143,7 +143,7 @@ function getDefaultUnitPlanBox(
     }
   }
 
-  const cols = totalOnFloor <= 2 ? Math.max(1, totalOnFloor) : totalOnFloor <= 4 ? 2 : 3
+  const cols = totalOnFloor <= 2 ? Math.max(1, totalOnFloor) : totalOnFloor <= 4 ? 2 : totalOnFloor === 8 ? 4 : 3
   const rows = Math.ceil(totalOnFloor / cols)
   const col = indexOnFloor % cols
   const row = Math.floor(indexOnFloor / cols)
@@ -2358,12 +2358,12 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                 </button>
               </div>
 
-              {/* KAT İÇİN HAZIR DAİRE SAYISI SEÇENEKLERİ: 4, 5, 6, 12 */}
+              {/* KAT İÇİN HAZIR DAİRE SAYISI SEÇENEKLERİ: 4, 5, 6, 8, 12 */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#282522] border border-[#4a443f]">
                 <span className="text-[11px] font-semibold text-[#a69f99] mr-0.5">
                   Kat Hazır Daire:
                 </span>
-                {([4, 5, 6, 12] as const).map((presetCnt) => {
+                {([4, 5, 6, 8, 12] as const).map((presetCnt) => {
                   const isCurrentCount = floorUnits.length === presetCnt
                   return (
                     <button

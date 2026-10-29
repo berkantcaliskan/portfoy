@@ -1908,6 +1908,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                   <option value={4}>4 Daire</option>
                   <option value={5}>5 Daire</option>
                   <option value={6}>6 Daire</option>
+                  <option value={8}>8 Daire</option>
                   <option value={12}>12 Daire</option>
                 </select>
               </div>
