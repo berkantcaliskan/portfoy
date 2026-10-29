@@ -346,19 +346,19 @@ export const MarketingCampaignsView: React.FC = () => {
       />
 
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1 pr-2">
           <div className="flex items-center gap-2.5">
-            <Megaphone className="w-5 h-5 text-[#b99881]" />
-            <h2 className="text-2xl font-bold text-white tracking-wide">Kampanyalar</h2>
+            <Megaphone className="w-5 h-5 text-[#b99881] shrink-0" />
+            <h2 className="text-2xl font-bold text-white tracking-wide truncate">Kampanyalar</h2>
           </div>
-          <p className="text-xs text-[#a69f99] mt-1">
+          <p className="text-xs text-[#a69f99] mt-1 truncate">
             Meta Ads, Google Ads ve Web & Dijital kanalların CRM entegrasyonları, form performansları ve dönüşüm sinyalleri.
           </p>
         </div>
 
         {/* Dynamic Platform Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
           {(activePlatform === 'all' || activePlatform === 'meta') && (
             <>
               <GlassButton
@@ -373,7 +373,7 @@ export const MarketingCampaignsView: React.FC = () => {
                 }
                 disabled={isSendingToMeta || allLeads.length === 0}
                 onClick={() => void handleManualSendToMeta()}
-                className="rounded-full px-4 text-xs font-semibold"
+                className="rounded-full px-3.5 text-xs font-semibold whitespace-nowrap shrink-0"
                 title="Potansiyel müşteri durumu ve aşama bilgilerini Meta'ya manuel gönder"
               >
                 {isSendingToMeta
@@ -387,7 +387,7 @@ export const MarketingCampaignsView: React.FC = () => {
                 size="sm"
                 icon={<Upload className="w-3.5 h-3.5" />}
                 onClick={() => metaCsvInputRef.current?.click()}
-                className="rounded-full px-3.5 text-xs font-semibold"
+                className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
               >
                 Meta CSV Yükle
               </GlassButton>
@@ -399,7 +399,7 @@ export const MarketingCampaignsView: React.FC = () => {
                   if (!selectedFormName && forms[0]?.name) setSelectedFormName(forms[0].name)
                   setIsSimulateOpen(true)
                 }}
-                className="rounded-full px-3.5 text-xs font-semibold"
+                className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
               >
                 Meta Webhook Simülasyonu
               </GlassButton>
@@ -415,7 +415,7 @@ export const MarketingCampaignsView: React.FC = () => {
                     size="sm"
                     icon={<Settings className="w-3.5 h-3.5" />}
                     onClick={() => setIsGoogleConfigOpen(true)}
-                    className="rounded-full px-3.5 text-xs font-semibold"
+                    className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
                   >
                     Google CRM Bağlantısı
                   </GlassButton>
@@ -424,7 +424,7 @@ export const MarketingCampaignsView: React.FC = () => {
                     size="sm"
                     icon={<Upload className="w-3.5 h-3.5" />}
                     onClick={() => googleCsvInputRef.current?.click()}
-                    className="rounded-full px-3.5 text-xs font-semibold"
+                    className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
                   >
                     Google CSV Yükle
                   </GlassButton>
@@ -433,7 +433,7 @@ export const MarketingCampaignsView: React.FC = () => {
                     size="sm"
                     icon={<Plus className="w-3.5 h-3.5" />}
                     onClick={() => setIsAddGoogleCampOpen(true)}
-                    className="rounded-full px-3.5 text-xs font-semibold"
+                    className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
                   >
                     Kampanya Ekle
                   </GlassButton>
@@ -444,7 +444,7 @@ export const MarketingCampaignsView: React.FC = () => {
                 size="sm"
                 icon={<Search className="w-3.5 h-3.5" />}
                 onClick={() => setIsGoogleSimulateOpen(true)}
-                className="rounded-full px-4 text-xs font-semibold"
+                className="rounded-full px-3.5 text-xs font-semibold whitespace-nowrap shrink-0"
               >
                 Google Webhook Simülasyonu
               </GlassButton>
