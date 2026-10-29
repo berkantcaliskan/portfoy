@@ -27,6 +27,7 @@ export interface AppUser {
   permissions: UserPermissions
   mustChangePassword?: boolean
   createdAt: string
+  updatedAt?: string
 }
 
 export function normalizeTurkish(text: string): string {
@@ -109,9 +110,16 @@ class UserStore {
       for (const inc of incoming) mergedMap.set(inc.id, inc)
       this.users = Array.from(mergedMap.values())
       if (this.currentUser) {
+        const activeWorkspaceDept = this.currentUser.department
         const updatedCurrent = this.users.find((u) => u.id === this.currentUser?.id)
         if (updatedCurrent) {
-          this.currentUser = updatedCurrent
+          const canKeepWorkspace =
+            updatedCurrent.role === 'ADMIN' ||
+            updatedCurrent.departments.includes(activeWorkspaceDept)
+          this.currentUser = {
+            ...updatedCurrent,
+            department: canKeepWorkspace ? activeWorkspaceDept : updatedCurrent.department,
+          }
         }
       }
       this.notify()
@@ -274,6 +282,7 @@ class UserStore {
       permissions: defaultPermissions,
       mustChangePassword: Boolean(user.mustChangePassword),
       createdAt: user.createdAt || new Date().toISOString(),
+      updatedAt: user.updatedAt || undefined,
     }
   }
 
@@ -299,7 +308,14 @@ class UserStore {
           const matched = this.users.find(
             (u) => u.id === parsed.id || u.username.toLowerCase() === parsed.username?.toLowerCase()
           )
-          this.currentUser = matched ? this.normalizeUser(matched) : null
+          if (matched) {
+            const norm = this.normalizeUser(matched)
+            const savedDept = parsed.department ? normalizeDepartmentName(parsed.department) : norm.department
+            const canKeep = norm.role === 'ADMIN' || norm.departments.includes(savedDept)
+            this.currentUser = { ...norm, department: canKeep ? savedDept : norm.department }
+          } else {
+            this.currentUser = null
+          }
         } else {
           this.currentUser = null
         }
@@ -516,6 +532,10 @@ class UserStore {
     if (!this.currentUser) return { success: false, error: 'Oturum açılmamış.' }
 
     const normalized = normalizeDepartmentName(targetDept)
+    if (this.currentUser.department === normalized) {
+      return { success: true }
+    }
+
     const isAllowed =
       this.currentUser.role === 'ADMIN' ||
       this.currentUser.departments.includes(normalized)
@@ -532,8 +552,10 @@ class UserStore {
       department: normalized,
     }
 
-    this.users = this.users.map((u) => (u.id === this.currentUser!.id ? this.currentUser! : u))
-    this.saveToStorage()
+    try {
+      localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
+    } catch {}
+    this.notify()
     return { success: true }
   }
 
@@ -590,6 +612,7 @@ class UserStore {
         ...oldUser.permissions,
         ...updates.permissions,
       },
+      updatedAt: new Date().toISOString(),
     }
 
     this.users[index] = updatedUser

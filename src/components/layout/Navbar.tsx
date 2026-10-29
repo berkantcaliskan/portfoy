@@ -1171,7 +1171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <motion.nav
               key={activeDept}
-              initial={{ opacity: 0 }}
+              initial={false}
               animate={{ opacity: 1 }}
               className={`flex flex-col gap-1 ${isSidebarCollapsed ? 'w-[40px] items-center' : 'w-full'}`}
             >
