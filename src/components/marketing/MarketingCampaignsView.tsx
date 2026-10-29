@@ -37,6 +37,7 @@ import {
 import { leadStore } from '@/services/leadStore'
 import { MetaFormSummary, MetaCapiEventLog } from '@/types/meta'
 import { Lead } from '@/types/lead'
+import { BookLogo } from '@/components/common/BookLogo'
 
 type CampaignPlatformTab = 'all' | 'meta' | 'google' | 'web'
 
@@ -326,38 +327,6 @@ export const MarketingCampaignsView: React.FC = () => {
 
   const grandTotalLeads = totalMetaLeads + totalGoogleLeads + webLeads.length
 
-  const TABS: {
-    id: CampaignPlatformTab
-    label: string
-    badge: number
-    sub: string
-  }[] = [
-    {
-      id: 'all',
-      label: 'Tümü',
-      badge: grandTotalLeads,
-      sub: 'Birleşik Görünüm',
-    },
-    {
-      id: 'meta',
-      label: 'Meta Ads',
-      badge: totalMetaLeads,
-      sub: 'Instagram & Facebook',
-    },
-    {
-      id: 'google',
-      label: 'Google Ads',
-      badge: totalGoogleLeads,
-      sub: 'Search, YouTube & PMax',
-    },
-    {
-      id: 'web',
-      label: 'Web & Dijital Kanallar',
-      badge: webLeads.length,
-      sub: 'Web Form, Portal & WhatsApp',
-    },
-  ]
-
   return (
     <div className="space-y-6">
       {/* Hidden CSV Inputs */}
@@ -484,34 +453,75 @@ export const MarketingCampaignsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Platform Navigation Tabs */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-[#282522] border border-[#4a443f] w-fit">
-        {TABS.map((tab) => {
-          const isActive = activePlatform === tab.id
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActivePlatform(tab.id)}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-[#b99881] text-white shadow-sm'
-                  : 'text-[#a69f99] hover:text-white hover:bg-[#34302d]/60'
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  isActive
-                    ? 'bg-black/20 text-white'
-                    : 'bg-[#34302d] text-[#d6beae] border border-[#4a443f]'
-                }`}
-              >
-                {tab.badge}
-              </span>
-            </button>
-          )
-        })}
+      {/* Platform Navigation Tabs: En solda Tümü (sadece ikon olarak), sonra Meta ve ikonu, Google ve ikonu, sonra Web Sitesi ve Demirtürk ikonu */}
+      <div className="flex flex-wrap items-center gap-1.5 py-1">
+        {/* 1. En solda: Tümü (Sadece İkon Olarak) */}
+        <button
+          type="button"
+          onClick={() => setActivePlatform('all')}
+          title={`Tümü (${grandTotalLeads})`}
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+            activePlatform === 'all'
+              ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
+              : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
+          }`}
+        >
+          <Layers className="w-4 h-4 shrink-0" />
+        </button>
+
+        {/* 2. Sonra: Meta ve İkonu */}
+        <button
+          type="button"
+          onClick={() => setActivePlatform('meta')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+            activePlatform === 'meta'
+              ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
+              : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+          }`}
+        >
+          <svg
+            className="w-4 h-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.1"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
+          </svg>
+          <span>Meta ({totalMetaLeads})</span>
+        </button>
+
+        {/* 3. Sonra: Google ve İkonu */}
+        <button
+          type="button"
+          onClick={() => setActivePlatform('google')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+            activePlatform === 'google'
+              ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
+              : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+          }`}
+        >
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
+          </svg>
+          <span>Google ({totalGoogleLeads})</span>
+        </button>
+
+        {/* 4. Sonra: Web Sitesi ve Demirtürk İkonu */}
+        <button
+          type="button"
+          onClick={() => setActivePlatform('web')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+            activePlatform === 'web'
+              ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
+              : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+          }`}
+        >
+          <BookLogo animated={false} className="w-4 h-4 shrink-0" />
+          <span>Web Sitesi ({webLeads.length})</span>
+        </button>
       </div>
 
       {successMsg && (
@@ -1398,6 +1408,57 @@ export const MarketingCampaignsView: React.FC = () => {
               </div>
             </GlassCard>
           </div>
+
+          {/* Web Sitesinden Gelen Tur Başvuruları ve Diğer İçerikler */}
+          <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookLogo animated={false} className="w-4 h-4 shrink-0" />
+                <h3 className="text-sm font-bold text-white">
+                  Web Sitesinden Gelen Tur Başvuruları ve Diğer İçerikler ({webLeads.length})
+                </h3>
+              </div>
+            </div>
+
+            {webLeads.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#8c857f] border border-dashed border-[#4a443f] rounded-2xl">
+                Henüz web sitesinden gelen tur başvurusu veya form kaydı bulunmuyor.
+              </div>
+            ) : (
+              <div className="divide-y divide-[#4a443f]/50">
+                {webLeads.map((wl) => {
+                  const isTour =
+                    wl.tags?.includes('Tanıtım Turu') ||
+                    wl.formName?.toLowerCase().includes('tur') ||
+                    wl.channel?.toLowerCase().includes('tur')
+                  return (
+                    <div
+                      key={wl.id}
+                      className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-white">{wl.fullName}</span>
+                          <span className="font-mono text-[11px] text-[#d6beae]">{wl.phone}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#34302d] text-[#d6beae] border border-[#4a443f]">
+                            {isTour ? 'Ücretsiz Tanıtım Turu' : wl.formName || 'Web Sitesi Formu'}
+                          </span>
+                        </div>
+                        {wl.notes && (
+                          <div className="text-[11px] text-[#a69f99] truncate max-w-xl">
+                            {wl.notes}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-[#8c857f] font-mono shrink-0">
+                        {new Date(wl.createdAt).toLocaleString('tr-TR')}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </GlassCard>
         </div>
       )}
 

@@ -1,17 +1,17 @@
 export type Department =
   | 'Satış'
-  | 'Pazarlama'
   | 'Kreatif'
   | 'Müşteri İlişkileri'
   | 'Muhasebe'
+  | 'Pazarlama'
   | 'Yönetim'
 
 export const CANONICAL_DEPARTMENTS: Department[] = [
   'Satış',
-  'Pazarlama',
   'Kreatif',
   'Müşteri İlişkileri',
   'Muhasebe',
+  'Pazarlama',
   'Yönetim',
 ]
 
@@ -92,15 +92,6 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
   ],
-  'Pazarlama': [
-    { id: 'dashboard', label: 'Başlangıç' },
-    { id: 'portfolio', label: 'Müşteriler' },
-    { id: 'marketing-campaigns', label: 'Kampanyalar' },
-    { id: 'marketing-reports', label: 'Raporlar' },
-    { id: 'teams', label: 'Ekipler' },
-    { id: 'shared', label: 'Paylaşılanlar' },
-    { id: 'projects', label: 'Projeler' },
-  ],
   'Kreatif': [
     { id: 'dashboard', label: 'Başlangıç' },
     { id: 'creative-schedule', label: 'Çizelge' },
@@ -125,6 +116,15 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'collections', label: 'Tahsilatlar' },
     { id: 'payments', label: 'Ödemeler' },
     { id: 'financial-reports', label: 'Finansal Raporlar' },
+    { id: 'teams', label: 'Ekipler' },
+    { id: 'shared', label: 'Paylaşılanlar' },
+    { id: 'projects', label: 'Projeler' },
+  ],
+  'Pazarlama': [
+    { id: 'dashboard', label: 'Başlangıç' },
+    { id: 'portfolio', label: 'Müşteriler' },
+    { id: 'marketing-campaigns', label: 'Kampanyalar' },
+    { id: 'marketing-reports', label: 'Raporlar' },
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },

@@ -36,6 +36,60 @@ import { formatCurrency, formatDate, formatDateOnly, formatTimeOnly, formatPhone
 import { DateRangePicker, DateRange } from '@/components/ui/DateRangePicker'
 import { loadSavedDateRange, saveDateRange, checkDayRollover } from '@/services/dateFilterService'
 import { PaginationBar } from '@/components/common/PaginationBar'
+import { BookLogo } from '@/components/common/BookLogo'
+import { requestStore } from '@/services/requestStore'
+
+function isWebLead(l: Lead): boolean {
+  return Boolean(
+    l.source === 'WEBSITE' ||
+      l.channel?.toLowerCase().includes('web') ||
+      l.formName?.toLowerCase().includes('tur') ||
+      l.formName?.toLowerCase().includes('web') ||
+      (l.tags && l.tags.some((t) => t.toLowerCase().includes('web') || t.toLowerCase().includes('tur')))
+  )
+}
+
+function isGoogleLead(l: Lead): boolean {
+  if (isWebLead(l)) return false
+  return Boolean(
+    l.source === 'GOOGLE_ADS' ||
+      l.channel?.toLowerCase().includes('google') ||
+      l.formName?.toLowerCase().includes('google')
+  )
+}
+
+function isMetaLead(l: Lead): boolean {
+  if (isWebLead(l) || isGoogleLead(l)) return false
+  return Boolean(
+    l.source === 'META_ADS' ||
+      l.source === 'INSTAGRAM' ||
+      l.source === 'FACEBOOK' ||
+      l.channel?.toLowerCase().includes('meta') ||
+      l.channel?.toLowerCase().includes('instagram') ||
+      l.channel?.toLowerCase().includes('facebook') ||
+      l.metaLeadId ||
+      !l.source
+  )
+}
+
+export function getLeadChannelLabel(lead: Lead): string {
+  if (isWebLead(lead)) {
+    const isTour =
+      lead.tags?.includes('Tanıtım Turu') ||
+      lead.formName?.toLowerCase().includes('tur') ||
+      lead.channel?.toLowerCase().includes('tur')
+    if (isTour) return 'Web Sitesi • Tanıtım Turu'
+    if (lead.formName && !lead.formName.toLowerCase().includes('web sitesi')) {
+      return `Web Sitesi • ${lead.formName}`
+    }
+    return 'Web Sitesi'
+  }
+  if (isGoogleLead(lead)) return 'Google'
+  if (lead.source === 'WHATSAPP') return 'WhatsApp'
+  if (lead.source === 'REFERRAL') return 'Referans'
+  if (lead.source === 'DIRECT') return 'Doğrudan'
+  return 'Meta'
+}
 
 interface CustomTab {
   id: string
@@ -49,6 +103,7 @@ interface CustomersViewProps {
   onSelectLead: (lead: Lead) => void
   currentUser?: AppUser | null
   onOpenNewLead?: () => void
+  isMarketingView?: boolean
 }
 
 const STORAGE_KEY_CUSTOM_TABS = 'demirturk_crm_custom_tabs'
@@ -58,10 +113,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   onSelectLead,
   currentUser,
   onOpenNewLead,
+  isMarketingView = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
-  // "İletişimde" ilk sekme ve varsayılan
-  const [filterStage, setFilterStage] = useState<string>('UNCONTACTED')
+  // Pazarlama'da varsayılan "Tümü" (ALL), Müşteri İlişkileri'nde "İletişimde" (UNCONTACTED)
+  const [filterStage, setFilterStage] = useState<string>(() =>
+    isMarketingView ? 'ALL' : 'UNCONTACTED'
+  )
+
+  useEffect(() => {
+    setFilterStage(isMarketingView ? 'ALL' : 'UNCONTACTED')
+  }, [isMarketingView])
 
   // Sıralama (Varsayılan: NEWEST - Yeniden Eskiye)
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC'>('NEWEST')
@@ -266,8 +328,44 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     leadStore.autoAssignCallCenterLeads(callCenterUsers)
   }
 
+  // Web sitesinden gelen müşteri talepleri (requestStore) varsa ve henüz lead olarak eklenmemişse Web Sitesi sekmesi için birleştir
+  const allRequests = requestStore.getAll()
+  const leadsWithWebRequests = React.useMemo(() => {
+    const merged = [...leads]
+    for (const req of allRequests) {
+      const cleanReqPhone = String(req.customerPhone || '').replace(/\D/g, '').slice(-10)
+      const exists = merged.some((l) => {
+        if (l.id === req.id) return true
+        const cleanLeadPhone = String(l.phone || '').replace(/\D/g, '').slice(-10)
+        return Boolean(cleanReqPhone && cleanLeadPhone && cleanReqPhone === cleanLeadPhone && isWebLead(l))
+      })
+      if (!exists) {
+        merged.unshift({
+          id: req.id,
+          fullName: req.customerName || 'Web Ziyaretçisi',
+          phone: req.customerPhone || '',
+          whatsappPhone: req.customerPhone || '',
+          email: '',
+          stage: 'NEW',
+          callStatus: 'WAITING',
+          owner: req.assignedToUserName || 'Atanmamış',
+          source: 'WEBSITE',
+          formName: req.subject || req.category || 'Web Sitesi Başvurusu',
+          channel: `Web Sitesi / ${req.category || 'Başvuru'}`,
+          preferredHousingType: req.subject || 'Web Başvurusu',
+          budget: 0,
+          notes: req.notes || req.subject || '',
+          tags: ['Web Sitesi', req.category || 'Talep'],
+          createdAt: req.createdAt || new Date().toISOString(),
+          updatedAt: req.updatedAt || req.createdAt || new Date().toISOString(),
+        })
+      }
+    }
+    return merged
+  }, [leads, allRequests])
+
   // 1. Date Range Filter
-  const dateFilteredLeads = leads.filter((l) => {
+  const dateFilteredLeads = leadsWithWebRequests.filter((l) => {
     if (dateRange.startDate) {
       const leadTime = new Date(l.createdAt).getTime()
       if (!isNaN(leadTime)) {
@@ -290,9 +388,28 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     return true
   })
 
+  // Web Sitesi sekmesinde seçili dar tarih aralığında (örn. sadece Bugün) 0 kayıt varsa tüm web başvurularını göster
+  const allWebLeadsInSystem = leadsWithWebRequests.filter(isWebLead)
+  const dateFilteredWebLeads = dateFilteredLeads.filter(isWebLead)
+  const effectiveWebLeads = dateFilteredWebLeads.length > 0 ? dateFilteredWebLeads : allWebLeadsInSystem
+  const metaChannelCount = dateFilteredLeads.filter(isMetaLead).length
+  const googleChannelCount = dateFilteredLeads.filter(isGoogleLead).length
+  const webChannelCount = effectiveWebLeads.length
+
+  const candidatePoolForFilter =
+    filterStage === 'CHANNEL_WEB' && dateFilteredWebLeads.length === 0
+      ? allWebLeadsInSystem
+      : dateFilteredLeads
+
   // Filter leads based on active tab & search
-  const filteredLeads = dateFilteredLeads.filter((l) => {
-    if (filterStage === 'UNCONTACTED') {
+  const filteredLeads = candidatePoolForFilter.filter((l) => {
+    if (filterStage === 'CHANNEL_META') {
+      if (!isMetaLead(l)) return false
+    } else if (filterStage === 'CHANNEL_GOOGLE') {
+      if (!isGoogleLead(l)) return false
+    } else if (filterStage === 'CHANNEL_WEB') {
+      if (!isWebLead(l)) return false
+    } else if (filterStage === 'UNCONTACTED') {
       // Yalnızca 3 Ekim ve sonrası iletişim kurulmamış (yeni) olanlar
       if (l.stage !== 'NEW') return false
       const leadTime = new Date(l.createdAt).getTime()
@@ -331,7 +448,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       l.fullName.toLowerCase().includes(q) ||
       l.phone.includes(q) ||
       l.formName.toLowerCase().includes(q) ||
-      (l.preferredHousingType && l.preferredHousingType.toLowerCase().includes(q)) ||
+      getLeadChannelLabel(l).toLowerCase().includes(q) ||
+      (l.notes && l.notes.toLowerCase().includes(q)) ||
       (l.assignedToUserName && l.assignedToUserName.toLowerCase().includes(q))
     )
   })
@@ -540,100 +658,173 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
       {/* Tabs & Search Bar (Katmansız, Pill Shape) */}
       <div className="relative z-30 flex flex-wrap items-center justify-between gap-4">
-        {/* Tab Listesi: İletişimde (Varsayılan) -> Nitelikli -> Satışa Atanan -> Tümü -> Custom Tabs -> [+] */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-          {/* 1. Sekme: İletişimde (Yalnızca iletişim kurulmamış olanlar - NEW) */}
-          <button
-            onClick={() => setFilterStage('UNCONTACTED')}
-            className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-              filterStage === 'UNCONTACTED'
-                ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
-            }`}
-          >
-            İletişimde ({uncontactedCount})
-          </button>
-
-          {/* 2. Sekme: Nitelikli (Yalnızca nitelikli olduğu belirtilenler) */}
-          <button
-            onClick={() => setFilterStage('QUALIFIED')}
-            className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-              filterStage === 'QUALIFIED'
-                ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
-            }`}
-          >
-            Nitelikli ({qualifiedCount})
-          </button>
-
-          {/* 3. Sekme: Satışa Atanan */}
-          <button
-            onClick={() => setFilterStage('ASSIGNED')}
-            className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-              filterStage === 'ASSIGNED'
-                ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
-            }`}
-          >
-            Satışa Atanan ({assignedCount})
-          </button>
-
-          {/* 4. Sekme: Dönüşüm (Satış Olanlar) */}
-          <button
-            onClick={() => setFilterStage('CONVERTED')}
-            className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-              filterStage === 'CONVERTED'
-                ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
-            }`}
-          >
-            Dönüşüm ({convertedCount})
-          </button>
-
-          {/* 4. Sekme: Tümü */}
-          <button
-            onClick={() => setFilterStage('ALL')}
-            className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-              filterStage === 'ALL'
-                ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
-            }`}
-          >
-            Tümü ({dateFilteredLeads.length})
-          </button>
-
-          {/* Kullanıcının Kendi Eklediği Özel Sekmeler */}
-          {customTabs.map((ct) => (
-            <div
-              key={ct.id}
-              onClick={() => setFilterStage(ct.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === ct.id
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                  : 'text-[#a69f99] hover:text-white font-medium hover:bg-white/5'
+        {isMarketingView ? (
+          /* PAZARLAMA SEKMELERİ: En solda Tümü (sadece ikon olarak), sonra Meta ve ikonu, Google ve ikonu, sonra Web Sitesi ve Demirtürk ikonu */
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+            {/* 1. En solda: Tümü (Sadece İkon Olarak) */}
+            <button
+              type="button"
+              onClick={() => setFilterStage('ALL')}
+              title={`Tümü (${dateFilteredLeads.length})`}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                filterStage === 'ALL'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
               }`}
             >
-              <span>{ct.name}</span>
-              <button
-                onClick={(e) => handleDeleteCustomTab(ct.id, e)}
-                className="hover:text-rose-400 p-0.5 rounded-full"
-                title="Sekmeyi Kaldır"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
+              <Layers className="w-4 h-4 shrink-0" />
+            </button>
 
-          {/* + Butonu: Eleman oraya kendi sekmesini ekleyebilecek */}
-          <button
-            onClick={() => setIsAddTabModalOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#34302d] text-[#b99881] hover:text-white hover:bg-[#3d3733] border border-[#4a443f] text-xs font-bold cursor-pointer transition-colors shrink-0"
-            title="Yeni Özel Sekme Ekle"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Sekme Ekle</span>
-          </button>
-        </div>
+            {/* 2. Sonra: Meta ve İkonu */}
+            <button
+              type="button"
+              onClick={() => setFilterStage('CHANNEL_META')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CHANNEL_META'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+              }`}
+            >
+              <svg
+                className="w-4 h-4 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
+              </svg>
+              <span>Meta ({metaChannelCount})</span>
+            </button>
+
+            {/* 3. Sonra: Google ve İkonu */}
+            <button
+              type="button"
+              onClick={() => setFilterStage('CHANNEL_GOOGLE')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CHANNEL_GOOGLE'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
+              </svg>
+              <span>Google ({googleChannelCount})</span>
+            </button>
+
+            {/* 4. Sonra: Web Sitesi ve Demirtürk İkonu */}
+            <button
+              type="button"
+              onClick={() => setFilterStage('CHANNEL_WEB')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CHANNEL_WEB'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+              }`}
+            >
+              <BookLogo animated={false} className="w-4 h-4 shrink-0" />
+              <span>Web Sitesi ({webChannelCount})</span>
+            </button>
+          </div>
+        ) : (
+          /* MÜŞTERİ İLİŞKİLERİ SEKMELERİ: İletişimde (Varsayılan) -> Nitelikli -> Satışa Atanan -> Dönüşüm -> Tümü -> Custom Tabs -> [+] */
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+            {/* 1. Sekme: İletişimde (Yalnızca iletişim kurulmamış olanlar - NEW) */}
+            <button
+              onClick={() => setFilterStage('UNCONTACTED')}
+              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'UNCONTACTED'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              }`}
+            >
+              İletişimde ({uncontactedCount})
+            </button>
+
+            {/* 2. Sekme: Nitelikli (Yalnızca nitelikli olduğu belirtilenler) */}
+            <button
+              onClick={() => setFilterStage('QUALIFIED')}
+              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'QUALIFIED'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              }`}
+            >
+              Nitelikli ({qualifiedCount})
+            </button>
+
+            {/* 3. Sekme: Satışa Atanan */}
+            <button
+              onClick={() => setFilterStage('ASSIGNED')}
+              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'ASSIGNED'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              }`}
+            >
+              Satışa Atanan ({assignedCount})
+            </button>
+
+            {/* 4. Sekme: Dönüşüm (Satış Olanlar) */}
+            <button
+              onClick={() => setFilterStage('CONVERTED')}
+              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CONVERTED'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              }`}
+            >
+              Dönüşüm ({convertedCount})
+            </button>
+
+            {/* 5. Sekme: Tümü */}
+            <button
+              onClick={() => setFilterStage('ALL')}
+              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'ALL'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              }`}
+            >
+              Tümü ({dateFilteredLeads.length})
+            </button>
+
+            {/* Kullanıcının Kendi Eklediği Özel Sekmeler */}
+            {customTabs.map((ct) => (
+              <div
+                key={ct.id}
+                onClick={() => setFilterStage(ct.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                  filterStage === ct.id
+                    ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                    : 'text-[#a69f99] hover:text-white font-medium hover:bg-white/5'
+                }`}
+              >
+                <span>{ct.name}</span>
+                <button
+                  onClick={(e) => handleDeleteCustomTab(ct.id, e)}
+                  className="hover:text-rose-400 p-0.5 rounded-full"
+                  title="Sekmeyi Kaldır"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+
+            {/* + Butonu: Eleman oraya kendi sekmesini ekleyebilecek */}
+            <button
+              onClick={() => setIsAddTabModalOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#34302d] text-[#b99881] hover:text-white hover:bg-[#3d3733] border border-[#4a443f] text-xs font-bold cursor-pointer transition-colors shrink-0"
+              title="Yeni Özel Sekme Ekle"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Sekme Ekle</span>
+            </button>
+          </div>
+        )}
 
         {/* Sağ: Arama ve Tarih Seçimi */}
         <div className="flex flex-wrap items-center gap-2.5">
@@ -642,7 +833,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <Search className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="İsim, telefon veya konut ara..."
+              placeholder="İsim, telefon veya kanal ara..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
@@ -778,13 +969,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         </div>
                         <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
                           <span className="text-[10px] text-[#8c857f]">
-                            {lead.preferredHousingType || 'Konut'}
+                            {getLeadChannelLabel(lead)}
                           </span>
-                          {(lead.source === 'WEBSITE' || lead.tags?.includes('Tanıtım Turu')) && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-semibold">
-                              {lead.tags?.includes('Tanıtım Turu') || lead.formName?.toLowerCase().includes('tur') ? 'Web • Tanıtım Turu' : 'Web Sitesi'}
-                            </span>
-                          )}
                           {inquiryCount > 1 && (
                             <button
                               onClick={() => setSelectedInquiryHistoryLead(lead)}

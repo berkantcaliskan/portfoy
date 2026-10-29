@@ -5,7 +5,6 @@ import { AppDock } from '@/components/layout/AppDock'
 import { DashboardView } from '@/components/dashboard/DashboardView'
 import { LeadDetailModal } from '@/components/crm/LeadDetailModal'
 import { LeadAddModal } from '@/components/crm/LeadAddModal'
-import { PortfolioView } from '@/components/portfolio/PortfolioView'
 import { ContactsView } from '@/components/contacts/ContactsView'
 import { AddPropertyModal } from '@/components/portfolio/AddPropertyModal'
 import { ProjectsView } from '@/components/projects/ProjectsView'
@@ -51,7 +50,7 @@ import { sharedFileStore } from '@/services/sharedFileStore'
 import { syncService } from '@/services/syncService'
 import { messageStore } from '@/services/messageStore'
 import { Lead, LeadStage } from '@/types/lead'
-import { PortfolioItem, PropertyStatus } from '@/types/portfolio'
+import { PortfolioItem } from '@/types/portfolio'
 import {
   DEPARTMENT_MENU_CONFIG,
   Department,
@@ -308,10 +307,6 @@ export function App() {
     leadStore.updateStage(leadId, newStage, currentUser)
   }
 
-  const handlePropertyStatusChange = (id: string, status: PropertyStatus) => {
-    portfolioStore.updateStatus(id, status)
-  }
-
   // Not logged in: Show dedicated modern Sign In & Sign Up screen
   if (!currentUser) {
     return (
@@ -384,15 +379,12 @@ export function App() {
 
             {/* PAZARLAMA SAYFALARI */}
             {activeTab === 'portfolio' && (
-              <PortfolioView
+              <CustomersView
+                isMarketingView={true}
                 leads={filteredLeads}
-                properties={properties}
                 onSelectLead={handleSelectLead}
-                onStageChange={handleStageChange}
-                onOpenAddLead={() => setIsAddLeadOpen(true)}
-                onPropertyStatusChange={handlePropertyStatusChange}
-                onOpenAddProperty={() => setIsAddPropertyOpen(true)}
-                searchQuery={searchQuery}
+                currentUser={currentUser}
+                onOpenNewLead={() => setIsAddLeadOpen(true)}
               />
             )}
             {activeTab === 'marketing-campaigns' && <MarketingCampaignsView />}

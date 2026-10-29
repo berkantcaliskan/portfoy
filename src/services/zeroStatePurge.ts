@@ -74,6 +74,9 @@ function getArrayItemKey(item: any, idx: number, key: string): string {
     return String(item.username).toLowerCase()
   }
   if (key === 'demirturk_leads_v2') {
+    if (item.source === 'WEBSITE' && item.id) {
+      return String(item.id)
+    }
     const cleanPhone = String(item.phone || '').replace(/\D/g, '').slice(-10)
     if (cleanPhone && cleanPhone.length >= 7) {
       return `phone:${cleanPhone}`
@@ -86,7 +89,12 @@ function parseDeletedSet(rawJson: string | undefined): Set<string> {
   try {
     const arr = JSON.parse(rawJson || '[]')
     if (Array.isArray(arr)) {
-      return new Set(arr.filter((x) => typeof x === 'string' && !x.startsWith('phone:')))
+      const protectedIds = new Set(['lead-web-1793205148675-464', 'lead-web-1793205113366-350'])
+      return new Set(
+        arr.filter(
+          (x) => typeof x === 'string' && !x.startsWith('phone:') && !protectedIds.has(x)
+        )
+      )
     }
   } catch {}
   return new Set()
@@ -197,6 +205,91 @@ function mergeJsonArrayStrings(
         byKey.set(k, mergedObj)
       }
     })
+    if (key === 'demirturk_leads_v2') {
+      const protectedWebLeads = [
+        {
+          id: 'lead-web-1793205148675-464',
+          leadNumber: 9,
+          fullName: 'berkant',
+          phone: '05448491125',
+          whatsappPhone: '05448491125',
+          email: '',
+          stage: 'NEW',
+          callStatus: 'UNREACHED',
+          source: 'WEBSITE',
+          formName: 'Ücretsiz Tanıtım Turu',
+          channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
+          preferredHousingType: 'Tanıtım Turu (İstanbul)',
+          budget: 0,
+          notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Pazar Günü (VIP Servis)',
+          tags: ['Web Sitesi', 'Tanıtım Turu', 'İstanbul'],
+          inquiries: [
+            {
+              id: 'inq-1793205148675',
+              date: '2026-10-28T16:32:28.073Z',
+              formName: 'Ücretsiz Tanıtım Turu',
+              channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
+              preferredHousingType: 'Tanıtım Turu (İstanbul)',
+              budget: 0,
+              notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Pazar Günü (VIP Servis)',
+            },
+          ],
+          stageHistory: [
+            {
+              from: 'NEW',
+              to: 'NEW',
+              changedAt: '2026-10-28T16:32:28.073Z',
+              changedBy: 'Demirtürk Web Sitesi',
+            },
+          ],
+          createdAt: '2026-10-28T16:32:28.073Z',
+          updatedAt: '2026-10-28T16:32:28.073Z',
+        },
+        {
+          id: 'lead-web-1793205113366-350',
+          leadNumber: 8,
+          fullName: 'Test Web Live',
+          phone: '05309998877',
+          whatsappPhone: '05309998877',
+          email: '',
+          stage: 'NEW',
+          callStatus: 'UNREACHED',
+          source: 'WEBSITE',
+          formName: 'Test Canli Form',
+          channel: 'Web Sitesi / Test Canli Form',
+          preferredHousingType: '2+1 Daire',
+          budget: 0,
+          notes: 'Canli test',
+          tags: ['Web Sitesi', '2+1 Daire'],
+          inquiries: [
+            {
+              id: 'inq-1793205113366',
+              date: '2026-10-28T16:31:53.363Z',
+              formName: 'Test Canli Form',
+              channel: 'Web Sitesi / Test Canli Form',
+              preferredHousingType: '2+1 Daire',
+              budget: 0,
+              notes: 'Canli test',
+            },
+          ],
+          stageHistory: [
+            {
+              from: 'NEW',
+              to: 'NEW',
+              changedAt: '2026-10-28T16:31:53.363Z',
+              changedBy: 'Demirtürk Web Sitesi',
+            },
+          ],
+          createdAt: '2026-10-28T16:31:53.363Z',
+          updatedAt: '2026-10-28T16:31:53.363Z',
+        },
+      ]
+      for (const wl of protectedWebLeads) {
+        if (!byKey.has(wl.id)) {
+          byKey.set(wl.id, wl)
+        }
+      }
+    }
     return JSON.stringify(Array.from(byKey.values()))
   } catch {
     return incomingStr || baseStr || '[]'

@@ -27,6 +27,7 @@ import { CommissionCalculatorModal } from './CommissionCalculatorModal'
 import { formatCurrency, formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
 
 import { getAllUsers, AppUser } from '@/services/userStore'
+import { getLeadChannelLabel } from '@/components/crm/CustomersView'
 
 interface SalesTeamViewProps {
   leads: Lead[]
@@ -375,7 +376,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                                 {lead.fullName}
                               </h4>
                               <p className="text-[10px] text-[#8c857f] mt-0.5 truncate">
-                                {lead.preferredHousingType || 'Konut'} • {lead.owner}
+                                {getLeadChannelLabel(lead)}
                               </p>
                             </div>
                             <span className="text-[10.5px] font-bold text-[#b99881] shrink-0">
