@@ -1914,30 +1914,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5">
-              {/* Blok Sayısı */}
-              <div>
-                <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
-                  Blok Sayısı
-                </label>
-                <select
-                  value={newProject.blockCount}
-                  onChange={(e) => {
-                    const bc = Number(e.target.value) as 1 | 2
-                    setNewProject({
-                      ...newProject,
-                      blockCount: bc,
-                      parsedUnits: [],
-                      totalUnits: newProject.maxFloors * newProject.unitsPerFloor * bc,
-                    })
-                  }}
-                  className="w-full px-3 py-2 rounded-[14px] bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none cursor-pointer"
-                >
-                  <option value={1}>Tek Blok (A)</option>
-                  <option value={2}>2 Blok (A & B)</option>
-                </select>
-              </div>
-
+            <div className="grid grid-cols-2 gap-2.5">
               {/* Ağırlıklı Oda Tipi */}
               <div>
                 <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">

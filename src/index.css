@@ -1448,13 +1448,18 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   color: #1e293b !important;
 }
 
+.unit-box-deposit .unit-inline-title,
+.unit-box-sold .unit-inline-title,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-deposit .unit-inline-title,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-sold .unit-inline-title {
   color: #ffffff !important;
+  background: transparent !important;
 }
 
+.unit-box-available .unit-inline-title,
 html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-available .unit-inline-title {
-  color: #064e3b !important;
+  color: #111827 !important;
+  background: transparent !important;
 }
 
 /* Kart ve Liste Görünümü Daire Kartları */

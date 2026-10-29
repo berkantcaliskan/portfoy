@@ -197,12 +197,23 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
     (a) => a.floor === undefined || a.floor === 'ALL' || a.floor === selectedFloor
   )
 
-  // Helper to resolve a unit's Block name and Entrance name cleanly
+  // Distinct blocks: ONLY blocks explicitly added by the user via "+ Blok" (no ready-made A/B Blok defaults)
+  const blocks = useMemo(() => {
+    const set = new Set<string>()
+    ;(project.customAreas || [])
+      .filter((a) => a.kind === 'block')
+      .forEach((a) => {
+        if (a.label.trim()) set.add(a.label.trim())
+      })
+    return Array.from(set)
+  }, [project.customAreas])
+
+  // Helper to resolve a unit's Block name (only if user added a block) and Entrance name cleanly
   const resolveUnitBlockAndEntrance = (u: FlatUnit): { blockName: string; entranceName: string } => {
     const rawBlock = (u.block || '').trim()
     const rawEntrance = (u.entrance || '').trim()
 
-    // Check if the unit's center is inside a custom Block area on this floor
+    // Check if the unit's center is inside a user-added custom Block area on this floor
     const unitBox = u.planBox
     if (unitBox) {
       const cx = unitBox.x + unitBox.w / 2
@@ -224,41 +235,19 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
       }
     }
 
-    if (/giriş/i.test(rawBlock)) {
-      const eName = rawEntrance || rawBlock
-      const bName = rawBlock.replace(/giriş/i, 'Blok').trim() || 'A Blok'
-      return { blockName: bName, entranceName: eName }
-    }
-
-    const bName = rawBlock || 'A Blok'
+    const matchedUserBlock = blocks.find(
+      (b) => b.toLocaleLowerCase('tr-TR') === rawBlock.toLocaleLowerCase('tr-TR')
+    )
+    const bName = matchedUserBlock || ''
     const eName =
       rawEntrance ||
-      (/^[a-zA-ZçğıöşüÇĞİÖŞÜ]\s*blok$/i.test(bName)
+      (/giriş/i.test(rawBlock)
+        ? rawBlock
+        : bName && /^[a-zA-ZçğıöşüÇĞİÖŞÜ]\s*blok$/i.test(bName)
         ? bName.replace(/blok/i, 'Giriş')
         : 'A Giriş')
     return { blockName: bName, entranceName: eName }
   }
-
-  // Distinct blocks (from custom 'block' areas + units + default A/B Blok)
-  const blocks = useMemo(() => {
-    const set = new Set<string>()
-    ;(project.customAreas || [])
-      .filter((a) => a.kind === 'block')
-      .forEach((a) => {
-        if (a.label.trim()) set.add(a.label.trim())
-      })
-    units.forEach((u) => {
-      const { blockName } = resolveUnitBlockAndEntrance(u)
-      if (blockName) set.add(blockName)
-    })
-    if (set.size === 0) {
-      set.add('A Blok')
-    }
-    if (set.size === 1 && project.blockCount === 2) {
-      set.add('B Blok')
-    }
-    return Array.from(set)
-  }, [project.customAreas, units, project.blockCount, selectedFloor])
 
   // Selectable Entrances for Left Bar ("A Giriş", "B Giriş" + custom entrance areas)
   const selectableEntrances = useMemo(() => {
@@ -3092,68 +3081,67 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
             </div>
           </div>
 
-          {/* 2. BLOK SEÇİMİ: Seçilen blok için proje alanında genişletilmiş ayrı görünüm açar */}
-          <div className="space-y-2 pt-2 border-t border-[#4a443f]/40">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-[#b99881]" />
-                <span>Blok</span>
-              </span>
-              {selectedBlock !== 'ALL' && (
+          {/* 2. BLOK SEÇİMİ: Yalnızca kullanıcı "+ Blok" ile blok eklediyse gösterilir */}
+          {blocks.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-[#4a443f]/40">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-[#b99881]" />
+                  <span>Blok</span>
+                </span>
+                {selectedBlock !== 'ALL' && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBlock('ALL')}
+                    className="text-[10px] font-semibold text-[#b99881] hover:underline cursor-pointer"
+                  >
+                    Tüm Plan
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <button
                   type="button"
                   onClick={() => setSelectedBlock('ALL')}
-                  className="text-[10px] font-semibold text-[#b99881] hover:underline cursor-pointer"
+                  className={`w-full px-3.5 py-2 rounded-full text-xs font-semibold text-left transition-all cursor-pointer flex items-center justify-between ${
+                    selectedBlock === 'ALL'
+                      ? 'bg-[#b99881] text-white shadow-sm'
+                      : 'bg-[#34302d] text-[#f3efe9] hover:text-white'
+                  }`}
                 >
-                  Tüm Plan
+                  <span>Tüm Site Planı</span>
+                  <span className="text-[10px] opacity-80 font-mono">{units.length} Daire</span>
                 </button>
-              )}
-            </div>
 
-            <div className="flex flex-col gap-1.5">
-              <button
-                type="button"
-                onClick={() => setSelectedBlock('ALL')}
-                className={`w-full px-3.5 py-2 rounded-full text-xs font-semibold text-left transition-all cursor-pointer flex items-center justify-between ${
-                  selectedBlock === 'ALL'
-                    ? 'bg-[#b99881] text-white shadow-sm'
-                    : 'bg-[#34302d] text-[#f3efe9] hover:text-white'
-                }`}
-              >
-                <span>Tüm Site Planı</span>
-                <span className="text-[10px] opacity-80 font-mono">{units.length} Daire</span>
-              </button>
+                {blocks.map((blk) => {
+                  const isBlkSelected = selectedBlock === blk
+                  const blkUnitCount = units.filter((u) => {
+                    const { blockName } = resolveUnitBlockAndEntrance(u)
+                    return blockName.toLocaleLowerCase('tr-TR') === blk.toLocaleLowerCase('tr-TR')
+                  }).length
 
-              {blocks.map((blk) => {
-                const isBlkSelected = selectedBlock === blk
-                const blkUnitCount = units.filter((u) => {
-                  const { blockName } = resolveUnitBlockAndEntrance(u)
                   return (
-                    blockName.toLocaleLowerCase('tr-TR') === blk.toLocaleLowerCase('tr-TR') ||
-                    (u.block || '').toLocaleLowerCase('tr-TR') === blk.toLocaleLowerCase('tr-TR')
+                    <button
+                      key={blk}
+                      type="button"
+                      onClick={() => setSelectedBlock(isBlkSelected ? 'ALL' : blk)}
+                      className={`w-full px-3.5 py-2 rounded-full text-xs font-semibold text-left transition-all cursor-pointer flex items-center justify-between ${
+                        isBlkSelected
+                          ? 'bg-[#b99881] text-white shadow-sm'
+                          : 'bg-[#34302d] text-[#f3efe9] hover:text-white'
+                      }`}
+                    >
+                      <span className="truncate">{blk}</span>
+                      <span className="text-[10px] opacity-80 font-mono shrink-0">
+                        {blkUnitCount} Daire
+                      </span>
+                    </button>
                   )
-                }).length
-
-                return (
-                  <button
-                    key={blk}
-                    type="button"
-                    onClick={() => setSelectedBlock(isBlkSelected ? 'ALL' : blk)}
-                    className={`w-full px-3.5 py-2 rounded-full text-xs font-semibold text-left transition-all cursor-pointer flex items-center justify-between ${
-                      isBlkSelected
-                        ? 'bg-[#b99881] text-white shadow-sm'
-                        : 'bg-[#34302d] text-[#f3efe9] hover:text-white'
-                    }`}
-                  >
-                    <span className="truncate">{blk}</span>
-                    <span className="text-[10px] opacity-80 font-mono shrink-0">
-                      {blkUnitCount} Daire
-                    </span>
-                  </button>
-                )
-              })}
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 3. GİRİŞ SEÇİMİ: Tıklandığında o giriş plan üzerinde yanıp sönme efektiyle vurgulanır */}
           <div className="space-y-2 pt-2 border-t border-[#4a443f]/40">
@@ -3901,7 +3889,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           >
                             <span
                               style={{ fontFamily: "'Karla', sans-serif" }}
-                              className={`px-1 py-1.5 rounded-full ${unitTitlePillClasses} text-[9.5px] font-bold tracking-tight leading-none`}
+                              className="unit-inline-title text-[10px] font-extrabold tracking-tight leading-none"
                             >
                               {unit.unitNumber}
                             </span>
@@ -3921,11 +3909,11 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           </div>
                         </div>
                       ) : isNarrowVertical ? (
-                        /* DÜŞEY (9:16) KUTU GÖRÜNÜMÜ: Sadece Daire Adı (Karla), Satışta ibaresi ve Fiyatı */
+                        /* DÜŞEY (9:16) KUTU GÖRÜNÜMÜ: Sadece Daire Adı (Karla, katmansız siyah), Satışta ibaresi ve Fiyatı */
                         <div className="flex-1 flex flex-col items-center justify-between text-center gap-0.5 py-0.5 min-h-0 overflow-hidden">
                           <span
                             style={{ fontFamily: "'Karla', sans-serif" }}
-                            className={`px-1.5 py-0.5 rounded-full ${unitTitlePillClasses} text-[10px] font-bold tracking-tight truncate max-w-full leading-tight`}
+                            className="unit-inline-title text-[11px] font-extrabold tracking-tight truncate max-w-full leading-tight"
                           >
                             {unit.unitNumber}
                           </span>
@@ -3944,14 +3932,14 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           )}
                         </div>
                       ) : (
-                        /* STANDART (1:1 veya 16:9) GÖRÜNÜM: Sadece Daire Adı (Karla), Satışta ibaresi ve Fiyatı */
+                        /* STANDART (1:1 veya 16:9) GÖRÜNÜM: Sadece Daire Adı (Karla, katmansız siyah), Satışta ibaresi ve Fiyatı */
                         <div className="flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
                           <div className="flex items-center justify-between gap-1 min-w-0">
                             <span
                               style={{ fontFamily: "'Karla', sans-serif" }}
-                              className={`px-2 py-0.5 rounded-full ${unitTitlePillClasses} ${
-                                isShortBox ? 'text-[10px]' : 'text-xs'
-                              } font-bold tracking-tight truncate shadow-2xs leading-tight`}
+                              className={`unit-inline-title ${
+                                isShortBox ? 'text-[10.5px]' : 'text-xs'
+                              } font-extrabold tracking-tight truncate leading-tight`}
                             >
                               {unit.unitNumber}
                             </span>
@@ -4799,7 +4787,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
 
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#34302d] font-semibold text-[#f3efe9]">
-                          {unitBlockName} • {unitEntranceName}
+                          {unitBlockName ? `${unitBlockName} • ${unitEntranceName}` : unitEntranceName}
                         </span>
                         <span className="text-[11px] text-[#a69f99]">
                           {activeUnit.roomType}
@@ -4807,7 +4795,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Daire Bilgileri: Katı, Bloğu, Girişi, Oda Tipi, Net ve Brüt Alanı, Liste Fiyatı */}
+                    {/* Daire Bilgileri: Katı, Bloğu (varsa), Girişi, Oda Tipi, Net ve Brüt Alanı, Liste Fiyatı */}
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between items-center py-1 border-b border-[#4a443f]/30">
                         <span className="text-[#a69f99]">Bulunduğu Kat</span>
@@ -4815,12 +4803,14 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           {FLOOR_LABELS[Math.max(0, Math.min(2, activeUnit.floor))]?.short}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-1 border-b border-[#4a443f]/30">
-                        <span className="text-[#a69f99]">Blok</span>
-                        <span className="font-semibold text-white text-right">
-                          {unitBlockName}
-                        </span>
-                      </div>
+                      {unitBlockName && (
+                        <div className="flex justify-between items-center py-1 border-b border-[#4a443f]/30">
+                          <span className="text-[#a69f99]">Blok</span>
+                          <span className="font-semibold text-white text-right">
+                            {unitBlockName}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center py-1 border-b border-[#4a443f]/30">
                         <span className="text-[#a69f99]">Giriş</span>
                         <span className="font-semibold text-white text-right">
@@ -5097,9 +5087,9 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       </div>
 
                       <div className="flex justify-between items-center py-1 border-b border-[#4a443f]/30">
-                        <span className="text-[#a69f99]">Blok & Kat Yapısı</span>
+                        <span className="text-[#a69f99]">{blocks.length > 0 ? 'Blok & Kat Yapısı' : 'Kat Yapısı'}</span>
                         <span className="font-semibold text-white">
-                          {blocks.length} Blok • {configuredMaxFloors} Kat
+                          {blocks.length > 0 ? `${blocks.length} Blok • ${configuredMaxFloors} Kat` : `${configuredMaxFloors} Kat`}
                         </span>
                       </div>
 
