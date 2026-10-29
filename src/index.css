@@ -1524,3 +1524,39 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   background-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 14%, transparent) !important;
   box-shadow: inset 3px 0 0 0 var(--accent-color, #5c6ac4);
 }
+
+/* ==========================================================================
+   META'YI EĞİTEN AŞAMA (STAGE DROPDOWN) DIŞ VURGU KONTÜRÜ
+   Aşama katmanının dışına vurgu rengi kontür vererek önemini ayrıştırır.
+   ========================================================================== */
+button.meta-stage-trigger-pill,
+main button.meta-stage-trigger-pill,
+main .glass-card button.meta-stage-trigger-pill,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill {
+  border: 1.5px solid var(--accent-color, #b99881) !important;
+  border-color: var(--accent-color, #b99881) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color, #b99881) 22%, transparent), 0 2px 6px -1px rgba(0, 0, 0, 0.08) !important;
+}
+
+button.meta-stage-trigger-pill:hover,
+button.meta-stage-trigger-pill[data-dropdown-open="true"],
+main button.meta-stage-trigger-pill:hover,
+main button.meta-stage-trigger-pill[data-dropdown-open="true"],
+main .glass-card button.meta-stage-trigger-pill:hover,
+main .glass-card button.meta-stage-trigger-pill[data-dropdown-open="true"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill[data-dropdown-open="true"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill[data-dropdown-open="true"] {
+  border: 1.5px solid var(--accent-color, #b99881) !important;
+  border-color: var(--accent-color, #b99881) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #b99881) 35%, transparent), 0 4px 10px -2px rgba(0, 0, 0, 0.12) !important;
+}
+
+div.dropdown-panel.meta-stage-dropdown-panel,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.dropdown-panel.meta-stage-dropdown-panel {
+  border: 1.5px solid var(--accent-color, #b99881) !important;
+  border-color: var(--accent-color, #b99881) !important;
+}
+

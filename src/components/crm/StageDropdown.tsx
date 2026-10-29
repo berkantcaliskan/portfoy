@@ -122,8 +122,8 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
         disabled={disabled}
         data-dropdown-open={isOpen ? 'true' : undefined}
         onClick={handleToggle}
-        className={`px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
-          isOpen ? 'border-[#b99881] ring-1 ring-[#b99881]/40' : ''
+        className={`meta-stage-trigger-pill px-3 py-1.5 rounded-full bg-[#282522] hover:bg-[#34302d] border border-[#b99881] hover:border-[#b99881] text-xs font-semibold text-white flex items-center justify-between gap-2 cursor-pointer transition-all select-none shadow-sm ${
+          isOpen ? 'border-[#b99881] ring-2 ring-[#b99881]/40' : ''
         } ${className}`}
         title="Meta Hunisi Aşaması Seç"
       >
@@ -135,7 +135,7 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
           <span className="truncate">{currentOption.label}</span>
         </div>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-[#a69f99] transition-transform duration-200 shrink-0 ${
+          className={`w-3.5 h-3.5 text-[#b99881] transition-transform duration-200 shrink-0 ${
             isOpen ? 'rotate-180 text-[#b99881]' : ''
           }`}
         />
@@ -169,7 +169,7 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
                 minWidth: `${coords.width}px`,
                 zIndex: 99999,
               }}
-              className="dropdown-panel rounded-[16px] backdrop-blur-2xl p-1.5 space-y-0.5 border border-[#4a443f]"
+              className="dropdown-panel meta-stage-dropdown-panel rounded-[16px] backdrop-blur-2xl p-1.5 space-y-0.5 border border-[#b99881]"
               onClick={(e) => e.stopPropagation()}
             >
               {STAGE_OPTIONS.map((opt) => {
