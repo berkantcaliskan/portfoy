@@ -405,6 +405,32 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
 
   // Interactive "Düzenle" Mode (Add/Edit/Delete/Move/Resize Units, Areas, and Facades)
   const [isLayoutEditMode, setIsLayoutEditMode] = useState(false)
+  const [isFreeMoveMode, setIsFreeMoveMode] = useState(false)
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || e.ctrlKey || e.metaKey) {
+        setIsCtrlPressed(true)
+      }
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || (!e.ctrlKey && !e.metaKey)) {
+        setIsCtrlPressed(false)
+      }
+    }
+    const handleWindowBlur = () => {
+      setIsCtrlPressed(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', handleWindowBlur)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', handleWindowBlur)
+    }
+  }, [])
   const [planOpacity, setPlanOpacity] = useState<number>(85)
   const canvasRef = useRef<HTMLDivElement>(null)
   const fileInputUniversalRef = useRef<HTMLInputElement>(null)
@@ -1153,13 +1179,14 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
   }
 
   // Clamp and snap any unit/area box to standardized ruler scale steps (cetvel ölçeği)
-  // + magnetic sibling alignment, while NEVER overlapping sibling boxes or perimeter/corner facade badges
+  // + magnetic sibling & pairwise center alignment (two-item centering), or 100% Free Mode when Ctrl / Free Mode is active
   const clampBoxAvoidingFacades = (
     rawBox: UnitPlanBox,
     mode: 'move' | 'resize',
     activeTargetId?: string,
     useRulerSnap = false,
-    allowGridRelocate = false
+    allowGridRelocate = false,
+    freeMode = false
   ): UnitPlanBox => {
     const minX = 1.0
     const maxX = 99.0
@@ -1172,8 +1199,30 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
     const isBlockTarget = activeAreaObj?.kind === 'block'
     const isEntranceTarget = activeAreaObj?.kind === 'entrance'
 
+    // In Free Mode (Ctrl held or Free Mode toggled on), bypass all magnet snapping and obstacle cushions
+    if (freeMode) {
+      if (mode === 'resize') {
+        const minW = isEntranceTarget ? 3.0 : isBlockTarget ? 10.0 : 4.0
+        const minH = isEntranceTarget ? 3.0 : isBlockTarget ? 10.0 : 4.5
+        w = Math.max(minW, Math.min(maxX - x, w))
+        h = Math.max(minH, Math.min(maxY - y, h))
+      } else {
+        w = Math.min(w, maxX - minX)
+        h = Math.min(h, maxY - minY)
+        x = Math.max(minX, Math.min(maxX - w, x))
+        y = Math.max(minY, Math.min(maxY - h, y))
+      }
+      return {
+        x: Number(x.toFixed(1)),
+        y: Number(y.toFixed(1)),
+        w: Number(w.toFixed(1)),
+        h: Number(h.toFixed(1)),
+      }
+    }
+
     // Collect all other boxes on this floor + current saved box of the active target
     const siblingBoxes: UnitPlanBox[] = []
+    const blockBoxes: UnitPlanBox[] = []
     let prevValidBox: UnitPlanBox | undefined
     floorUnits.forEach((u, idx) => {
       const b =
@@ -1191,8 +1240,10 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
         prevValidBox = a.box
         return
       }
-      // Block containers enclose units/entrances so they do not act as collision obstacles
-      if (a.kind === 'block') return
+      if (a.kind === 'block') {
+        blockBoxes.push(a.box)
+        return
+      }
       if (!isBlockTarget && !isEntranceTarget) {
         siblingBoxes.push(a.box)
       }
@@ -1201,65 +1252,134 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
     const allObstacles: UnitPlanBox[] = isBlockTarget || isEntranceTarget ? [] : [...siblingBoxes]
     const MIN_GAP = 0.2
 
-    // Standardized Cetvel / Ölçek Snapping (Hafif Mıknatıs Etkisi - Yan Yana ve Üst Üste Eşit Hizada Oturma)
+    // Upgraded Magnet System: Single-item alignment + Pairwise Centering (centering an item under/above/between 2 items)
     if (useRulerSnap) {
-      const RULER_STEP = 0.5
-      const MAGNET_THRESH = 2.2 // Mıknatıs çekim eşiği (yan yana ve üst üste eşit hizalarda tam oturma)
+      const MAGNET_THRESH = 1.05 // Crisp magnet threshold that never yanks across distant edges
 
       if (mode === 'move') {
-        let snappedX = Math.round(x / RULER_STEP) * RULER_STEP
-        let snappedY = Math.round(y / RULER_STEP) * RULER_STEP
+        let snappedX = Number(x.toFixed(1))
+        let snappedY = Number(y.toFixed(1))
         let bestXDist = MAGNET_THRESH
         let bestYDist = MAGNET_THRESH
 
-        siblingBoxes.forEach((sb) => {
-          // X Ekseninde Mıknatıs: Üst üste eşit hizalar veya yan yana bitişik eşit boşluklar
-          const xCandidates = [
-            sb.x,                    // Sol kenar birebir hizada (üst üste eşit hiza)
-            sb.x + sb.w - w,         // Sağ kenar birebir hizada (üst üste eşit hiza)
-            sb.x + (sb.w - w) / 2,   // Tam dikey merkez hizada
-            sb.x + sb.w + 0.4,       // Sağ yanına bitişik standart eşit boşluk (yan yana)
-            sb.x - w - 0.4,          // Sol yanına bitişik standart eşit boşluk (yan yana)
-            sb.x + sb.w + 1.0,       // Sağ yanına 1% boşluk
-            sb.x - w - 1.0,          // Sol yanına 1% boşluk
-          ]
-          xCandidates.forEach((cand) => {
-            const d = Math.abs(x - cand)
-            if (d < bestXDist) {
-              bestXDist = d
-              snappedX = cand
-            }
-          })
+        const xCandidates: { val: number; weight: number }[] = [
+          { val: 50 - w / 2, weight: 0.9 }, // Canvas horizontal center
+        ]
+        const yCandidates: { val: number; weight: number }[] = [
+          { val: 50 - h / 2, weight: 0.9 }, // Canvas vertical center
+        ]
 
-          // Y Ekseninde Mıknatıs: Yan yana eşit hizalar veya üst üste bitişik eşit boşluklar
-          const yCandidates = [
-            sb.y,                    // Üst kenar birebir hizada (yan yana eşit hiza)
-            sb.y + sb.h - h,         // Alt kenar birebir hizada (yan yana eşit hiza)
-            sb.y + (sb.h - h) / 2,   // Tam yatay merkez hizada
-            sb.y + sb.h + 0.4,       // Altına bitişik standart eşit boşluk (üst üste 12 daire için)
-            sb.y - h - 0.4,          // Üstüne bitişik standart eşit boşluk
-            sb.y + sb.h + 1.0,       // Altına 1% boşluk
-            sb.y - h - 1.0,          // Üstüne 1% boşluk
-          ]
-          yCandidates.forEach((cand) => {
-            const d = Math.abs(y - cand)
-            if (d < bestYDist) {
-              bestYDist = d
-              snappedY = cand
+        // Enclosing block centers
+        blockBoxes.forEach((bb) => {
+          xCandidates.push({ val: bb.x + (bb.w - w) / 2, weight: 0.9 })
+          yCandidates.push({ val: bb.y + (bb.h - h) / 2, weight: 0.9 })
+        })
+
+        // 1. Pairwise Centering Candidates (Two elements: center under/above two side-by-side items, or beside two stacked items)
+        for (let i = 0; i < siblingBoxes.length; i++) {
+          for (let j = i + 1; j < siblingBoxes.length; j++) {
+            const sb1 = siblingBoxes[i]
+            const sb2 = siblingBoxes[j]
+
+            // Horizontal pair centers (e.g. centering 1 item under or above 2 items)
+            const pairLeft = Math.min(sb1.x, sb2.x)
+            const pairRight = Math.max(sb1.x + sb1.w, sb2.x + sb2.w)
+            const pairSpanCenterX = (pairLeft + pairRight) / 2
+            const pairMidCenterX = ((sb1.x + sb1.w / 2) + (sb2.x + sb2.w / 2)) / 2
+
+            // Slight priority boost (weight 0.82) so centering under 2 items wins over a nearby single edge
+            xCandidates.push({ val: pairSpanCenterX - w / 2, weight: 0.82 })
+            xCandidates.push({ val: pairMidCenterX - w / 2, weight: 0.82 })
+
+            // Inner gap center between sb1 and sb2
+            const innerLeft = Math.min(sb1.x + sb1.w, sb2.x + sb2.w)
+            const innerRight = Math.max(sb1.x, sb2.x)
+            if (innerRight >= innerLeft - 0.5) {
+              const gapCenterX = (innerLeft + innerRight) / 2
+              xCandidates.push({ val: gapCenterX - w / 2, weight: 0.82 })
             }
-          })
+
+            // Vertical pair centers (e.g. centering 1 item beside 2 vertically stacked items)
+            const pairTop = Math.min(sb1.y, sb2.y)
+            const pairBottom = Math.max(sb1.y + sb1.h, sb2.y + sb2.h)
+            const pairSpanCenterY = (pairTop + pairBottom) / 2
+            const pairMidCenterY = ((sb1.y + sb1.h / 2) + (sb2.y + sb2.h / 2)) / 2
+
+            yCandidates.push({ val: pairSpanCenterY - h / 2, weight: 0.82 })
+            yCandidates.push({ val: pairMidCenterY - h / 2, weight: 0.82 })
+
+            const innerTop = Math.min(sb1.y + sb1.h, sb2.y + sb2.h)
+            const innerBottom = Math.max(sb1.y, sb2.y)
+            if (innerBottom >= innerTop - 0.5) {
+              const gapCenterY = (innerTop + innerBottom) / 2
+              yCandidates.push({ val: gapCenterY - h / 2, weight: 0.82 })
+            }
+          }
+        }
+
+        // 2. Single Sibling Alignment Candidates
+        siblingBoxes.forEach((sb) => {
+          const verticallyOverlaps = y < sb.y + sb.h + 1.0 && y + h > sb.y - 1.0
+          const horizontallyOverlaps = x < sb.x + sb.w + 1.0 && x + w > sb.x - 1.0
+
+          // X alignments: Left edge, Right edge, Center
+          xCandidates.push(
+            { val: sb.x, weight: 1.0 },
+            { val: sb.x + sb.w - w, weight: 1.0 },
+            { val: sb.x + (sb.w - w) / 2, weight: 0.92 }
+          )
+          // Only snap to side-by-side gap when actually on the same horizontal row
+          if (verticallyOverlaps) {
+            xCandidates.push(
+              { val: sb.x + sb.w + 0.5, weight: 1.0 },
+              { val: sb.x - w - 0.5, weight: 1.0 }
+            )
+          }
+
+          // Y alignments: Top edge, Bottom edge, Center
+          yCandidates.push(
+            { val: sb.y, weight: 1.0 },
+            { val: sb.y + sb.h - h, weight: 1.0 },
+            { val: sb.y + (sb.h - h) / 2, weight: 0.92 }
+          )
+          // Only snap to top/bottom stack gap when actually in the same vertical column
+          if (horizontallyOverlaps) {
+            yCandidates.push(
+              { val: sb.y + sb.h + 0.5, weight: 1.0 },
+              { val: sb.y - h - 0.5, weight: 1.0 }
+            )
+          }
+        })
+
+        xCandidates.forEach((cand) => {
+          const rawDist = Math.abs(x - cand.val)
+          const weightedDist = rawDist * cand.weight
+          if (rawDist < MAGNET_THRESH && weightedDist < bestXDist) {
+            bestXDist = weightedDist
+            snappedX = cand.val
+          }
+        })
+
+        yCandidates.forEach((cand) => {
+          const rawDist = Math.abs(y - cand.val)
+          const weightedDist = rawDist * cand.weight
+          if (rawDist < MAGNET_THRESH && weightedDist < bestYDist) {
+            bestYDist = weightedDist
+            snappedY = cand.val
+          }
         })
 
         x = snappedX
         y = snappedY
       } else {
-        let snappedW = Math.round(w / RULER_STEP) * RULER_STEP
-        let snappedH = Math.round(h / RULER_STEP) * RULER_STEP
-        let bestWDist = MAGNET_THRESH
-        let bestHDist = MAGNET_THRESH
+        const MAGNET_RESIZE_THRESH = 1.1
+        let snappedW = Number(w.toFixed(1))
+        let snappedH = Number(h.toFixed(1))
+        let bestWDist = MAGNET_RESIZE_THRESH
+        let bestHDist = MAGNET_RESIZE_THRESH
 
         siblingBoxes.forEach((sb) => {
-          const wCandidates = [sb.w, sb.x + sb.w - x, sb.x - x - 0.4]
+          const wCandidates = [sb.w, sb.x + sb.w - x, sb.x - x - 0.5]
           wCandidates.forEach((cand) => {
             const d = Math.abs(w - cand)
             if (cand >= 4.5 && d < bestWDist) {
@@ -1268,7 +1388,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
             }
           })
 
-          const hCandidates = [sb.h, sb.y + sb.h - y, sb.y - y - 0.4]
+          const hCandidates = [sb.h, sb.y + sb.h - y, sb.y - y - 0.5]
           hCandidates.forEach((cand) => {
             const d = Math.abs(h - cand)
             if (cand >= 5.5 && d < bestHDist) {
@@ -1701,7 +1821,11 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
   useEffect(() => {
     if (!interactionState) return
 
-    const updateSnapGuidesForBox = (box: UnitPlanBox, excludeId: string) => {
+    const updateSnapGuidesForBox = (box: UnitPlanBox, excludeId: string, isFree: boolean) => {
+      if (isFree) {
+        setSnapGuides({ xLines: [], yLines: [] })
+        return
+      }
       const xSet = new Set<number>()
       const ySet = new Set<number>()
       const siblings: UnitPlanBox[] = []
@@ -1714,19 +1838,26 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
       })
       floorAreas.forEach((a) => {
         if (a.id === excludeId) return
+        if (a.kind === 'block') return
         siblings.push(a.box)
       })
 
-      const myXEdges = [box.x, box.x + box.w, box.x + box.w / 2]
-      const myYEdges = [box.y, box.y + box.h, box.y + box.h / 2]
+      const myCenterX = box.x + box.w / 2
+      const myCenterY = box.y + box.h / 2
+      const myXEdges = [box.x, box.x + box.w, myCenterX]
+      const myYEdges = [box.y, box.y + box.h, myCenterY]
 
+      if (Math.abs(myCenterX - 50) <= 0.25) xSet.add(50)
+      if (Math.abs(myCenterY - 50) <= 0.25) ySet.add(50)
+
+      // Single sibling guide lines
       siblings.forEach((sb) => {
         const sbXEdges = [sb.x, sb.x + sb.w, sb.x + sb.w / 2]
         const sbYEdges = [sb.y, sb.y + sb.h, sb.y + sb.h / 2]
 
         myXEdges.forEach((mx) => {
           sbXEdges.forEach((sx) => {
-            if (Math.abs(mx - sx) <= 0.35) {
+            if (Math.abs(mx - sx) <= 0.25) {
               xSet.add(Number(sx.toFixed(1)))
             }
           })
@@ -1734,12 +1865,36 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
 
         myYEdges.forEach((my) => {
           sbYEdges.forEach((sy) => {
-            if (Math.abs(my - sy) <= 0.35) {
+            if (Math.abs(my - sy) <= 0.25) {
               ySet.add(Number(sy.toFixed(1)))
             }
           })
         })
       })
+
+      // Pairwise center guide lines (shows center line when centered under/above/between two items)
+      for (let i = 0; i < siblings.length; i++) {
+        for (let j = i + 1; j < siblings.length; j++) {
+          const sb1 = siblings[i]
+          const sb2 = siblings[j]
+
+          const pairSpanCenterX = (Math.min(sb1.x, sb2.x) + Math.max(sb1.x + sb1.w, sb2.x + sb2.w)) / 2
+          const pairMidCenterX = ((sb1.x + sb1.w / 2) + (sb2.x + sb2.w / 2)) / 2
+          if (Math.abs(myCenterX - pairSpanCenterX) <= 0.25) {
+            xSet.add(Number(pairSpanCenterX.toFixed(1)))
+          } else if (Math.abs(myCenterX - pairMidCenterX) <= 0.25) {
+            xSet.add(Number(pairMidCenterX.toFixed(1)))
+          }
+
+          const pairSpanCenterY = (Math.min(sb1.y, sb2.y) + Math.max(sb1.y + sb1.h, sb2.y + sb2.h)) / 2
+          const pairMidCenterY = ((sb1.y + sb1.h / 2) + (sb2.y + sb2.h / 2)) / 2
+          if (Math.abs(myCenterY - pairSpanCenterY) <= 0.25) {
+            ySet.add(Number(pairSpanCenterY.toFixed(1)))
+          } else if (Math.abs(myCenterY - pairMidCenterY) <= 0.25) {
+            ySet.add(Number(pairMidCenterY.toFixed(1)))
+          }
+        }
+      }
 
       setSnapGuides({
         xLines: Array.from(xSet),
@@ -1747,11 +1902,12 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
       })
     }
 
-    const handleMove = (clientX: number, clientY: number) => {
+    const handleMove = (clientX: number, clientY: number, ctrlHeld = false) => {
       if (!canvasRef.current) return
       const rect = canvasRef.current.getBoundingClientRect()
       if (rect.width <= 0 || rect.height <= 0) return
 
+      const isFree = Boolean(ctrlHeld || isFreeMoveMode || isCtrlPressed)
       const dxPct = ((clientX - interactionState.startX) / rect.width) * 100
       const dyPct = ((clientY - interactionState.startY) / rect.height) * 100
       const init = interactionState.initialBox
@@ -1765,10 +1921,12 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
           },
           'move',
           interactionState.targetId,
-          true
+          !isFree,
+          false,
+          isFree
         )
 
-        updateSnapGuidesForBox(nextBox, interactionState.targetId)
+        updateSnapGuidesForBox(nextBox, interactionState.targetId, isFree)
 
         if (interactionState.targetType === 'unit') {
           projectStore.updateUnitPlanBox(project.id, interactionState.targetId, nextBox)
@@ -1786,7 +1944,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
         }
         onProjectUpdated()
       } else {
-        // Apple Widget Bottom-Right Corner Resize (snapped to ruler scale & prevented from crossing facades)
+        // Apple Widget Bottom-Right Corner Resize
         const nextBox = clampBoxAvoidingFacades(
           {
             ...init,
@@ -1795,10 +1953,12 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
           },
           'resize',
           interactionState.targetId,
-          true
+          !isFree,
+          false,
+          isFree
         )
 
-        updateSnapGuidesForBox(nextBox, interactionState.targetId)
+        updateSnapGuidesForBox(nextBox, interactionState.targetId, isFree)
 
         if (interactionState.targetType === 'unit') {
           const detectedPreset = inferSizePresetFromBox(nextBox)
@@ -1824,7 +1984,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
       }
     }
 
-    const onMouseMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY)
+    const onMouseMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY, e.ctrlKey || e.metaKey)
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length > 0) {
         handleMove(e.touches[0].clientX, e.touches[0].clientY)
@@ -1845,7 +2005,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
       window.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('touchend', onEnd)
     }
-  }, [interactionState, project.id, project.paymentBanner, customFacades, isLayoutEditMode, onProjectUpdated])
+  }, [interactionState, project.id, project.paymentBanner, customFacades, isLayoutEditMode, isFreeMoveMode, isCtrlPressed, onProjectUpdated])
 
   // Render Apple iOS/macOS Widget-style curved bottom-right corner handle
   // Card has rounded-[18px] and border-2 (inner corner radius = 16px, center at 16px from bottom-right).
@@ -2028,11 +2188,39 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
             </button>
           )}
 
-          {/* DÜZENLE / DÜZENLEMEYİ BİTİR Butonu (En Sağda) */}
+          {/* SERBEST MOD (FREE MODE / CTRL) BUTONU */}
+          {(isLayoutEditMode || isCtrlPressed || isFreeMoveMode) && (
+            <button
+              type="button"
+              onClick={() => {
+                const nextFree = !isFreeMoveMode
+                setIsFreeMoveMode(nextFree)
+                if (nextFree && !isLayoutEditMode) {
+                  setIsLayoutEditMode(true)
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                isFreeMoveMode || isCtrlPressed
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
+              }`}
+              title="Ctrl tuşuna basılı tutarak veya bu butonla mıknatısı kapatıp Serbest Taşıma (Free Mod) açabilirsiniz"
+            >
+              <span>{isFreeMoveMode || isCtrlPressed ? 'Serbest Mod (Free): Açık' : 'Mıknatıs Aktif (Ctrl: Free Mod)'}</span>
+            </button>
+          )}
+
+          {/* DÜZENLE / DÜZENLEMEYİ BİTİR Butonu (En Sağda - Ctrl ile basıldığında doğrudan Free Mod ile açılır) */}
           <button
             type="button"
-            onClick={() => {
-              setIsLayoutEditMode(!isLayoutEditMode)
+            onClick={(e) => {
+              const nextMode = !isLayoutEditMode
+              setIsLayoutEditMode(nextMode)
+              if (nextMode && (e.ctrlKey || e.metaKey || isCtrlPressed)) {
+                setIsFreeMoveMode(true)
+              } else if (!nextMode) {
+                setIsFreeMoveMode(false)
+              }
               closeAllEditForms()
               setUnitContextMenu(null)
             }}
@@ -2041,7 +2229,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                 ? 'bg-[#b99881] text-white shadow-sm'
                 : 'bg-[#34302d] text-[#f3efe9] hover:text-white'
             }`}
-            title="Kat planı yerleşimini düzenle"
+            title="Kat planı yerleşimini düzenle (Ctrl'ye basarak tıklarsanız doğrudan Free Mod açılır)"
           >
             {isLayoutEditMode ? (
               <>
@@ -3293,7 +3481,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   : 'bg-white/75 border-2 border-black/25 text-[#292d2b]'
 
                 // Entrances and selected areas are movable; other areas movable in edit mode
-                const canDragThisArea = isLayoutEditMode || isEntrance || isSelectedArea
+                const canDragThisArea = isLayoutEditMode || isCtrlPressed || isFreeMoveMode || isEntrance || isSelectedArea
                 const isVeryNarrowArea = !isBlockArea && area.box.w <= 7.8 && area.box.h > area.box.w * 1.3
                 const isVerticalTextArea =
                   area.textOrientation === 'vertical' ||
@@ -3350,7 +3538,11 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     onMouseDown={(e) => {
                       if (e.button !== 0) return
                       setActiveAreaId(area.id)
-                      if (canDragThisArea) {
+                      if (e.ctrlKey || e.metaKey) {
+                        setIsLayoutEditMode(true)
+                        setIsFreeMoveMode(true)
+                      }
+                      if (canDragThisArea || e.ctrlKey || e.metaKey) {
                         e.stopPropagation()
                         const blockChildren = isBlockArea
                           ? captureBlockChildren(area.id, area.box)
@@ -3394,7 +3586,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     {/* Aktif Taşıma/Boyutlandırma Cetvel Ölçüsü Rozeti */}
                     {isInteractingArea && (
                       <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[#282522] text-[#f3efe9] border border-[#b99881] text-[9px] font-mono font-bold whitespace-nowrap shadow-md z-40 pointer-events-none">
-                        X:{Math.round(area.box.x)} Y:{Math.round(area.box.y)} • {Math.round(area.box.w)}×{Math.round(area.box.h)}
+                        {isFreeMoveMode || isCtrlPressed ? 'Free Mod' : 'Mıknatıs'}: X:{area.box.x.toFixed(1)} Y:{area.box.y.toFixed(1)} • {Math.round(area.box.w)}×{Math.round(area.box.h)}
                       </div>
                     )}
 
@@ -3586,7 +3778,11 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         setActiveUnitId(unit.id)
                         setActiveAreaId(null)
                         if (e.button !== 0) return
-                        if (isLayoutEditMode) {
+                        if (e.ctrlKey || e.metaKey) {
+                          setIsLayoutEditMode(true)
+                          setIsFreeMoveMode(true)
+                        }
+                        if (isLayoutEditMode || isFreeMoveMode || isCtrlPressed || e.ctrlKey || e.metaKey) {
                           e.stopPropagation()
                           setInteractionState({
                             targetType: 'unit',
@@ -3619,7 +3815,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         isUltraShort ? 'rounded-[10px]' : isShortBox ? 'rounded-[13px]' : 'rounded-[16px]'
                       } border-2 transition-colors backdrop-blur-[2px] overflow-hidden ${statusColorClasses} ${
                         isSelected ? 'ring-2 ring-[#5c6ac4] z-20' : 'z-10'
-                      } ${isLayoutEditMode ? 'cursor-move' : 'cursor-pointer'} ${
+                      } ${isLayoutEditMode || isCtrlPressed || isFreeMoveMode ? 'cursor-move' : 'cursor-pointer'} ${
                         isUltraShort
                           ? 'px-1.5 py-0.5'
                           : isVeryNarrowUnit
@@ -3632,7 +3828,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       {/* Aktif Taşıma/Boyutlandırma Cetvel Ölçüsü Rozeti */}
                       {isInteractingUnit && (
                         <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[#282522] text-[#f3efe9] border border-[#b99881] text-[9px] font-mono font-bold whitespace-nowrap shadow-md z-40 pointer-events-none">
-                          Cetvel: X:{Math.round(box.x)} Y:{Math.round(box.y)} • {Math.round(box.w)}×{Math.round(box.h)}
+                          {isFreeMoveMode || isCtrlPressed ? 'Free Mod' : 'Mıknatıs'}: X:{box.x.toFixed(1)} Y:{box.y.toFixed(1)} • {Math.round(box.w)}×{Math.round(box.h)}
                         </div>
                       )}
 
