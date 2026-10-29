@@ -1,11 +1,11 @@
 import { leadStore } from './leadStore'
-import { requestStore, CustomerRequest } from './requestStore'
-import { userStore } from './userStore'
+import { requestStore } from './requestStore'
 import { Lead } from '@/types/lead'
 import { NavPageId } from '@/types/department'
 
 export interface AppNotification {
   id: string
+  childIds?: string[]
   type: 'WEBSITE' | 'LEAD' | 'REQUEST' | 'APPOINTMENT' | 'SYSTEM'
   title: string
   subtitle: string
@@ -17,6 +17,7 @@ export interface AppNotification {
 
 const STORAGE_KEY_LAST_VIEWED = 'demirturk_tabs_last_viewed_v1'
 const STORAGE_KEY_READ_NOTIFS = 'demirturk_read_notification_ids_v1'
+const STORAGE_KEY_DELETED_NOTIFS = 'demirturk_deleted_notification_ids_v1'
 
 type Listener = () => void
 type IncomingListener = (notif: AppNotification) => void
@@ -24,6 +25,7 @@ type IncomingListener = (notif: AppNotification) => void
 class NotificationStore {
   private lastViewedTabs: Record<string, number> = {}
   private readNotifIds: Set<string> = new Set()
+  private deletedNotifIds: Set<string> = new Set()
   private listeners: Set<Listener> = new Set()
   private incomingListeners: Set<IncomingListener> = new Set()
   private customNotifications: AppNotification[] = []
@@ -41,7 +43,6 @@ class NotificationStore {
       if (savedTabs) {
         this.lastViewedTabs = JSON.parse(savedTabs)
       } else {
-        // Default to yesterday so existing open/new items have notification badges initially
         const yesterday = Date.now() - 24 * 60 * 60 * 1000
         this.lastViewedTabs = {
           requests: yesterday,
@@ -54,11 +55,22 @@ class NotificationStore {
       const savedReads = localStorage.getItem(STORAGE_KEY_READ_NOTIFS)
       if (savedReads) {
         const arr = JSON.parse(savedReads)
-        this.readNotifIds = new Set(arr)
+        if (Array.isArray(arr)) {
+          this.readNotifIds = new Set(arr)
+        }
+      }
+
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_NOTIFS)
+      if (savedDeleted) {
+        const arr = JSON.parse(savedDeleted)
+        if (Array.isArray(arr)) {
+          this.deletedNotifIds = new Set(arr)
+        }
       }
     } catch {
       this.lastViewedTabs = {}
       this.readNotifIds = new Set()
+      this.deletedNotifIds = new Set()
     }
   }
 
@@ -68,6 +80,10 @@ class NotificationStore {
       localStorage.setItem(
         STORAGE_KEY_READ_NOTIFS,
         JSON.stringify(Array.from(this.readNotifIds))
+      )
+      localStorage.setItem(
+        STORAGE_KEY_DELETED_NOTIFS,
+        JSON.stringify(Array.from(this.deletedNotifIds))
       )
     } catch (e) {
       console.error('NotificationStore save error:', e)
@@ -115,8 +131,10 @@ class NotificationStore {
     item: Omit<AppNotification, 'id' | 'isRead' | 'createdAt'> & { id?: string }
   ): AppNotification {
     const id = item.id || `notif-sys-${Date.now()}`
+    this.deletedNotifIds.delete(id)
     const notif: AppNotification = {
       id,
+      childIds: item.childIds,
       type: item.type,
       title: item.title,
       subtitle: item.subtitle,
@@ -136,7 +154,6 @@ class NotificationStore {
   }
 
   private initSubscriptions() {
-    // Re-evaluate whenever leads or requests update
     leadStore.subscribe(() => this.notify())
     requestStore.subscribe(() => this.notify())
 
@@ -153,11 +170,13 @@ class NotificationStore {
   public markTabAsViewed(tabId: string) {
     this.lastViewedTabs[tabId] = Date.now()
 
-    // Also mark notifications belonging to this tab as read
     const allNotifs = this.getAllNotifications()
     for (const n of allNotifs) {
-      if (n.targetTab === tabId) {
+      if (n.targetTab === tabId || (tabId === 'portfolio' && n.targetTab === 'customers')) {
         this.readNotifIds.add(n.id)
+        if (n.childIds) {
+          n.childIds.forEach((cid) => this.readNotifIds.add(cid))
+        }
       }
     }
 
@@ -168,7 +187,55 @@ class NotificationStore {
    * Mark a specific notification as read
    */
   public markNotificationAsRead(id: string) {
+    const target = this.getAllNotifications().find((n) => n.id === id)
     this.readNotifIds.add(id)
+    if (target?.childIds) {
+      target.childIds.forEach((cid) => this.readNotifIds.add(cid))
+    }
+    this.saveToStorage()
+  }
+
+  /**
+   * Delete a specific notification
+   */
+  public deleteNotification(id: string) {
+    const target = this.getAllNotifications().find((n) => n.id === id)
+    this.deletedNotifIds.add(id)
+    this.readNotifIds.add(id)
+    if (target?.childIds) {
+      target.childIds.forEach((cid) => {
+        this.deletedNotifIds.add(cid)
+        this.readNotifIds.add(cid)
+      })
+    }
+    this.customNotifications = this.customNotifications.filter((c) => c.id !== id)
+    this.saveToStorage()
+  }
+
+  /**
+   * Delete all notifications
+   */
+  public deleteAllNotifications() {
+    const now = Date.now()
+    this.lastViewedTabs['requests'] = now
+    this.lastViewedTabs['customers'] = now
+    this.lastViewedTabs['portfolio'] = now
+    this.lastViewedTabs['crm'] = now
+    this.lastViewedTabs['appointments'] = now
+    this.lastViewedTabs['followups-appointments'] = now
+
+    const allNotifs = this.getAllNotifications()
+    for (const n of allNotifs) {
+      this.deletedNotifIds.add(n.id)
+      this.readNotifIds.add(n.id)
+      if (n.childIds) {
+        n.childIds.forEach((cid) => {
+          this.deletedNotifIds.add(cid)
+          this.readNotifIds.add(cid)
+        })
+      }
+    }
+    this.customNotifications = []
     this.saveToStorage()
   }
 
@@ -179,6 +246,7 @@ class NotificationStore {
     const now = Date.now()
     this.lastViewedTabs['requests'] = now
     this.lastViewedTabs['customers'] = now
+    this.lastViewedTabs['portfolio'] = now
     this.lastViewedTabs['crm'] = now
     this.lastViewedTabs['appointments'] = now
     this.lastViewedTabs['followups-appointments'] = now
@@ -186,6 +254,9 @@ class NotificationStore {
     const allNotifs = this.getAllNotifications()
     for (const n of allNotifs) {
       this.readNotifIds.add(n.id)
+      if (n.childIds) {
+        n.childIds.forEach((cid) => this.readNotifIds.add(cid))
+      }
     }
 
     this.saveToStorage()
@@ -195,82 +266,49 @@ class NotificationStore {
    * Calculate unread / unviewed badge count for a specific navigation tab
    */
   public getUnreadCountForTab(tabId: string): number {
-    const lastViewed = this.lastViewedTabs[tabId] || 0
-
-    if (tabId === 'requests') {
-      // 1. Unviewed website leads
-      const allLeads = leadStore.getAllRaw()
-      let unreadWebLeads = 0
-      for (const l of allLeads) {
-        const isWeb =
-          l.source === 'WEBSITE' ||
-          l.channel?.toLowerCase().includes('web') ||
-          l.tags?.some((t) => t.toLowerCase().includes('web'))
-        if (isWeb) {
-          const t = new Date(l.createdAt).getTime()
-          if (t > lastViewed && l.stage === 'NEW') {
-            unreadWebLeads++
-          }
-        }
-      }
-
-      // 2. Unviewed customer requests
-      const allReqs = requestStore.getAll()
-      let unreadReqs = 0
-      for (const r of allReqs) {
-        const t = new Date(r.createdAt).getTime()
-        if (t > lastViewed && r.status === 'Açık') {
-          unreadReqs++
-        }
-      }
-
-      return unreadWebLeads + unreadReqs
-    }
-
+    const notifs = this.getAllNotifications()
     if (tabId === 'customers' || tabId === 'portfolio') {
-      // Unviewed leads (stage === 'NEW' created after lastViewed)
-      const allLeads = leadStore.getAllRaw()
-      let count = 0
-      for (const l of allLeads) {
-        if (l.stage === 'NEW') {
-          const t = new Date(l.createdAt).getTime()
-          if (t > lastViewed) {
-            count++
-          }
-        }
-      }
-      return count
+      return notifs.filter((n) => !n.isRead && (n.targetTab === 'customers' || n.targetTab === 'portfolio')).length
     }
-
-    if (tabId === 'crm') {
-      // In Satış CRM: unviewed website submissions or qualified leads assigned
-      const allLeads = leadStore.getAllRaw()
-      let count = 0
-      for (const l of allLeads) {
-        const isWeb = l.source === 'WEBSITE'
-        if (isWeb && l.stage === 'NEW') {
-          const t = new Date(l.createdAt).getTime()
-          if (t > lastViewed) count++
-        }
-      }
-      return count
-    }
-
-    return 0
+    return notifs.filter((n) => !n.isRead && n.targetTab === tabId).length
   }
 
   /**
-   * Returns all dynamic notifications sorted newest first
+   * Extracts the system addition timestamp (ms) of a lead so bulk imports are grouped together
+   */
+  private getLeadAddedTimeMs(lead: Lead): number {
+    const idMatch = String(lead.id || '').match(/^lead-(?:web-)?(\d{12,14})-/)
+    if (idMatch) {
+      const ms = Number(idMatch[1])
+      if (!isNaN(ms) && ms > 0) return ms
+    }
+    if (Array.isArray(lead.inquiries) && lead.inquiries.length > 0 && lead.inquiries[0]?.createdAt) {
+      const ms = new Date(lead.inquiries[0].createdAt).getTime()
+      if (!isNaN(ms) && ms > 0) return ms
+    }
+    const ms = new Date(lead.createdAt || lead.updatedAt || 0).getTime()
+    return !isNaN(ms) ? ms : 0
+  }
+
+  /**
+   * Returns all dynamic notifications sorted newest first.
+   * Multiple leads added together (bulk/CSV import) are grouped into a single
+   * "... yeni potansiyel müşteri eklendi" notification.
    */
   public getAllNotifications(): AppNotification[] {
-    const list: AppNotification[] = this.customNotifications.map((c) => ({
-      ...c,
-      isRead: this.readNotifIds.has(c.id),
-    }))
+    const list: AppNotification[] = this.customNotifications
+      .filter((c) => !this.deletedNotifIds.has(c.id))
+      .map((c) => ({
+        ...c,
+        isRead: this.readNotifIds.has(c.id),
+      }))
+
     const allLeads = leadStore.getAllRaw()
     const allReqs = requestStore.getAll()
 
-    // 1. Website submissions from leads
+    const newPotentialLeads: { lead: Lead; addedMs: number }[] = []
+
+    // 1. Separate Website submissions and New potential leads
     for (const lead of allLeads) {
       const isWeb =
         lead.source === 'WEBSITE' ||
@@ -279,6 +317,7 @@ class NotificationStore {
 
       if (isWeb) {
         const notifId = `notif-web-${lead.id}`
+        if (this.deletedNotifIds.has(notifId)) continue
         list.push({
           id: notifId,
           type: 'WEBSITE',
@@ -292,7 +331,39 @@ class NotificationStore {
           createdAt: lead.createdAt,
         })
       } else if (lead.stage === 'NEW') {
+        const singleId = `notif-lead-${lead.id}`
+        if (this.deletedNotifIds.has(singleId)) continue
+        newPotentialLeads.push({
+          lead,
+          addedMs: this.getLeadAddedTimeMs(lead),
+        })
+      }
+    }
+
+    // Group newPotentialLeads by addition time window (within 2 minutes = same bulk import/sync batch)
+    newPotentialLeads.sort((a, b) => b.addedMs - a.addedMs)
+    const batches: { lead: Lead; addedMs: number }[][] = []
+    const BATCH_WINDOW_MS = 2 * 60 * 1000
+
+    for (const item of newPotentialLeads) {
+      const currentBatch = batches[batches.length - 1]
+      if (!currentBatch) {
+        batches.push([item])
+      } else {
+        const prevAddedMs = currentBatch[currentBatch.length - 1].addedMs
+        if (Math.abs(prevAddedMs - item.addedMs) <= BATCH_WINDOW_MS) {
+          currentBatch.push(item)
+        } else {
+          batches.push([item])
+        }
+      }
+    }
+
+    for (const batch of batches) {
+      if (batch.length === 1) {
+        const { lead, addedMs } = batch[0]
         const notifId = `notif-lead-${lead.id}`
+        if (this.deletedNotifIds.has(notifId)) continue
         list.push({
           id: notifId,
           type: 'LEAD',
@@ -301,7 +372,41 @@ class NotificationStore {
           targetTab: 'customers',
           referenceId: lead.id,
           isRead: this.readNotifIds.has(notifId),
-          createdAt: lead.createdAt,
+          createdAt: addedMs > 0 ? new Date(addedMs).toISOString() : lead.createdAt,
+        })
+      } else if (batch.length > 1) {
+        const childIds = batch.map((b) => `notif-lead-${b.lead.id}`)
+        const batchId = `notif-lead-batch-${batch[0].lead.id}`
+        if (
+          this.deletedNotifIds.has(batchId) ||
+          childIds.every((cid) => this.deletedNotifIds.has(cid))
+        ) {
+          continue
+        }
+        const isRead =
+          this.readNotifIds.has(batchId) ||
+          childIds.every((cid) => this.readNotifIds.has(cid))
+        const latestAddedMs = batch[0].addedMs
+        const uniqueForms = Array.from(
+          new Set(batch.map((b) => b.lead.formName || 'Meta Ads Formu').filter(Boolean))
+        )
+        const formText =
+          uniqueForms.length <= 2
+            ? uniqueForms.join(', ')
+            : `${uniqueForms.slice(0, 2).join(', ')} ve +${uniqueForms.length - 2} form`
+
+        list.push({
+          id: batchId,
+          childIds,
+          type: 'LEAD',
+          title: `${batch.length} yeni potansiyel müşteri eklendi`,
+          subtitle: `${formText} • Toplu müşteri aktarımı`,
+          targetTab: 'customers',
+          isRead,
+          createdAt:
+            latestAddedMs > 0
+              ? new Date(latestAddedMs).toISOString()
+              : batch[0].lead.createdAt,
         })
       }
     }
@@ -312,6 +417,7 @@ class NotificationStore {
         req.id.startsWith('req-web-') ||
         req.subject.toLowerCase().includes('web')
       const notifId = `notif-req-${req.id}`
+      if (this.deletedNotifIds.has(notifId)) continue
 
       list.push({
         id: notifId,

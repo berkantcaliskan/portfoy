@@ -48,10 +48,11 @@ class LeadStore {
       window.addEventListener('demirturk:cloud-db-synced', () => {
         const prevIds = new Set(this.leads.map((l) => l.id))
         this.reloadFromCloudMirror()
-        for (const l of this.leads) {
-          if (!prevIds.has(l.id)) {
-            this.triggerNewLeadAlert(l)
-          }
+        const newLeads = this.leads.filter((l) => !prevIds.has(l.id))
+        if (newLeads.length === 1) {
+          this.triggerNewLeadAlert(newLeads[0])
+        } else if (newLeads.length > 1) {
+          this.triggerBulkLeadAlert(newLeads)
         }
         this.notify()
       })
@@ -317,12 +318,32 @@ class LeadStore {
 
     this.leads = merged
     this.activities = mergedActivities
+    this.repairMetaCsvLeads()
     this.ensureSequentialNumbersForLeads()
     try {
       localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(this.leads))
       localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(this.activities))
     } catch {}
     this.notify()
+  }
+
+  private triggerBulkLeadAlert(leads: Lead[]) {
+    if (!leads || leads.length === 0) return
+    playNewLeadChime()
+    if (typeof window !== "undefined") {
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification(`${leads.length} yeni potansiyel müşteri eklendi`, {
+            body: "Toplu müşteri aktarımı başarıyla tamamlandı.",
+            icon: "/icon.png",
+          })
+        } catch {}
+      }
+    }
+  }
+
+  public flushSave() {
+    this.saveToStorage()
   }
 
   private triggerNewLeadAlert(lead: Lead) {
@@ -470,6 +491,7 @@ class LeadStore {
       return l
     })
 
+    this.repairMetaCsvLeads()
     this.ensureSequentialNumbersForLeads()
 
     try {
@@ -707,25 +729,28 @@ class LeadStore {
    * Prevents duplicate customer records when multiple inquiries are submitted.
    * Preserves previous campaign and inquiry history.
    */
-  public addOrMergeInquiry(data: {
-    fullName: string
-    phone: string
-    secondaryPhone?: string
-    whatsappPhone?: string
-    email?: string
-    source?: Lead['source']
-    formName: string
-    campaignName?: string
-    channel?: string
-    metaLeadgenId?: string
-    budget?: number
-    preferredHousingType?: string
-    notes?: string
-    owner?: string
-    aiSuggestion?: string
-    metaAnswers?: { question: string; answer: string }[]
-    createdAt?: string
-  }): { lead: Lead; isNewCustomer: boolean } {
+  public addOrMergeInquiry(
+    data: {
+      fullName: string
+      phone: string
+      secondaryPhone?: string
+      whatsappPhone?: string
+      email?: string
+      source?: Lead['source']
+      formName: string
+      campaignName?: string
+      channel?: string
+      metaLeadgenId?: string
+      budget?: number
+      preferredHousingType?: string
+      notes?: string
+      owner?: string
+      aiSuggestion?: string
+      metaAnswers?: { question: string; answer: string }[]
+      createdAt?: string
+    },
+    options?: { skipSave?: boolean }
+  ): { lead: Lead; isNewCustomer: boolean } {
     const cleanPhone = cleanPhoneNumber(data.phone)
     const existingIndex = this.leads.findIndex(
       (l) => cleanPhoneNumber(l.phone) === cleanPhone || (cleanPhone.length > 7 && cleanPhoneNumber(l.phone).endsWith(cleanPhone.slice(-7)))
@@ -772,7 +797,9 @@ class LeadStore {
         `Müşteriden yeni başvuru alındı. Kampanya/Form: ${data.formName}`,
         'Sistem'
       )
-      this.saveToStorage()
+      if (!options?.skipSave) {
+        this.saveToStorage()
+      }
       syncService.saveLead(updatedLead)
       return { lead: updatedLead, isNewCustomer: false }
     }
@@ -873,7 +900,9 @@ class LeadStore {
         'Sistem'
       )
     }
-    this.saveToStorage()
+    if (!options?.skipSave) {
+      this.saveToStorage()
+    }
     syncService.saveLead(newLead)
     try {
       const cfg = metaStore.getConfig()

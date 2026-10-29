@@ -3,11 +3,11 @@ import {
   Bell,
   Globe,
   User,
+  Users,
   AlertCircle,
-  Calendar,
   CheckCheck,
-  ExternalLink,
   X,
+  Trash2,
   ChevronRight,
 } from 'lucide-react'
 import {
@@ -63,44 +63,65 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
     notificationStore.markAllAsRead()
   }
 
+  const handleDeleteNotification = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    notificationStore.deleteNotification(id)
+  }
+
+  const handleDeleteAll = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    notificationStore.deleteAllNotifications()
+  }
+
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className="dropdown-panel dropdown-panel-down fixed md:absolute right-3.5 md:right-0 top-16 md:top-full md:mt-2.5 w-[calc(100vw-28px)] md:w-96 max-w-sm rounded-[26px] bg-[#282522] border border-[#4a443f] shadow-2xl p-4 z-[70] backdrop-blur-2xl space-y-3"
+      className="dropdown-panel dropdown-panel-down fixed md:absolute right-3.5 md:right-0 top-16 md:top-full md:mt-2.5 w-[calc(100vw-28px)] md:w-[420px] max-w-[420px] rounded-[26px] bg-[#282522] border border-[#4a443f] shadow-2xl p-4 z-[70] backdrop-blur-2xl space-y-3"
       style={{
         boxShadow:
           '0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(185, 152, 129, 0.35)',
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-1">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-[#b99881]/20 border border-[#b99881]/40 flex items-center justify-center text-[#dfb76c]">
+      <div className="flex items-center justify-between gap-2 pb-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-xl bg-[#b99881]/20 border border-[#b99881]/40 flex items-center justify-center text-[#dfb76c] shrink-0">
             <Bell className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-bold text-white">Bildirimler</span>
-              {unreadCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#b99881] text-[#282522]">
-                  {unreadCount}
-                </span>
-              )}
-            </div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-sm font-bold text-white truncate">Bildirimler</span>
+            {unreadCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#b99881] text-[#282522] shrink-0">
+                {unreadCount}
+              </span>
+            )}
           </div>
         </div>
 
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={handleMarkAllRead}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[11px] font-semibold text-[#d6beae] hover:text-white transition-colors cursor-pointer"
-            title="Tümünü Okundu İşaretle"
-          >
-            <CheckCheck className="w-3 h-3 text-[#b99881]" />
-            <span>Tümünü Okundu Say</span>
-          </button>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={handleMarkAllRead}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[11px] font-semibold text-[#d6beae] hover:text-white transition-colors cursor-pointer"
+              title="Tümünü Okundu İşaretle"
+            >
+              <CheckCheck className="w-3 h-3 text-[#b99881]" />
+              <span>Tümünü Okundu Say</span>
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteAll}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-[11px] font-semibold text-rose-500 hover:text-rose-600 transition-colors cursor-pointer"
+              title="Tüm Bildirimleri Sil"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Tümünü Sil</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Notifications List */}
@@ -114,6 +135,7 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
         ) : (
           notifications.map((n) => {
             const timeAgo = formatTimeAgo(n.createdAt)
+            const isBulkLead = n.type === 'LEAD' && n.childIds && n.childIds.length > 1
             return (
               <div
                 key={n.id}
@@ -136,6 +158,8 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
                 >
                   {n.type === 'WEBSITE' ? (
                     <Globe className="w-4 h-4" />
+                  ) : isBulkLead ? (
+                    <Users className="w-4 h-4" />
                   ) : n.type === 'LEAD' ? (
                     <User className="w-4 h-4" />
                   ) : (
@@ -145,13 +169,23 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center justify-between gap-1.5">
                     <span className="text-xs font-bold text-white truncate block">
                       {n.title}
                     </span>
-                    <span className="text-[10px] text-[#8c857f] shrink-0 font-medium">
-                      {timeAgo}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] text-[#8c857f] font-medium">
+                        {timeAgo}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteNotification(e, n.id)}
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[#8c857f] hover:text-rose-500 hover:bg-rose-500/15 transition-colors cursor-pointer"
+                        title="Bildirimi Sil"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   <p className="text-[11px] text-[#a69f99] truncate mt-0.5 leading-snug">

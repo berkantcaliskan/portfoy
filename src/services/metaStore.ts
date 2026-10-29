@@ -1040,7 +1040,7 @@ class MetaStore {
             preferredHousingType: preferredHousingType || undefined,
             metaAnswers: metaAnswers.length > 0 ? metaAnswers : undefined,
             createdAt: createdIso,
-          })
+          }, { skipSave: true })
 
           if (intake.isNewCustomer) {
             newCount++
@@ -1050,6 +1050,9 @@ class MetaStore {
         }
       }
 
+      if (newCount > 0 || mergedCount > 0) {
+        leadStore.flushSave()
+      }
       this.notify()
       return { newCount, mergedCount }
     } catch (err: any) {
@@ -1127,7 +1130,7 @@ class MetaStore {
 
         if (hl === 'id' || hl === 'lead_id') {
           leadId = val.replace(/^l:/i, '').trim()
-        } else if (hl.includes('created_time') || hl.includes('tarih')) {
+        } else if (hl.includes('created_time') || hl.includes('tarih') || hl.includes('oluşturul') || hl.includes('olusturul')) {
           createdTime = val
         } else if (hl.includes('form_name') || hl === 'form') {
           formName = val
@@ -1138,6 +1141,10 @@ class MetaStore {
           hl.includes('ad_soyad') ||
           hl.includes('isim') ||
           hl === 'name' ||
+          hl === 'adı' ||
+          hl === 'adi' ||
+          hl === 'ad' ||
+          hl === 'ad soyad' ||
           hl.includes('adınız')
         ) {
           fullName = fullName ? `${fullName} ${val}` : val
@@ -1189,7 +1196,7 @@ class MetaStore {
         preferredHousingType: preferredHousingType || undefined,
         metaAnswers: metaAnswers.length > 0 ? metaAnswers : undefined,
         createdAt: validDate.toISOString(),
-      })
+      }, { skipSave: true })
 
       if (res.isNewCustomer) {
         newCount++
@@ -1198,6 +1205,9 @@ class MetaStore {
       }
     }
 
+    if (newCount > 0 || mergedCount > 0) {
+      leadStore.flushSave()
+    }
     return { newCount, mergedCount }
   }
 }

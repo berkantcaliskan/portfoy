@@ -166,27 +166,6 @@ export function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
   }, [])
 
-  // Listen for realtime new incoming leads and push to notification preview
-  useEffect(() => {
-    const handleNewLeadEvent = (e: any) => {
-      const incoming = e.detail as Lead
-      if (incoming) {
-        notificationStore.pushNotification({
-          id: `lead-incoming-${incoming.id}`,
-          type: 'LEAD',
-          title: `Yeni Başvuru: ${incoming.fullName}`,
-          subtitle: `${incoming.formName || 'Meta Lead Ads'} • ${formatPhoneNumber(incoming.phone)}${
-            incoming.preferredHousingType ? ` • ${incoming.preferredHousingType}` : ''
-          }`,
-          targetTab: 'customers',
-          referenceId: incoming.id,
-        })
-      }
-    }
-    window.addEventListener('demirturk:new-lead', handleNewLeadEvent)
-    return () => window.removeEventListener('demirturk:new-lead', handleNewLeadEvent)
-  }, [])
-
   // Subscriptions to stores & initial theme sync
   useEffect(() => {
     try {

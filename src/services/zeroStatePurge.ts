@@ -49,6 +49,7 @@ const LOCAL_MACHINE_ONLY_KEYS = new Set([
   'demirturk_tabs_last_viewed_v1',
   'demirturk_team_presence_v1',
   'demirturk_read_notification_ids_v1',
+  'demirturk_deleted_notification_ids_v1',
   'demirturk_company_lead_seq_v1',
   'demirturk_company_lead_map_v1',
   'demirturk_last_assigned_mt_idx',
@@ -143,10 +144,14 @@ function mergeJsonArrayStrings(
     const baseArrRaw = baseStr ? JSON.parse(baseStr) : []
     const incArrRaw = incomingStr ? JSON.parse(incomingStr) : []
     const baseArr = Array.isArray(baseArrRaw)
-      ? baseArrRaw.filter((item, i) => !isItemDeleted(item, i, key, deletedSet))
+      ? baseArrRaw
+          .filter((item, i) => !isItemDeleted(item, i, key, deletedSet))
+          .map((item) => (key === 'demirturk_leads_v2' ? repairLeadForSync(item) : item))
       : []
     const incArr = Array.isArray(incArrRaw)
-      ? incArrRaw.filter((item, i) => !isItemDeleted(item, i, key, deletedSet))
+      ? incArrRaw
+          .filter((item, i) => !isItemDeleted(item, i, key, deletedSet))
+          .map((item) => (key === 'demirturk_leads_v2' ? repairLeadForSync(item) : item))
       : []
 
     const byKey = new Map<string, any>()
