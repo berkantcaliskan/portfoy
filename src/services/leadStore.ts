@@ -1212,7 +1212,12 @@ class LeadStore {
   }
 
   public updateStage(id: string, newStage: LeadStage, changedByUser?: AppUser | null): void {
-    const isQual = newStage === 'QUALIFIED' ? true : newStage === 'LOST' ? false : undefined
+    const isQual =
+      newStage === 'QUALIFIED'
+        ? true
+        : newStage === 'LOST' || newStage === 'NO_INTENT' || newStage === 'NEW' || newStage === 'CONTACTED'
+        ? false
+        : undefined
     this.update(
       id,
       {

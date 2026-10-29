@@ -409,20 +409,41 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     } else if (filterStage === 'CHANNEL_WEB') {
       if (!isWebLead(l)) return false
     } else if (filterStage === 'UNCONTACTED') {
-      // Yalnızca 3 Ekim ve sonrası iletişim kurulmamış (yeni) olanlar
-      if (l.stage !== 'NEW') return false
-      const leadTime = new Date(l.createdAt).getTime()
-      const oct3Start = new Date('2026-10-02T21:00:00.000Z').getTime()
-      if (leadTime < oct3Start) return false
+      // İletişim: 3 Ekim ve sonrası yeni (NEW) veya İletişim (CONTACTED / UNDECIDED) aşamasındakiler (Potansiyel olmayanlar hariç)
+      if (l.callStatus === 'NO_INTENT') return false
+      const isNewAfterOct3 =
+        l.stage === 'NEW' &&
+        new Date(l.createdAt).getTime() >= new Date('2026-10-02T21:00:00.000Z').getTime()
+      const isContactedStage = l.stage === 'CONTACTED' || l.stage === 'UNDECIDED'
+      if (!isNewAfterOct3 && !isContactedStage) return false
     } else if (filterStage === 'QUALIFIED') {
-      // Yalnızca nitelikli olduğu belirtilenler
-      if (!l.isQualified && l.stage !== 'QUALIFIED') return false
-    } else if (filterStage === 'ASSIGNED') {
-      // Satışa atananlar
-      if (!l.assignedToUserId) return false
+      // Nitelikli
+      const isQual =
+        l.stage === 'QUALIFIED' ||
+        (Boolean(l.isQualified) &&
+          l.stage !== 'OFFER' &&
+          l.stage !== 'APPOINTMENT' &&
+          l.stage !== 'PRESENTATION' &&
+          l.stage !== 'WON' &&
+          l.stage !== 'LOST' &&
+          l.stage !== 'NO_INTENT')
+      if (!isQual) return false
+    } else if (filterStage === 'OFFER') {
+      // Teklif (OFFER / APPOINTMENT / PRESENTATION)
+      if (l.stage !== 'OFFER' && l.stage !== 'APPOINTMENT' && l.stage !== 'PRESENTATION') {
+        return false
+      }
     } else if (filterStage === 'CONVERTED') {
       // Dönüşüm (Satış olanlar)
       if (l.stage !== 'WON') return false
+    } else if (filterStage === 'OTHER') {
+      // Diğer (Potansiyel olmayanlar: LOST / NO_INTENT)
+      if (l.stage !== 'LOST' && l.stage !== 'NO_INTENT' && l.callStatus !== 'NO_INTENT') {
+        return false
+      }
+    } else if (filterStage === 'ASSIGNED') {
+      // Satışa atananlar
+      if (!l.assignedToUserId) return false
     } else if (filterStage.startsWith('custom-')) {
       const customTab = customTabs.find((t) => t.id === filterStage)
       if (customTab) {
@@ -567,14 +588,33 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     leadStore.verifyAiEvaluation(lead.id, currentUser, true)
   }
 
-  // Counts for tabs (İletişimde shows only active 3 Ekim and onwards leads)
+  // Counts for tabs
   const oct3Start = new Date('2026-10-02T21:00:00.000Z').getTime()
   const uncontactedCount = dateFilteredLeads.filter(
-    (l) => l.stage === 'NEW' && new Date(l.createdAt).getTime() >= oct3Start
+    (l) =>
+      l.callStatus !== 'NO_INTENT' &&
+      ((l.stage === 'NEW' && new Date(l.createdAt).getTime() >= oct3Start) ||
+        l.stage === 'CONTACTED' ||
+        l.stage === 'UNDECIDED')
   ).length
-  const qualifiedCount = dateFilteredLeads.filter((l) => l.isQualified || l.stage === 'QUALIFIED').length
-  const assignedCount = dateFilteredLeads.filter((l) => Boolean(l.assignedToUserId)).length
+  const qualifiedCount = dateFilteredLeads.filter(
+    (l) =>
+      l.stage === 'QUALIFIED' ||
+      (Boolean(l.isQualified) &&
+        l.stage !== 'OFFER' &&
+        l.stage !== 'APPOINTMENT' &&
+        l.stage !== 'PRESENTATION' &&
+        l.stage !== 'WON' &&
+        l.stage !== 'LOST' &&
+        l.stage !== 'NO_INTENT')
+  ).length
+  const offerCount = dateFilteredLeads.filter(
+    (l) => l.stage === 'OFFER' || l.stage === 'APPOINTMENT' || l.stage === 'PRESENTATION'
+  ).length
   const convertedCount = dateFilteredLeads.filter((l) => l.stage === 'WON').length
+  const otherCount = dateFilteredLeads.filter(
+    (l) => l.stage === 'LOST' || l.stage === 'NO_INTENT' || l.callStatus === 'NO_INTENT'
+  ).length
 
   return (
     <div className="space-y-6">
@@ -729,9 +769,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             </button>
           </div>
         ) : (
-          /* MÜŞTERİ İLİŞKİLERİ SEKMELERİ: İletişimde (Varsayılan) -> Nitelikli -> Satışa Atanan -> Dönüşüm -> Tümü -> Custom Tabs -> [+] */
+          /* MÜŞTERİ İLİŞKİLERİ SEKMELERİ: İletişim (Varsayılan) -> Nitelikli -> Teklif -> Dönüşüm -> Diğer (Potansiyel Olmayanlar) -> Tümü -> Custom Tabs -> [+] */
           <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-            {/* 1. Sekme: İletişimde (Yalnızca iletişim kurulmamış olanlar - NEW) */}
+            {/* 1. Sekme: İletişim */}
             <button
               onClick={() => setFilterStage('UNCONTACTED')}
               className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
@@ -740,10 +780,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
               }`}
             >
-              İletişimde ({uncontactedCount})
+              İletişim ({uncontactedCount})
             </button>
 
-            {/* 2. Sekme: Nitelikli (Yalnızca nitelikli olduğu belirtilenler) */}
+            {/* 2. Sekme: Nitelikli */}
             <button
               onClick={() => setFilterStage('QUALIFIED')}
               className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
@@ -755,19 +795,19 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               Nitelikli ({qualifiedCount})
             </button>
 
-            {/* 3. Sekme: Satışa Atanan */}
+            {/* 3. Sekme: Teklif */}
             <button
-              onClick={() => setFilterStage('ASSIGNED')}
+              onClick={() => setFilterStage('OFFER')}
               className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'ASSIGNED'
+                filterStage === 'OFFER'
                   ? 'bg-[#b99881] text-white font-semibold border border-white/10'
                   : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
               }`}
             >
-              Satışa Atanan ({assignedCount})
+              Teklif ({offerCount})
             </button>
 
-            {/* 4. Sekme: Dönüşüm (Satış Olanlar) */}
+            {/* 4. Sekme: Dönüşüm */}
             <button
               onClick={() => setFilterStage('CONVERTED')}
               className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
@@ -779,7 +819,20 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               Dönüşüm ({convertedCount})
             </button>
 
-            {/* 5. Sekme: Tümü */}
+            {/* 5. Sekme: Diğer (Potansiyel Olmayanlar) */}
+            <button
+              onClick={() => setFilterStage('OTHER')}
+              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'OTHER'
+                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
+                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              }`}
+              title="Potansiyel olmayan (Potansiyel Değil / Satın alma niyeti yok) kayıtlar"
+            >
+              Diğer ({otherCount})
+            </button>
+
+            {/* 6. Sekme: Tümü */}
             <button
               onClick={() => setFilterStage('ALL')}
               className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
