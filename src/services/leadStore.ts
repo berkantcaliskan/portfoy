@@ -820,6 +820,7 @@ class LeadStore {
     const isMetaLead =
       !data.source ||
       data.source === 'META_ADS' ||
+      data.source === 'GOOGLE_ADS' ||
       data.source === 'INSTAGRAM' ||
       data.source === 'FACEBOOK' ||
       Boolean(data.metaLeadgenId)

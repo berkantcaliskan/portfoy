@@ -123,7 +123,7 @@ export const STAGE_CONFIGS: Record<LeadStage, StageConfig> = {
   },
 }
 
-export type LeadSource = 'META_ADS' | 'INSTAGRAM' | 'FACEBOOK' | 'REFERRAL' | 'DIRECT' | 'WEBSITE' | 'WHATSAPP'
+export type LeadSource = 'META_ADS' | 'GOOGLE_ADS' | 'INSTAGRAM' | 'FACEBOOK' | 'REFERRAL' | 'DIRECT' | 'WEBSITE' | 'WHATSAPP'
 
 export interface MetaAnswer {
   question: string

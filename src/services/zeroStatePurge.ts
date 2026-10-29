@@ -28,6 +28,8 @@ const ARRAY_MERGE_KEYS = new Set([
   'demirturk_creative_schedule_v1',
   'demirturk_creative_comments_v1',
   'demirturk_creative_briefs_v1',
+  'demirturk_google_ads_campaigns_v1',
+  'demirturk_google_conversion_logs_v1',
 ])
 
 const OBJECT_MAP_MERGE_KEYS = new Set([
@@ -37,7 +39,7 @@ const OBJECT_MAP_MERGE_KEYS = new Set([
 // Only genuine shared business data keys trigger a cloud push to GitHub
 function isCloudSyncedBusinessKey(key: string): boolean {
   if (ARRAY_MERGE_KEYS.has(key) || OBJECT_MAP_MERGE_KEYS.has(key)) return true
-  if (key === 'demirturk_meta_api_config') return true
+  if (key === 'demirturk_meta_api_config' || key === 'demirturk_google_ads_config') return true
   if (key.startsWith('demirturk_avatar_')) return true
   if (key.startsWith('demirturk_calendar_')) return true
   return false
