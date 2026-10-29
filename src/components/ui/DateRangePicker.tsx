@@ -221,14 +221,12 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
     // Case 3: Range [startDate, endDate] is already active
     if (startDate && endDate) {
-      if (isSameDay(startDate, normalized)) {
-        // Clicked start date -> select other date (endDate)
-        onChange({ startDate: new Date(endDate), endDate: null, presetKey: 'CUSTOM', presetLabel: 'Özel Aralık' })
-      } else if (isSameDay(endDate, normalized)) {
-        // Clicked end date -> select other date (startDate)
-        onChange({ startDate: new Date(startDate), endDate: null, presetKey: 'CUSTOM', presetLabel: 'Özel Aralık' })
+      if (isSameDay(startDate, endDate) && isSameDay(startDate, normalized)) {
+        // Single-day range clicked again -> clears selection
+        onChange({ startDate: null, endDate: null, presetKey: 'ALL', presetLabel: 'Tümü' })
       } else {
-        // Clicked a different date -> start new range
+        // Any date clicked while a multi-day range is active (including clicking the 2nd selected date again)
+        // moves the start date to the clicked date
         onChange({ startDate: normalized, endDate: null, presetKey: 'CUSTOM', presetLabel: 'Özel Aralık' })
       }
     }
