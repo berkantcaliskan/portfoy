@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import React, { useState, useEffect } from 'react'
 import {
   Palette,
@@ -376,9 +377,9 @@ export function CreativesGalleryView() {
       </div>
 
       {/* Selected Creative Detail & Comments Modal */}
-      {selectedCreative && (
+      {selectedCreative && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setSelectedCreativeId(null)}
         >
           <div
@@ -620,13 +621,14 @@ export function CreativesGalleryView() {
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Create New Creative Modal */}
-      {showCreateModal && (
+      {showCreateModal && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setShowCreateModal(false)}
         >
           <div
@@ -805,7 +807,8 @@ export function CreativesGalleryView() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

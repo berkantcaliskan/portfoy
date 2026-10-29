@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import React, { useState, useEffect } from 'react'
 import {
   FileText,
@@ -255,9 +256,9 @@ export function CreativeBriefsView() {
       </div>
 
       {/* Add Brief Modal */}
-      {showAddModal && (
+      {showAddModal && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setShowAddModal(false)}
         >
           <div
@@ -405,7 +406,8 @@ export function CreativeBriefsView() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

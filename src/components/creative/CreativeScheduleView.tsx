@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import React, { useState, useEffect, useMemo } from 'react'
 import {
   Calendar as CalendarIcon,
@@ -813,9 +814,9 @@ export const CreativeScheduleView: React.FC = () => {
       {/* =====================================================================
           GÜNE TIKLANDIĞINDA AÇILAN GÜN DETAY & İŞLEM MODALI
           ===================================================================== */}
-      {selectedDayIso && (
+      {selectedDayIso && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setSelectedDayIso(null)}
         >
           <div
@@ -957,15 +958,16 @@ export const CreativeScheduleView: React.FC = () => {
               </GlassButton>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* =====================================================================
           YENİ ÖZEL GÜN / ÇİZELGE PLANI EKLEME MODALI
           ===================================================================== */}
-      {showAddModal && (
+      {showAddModal && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setShowAddModal(false)}
         >
           <div
@@ -1119,7 +1121,8 @@ export const CreativeScheduleView: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
