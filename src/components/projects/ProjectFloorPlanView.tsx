@@ -3008,9 +3008,9 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
       )}
 
       {/* ANA ETKİLEŞİMLİ ALAN: Sol Kat Görünümü + Orta Geniş Kroki Planı + Sağ Bilgi Kutucuğu (Dock çizgisine temas etmemesi için birkaç px yukarı çekildi) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[205px_minmax(0,1fr)_252px] xl:grid-cols-[215px_minmax(0,1fr)_264px] gap-3.5 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-[205px_minmax(0,1fr)_252px] xl:grid-cols-[215px_minmax(0,1fr)_264px] gap-3.5 items-stretch min-h-[635px] xl:min-h-[650px]">
         {/* SOL SÜTUN: KAT PLANI (Katlar + Blok Seçimi + Giriş Seçimi) */}
-        <div className="p-3.5 rounded-[24px] bg-[#282522] border border-[#4a443f] flex flex-col justify-start space-y-3.5 min-h-[485px] xl:min-h-[520px]">
+        <div className="p-3.5 rounded-[24px] bg-[#282522] border border-[#4a443f] flex flex-col justify-start space-y-3.5 min-h-[635px] xl:min-h-[650px] h-full">
           {/* 1. KATLAR: Yukarıdan aşağıya İkinci Kat -> Birinci Kat -> Zemin Kat (en altta), alt açıklamalar kaldırıldı */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
@@ -3192,7 +3192,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
         </div>
 
         {/* ORTA SÜTUN: ETKİLEŞİMLİ MİMARİ KAT KROKİSİ (Dış çizgi katmanı ve başlık kaldırıldı, direkt karta genişletildi) */}
-        <div className="rounded-[24px] bg-[#282522] border border-[#4a443f] flex flex-col justify-between min-h-[485px] xl:min-h-[520px] overflow-hidden">
+        <div className="rounded-[24px] bg-[#282522] border border-[#4a443f] flex flex-col justify-between min-h-[635px] xl:min-h-[650px] h-full overflow-hidden">
           {/* Yüklenen Kat Planı Görseli Varsa Opaklık Ayarı */}
           {activeFloorPlanUrl && (
             <div className="flex items-center justify-between gap-3 px-4 py-1.5 m-2 rounded-full bg-[#34302d] text-xs">
@@ -3225,7 +3225,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   setActiveAreaId(null)
                 }
               }}
-              className="interactive-plan-canvas relative w-full min-h-[485px] xl:min-h-[520px] flex-1 rounded-[24px] overflow-hidden select-none z-10"
+              className="interactive-plan-canvas relative w-full min-h-[635px] xl:min-h-[650px] h-full flex-1 rounded-[24px] overflow-hidden select-none z-10"
             >
                 {/* SEÇİLEN BLOK İÇİN GENİŞLETİLMİŞ AYRI GÖRÜNÜM ÇERÇEVESİ */}
                 {selectedBlock !== 'ALL' && (
@@ -4754,7 +4754,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
           )}
 
         {/* SAĞ SÜTUN: HİÇBİR DAİRE SEÇİLMEDİĞİNDE PROJE BİLGİSİ, DAİREYE TIKLANDIĞINDA DAİRE BİLGİSİ */}
-        <div className="p-3.5 rounded-[24px] bg-[#282522] border border-[#4a443f] flex flex-col justify-between min-h-[485px] xl:min-h-[520px] h-full">
+        <div className="p-3.5 rounded-[24px] bg-[#282522] border border-[#4a443f] flex flex-col justify-between min-h-[635px] xl:min-h-[650px] h-full">
           {activeUnit ? (
             (() => {
               const { blockName: unitBlockName, entranceName: unitEntranceName } =
