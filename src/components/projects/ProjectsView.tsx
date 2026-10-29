@@ -973,8 +973,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
 
                       return (
                         <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)] gap-6 items-start">
-                          {/* SOL: Daireler Listesi */}
-                          <div className="rounded-[22px] bg-[#282522] border border-[#4a443f] p-2.5 max-h-[640px] overflow-y-auto space-y-1.5">
+                          {/* SOL: Daireler Listesi (Dış beyaz katman kaldırıldı, daire kartları düşey genişletildi) */}
+                          <div className="max-h-[calc(100vh-210px)] overflow-y-auto pr-1.5 py-1 space-y-2.5">
                             {currentUnits.map((unit) => {
                               const isSelected = activeListUnit?.id === unit.id
                               const isReserved =
@@ -997,27 +997,27 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                                   key={unit.id}
                                   type="button"
                                   onClick={() => setActiveListUnitId(unit.id)}
-                                  className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl text-left transition-all cursor-pointer ${rowStatusClass} ${
+                                  className={`w-full flex items-center justify-between gap-3 px-4 py-4 rounded-[20px] text-left transition-all cursor-pointer ${rowStatusClass} ${
                                     isSelected ? 'ring-2 ring-[#5c6ac4] shadow-md' : ''
                                   }`}
                                 >
-                                  <div className="min-w-0">
+                                  <div className="min-w-0 space-y-1.5">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold truncate">
+                                      <span className="text-[13px] font-bold truncate">
                                         {unit.unitNumber}
                                       </span>
-                                      <span className="unit-pill-light text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                      <span className="unit-pill-light text-[10.5px] font-semibold px-2.5 py-0.5 rounded-full">
                                         {unit.roomType}
                                       </span>
                                     </div>
-                                    <div className="text-[11px] mt-0.5 truncate opacity-90">
+                                    <div className="text-xs truncate opacity-90">
                                       {unit.block || 'A Blok'} • {floorText} • {unit.grossSqm} m²
                                     </div>
                                   </div>
 
-                                  <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <div className="flex flex-col items-end gap-2 shrink-0">
                                     <span
-                                      className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider ${
+                                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                                         isAvailable
                                           ? 'unit-badge-available'
                                           : isReserved
@@ -1033,7 +1033,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                                           : 'Kapora / Rezerve'
                                         : unit.statusLabel || 'Satıldı'}
                                     </span>
-                                    <span className="unit-pill-light px-2 py-0.5 rounded-full text-xs font-bold font-mono">
+                                    <span className="unit-pill-light px-2.5 py-0.5 rounded-full text-xs font-bold font-mono">
                                       {unit.price > 0 ? formatCurrency(unit.price) : 'Belirlenmedi'}
                                     </span>
                                   </div>
