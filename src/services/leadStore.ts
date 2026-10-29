@@ -74,6 +74,7 @@ class LeadStore {
           this.activities = parsedAct
         }
       }
+      this.repairMetaCsvLeads()
       this.ensureSequentialNumbersForLeads()
     } catch {}
   }
@@ -170,6 +171,61 @@ class LeadStore {
    * Mevcut veya dışarıdan (Meta Ads, Web, Supabase) gelen tüm lead'lere
    * oluşturulma sırasına (createdAt) göre şirket bazlı ardışık numara (#lead-1, #lead-2...) atar.
    */
+
+  private repairMetaCsvLeads(): void {
+    if (!this.leads || this.leads.length === 0) return
+    const metaSkipQuestions = new Set([
+      'oluşturuldu',
+      'olusturuldu',
+      'adı',
+      'adi',
+      'ad',
+      'ad soyad',
+      'isim',
+      'full_name',
+      'kaynak',
+      'kanal',
+      'aşama',
+      'asama',
+      'sahibi',
+    ])
+    this.leads = this.leads.map((l) => {
+      if (!Array.isArray(l.metaAnswers) || l.metaAnswers.length === 0) return l
+      let updatedFullName = l.fullName
+      let updatedCreatedAt = l.createdAt
+
+      for (const ans of l.metaAnswers) {
+        const q = String(ans?.question || '').toLowerCase().trim()
+        const val = String(ans?.answer || '').trim()
+        if (!val) continue
+        if (
+          (q === 'adı' || q === 'adi' || q === 'ad' || q === 'ad soyad' || q === 'isim' || q === 'full_name') &&
+          (!updatedFullName || updatedFullName === 'Meta Müşterisi' || updatedFullName === 'Meta Müşteri Adayı')
+        ) {
+          updatedFullName = val
+        } else if (q.includes('oluşturul') || q.includes('olusturul') || q.includes('created') || q === 'tarih') {
+          const cleaned = val.replace(/(\d)(am|pm)$/i, '$1 $2')
+          const d = new Date(cleaned)
+          if (!isNaN(d.getTime())) {
+            updatedCreatedAt = d.toISOString()
+          }
+        }
+      }
+
+      const cleanedAnswers = l.metaAnswers.filter((ans) => {
+        const q = String(ans?.question || '').toLowerCase().trim()
+        return !metaSkipQuestions.has(q)
+      })
+
+      return {
+        ...l,
+        fullName: updatedFullName,
+        createdAt: updatedCreatedAt,
+        metaAnswers: cleanedAnswers,
+      }
+    })
+  }
+
   private ensureSequentialNumbersForLeads(): void {
     if (!this.leads || this.leads.length === 0) return
 

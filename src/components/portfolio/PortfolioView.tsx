@@ -548,7 +548,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
 
                         {/* Assigned Consultant */}
                         <td className="py-3.5 px-4 text-[#a69f99]">
-                          <span className="inline-block py-0.5 px-2 rounded-full bg-[#1e1b18] border border-[#4a443f]/60 text-[11px]">
+                          <span className="inline-block py-0.5 px-2.5 rounded-full bg-[#34302d] border border-[#4a443f] text-white font-medium text-[11px]">
                             {lead.assignedToUserName || lead.owner || 'Pazarlama Havuzu'}
                           </span>
                         </td>

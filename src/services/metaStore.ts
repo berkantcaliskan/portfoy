@@ -687,8 +687,42 @@ class MetaStore {
     }
   }
 
-  public getForms(): MetaFormSummary[] {
-    return [...this.forms]
+    public getForms(): MetaFormSummary[] {
+    const map = new Map<string, MetaFormSummary>()
+    for (const f of this.forms) {
+      map.set(f.name, { ...f })
+    }
+    try {
+      const allLeads = leadStore.getAllRaw()
+      const metaLeads = allLeads.filter((l) => l.source === 'META_ADS')
+      const grouped = new Map<string, { total: number; qualified: number; lastAt: string }>()
+      for (const l of metaLeads) {
+        const fname = (l.formName || 'Meta Ads Formu').trim()
+        const cur = grouped.get(fname) || { total: 0, qualified: 0, lastAt: l.createdAt || new Date().toISOString() }
+        cur.total += 1
+        if (l.isQualified || ['QUALIFIED', 'APPOINTMENT', 'PRESENTATION', 'OFFER', 'WON'].includes(l.stage)) {
+          cur.qualified += 1
+        }
+        if (l.createdAt && l.createdAt > cur.lastAt) {
+          cur.lastAt = l.createdAt
+        }
+        grouped.set(fname, cur)
+      }
+      for (const [fname, stats] of grouped.entries()) {
+        const convRate = stats.total > 0 ? Math.round((stats.qualified / stats.total) * 100) : 0
+        const existing = map.get(fname)
+        map.set(fname, {
+          id: existing?.id || 'form-' + fname.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          name: fname,
+          campaignName: existing?.campaignName || fname,
+          status: 'ACTIVE',
+          leadCount: stats.total,
+          conversionRate: convRate,
+          lastLeadAt: stats.lastAt,
+        })
+      }
+    } catch {}
+    return Array.from(map.values()).sort((a, b) => b.leadCount - a.leadCount)
   }
 
   public getWebhookLogs(): MetaWebhookEvent[] {
@@ -1117,7 +1151,7 @@ class MetaStore {
         } else if (hl.includes('email') || hl.includes('e-posta') || hl.includes('mail')) {
           email = val
         } else if (
-          !['ad_id', 'adset_id', 'adset_name', 'campaign_id', 'form_id', 'is_organic', 'platform', 'lead_status'].includes(hl)
+          !['ad_id', 'adset_id', 'adset_name', 'campaign_id', 'form_id', 'is_organic', 'platform', 'lead_status', 'kaynak', 'kanal', 'aşama', 'asama', 'sahibi'].includes(hl)
         ) {
           metaAnswers.push({ question: h, answer: val })
           if (
@@ -1135,7 +1169,8 @@ class MetaStore {
 
       if (!fullName && !phone) continue
 
-      const parsedDate = createdTime ? new Date(createdTime) : new Date()
+      const normalizedTimeStr = createdTime ? createdTime.trim().replace(/(\d)(am|pm)$/i, '$1 $2') : ''
+      const parsedDate = normalizedTimeStr ? new Date(normalizedTimeStr) : new Date()
       const validDate = !isNaN(parsedDate.getTime()) ? parsedDate : new Date()
 
       if (startDate && validDate.getTime() < startDate.getTime()) continue
