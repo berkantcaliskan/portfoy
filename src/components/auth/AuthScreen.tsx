@@ -134,8 +134,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         >
           {/* Logo & Headline */}
           <div className="text-center space-y-2 mb-7">
-            <div className="w-14 h-14 rounded-2xl bg-[#ebece9] border border-[#657a72]/30 mx-auto flex items-center justify-center text-[#657a72] shadow-xs mb-3">
-              <BookLogo size={28} className="text-[#657a72]" />
+            <div className="mx-auto flex items-center justify-center text-[#657a72] mb-3">
+              <BookLogo size={42} className="text-[#657a72]" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#292d2b]">
               Demirtürk Portföy

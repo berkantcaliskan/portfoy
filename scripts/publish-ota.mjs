@@ -203,8 +203,16 @@ function exportSharedCompanyDb() {
 function collectDistFiles() {
   const files = {}
 
-  // 1. index.html & shared-db.json
-  for (const topFile of ['index.html', 'shared-db.json']) {
+  // 1. index.html, shared-db.json & icon files
+  for (const topFile of [
+    'index.html',
+    'shared-db.json',
+    'favicon.svg',
+    'favicon.ico',
+    'favicon-32x32.png',
+    'favicon-16x16.png',
+    'apple-touch-icon.png',
+  ]) {
     const fullPath = path.join(distDir, topFile)
     if (fs.existsSync(fullPath)) {
       const raw = fs.readFileSync(fullPath)
