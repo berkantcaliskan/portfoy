@@ -219,9 +219,9 @@ export function CreativesGalleryView() {
         </GlassButton>
       </div>
 
-      {/* Filter Bar */}
-      <div className="p-3.5 rounded-[22px] bg-[#282522] border border-[#4a443f] glass-card-static flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 flex-wrap">
+      {/* Filter Bar (Dış katmansız, her sekme kendi pill-shaped katmanıyla) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {[
             { id: 'ALL', label: `Tümü (${creatives.length})` },
             {
@@ -249,10 +249,10 @@ export function CreativesGalleryView() {
               key={tab.id}
               type="button"
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 statusFilter === tab.id
-                  ? 'bg-[#b99881] text-white border-[#b99881]'
-                  : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
+                  ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
+                  : 'bg-[#282522] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
               }`}
             >
               {tab.label}
@@ -267,7 +267,7 @@ export function CreativesGalleryView() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="KRT kodu, proje veya başlık ara..."
-            className="w-full pl-9 pr-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white placeholder:text-[#8c857f] focus:outline-none"
+            className="w-full pl-9 pr-3.5 py-2 rounded-full bg-[#282522] border border-[#4a443f] text-xs text-white placeholder:text-[#8c857f] focus:outline-none"
           />
         </div>
       </div>

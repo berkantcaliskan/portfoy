@@ -355,7 +355,7 @@ export const CreativeScheduleView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleJumpToday}
-                className="px-3 py-1 rounded-full text-[11px] font-semibold border border-[#4a443f] text-[#b99881] hover:text-white cursor-pointer transition-colors"
+                className="px-3 py-1 rounded-full text-[11px] font-bold bg-[#b99881] text-white border border-[#b99881] cursor-pointer transition-colors shadow-xs"
               >
                 Bugün
               </button>
@@ -365,9 +365,9 @@ export const CreativeScheduleView: React.FC = () => {
 
         {/* Sağ: Kategori Filtreleri + Takvim/Liste Görünüm Değiştirici + Yeni Ekle */}
         <div className="flex flex-wrap items-center gap-2 justify-between xl:justify-end">
-          {/* Hızlı Kategori Hapları (Takvim görünümünde doğrudan üst barda) */}
+          {/* Hızlı Kategori Hapları (Takvim görünümünde doğrudan üst barda, her biri kendi pill-shaped katmanıyla) */}
           {viewMode === 'calendar' && (
-            <div className="hidden 2xl:flex items-center gap-1">
+            <div className="hidden 2xl:flex items-center gap-1.5">
               {(
                 [
                   { id: 'ALL', label: 'Tümü' },
@@ -381,10 +381,10 @@ export const CreativeScheduleView: React.FC = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setCategoryFilter(tab.id)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer border ${
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer border ${
                     categoryFilter === tab.id
-                      ? 'bg-[#b99881] text-white border-[#b99881] font-bold'
-                      : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
+                      ? 'bg-[#b99881] text-white border-[#b99881] font-bold shadow-xs'
+                      : 'bg-[#34302d] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
                   }`}
                 >
                   {tab.label}
@@ -394,15 +394,15 @@ export const CreativeScheduleView: React.FC = () => {
           )}
 
           <div className="flex items-center gap-1.5">
-            {/* Görünüm Seçici: Takvim (Varsayılan) | Liste */}
-            <div className="inline-flex items-center p-0.5 rounded-full bg-[#34302d] border border-[#4a443f]">
+            {/* Görünüm Seçici: Takvim (Varsayılan) | Liste (Dış katmansız, kendi pill-shaped katmanlarıyla) */}
+            <div className="inline-flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setViewMode('calendar')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer border ${
                   viewMode === 'calendar'
-                    ? 'bg-[#b99881] text-white shadow-sm'
-                    : 'text-[#a69f99] hover:text-white'
+                    ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
+                    : 'bg-[#34302d] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -411,10 +411,10 @@ export const CreativeScheduleView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer border ${
                   viewMode === 'list'
-                    ? 'bg-[#b99881] text-white shadow-sm'
-                    : 'text-[#a69f99] hover:text-white'
+                    ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
+                    : 'bg-[#34302d] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
                 }`}
               >
                 <List className="w-3.5 h-3.5" />
@@ -479,10 +479,8 @@ export const CreativeScheduleView: React.FC = () => {
                   key={cell.dateIso}
                   onClick={() => setSelectedDayIso(cell.dateIso)}
                   className={`calendar-day-cell p-2 sm:p-2.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between overflow-hidden ${
-                    isSelected
-                      ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
-                      : isToday
-                      ? 'bg-[#34302d] border-[#b99881] text-white'
+                    isSelected || isToday
+                      ? 'calendar-today-cell bg-[#b99881] text-white border-[#b99881] shadow-sm'
                       : dayItems.length > 0
                       ? 'bg-[#34302d]/80 border-[#4a443f] hover:border-[#b99881] text-white'
                       : 'bg-transparent border-[#4a443f]/60 hover:border-[#b99881] text-white'
@@ -493,11 +491,7 @@ export const CreativeScheduleView: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       <span
                         className={`text-xs sm:text-sm font-bold leading-none font-mono ${
-                          isSelected
-                            ? 'text-white'
-                            : isToday
-                            ? 'text-[#b99881]'
-                            : 'text-white'
+                          isSelected || isToday ? 'text-white' : 'text-white'
                         }`}
                       >
                         {cell.dayNumber}
@@ -505,7 +499,7 @@ export const CreativeScheduleView: React.FC = () => {
                       {isToday && (
                         <span
                           className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                            isSelected
+                            isSelected || isToday
                               ? 'bg-white/25 text-white'
                               : 'bg-[#b99881]/20 text-[#b99881]'
                           }`}
@@ -518,7 +512,7 @@ export const CreativeScheduleView: React.FC = () => {
                     {dayItems.length > 0 && (
                       <span
                         className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full leading-none ${
-                          isSelected
+                          isSelected || isToday
                             ? 'bg-white/25 text-white'
                             : 'bg-[#b99881]/20 text-[#b99881]'
                         }`}
@@ -536,7 +530,7 @@ export const CreativeScheduleView: React.FC = () => {
                         <div
                           key={ev.id}
                           className={`px-2 py-1 rounded-xl text-[10px] font-semibold truncate flex items-center gap-1.5 ${
-                            isSelected
+                            isSelected || isToday
                               ? 'bg-white/20 text-white'
                               : 'bg-[#282522] text-white border border-[#4a443f]/60'
                           }`}
@@ -544,7 +538,7 @@ export const CreativeScheduleView: React.FC = () => {
                           <span
                             className="w-2 h-2 rounded-full shrink-0"
                             style={{
-                              backgroundColor: isSelected ? '#ffffff' : catMeta.dotColor,
+                              backgroundColor: isSelected || isToday ? '#ffffff' : catMeta.dotColor,
                             }}
                           />
                           <span className="truncate">{ev.title}</span>
@@ -554,7 +548,7 @@ export const CreativeScheduleView: React.FC = () => {
                     {dayItems.length > 2 && (
                       <div
                         className={`text-[10px] font-semibold pl-1 truncate ${
-                          isSelected ? 'text-white/90' : 'text-[#a69f99]'
+                          isSelected || isToday ? 'text-white/90' : 'text-[#a69f99]'
                         }`}
                       >
                         +{dayItems.length - 2} kayıt daha
@@ -636,9 +630,9 @@ export const CreativeScheduleView: React.FC = () => {
             </GlassCard>
           </div>
 
-          {/* Filtre & Arama Barı */}
-          <div className="p-3.5 rounded-[22px] bg-[#282522] border border-[#4a443f] glass-card-static flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Filtre & Arama Barı (Dış katmansız, her sekme kendi pill-shaped katmanıyla) */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               {(
                 [
                   { id: 'ALL', label: 'Tümü' },
@@ -653,10 +647,10 @@ export const CreativeScheduleView: React.FC = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setCategoryFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                     categoryFilter === tab.id
-                      ? 'bg-[#b99881] text-white border-[#b99881]'
-                      : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
+                      ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
+                      : 'bg-[#282522] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
                   }`}
                 >
                   {tab.label}
@@ -671,7 +665,7 @@ export const CreativeScheduleView: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Özel gün, proje veya not ara..."
-                className="w-full pl-9 pr-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white placeholder:text-[#8c857f] focus:outline-none"
+                className="w-full pl-9 pr-3.5 py-2 rounded-full bg-[#282522] border border-[#4a443f] text-xs text-white placeholder:text-[#8c857f] focus:outline-none"
               />
             </div>
           </div>

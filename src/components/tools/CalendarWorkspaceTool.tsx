@@ -831,7 +831,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
               <button
                 type="button"
                 onClick={handleJumpToday}
-                className="px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 border border-[#4a443f] text-[#b99881] hover:text-white cursor-pointer"
+                className="px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 bg-[#b99881] text-white border border-[#b99881] cursor-pointer shadow-xs"
               >
                 Bugün
               </button>
@@ -869,17 +869,15 @@ export const CalendarWorkspaceTool: React.FC = () => {
                   onDoubleClick={() => handleOpenNewForm(cell.dateIso!)}
                   title="Günü filtrelemek için tıklayın, yeni plan eklemek için çift tıklayın"
                   className={`calendar-day-cell h-11 p-1.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none ${
-                    isSelected
-                      ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
-                      : isToday
-                      ? 'bg-transparent border-[#b99881] hover:!border-[var(--accent-color,#b99881)] text-white'
+                    isSelected || isToday
+                      ? 'calendar-today-cell bg-[#b99881] text-white border-[#b99881] shadow-sm'
                       : 'bg-transparent border-[#4a443f]/60 hover:!border-[var(--accent-color,#b99881)] text-white'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span
                       className={`text-xs font-bold leading-none ${
-                        isSelected ? 'text-white' : isToday ? 'text-[#b99881]' : 'text-white'
+                        isSelected || isToday ? 'text-white' : 'text-white'
                       }`}
                     >
                       {cell.dayNumber}
@@ -887,7 +885,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
                     {dayEvents.length > 0 && (
                       <span
                         className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ${
-                          isSelected
+                          isSelected || isToday
                             ? 'bg-white/25 text-white'
                             : 'bg-[#b99881]/20 text-[#b99881]'
                         }`}
@@ -906,7 +904,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
                           key={ev.id}
                           className="w-2 h-2 rounded-full shrink-0"
                           style={{
-                            backgroundColor: isSelected ? '#ffffff' : meta.dotColor,
+                            backgroundColor: isSelected || isToday ? '#ffffff' : meta.dotColor,
                           }}
                           title={`${ev.time} - ${ev.title}`}
                         />
@@ -915,7 +913,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
                     {dayEvents.length === 1 && (
                       <span
                         className={`text-[9px] truncate leading-tight ${
-                          isSelected ? 'text-white' : 'text-[#8c857f]'
+                          isSelected || isToday ? 'text-white' : 'text-[#8c857f]'
                         }`}
                       >
                         {dayEvents[0].title}

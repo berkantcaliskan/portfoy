@@ -361,17 +361,17 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                   />
                 )}
 
-                {/* Day button - Yalnızca seçildiğinde yuvarlak içinde, seçilmediğinde düz sade rakam */}
+                {/* Day button - Seçildiğinde veya Bugün olduğunda vurgu renginde yuvarlak içinde */}
                 <button
                   type="button"
                   onClick={() => handleDateClick(date)}
                   className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs transition-colors cursor-pointer ${
                     isStart || isEnd
                       ? 'bg-[#b99881] text-white font-bold shadow-sm scale-105'
+                      : isToday
+                      ? 'calendar-today-cell bg-[#b99881] text-white font-bold shadow-sm'
                       : inRange
                       ? 'text-white font-semibold'
-                      : isToday
-                      ? 'text-[#b99881] font-bold hover:text-white relative after:content-[\'\'] after:absolute after:bottom-0.5 after:w-1 after:h-1 after:rounded-full after:bg-[#b99881]'
                       : 'text-[#d6cec7] hover:text-white'
                   }`}
                 >

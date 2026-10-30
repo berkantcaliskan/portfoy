@@ -1589,4 +1589,29 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent-color, #b99881) 45%, transparent) !important;
 }
 
+/* ==========================================================================
+   TAKVİMLERDE BUGÜN (TODAY) VURGU RENGİ STİLİ
+   Hem Kreatif Takvimi hem Uygulama Takviminde bugünün hücresini aktif vurgu
+   renginde (var(--accent-color)) ve yüksek kontrastlı beyaz metinle gösterir.
+   ========================================================================== */
+.calendar-today-cell,
+main .calendar-today-cell,
+main .glass-card-static .calendar-today-cell,
+.glass-modal .calendar-today-cell,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-today-cell,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .calendar-today-cell,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static .calendar-today-cell,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-modal .calendar-today-cell {
+  background: var(--accent-color, #5c6ac4) !important;
+  background-color: var(--accent-color, #5c6ac4) !important;
+  border-color: var(--accent-color, #5c6ac4) !important;
+  color: #ffffff !important;
+}
+
+.calendar-today-cell *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-today-cell * {
+  color: #ffffff !important;
+}
+
+
 
