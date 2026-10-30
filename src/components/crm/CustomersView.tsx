@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Users,
   Search,
@@ -18,6 +19,7 @@ import {
   ArrowUpDown,
   ArrowDown,
   ArrowUp,
+  Bookmark,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -123,6 +125,25 @@ interface CustomersViewProps {
 }
 
 const STORAGE_KEY_CUSTOM_TABS = 'demirturk_crm_custom_tabs'
+const STORAGE_KEY_MILESTONES = 'demirturk_crm_milestone_leads_v1'
+
+function getLeadDayKey(dateStr?: string): string {
+  if (!dateStr) return 'unknown'
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return String(dateStr).slice(0, 10)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+interface LeadSegment {
+  id: string
+  leads: Lead[]
+  hasDayEndAfter: boolean
+  hasMilestoneAfter: boolean
+  milestoneLeadId?: string
+}
 
 export const CustomersView: React.FC<CustomersViewProps> = ({
   leads,
@@ -193,6 +214,67 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       return []
     }
   })
+
+  // Dönüm (Son Kalınan Yer) İşaretleri ve Sağ Tık Bağlam Menüsü
+  const [milestoneLeadIds, setMilestoneLeadIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_MILESTONES)
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+  const [rowContextMenu, setRowContextMenu] = useState<{
+    x: number
+    y: number
+    lead: Lead
+  } | null>(null)
+
+  useEffect(() => {
+    const syncMilestones = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_MILESTONES)
+        setMilestoneLeadIds(saved ? JSON.parse(saved) : [])
+      } catch {
+        // ignore
+      }
+    }
+    window.addEventListener('demirturk:crm-milestones-updated', syncMilestones)
+    return () => window.removeEventListener('demirturk:crm-milestones-updated', syncMilestones)
+  }, [])
+
+  useEffect(() => {
+    if (!rowContextMenu) return
+    const handleClose = () => setRowContextMenu(null)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setRowContextMenu(null)
+    }
+    window.addEventListener('click', handleClose)
+    window.addEventListener('scroll', handleClose, true)
+    window.addEventListener('resize', handleClose)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('click', handleClose)
+      window.removeEventListener('scroll', handleClose, true)
+      window.removeEventListener('resize', handleClose)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [rowContextMenu])
+
+  const handleToggleMilestone = (leadId: string) => {
+    setMilestoneLeadIds((prev) => {
+      const exists = prev.includes(leadId)
+      const next = exists ? prev.filter((id) => id !== leadId) : [...prev, leadId]
+      try {
+        localStorage.setItem(STORAGE_KEY_MILESTONES, JSON.stringify(next))
+        window.dispatchEvent(new CustomEvent('demirturk:crm-milestones-updated'))
+      } catch {
+        // ignore
+      }
+      return next
+    })
+    setRowContextMenu(null)
+  }
   const [isAddTabModalOpen, setIsAddTabModalOpen] = useState(false)
   const [newTabName, setNewTabName] = useState('')
   const [newTabCriteriaType, setNewTabCriteriaType] = useState<'STAGE' | 'KEYWORD'>('STAGE')
@@ -531,6 +613,30 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   }, [filterStage, searchQuery, dateRange, sortOrder])
 
   const paginatedLeads = sortedLeads.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  // Gün bitişlerine ve "Dönüm" işaretlerine göre ayrı beyaz katmanlara böl
+  const leadSegments: LeadSegment[] = []
+  let currentSegmentLeads: Lead[] = []
+  paginatedLeads.forEach((lead, idx) => {
+    currentSegmentLeads.push(lead)
+    const isLast = idx === paginatedLeads.length - 1
+    const nextLead = !isLast ? paginatedLeads[idx + 1] : null
+    const hasDayEndAfter = Boolean(
+      nextLead && getLeadDayKey(lead.createdAt) !== getLeadDayKey(nextLead.createdAt)
+    )
+    const hasMilestoneAfter = milestoneLeadIds.includes(lead.id)
+
+    if (isLast || hasDayEndAfter || hasMilestoneAfter) {
+      leadSegments.push({
+        id: `seg-${lead.id}-${idx}`,
+        leads: currentSegmentLeads,
+        hasDayEndAfter,
+        hasMilestoneAfter,
+        milestoneLeadId: hasMilestoneAfter ? lead.id : undefined,
+      })
+      currentSegmentLeads = []
+    }
+  })
 
   // Add custom tab
   const handleCreateCustomTab = (e: React.FormEvent) => {
@@ -988,7 +1094,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </div>
       )}
 
-      {/* MÜŞTERİ TABLOSU: Katman & Kontür Çerçeve (Boşken Katmansız ve Ortalı) */}
+      {/* MÜŞTERİ TABLOSU: Günlere ve Dönümlere Göre Ayrı Beyaz Katmanlar & Arada Vurgu Rengi Çizgi */}
       {filteredLeads.length === 0 ? (
         <div className="py-20 text-center flex flex-col items-center justify-center">
           <p className="text-sm font-semibold text-[#f3efe9]">
@@ -999,247 +1105,336 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           </p>
         </div>
       ) : (
-        <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] overflow-hidden shadow-sm backdrop-blur-sm">
-          <div className="w-full overflow-x-auto">
-            <table className="w-full table-fixed min-w-[1320px] text-xs text-left">
-              <thead>
-                <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
-                  {/* 1. Kolon: Tarih */}
-                  <th className="py-3 px-3 w-[108px]">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSortOrder((prev) => (prev === 'NEWEST' ? 'OLDEST' : 'NEWEST'))
-                      }
-                      className="no-layer-btn inline-flex items-center gap-1 text-[11px] font-semibold text-[#8c857f] hover:text-white cursor-pointer select-none"
-                      title={
-                        sortOrder === 'OLDEST'
-                          ? 'Şu an: Eskiden yeniye (Yeniden eskiye sıralamak için tıklayın)'
-                          : 'Şu an: Yeniden eskiye (Eskiden yeniye sıralamak için tıklayın)'
-                      }
-                    >
-                      <span>Tarih</span>
-                      {sortOrder === 'OLDEST' ? (
-                        <ArrowUp className="w-3 h-3 text-[#b99881]" />
-                      ) : (
-                        <ArrowDown className="w-3 h-3 text-[#b99881]" />
-                      )}
-                    </button>
-                  </th>
-                  {/* 2. Kolon: Müşteri */}
-                  <th className="py-3 px-3 w-[195px]">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSortOrder((prev) => (prev === 'NAME_ASC' ? 'NAME_DESC' : 'NAME_ASC'))
-                      }
-                      className="no-layer-btn inline-flex items-center gap-1 text-[11px] font-semibold text-[#8c857f] hover:text-white cursor-pointer select-none"
-                      title="İsme göre sırala"
-                    >
-                      <span>Müşteri</span>
-                      {(sortOrder === 'NAME_ASC' || sortOrder === 'NAME_DESC') && (
-                        sortOrder === 'NAME_ASC' ? (
-                          <ArrowUp className="w-3 h-3 text-[#b99881]" />
-                        ) : (
-                          <ArrowDown className="w-3 h-3 text-[#b99881]" />
-                        )
-                      )}
-                    </button>
-                  </th>
-                  {/* 3. Kolon: İletişim */}
-                  <th className="py-3 px-3 w-[166px]">İletişim</th>
-                  {/* 4. Kolon: Atanan Danışman */}
-                  <th className="py-3 px-3 w-[148px]">Atanan Danışman</th>
-                  {/* 5. Kolon: Bilgi */}
-                  <th className="py-3 px-3 w-[188px]">Bilgi</th>
-                  {/* 6. Kolon: Aşama */}
-                  <th className="py-3 px-3 w-[180px]">Aşama</th>
-                  {/* 7. Kolon: Açıklama */}
-                  <th className="py-3 px-3 w-[185px]">Açıklama</th>
-                  {/* 8. Kolon: İşlemler */}
-                  <th className="py-3 px-3 w-[195px]">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody className="text-[#f3efe9]">
-                {paginatedLeads.map((lead) => {
-                const inquiryCount = lead.inquiries?.length || 1
-                const hasAi = Boolean(lead.aiEvaluation)
-                const isQualifiedLead = Boolean(lead.isQualified || lead.stage === 'QUALIFIED')
-
-                return (
-                  <tr
-                    key={lead.id}
-                    className="customer-table-row transition-colors border-b border-[#4a443f]/60 last:border-b-0"
-                  >
-                      {/* 1. Kolon: Tarih & Saat */}
-                      <td className="py-3 px-3 text-[#d6beae] whitespace-nowrap">
-                        <div className="font-semibold text-white text-xs leading-tight">
-                          {formatDateOnly(lead.createdAt)}
-                        </div>
-                        <div className="text-[9px] leading-tight text-[#8c857f] tabular-nums tracking-tight mt-0.5">
-                          {formatTimeOnly(lead.createdAt)}
-                        </div>
-                      </td>
-
-                      {/* 2. Kolon: Müşteri */}
-                      <td className="py-3 px-3 overflow-hidden">
-                        <div
-                          onClick={() => onSelectLead(lead)}
-                          className="font-bold text-white hover:text-[#b99881] cursor-pointer transition-colors text-xs select-text truncate"
-                          title="Detayları Görüntüle"
-                        >
-                          {lead.fullName}
-                        </div>
-                        <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-[#8c857f] truncate">
-                            {getLeadChannelLabel(lead)}
-                          </span>
-                          {inquiryCount > 1 && (
+        <div className="space-y-0">
+          {leadSegments.map((segment, segIdx) => (
+            <React.Fragment key={segment.id}>
+              {/* Her gün ve dönüm kendi beyaz katmanına sahiptir */}
+              <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] overflow-hidden shadow-sm backdrop-blur-sm">
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full table-fixed min-w-[1320px] text-xs text-left">
+                    <colgroup>
+                      <col className="w-[108px]" />
+                      <col className="w-[195px]" />
+                      <col className="w-[166px]" />
+                      <col className="w-[148px]" />
+                      <col className="w-[188px]" />
+                      <col className="w-[180px]" />
+                      <col className="w-[185px]" />
+                      <col className="w-[195px]" />
+                    </colgroup>
+                    {segIdx === 0 && (
+                      <thead>
+                        <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
+                          {/* 1. Kolon: Tarih */}
+                          <th className="py-3 px-3 w-[108px]">
                             <button
-                              onClick={() => setSelectedInquiryHistoryLead(lead)}
-                              className="px-1.5 py-0.5 rounded-full bg-[#b99881]/20 text-[#b99881] text-[9px] font-bold hover:bg-[#b99881]/30 cursor-pointer shrink-0"
-                              title="Tüm Başvuru Geçmişini Görüntüle"
+                              type="button"
+                              onClick={() =>
+                                setSortOrder((prev) => (prev === 'NEWEST' ? 'OLDEST' : 'NEWEST'))
+                              }
+                              className="no-layer-btn inline-flex items-center gap-1 text-[11px] font-semibold text-[#8c857f] hover:text-white cursor-pointer select-none"
+                              title={
+                                sortOrder === 'OLDEST'
+                                  ? 'Şu an: Eskiden yeniye (Yeniden eskiye sıralamak için tıklayın)'
+                                  : 'Şu an: Yeniden eskiye (Eskiden yeniye sıralamak için tıklayın)'
+                              }
                             >
-                              {inquiryCount} Başvuru
+                              <span>Tarih</span>
+                              {sortOrder === 'OLDEST' ? (
+                                <ArrowUp className="w-3 h-3 text-[#b99881]" />
+                              ) : (
+                                <ArrowDown className="w-3 h-3 text-[#b99881]" />
+                              )}
                             </button>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* 3. Kolon: İletişim & WhatsApp İkonu */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="flex items-center justify-between w-[146px]">
-                          <span className="font-mono text-xs text-[#f3efe9] select-all tracking-wide">
-                            {formatPhoneDisplay(lead.phone)}
-                          </span>
-                          {lead.phone ? (
-                            <a
-                              href={generateWhatsAppUrl(lead.whatsappPhone || lead.phone, lead.fullName)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 transition-colors flex items-center justify-center shrink-0 ml-2"
-                              title="WhatsApp Mesajı Gönder"
+                          </th>
+                          {/* 2. Kolon: Müşteri */}
+                          <th className="py-3 px-3 w-[195px]">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSortOrder((prev) => (prev === 'NAME_ASC' ? 'NAME_DESC' : 'NAME_ASC'))
+                              }
+                              className="no-layer-btn inline-flex items-center gap-1 text-[11px] font-semibold text-[#8c857f] hover:text-white cursor-pointer select-none"
+                              title="İsme göre sırala"
                             >
-                              <svg
-                                className="w-3.5 h-3.5 shrink-0"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
+                              <span>Müşteri</span>
+                              {(sortOrder === 'NAME_ASC' || sortOrder === 'NAME_DESC') && (
+                                sortOrder === 'NAME_ASC' ? (
+                                  <ArrowUp className="w-3 h-3 text-[#b99881]" />
+                                ) : (
+                                  <ArrowDown className="w-3 h-3 text-[#b99881]" />
+                                )
+                              )}
+                            </button>
+                          </th>
+                          {/* 3. Kolon: İletişim */}
+                          <th className="py-3 px-3 w-[166px]">İletişim</th>
+                          {/* 4. Kolon: Atanan Danışman */}
+                          <th className="py-3 px-3 w-[148px]">Atanan Danışman</th>
+                          {/* 5. Kolon: Bilgi */}
+                          <th className="py-3 px-3 w-[188px]">Bilgi</th>
+                          {/* 6. Kolon: Aşama */}
+                          <th className="py-3 px-3 w-[180px]">Aşama</th>
+                          {/* 7. Kolon: Açıklama */}
+                          <th className="py-3 px-3 w-[185px]">Açıklama</th>
+                          {/* 8. Kolon: İşlemler */}
+                          <th className="py-3 px-3 w-[195px]">İşlemler</th>
+                        </tr>
+                      </thead>
+                    )}
+                    <tbody className="text-[#f3efe9]">
+                      {segment.leads.map((lead) => {
+                        const inquiryCount = lead.inquiries?.length || 1
+
+                        return (
+                          <tr
+                            key={lead.id}
+                            onContextMenu={(e) => {
+                              e.preventDefault()
+                              setRowContextMenu({
+                                x: e.clientX,
+                                y: e.clientY,
+                                lead,
+                              })
+                            }}
+                            className="customer-table-row transition-colors border-b border-[#4a443f]/60 last:border-b-0"
+                          >
+                            {/* 1. Kolon: Tarih & Saat */}
+                            <td className="py-3 px-3 text-[#d6beae] whitespace-nowrap">
+                              <div className="font-semibold text-white text-xs leading-tight">
+                                {formatDateOnly(lead.createdAt)}
+                              </div>
+                              <div className="text-[9px] leading-tight text-[#8c857f] tabular-nums tracking-tight mt-0.5">
+                                {formatTimeOnly(lead.createdAt)}
+                              </div>
+                            </td>
+
+                            {/* 2. Kolon: Müşteri */}
+                            <td className="py-3 px-3 overflow-hidden">
+                              <div
+                                onClick={() => onSelectLead(lead)}
+                                className="font-bold text-white hover:text-[#b99881] cursor-pointer transition-colors text-xs select-text truncate"
+                                title="Detayları Görüntüle"
                               >
-                                <path d="M12.031 2.01c-5.518 0-9.998 4.48-9.998 9.998 0 1.763.46 3.485 1.334 5.003L2 22l5.122-1.343a9.956 9.956 0 0 0 4.909 1.298h.004c5.517 0 9.997-4.48 9.997-9.998 0-2.671-1.04-5.182-2.928-7.07A9.935 9.935 0 0 0 12.031 2.01Zm5.847 14.307c-.246.693-1.434 1.326-1.997 1.41-.513.076-1.163.109-1.878-.118-.433-.138-.988-.321-1.7-.628-2.993-1.292-4.947-4.306-5.097-4.505-.149-.2-1.216-1.618-1.216-3.086 0-1.468.769-2.19 1.042-2.489.274-.298.597-.373.796-.373.199 0 .398.002.572.01.183.009.429-.07.671.512.248.597.845 2.065.92 2.214.075.15.124.324.025.523-.099.199-.149.323-.298.497-.15.174-.314.389-.448.523-.149.149-.304.311-.131.609.174.298.773 1.275 1.66 2.065 1.14.996 2.101 1.305 2.4 1.454.298.15.472.125.646-.075.174-.199.746-.87.945-1.169.199-.298.398-.248.671-.149.274.1 1.741.821 2.039.97.298.149.497.224.572.348.075.125.075.722-.171 1.415Z" />
-                              </svg>
-                            </a>
-                          ) : (
-                            <span className="w-6 h-6" />
-                          )}
-                        </div>
-                      </td>
+                                {lead.fullName}
+                              </div>
+                              <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                                <span className="text-[10px] text-[#8c857f] truncate">
+                                  {getLeadChannelLabel(lead)}
+                                </span>
+                                {inquiryCount > 1 && (
+                                  <button
+                                    onClick={() => setSelectedInquiryHistoryLead(lead)}
+                                    className="px-1.5 py-0.5 rounded-full bg-[#b99881]/20 text-[#b99881] text-[9px] font-bold hover:bg-[#b99881]/30 cursor-pointer shrink-0"
+                                    title="Tüm Başvuru Geçmişini Görüntüle"
+                                  >
+                                    {inquiryCount} Başvuru
+                                  </button>
+                                )}
+                              </div>
+                            </td>
 
-                      {/* 4. Kolon: Atanan Danışman */}
-                      <td className="py-3 px-3 overflow-hidden">
-                        {lead.assignedToUserName ? (
-                          <div
-                            onClick={() => handleOpenConsultantChange(lead)}
-                            className="flex items-center gap-2 group cursor-pointer min-w-0"
-                            title="Danışmanı Değiştir"
-                          >
-                            <div className="w-6 h-6 rounded-full bg-[#b99881]/25 border border-[#b99881]/40 flex items-center justify-center text-[10px] font-bold text-white shrink-0 group-hover:border-[#b99881]">
-                              {lead.assignedToUserName.charAt(0)}
-                            </div>
-                            <div className="text-white font-medium text-xs group-hover:text-[#b99881] transition-colors truncate">
-                              {lead.assignedToUserName}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-[#8c857f] text-xs font-mono select-none">-</span>
-                        )}
-                      </td>
+                            {/* 3. Kolon: İletişim & WhatsApp İkonu */}
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <div className="flex items-center justify-between w-[146px]">
+                                <span className="font-mono text-xs text-[#f3efe9] select-all tracking-wide">
+                                  {formatPhoneDisplay(lead.phone)}
+                                </span>
+                                {lead.phone ? (
+                                  <a
+                                    href={generateWhatsAppUrl(lead.whatsappPhone || lead.phone, lead.fullName)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 transition-colors flex items-center justify-center shrink-0 ml-2"
+                                    title="WhatsApp Mesajı Gönder"
+                                  >
+                                    <svg
+                                      className="w-3.5 h-3.5 shrink-0"
+                                      viewBox="0 0 24 24"
+                                      fill="currentColor"
+                                    >
+                                      <path d="M12.031 2.01c-5.518 0-9.998 4.48-9.998 9.998 0 1.763.46 3.485 1.334 5.003L2 22l5.122-1.343a9.956 9.956 0 0 0 4.909 1.298h.004c5.517 0 9.997-4.48 9.997-9.998 0-2.671-1.04-5.182-2.928-7.07A9.935 9.935 0 0 0 12.031 2.01Zm5.847 14.307c-.246.693-1.434 1.326-1.997 1.41-.513.076-1.163.109-1.878-.118-.433-.138-.988-.321-1.7-.628-2.993-1.292-4.947-4.306-5.097-4.505-.149-.2-1.216-1.618-1.216-3.086 0-1.468.769-2.19 1.042-2.489.274-.298.597-.373.796-.373.199 0 .398.002.572.01.183.009.429-.07.671.512.248.597.845 2.065.92 2.214.075.15.124.324.025.523-.099.199-.149.323-.298.497-.15.174-.314.389-.448.523-.149.149-.304.311-.131.609.174.298.773 1.275 1.66 2.065 1.14.996 2.101 1.305 2.4 1.454.298.15.472.125.646-.075.174-.199.746-.87.945-1.169.199-.298.398-.248.671-.149.274.1 1.741.821 2.039.97.298.149.497.224.572.348.075.125.075.722-.171 1.415Z" />
+                                    </svg>
+                                  </a>
+                                ) : (
+                                  <span className="w-6 h-6" />
+                                )}
+                              </div>
+                            </td>
 
-                      {/* 5. Kolon: Bilgi (Call Center) */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <CallStatusDropdown
-                          value={lead.callStatus || 'WAITING'}
-                          onChange={(newCallStatus) => handleCallStatusChange(lead.id, newCallStatus)}
-                        />
-                      </td>
+                            {/* 4. Kolon: Atanan Danışman */}
+                            <td className="py-3 px-3 overflow-hidden">
+                              {lead.assignedToUserName ? (
+                                <div
+                                  onClick={() => handleOpenConsultantChange(lead)}
+                                  className="flex items-center gap-2 group cursor-pointer min-w-0"
+                                  title="Danışmanı Değiştir"
+                                >
+                                  <div className="w-6 h-6 rounded-full bg-[#b99881]/25 border border-[#b99881]/40 flex items-center justify-center text-[10px] font-bold text-white shrink-0 group-hover:border-[#b99881]">
+                                    {lead.assignedToUserName.charAt(0)}
+                                  </div>
+                                  <div className="text-white font-medium text-xs group-hover:text-[#b99881] transition-colors truncate">
+                                    {lead.assignedToUserName}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-[#8c857f] text-xs font-mono select-none">-</span>
+                              )}
+                            </td>
 
-                      {/* 6. Kolon: Aşama (Meta Hunisi) */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <StageDropdown
-                          value={lead.stage}
-                          onChange={(newStage) => handleStageChange(lead.id, newStage)}
-                        />
-                      </td>
+                            {/* 5. Kolon: Bilgi (Call Center) */}
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <CallStatusDropdown
+                                value={lead.callStatus || 'WAITING'}
+                                onChange={(newCallStatus) => handleCallStatusChange(lead.id, newCallStatus)}
+                              />
+                            </td>
 
-                      {/* 7. Kolon: Açıklama (Call center notu / Açıklama ekle) */}
-                      <td className="py-3 px-3 overflow-hidden">
-                        {lead.notes && lead.notes.trim() ? (
-                          <div
-                            onClick={() => handleOpenNoteEdit(lead)}
-                            className="group flex items-center gap-2 cursor-pointer max-w-full min-w-0"
-                            title="Açıklamayı düzenlemek için tıklayın"
-                          >
-                            <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] truncate transition-colors select-text">
-                              {formatSentenceNote(lead.notes)}
-                            </span>
-                            <Edit3 className="w-3 h-3 text-[#8c857f] group-hover:text-[#b99881] opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenNoteEdit(lead)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d]/40 hover:bg-[#3d3733] border border-dashed border-[#4a443f] hover:border-[#b99881]/60 text-[#8c857f] hover:text-[#d6beae] text-[11px] font-medium transition-all cursor-pointer group whitespace-nowrap"
-                            title="Açıklama Ekle"
-                          >
-                            <Plus className="w-3 h-3 text-[#b99881] group-hover:scale-110 transition-transform shrink-0" />
-                            <span>Açıklama ekle</span>
-                          </button>
-                        )}
-                      </td>
+                            {/* 6. Kolon: Aşama (Meta Hunisi) */}
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <StageDropdown
+                                value={lead.stage}
+                                onChange={(newStage) => handleStageChange(lead.id, newStage)}
+                              />
+                            </td>
 
-                      {/* 8. Kolon: İşlemler */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 whitespace-nowrap">
-                          <a
-                            href={`tel:${lead.phone}`}
-                            className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors flex items-center justify-center shadow-sm shrink-0"
-                            title="Telefonla Ara"
-                          >
-                            <Phone className="w-3.5 h-3.5 text-[#b99881]" />
-                          </a>
-                          <button
-                            onClick={() => setSelectedInquiryHistoryLead(lead)}
-                            className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors cursor-pointer flex items-center justify-center shadow-sm shrink-0"
-                            title="Başvuru Geçmişi & Notlar"
-                          >
-                            <Layers className="w-3.5 h-3.5 text-sky-400" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenAssign(lead)}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold cursor-pointer transition-colors shadow-sm whitespace-nowrap shrink-0"
-                            title="Satış Ekibine Devret"
-                          >
-                            <UserPlus className="w-3 h-3 text-amber-400 shrink-0" />
-                            <span>Satışa Devret</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                            {/* 7. Kolon: Açıklama (Call center notu / Açıklama ekle) */}
+                            <td className="py-3 px-3 overflow-hidden">
+                              {lead.notes && lead.notes.trim() ? (
+                                <div
+                                  onClick={() => handleOpenNoteEdit(lead)}
+                                  className="group flex items-center gap-2 cursor-pointer max-w-full min-w-0"
+                                  title="Açıklamayı düzenlemek için tıklayın"
+                                >
+                                  <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] truncate transition-colors select-text">
+                                    {formatSentenceNote(lead.notes)}
+                                  </span>
+                                  <Edit3 className="w-3 h-3 text-[#8c857f] group-hover:text-[#b99881] opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenNoteEdit(lead)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d]/40 hover:bg-[#3d3733] border border-dashed border-[#4a443f] hover:border-[#b99881]/60 text-[#8c857f] hover:text-[#d6beae] text-[11px] font-medium transition-all cursor-pointer group whitespace-nowrap"
+                                  title="Açıklama Ekle"
+                                >
+                                  <Plus className="w-3 h-3 text-[#b99881] group-hover:scale-110 transition-transform shrink-0" />
+                                  <span>Açıklama ekle</span>
+                                </button>
+                              )}
+                            </td>
+
+                            {/* 8. Kolon: İşlemler */}
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <a
+                                  href={`tel:${lead.phone}`}
+                                  className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors flex items-center justify-center shadow-sm shrink-0"
+                                  title="Telefonla Ara"
+                                >
+                                  <Phone className="w-3.5 h-3.5 text-[#b99881]" />
+                                </a>
+                                <button
+                                  onClick={() => setSelectedInquiryHistoryLead(lead)}
+                                  className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors cursor-pointer flex items-center justify-center shadow-sm shrink-0"
+                                  title="Başvuru Geçmişi & Notlar"
+                                >
+                                  <Layers className="w-3.5 h-3.5 text-sky-400" />
+                                </button>
+                                <button
+                                  onClick={() => handleOpenAssign(lead)}
+                                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold cursor-pointer transition-colors shadow-sm whitespace-nowrap shrink-0"
+                                  title="Satış Ekibine Devret"
+                                >
+                                  <UserPlus className="w-3 h-3 text-amber-400 shrink-0" />
+                                  <span>Satışa Devret</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Katmanlar Arası (Gri Arka Plan Üzerinde) Gün Sonu ve Dönüm Vurgu Çizgisi */}
+              {(segment.hasMilestoneAfter || segment.hasDayEndAfter) && (
+                <div className="py-2.5 flex flex-col items-center justify-center gap-1.5 select-none">
+                  {segment.hasMilestoneAfter && (
+                    <div
+                      onContextMenu={(e) => {
+                        if (!segment.milestoneLeadId) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const leadObj = paginatedLeads.find((l) => l.id === segment.milestoneLeadId)
+                        if (leadObj) {
+                          setRowContextMenu({ x: e.clientX, y: e.clientY, lead: leadObj })
+                        }
+                      }}
+                      title="Dönüm noktası (Son kalınan yer) — Sağ tık ile yönetin"
+                      className="crm-segment-divider-line is-milestone-line cursor-context-menu"
+                    />
+                  )}
+                  {segment.hasDayEndAfter && (
+                    <div
+                      title="Gün sonu ayrımı"
+                      className="crm-segment-divider-line"
+                    />
+                  )}
+                </div>
+              )}
+            </React.Fragment>
+          ))}
 
           {/* Listenin Sonunda Ortalı Sayfalama ve Sağda Göster [20, 50, 100] İbaresi */}
-          <PaginationBar
-            totalItems={filteredLeads.length}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
+          <div className="pt-2">
+            <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] px-3 py-1 shadow-sm backdrop-blur-sm">
+              <PaginationBar
+                totalItems={filteredLeads.length}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                className="border-t-0"
+              />
+            </div>
+          </div>
         </div>
       )}
+
+      {/* MÜŞTERİ SATIRI SAĞ TIK BAĞLAM MENÜSÜ: DÖNÜM OLARAK AYARLA */}
+      {rowContextMenu &&
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              top: `${Math.min(rowContextMenu.y, window.innerHeight - 90)}px`,
+              left: `${Math.min(rowContextMenu.x, window.innerWidth - 220)}px`,
+              zIndex: 99999,
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="dropdown-panel context-menu rounded-[16px] backdrop-blur-2xl p-1.5 min-w-[195px] border border-[#4a443f] shadow-xl"
+          >
+            <div className="px-2.5 py-1 text-[10px] font-semibold text-[#8c857f] truncate border-b border-[#4a443f]/40 mb-1">
+              {rowContextMenu.lead.fullName}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleToggleMilestone(rowContextMenu.lead.id)}
+              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white hover:bg-[#34302d] cursor-pointer transition-colors text-left"
+            >
+              <Bookmark className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+              <span>
+                {milestoneLeadIds.includes(rowContextMenu.lead.id)
+                  ? 'Dönümü Kaldır'
+                  : 'Dönüm Olarak Ayarla'}
+              </span>
+            </button>
+          </div>,
+          document.body
+        )}
 
       {/* SAĞ TIK: VERİLERİ AL TARİH SEÇME PENCERESİ */}
       <GlassModal

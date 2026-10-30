@@ -1560,3 +1560,32 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   border-color: var(--accent-color, #b99881) !important;
 }
 
+/* ==========================================================================
+   MÜŞTERİ LİSTESİ GÜN VE DÖNÜM AYIRICI VURGU ÇİZGİSİ
+   Beyaz katmanları bölen, gri arka plan üzerinde ortalı ve fark edilir çizgi.
+   ========================================================================== */
+div.crm-segment-divider-line,
+main div.crm-segment-divider-line,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.crm-segment-divider-line {
+  width: 260px !important;
+  max-width: 55% !important;
+  height: 2px !important;
+  border-radius: 9999px !important;
+  background: var(--accent-color, #b99881) !important;
+  background-color: var(--accent-color, #b99881) !important;
+  opacity: 0.65 !important;
+  border: none !important;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent-color, #b99881) 30%, transparent) !important;
+}
+
+div.crm-segment-divider-line.is-milestone-line,
+main div.crm-segment-divider-line.is-milestone-line,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.crm-segment-divider-line.is-milestone-line {
+  width: 320px !important;
+  max-width: 65% !important;
+  height: 2.5px !important;
+  opacity: 0.92 !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-color, #b99881) 45%, transparent) !important;
+}
+
+
