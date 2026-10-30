@@ -1057,7 +1057,7 @@ export const SharedFilesView: React.FC = () => {
                 const colCount = allRows[0]?.length || 0
 
                 return (
-                  <div className="h-[66vh] rounded-[18px] bg-[#1f1d1b] border border-[#4a443f] overflow-auto">
+                  <div className="h-[66vh] rounded-[18px] bg-[#24211f] border border-[#4a443f] overflow-auto">
                     {filteredRows.length === 0 ? (
                       <div className="h-full flex items-center justify-center text-xs text-[#8c857f]">
                         Bu çalışma sayfasında görüntülenecek veri bulunamadı.
@@ -1087,8 +1087,8 @@ export const SharedFilesView: React.FC = () => {
                                 key={rIdx}
                                 className={
                                   isHeaderRow
-                                    ? 'bg-[#b99881]/12 font-bold text-white'
-                                    : 'hover:bg-white/[0.03] text-[#e6dfd9]'
+                                    ? 'bg-[#b99881]/15 font-bold text-white'
+                                    : 'hover:bg-white/[0.03] text-white font-medium'
                                 }
                               >
                                 <td className="py-2 px-2.5 border-r border-[#4a443f]/50 text-center font-mono text-[10px] text-[#8c857f] bg-[#24211f]">
@@ -1097,7 +1097,7 @@ export const SharedFilesView: React.FC = () => {
                                 {row.map((cell, cIdx) => (
                                   <td
                                     key={cIdx}
-                                    className="py-2 px-3 border-r border-[#4a443f]/30 whitespace-nowrap max-w-[320px] truncate"
+                                    className="py-2 px-3 border-r border-[#4a443f]/30 whitespace-nowrap max-w-[320px] truncate text-white"
                                     title={cell}
                                   >
                                     {cell}
@@ -1114,7 +1114,7 @@ export const SharedFilesView: React.FC = () => {
               })()
             ) : parsedPreview.kind === 'word' ? (
               /* WORD BELGESİ (.docx / .doc) ÖNİZLEME */
-              <div className="h-[66vh] rounded-[18px] bg-[#1f1d1b] border border-[#4a443f] overflow-y-auto p-6 sm:p-8">
+              <div className="h-[66vh] rounded-[18px] bg-[#24211f] border border-[#4a443f] overflow-y-auto p-6 sm:p-8">
                 <div className="max-w-3xl mx-auto bg-[#282522] border border-[#4a443f] rounded-[16px] p-6 sm:p-8 shadow-inner space-y-4">
                   {parsedPreview.blocks.map((block, bIdx) => {
                     if (block.type === 'heading') {
@@ -1143,13 +1143,13 @@ export const SharedFilesView: React.FC = () => {
                                   className={
                                     rIdx === 0
                                       ? 'bg-[#34302d] font-bold text-white'
-                                      : 'bg-[#24211f]/70 text-[#e6dfd9]'
+                                      : 'bg-[#24211f]/70 text-white font-medium'
                                   }
                                 >
                                   {r.map((cell, cIdx) => (
                                     <td
                                       key={cIdx}
-                                      className="p-2.5 border-r border-[#4a443f]/50 last:border-r-0"
+                                      className="p-2.5 border-r border-[#4a443f]/50 last:border-r-0 text-white"
                                     >
                                       {cell}
                                     </td>
@@ -1164,7 +1164,7 @@ export const SharedFilesView: React.FC = () => {
                     return (
                       <p
                         key={bIdx}
-                        className="text-xs sm:text-sm text-[#f3efe9] leading-relaxed whitespace-pre-wrap"
+                        className="text-xs sm:text-sm text-white leading-relaxed whitespace-pre-wrap"
                       >
                         {block.text}
                       </p>
@@ -1174,8 +1174,8 @@ export const SharedFilesView: React.FC = () => {
               </div>
             ) : parsedPreview.kind === 'text' ? (
               /* METİN BELGESİ (.txt, .md, .json, .xml, .rtf, .log) ÖNİZLEME */
-              <div className="h-[66vh] rounded-[18px] bg-[#1d1b19] border border-[#4a443f] overflow-auto p-5">
-                <pre className="text-xs sm:text-sm font-mono text-[#f3efe9] whitespace-pre-wrap break-words leading-relaxed">
+              <div className="h-[66vh] rounded-[18px] bg-[#24211f] border border-[#4a443f] overflow-auto p-5">
+                <pre className="text-xs sm:text-sm font-mono text-white whitespace-pre-wrap break-words leading-relaxed">
                   {parsedPreview.content || '(Boş metin belgesi)'}
                 </pre>
               </div>
