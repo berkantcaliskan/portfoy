@@ -84,8 +84,14 @@ export class PermissionService {
    */
   public canAccessFile(user: AppUser | null, file: SharedFilePermissionTarget): boolean {
     if (!user) return false
-    if (user.role === 'ADMIN') return true
     if (file.uploadedByUserId === user.id) return true
+
+    // Kişilere özel paylaşılan dosyalar YALNIZCA yükleyen kişi ve seçilen kişi(ler) tarafından görülebilir
+    if (file.shareTarget === 'MEMBERS') {
+      return Boolean(file.targetMemberIds?.includes(user.id))
+    }
+
+    if (user.role === 'ADMIN') return true
 
     switch (file.shareTarget) {
       case 'ALL_TEAM':
@@ -99,8 +105,6 @@ export class PermissionService {
         }
         return false
       }
-      case 'MEMBERS':
-        return Boolean(file.targetMemberIds?.includes(user.id))
       case 'MANAGEMENT':
         return user.department === 'Yönetim' || user.isManager
       default:

@@ -183,6 +183,8 @@ export const SharedFilesView: React.FC = () => {
     const d = userStore.getCurrentUser()?.department
     return d ? [d] : ['Pazarlama']
   })
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
+  const [allUsers, setAllUsers] = useState<AppUser[]>(() => userStore.getAllUsers())
   const [canEdit, setCanEdit] = useState(false)
   const [canReshare, setCanReshare] = useState(true)
 
@@ -193,6 +195,7 @@ export const SharedFilesView: React.FC = () => {
     const unsubUser = userStore.subscribe(() => {
       const u = userStore.getCurrentUser()
       setCurrentUser(u)
+      setAllUsers(userStore.getAllUsers())
       setFiles(sharedFileStore.getFilesForUser(u))
     })
     return () => {
@@ -376,6 +379,14 @@ export const SharedFilesView: React.FC = () => {
     }
   }
 
+  const handleMemberToggle = (memberId: string) => {
+    if (selectedMemberIds.includes(memberId)) {
+      setSelectedMemberIds(selectedMemberIds.filter((id) => id !== memberId))
+    } else {
+      setSelectedMemberIds([...selectedMemberIds, memberId])
+    }
+  }
+
   const handleUploadSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!currentUser) return
@@ -392,6 +403,12 @@ export const SharedFilesView: React.FC = () => {
       return
     }
 
+    if (shareTarget === 'MEMBERS' && selectedMemberIds.length === 0) {
+      setErrorMessage('Lütfen dosyanın paylaşılacağı en az bir kişi seçin.')
+      setTimeout(() => setErrorMessage(null), 3000)
+      return
+    }
+
     for (const item of pendingFiles) {
       sharedFileStore.uploadFile(
         {
@@ -403,6 +420,7 @@ export const SharedFilesView: React.FC = () => {
           fileDataUrl: item.dataUrl,
           shareTarget,
           targetDepartments: shareTarget === 'DEPARTMENTS' ? selectedDepts : undefined,
+          targetMemberIds: shareTarget === 'MEMBERS' ? selectedMemberIds : undefined,
           permissions: {
             canView: true,
             canEdit,
@@ -416,6 +434,7 @@ export const SharedFilesView: React.FC = () => {
     const uploadedCount = pendingFiles.length
     setIsUploadModalOpen(false)
     setPendingFiles([])
+    setSelectedMemberIds([])
     setDownloadSuccessMessage(
       uploadedCount === 1
         ? 'Dosya başarıyla yüklendi ve seçilen hedef yetkileriyle paylaşıldı.'
@@ -457,8 +476,25 @@ export const SharedFilesView: React.FC = () => {
         )
       case 'MANAGEMENT':
         return <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">Yönetim Özel</span>
-      case 'MEMBERS':
-        return <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">Belirli Üyeler</span>
+      case 'MEMBERS': {
+        const names = (file.targetMemberIds || [])
+          .map((id) => allUsers.find((u) => u.id === id)?.fullName)
+          .filter(Boolean) as string[]
+        const label =
+          names.length === 0
+            ? 'Seçili Kişiler'
+            : names.length <= 2
+              ? names.join(', ')
+              : `${names[0]}, ${names[1]} +${names.length - 2}`
+        return (
+          <span
+            className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20"
+            title={names.length > 0 ? `Paylaşılan kişiler: ${names.join(', ')}` : 'Belirli kişilerle paylaşıldı'}
+          >
+            {label}
+          </span>
+        )
+      }
     }
   }
 
@@ -1319,12 +1355,12 @@ export const SharedFilesView: React.FC = () => {
             </select>
           </div>
 
-          {/* Hedef Seçimi (Tüm Ekip, Çoklu Departman, Yönetim) */}
+          {/* Hedef Seçimi (Tüm Ekip, Departmanlar, Kişilerle Paylaş, Yönetim) */}
           <div>
             <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
               Paylaşım Hedefi *
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => setShareTarget('ALL_TEAM')}
@@ -1346,6 +1382,17 @@ export const SharedFilesView: React.FC = () => {
                 }`}
               >
                 Departmanlar
+              </button>
+              <button
+                type="button"
+                onClick={() => setShareTarget('MEMBERS')}
+                className={`py-2 px-2.5 rounded-[12px] text-xs font-medium border transition-colors cursor-pointer text-center ${
+                  shareTarget === 'MEMBERS'
+                    ? 'bg-[#b99881]/20 border-[#b99881] text-white font-bold'
+                    : 'bg-[#24211f] border-[#4a443f] text-[#a69f99]'
+                }`}
+              >
+                Kişilerle Paylaş
               </button>
               <button
                 type="button"
@@ -1385,6 +1432,52 @@ export const SharedFilesView: React.FC = () => {
                     </label>
                   )
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Kişi / Kişiler Seçici (Yalnızca seçilen kişilere özel paylaşım) */}
+          {shareTarget === 'MEMBERS' && (
+            <div className="p-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-semibold text-[#b99881]">
+                  Paylaşılacak Kişi / Kişiler (Yalnızca seçilenler görebilir):
+                </span>
+                {selectedMemberIds.length > 0 && (
+                  <span className="text-[10px] font-bold text-[#b99881]">
+                    {selectedMemberIds.length} kişi seçildi
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-28 overflow-y-auto no-scrollbar pr-1">
+                {allUsers
+                  .filter((u) => u.id !== currentUser?.id)
+                  .map((member) => {
+                    const isChecked = selectedMemberIds.includes(member.id)
+                    return (
+                      <label
+                        key={member.id}
+                        className="flex items-center gap-1.5 text-xs text-[#f3efe9] cursor-pointer py-0.5"
+                        title={`${member.fullName} (${member.department})`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleMemberToggle(member.id)}
+                          className="rounded border-[#4a443f] text-[#b99881] focus:ring-0 shrink-0"
+                        />
+                        <span className="truncate">
+                          {member.fullName}{' '}
+                          <span className="text-[10px] text-[#8c857f]">({member.department})</span>
+                        </span>
+                      </label>
+                    )
+                  })}
+                {allUsers.filter((u) => u.id !== currentUser?.id).length === 0 && (
+                  <div className="col-span-full text-[11px] text-[#8c857f] py-1">
+                    Sistemde başka kayıtlı ekip üyesi bulunmuyor.
+                  </div>
+                )}
               </div>
             </div>
           )}
