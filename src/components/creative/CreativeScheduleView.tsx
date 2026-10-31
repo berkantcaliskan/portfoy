@@ -379,10 +379,8 @@ export const CreativeScheduleView: React.FC = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setCategoryFilter(tab.id)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer border ${
-                    categoryFilter === tab.id
-                      ? 'bg-[#b99881] text-white border-[#b99881] font-bold shadow-xs'
-                      : 'bg-[#34302d] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
+                  className={`tab-pill-btn px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                    categoryFilter === tab.id ? 'is-active-tab-pill' : ''
                   }`}
                 >
                   {tab.label}
@@ -397,10 +395,8 @@ export const CreativeScheduleView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('calendar')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer border ${
-                  viewMode === 'calendar'
-                    ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
-                    : 'bg-[#34302d] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
+                className={`tab-pill-btn px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === 'calendar' ? 'is-active-tab-pill' : ''
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -409,10 +405,8 @@ export const CreativeScheduleView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer border ${
-                  viewMode === 'list'
-                    ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
-                    : 'bg-[#34302d] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
+                className={`tab-pill-btn px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === 'list' ? 'is-active-tab-pill' : ''
                 }`}
               >
                 <List className="w-3.5 h-3.5" />
@@ -645,10 +639,8 @@ export const CreativeScheduleView: React.FC = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setCategoryFilter(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
-                    categoryFilter === tab.id
-                      ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
-                      : 'bg-[#282522] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
+                  className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    categoryFilter === tab.id ? 'is-active-tab-pill' : ''
                   }`}
                 >
                   {tab.label}

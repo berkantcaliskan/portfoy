@@ -1613,5 +1613,103 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   color: #ffffff !important;
 }
 
+/* ==========================================================================
+   OTOMATİK ARKA PLAN KONTRAST SİSTEMİ (data-auto-contrast="light" | "dark")
+   Açık arka planlarda (örn. #F8FAFC beyaz) metin/ikonları otomatik siyah/koyu
+   lacivert (#0F172A), koyu arka planlarda ise otomatik beyaz (#FFFFFF) yapar.
+   ========================================================================== */
+[data-auto-contrast="light"],
+[data-auto-contrast="light"] *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="light"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="light"] * {
+  color: #0f172a !important;
+}
+
+[data-auto-contrast="dark"],
+[data-auto-contrast="dark"] *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="dark"],
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="dark"] * {
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   SEKME & FİLTRE HAPLARI (TAB PILL BUTTONS)
+   Sekme butonları tamamen vurgu renginde dolmaz; aktif sekmede yalnızca
+   vurgu renginde hafif kalın kontür çizgisi (2px) yer alır.
+   ========================================================================== */
+button.tab-pill-btn,
+main button.tab-pill-btn {
+  background: #282522 !important;
+  background-color: #282522 !important;
+  color: #a69f99 !important;
+  border: 1.5px solid #4a443f !important;
+  box-shadow: none !important;
+}
+
+button.tab-pill-btn:hover,
+main button.tab-pill-btn:hover {
+  border-color: color-mix(in srgb, var(--accent-color, #b99881) 65%, transparent) !important;
+  color: #ffffff !important;
+}
+
+button.tab-pill-btn.is-active-tab-pill,
+main button.tab-pill-btn.is-active-tab-pill {
+  background: #282522 !important;
+  background-color: #282522 !important;
+  color: #ffffff !important;
+  border: 2px solid var(--accent-color, #b99881) !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+button.tab-pill-btn.is-active-tab-pill *,
+main button.tab-pill-btn.is-active-tab-pill * {
+  color: #ffffff !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: rgba(41, 45, 43, 0.72) !important;
+  border: 1.5px solid rgba(41, 45, 43, 0.12) !important;
+  box-shadow: none !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn:hover,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn:hover {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #292d2b !important;
+  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn.is-active-tab-pill,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn.is-active-tab-pill {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #292d2b !important;
+  border: 2px solid var(--accent-color, #5c6ac4) !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn.is-active-tab-pill *,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn.is-active-tab-pill * {
+  color: #292d2b !important;
+}
+
+/* ==========================================================================
+   KAMPANYALAR SAYFASI GÖLGESİZ KART DENEMESİ (.campaigns-no-shadow)
+   ========================================================================== */
+.campaigns-no-shadow .glass-card,
+.campaigns-no-shadow .glass-card-static,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow .glass-card,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow .glass-card-static,
+html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow [class*="bg-[#282522]"] {
+  box-shadow: none !important;
+}
+
+
 
 

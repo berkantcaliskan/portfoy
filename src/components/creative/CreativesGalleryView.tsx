@@ -247,10 +247,8 @@ export function CreativesGalleryView() {
               key={tab.id}
               type="button"
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
-                statusFilter === tab.id
-                  ? 'bg-[#b99881] text-white border-[#b99881] shadow-sm'
-                  : 'bg-[#282522] text-[#a69f99] border-[#4a443f] hover:text-white hover:border-[#b99881]'
+              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                statusFilter === tab.id ? 'is-active-tab-pill' : ''
               }`}
             >
               {tab.label}

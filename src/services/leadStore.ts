@@ -960,7 +960,10 @@ class LeadStore {
       this.saveToStorage()
     }
     syncService.saveLead(newLead)
-    // Not: Meta'ya otomatik veri gönderimi kapatıldı. Yalnızca Pazarlama > Kampanyalar > "Veriyi Gönder" ile manuel gönderilir.
+    if (metaStore.getConfig().autoSyncStages) {
+      const effStage = newLead.stage === 'NEW' && newLead.isQualified ? 'QUALIFIED' : newLead.stage
+      void metaStore.sendCapiLeadEvent(newLead, effStage)
+    }
     return { lead: newLead, isNewCustomer: true }
   }
 
@@ -1063,7 +1066,10 @@ class LeadStore {
 
     this.saveToStorage()
     syncService.saveLead(newLead)
-    // Not: Meta'ya otomatik veri gönderimi kapatıldı. Yalnızca Pazarlama > Kampanyalar > "Veriyi Gönder" ile manuel gönderilir.
+    if (metaStore.getConfig().autoSyncStages) {
+      const effStage = newLead.stage === 'NEW' && newLead.isQualified ? 'QUALIFIED' : newLead.stage
+      void metaStore.sendCapiLeadEvent(newLead, effStage)
+    }
     return newLead
   }
 
@@ -1079,6 +1085,9 @@ class LeadStore {
     }
 
     const stageChanged = Boolean(updates.stage && updates.stage !== oldLead.stage)
+    const qualifiedChanged = Boolean(
+      updates.isQualified !== undefined && updates.isQualified !== oldLead.isQualified
+    )
 
     if (stageChanged && updates.stage) {
       const stageEntry: StageHistoryEntry = {
@@ -1103,8 +1112,11 @@ class LeadStore {
     this.saveToStorage()
     syncService.saveLead(updatedLead)
 
-    // Not: Aşama değiştiğinde Meta'ya otomatik veri gönderimi yapılmaz.
-    // Yalnızca Pazarlama > Kampanyalar > "Veriyi Gönder" butonu ile manuel gönderilir.
+    if ((stageChanged || qualifiedChanged) && metaStore.getConfig().autoSyncStages) {
+      const effStage =
+        updatedLead.stage === 'NEW' && updatedLead.isQualified ? 'QUALIFIED' : updatedLead.stage
+      void metaStore.sendCapiLeadEvent(updatedLead, effStage)
+    }
 
     return updatedLead
   }
@@ -1478,6 +1490,12 @@ class LeadStore {
   public delete(id: string): boolean {
     const target = this.leads.find((l) => l.id === id)
     const idsToMarkDeleted = [id]
+    if (target?.phone) {
+      const cleanPhone = String(target.phone).replace(/\D/g, '').slice(-10)
+      if (cleanPhone && cleanPhone.length >= 7) {
+        idsToMarkDeleted.push(`phone:${cleanPhone}`)
+      }
+    }
     if (target?.inquiries) {
       for (const inq of target.inquiries) {
         if (inq.id) idsToMarkDeleted.push(inq.id)

@@ -73,6 +73,26 @@ export const MarketingCampaignsView: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [isSendingToMeta, setIsSendingToMeta] = useState(false)
   const [sendingSingleLeadId, setSendingSingleLeadId] = useState<string | null>(null)
+  const [sendBtnContextMenu, setSendBtnContextMenu] = useState<{ x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    if (!sendBtnContextMenu) return
+    const close = () => setSendBtnContextMenu(null)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [sendBtnContextMenu])
+
+  const handleToggleAutoSend = () => {
+    const nextVal = !metaConfig.autoSyncStages
+    metaStore.setAutoSyncStages(nextVal)
+    setMetaConfig(metaStore.getConfig())
+    setSendBtnContextMenu(null)
+    showToast(
+      nextVal
+        ? "Meta'ya otomatik veri gönderimi açıldı. Müşteri aşama ve durum güncellemeleri otomatik iletilecek."
+        : "Meta'ya otomatik veri gönderimi kapatıldı. Yalnızca Veriyi Gönder butonuyla gönderilecek."
+    )
+  }
 
   const pendingMetaLeads = allLeads.filter((l) => isLeadPendingMetaSync(l))
 
@@ -328,7 +348,7 @@ export const MarketingCampaignsView: React.FC = () => {
   const grandTotalLeads = totalMetaLeads + totalGoogleLeads + webLeads.length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 campaigns-no-shadow">
       {/* Hidden CSV Inputs */}
       <input
         ref={metaCsvInputRef}
@@ -358,30 +378,71 @@ export const MarketingCampaignsView: React.FC = () => {
         </div>
 
         {/* Dynamic Platform Action Buttons */}
-        <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+        <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap relative">
           {(activePlatform === 'all' || activePlatform === 'meta') && (
             <>
-              <GlassButton
-                variant="gold"
-                size="sm"
-                icon={
-                  isSendingToMeta ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Send className="w-3.5 h-3.5" />
-                  )
-                }
-                disabled={isSendingToMeta || allLeads.length === 0}
-                onClick={() => void handleManualSendToMeta()}
-                className="rounded-full px-3.5 text-xs font-semibold whitespace-nowrap shrink-0"
-                title="Potansiyel müşteri durumu ve aşama bilgilerini Meta'ya manuel gönder"
+              <div
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setSendBtnContextMenu({ x: e.clientX, y: e.clientY })
+                }}
+                className="relative inline-flex"
               >
-                {isSendingToMeta
-                  ? "Meta'ya Gönderiliyor..."
-                  : pendingMetaLeads.length > 0
-                  ? `Veriyi Gönder (${pendingMetaLeads.length})`
-                  : 'Veriyi Gönder'}
-              </GlassButton>
+                <GlassButton
+                  variant="gold"
+                  size="sm"
+                  icon={
+                    isSendingToMeta ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )
+                  }
+                  disabled={isSendingToMeta || allLeads.length === 0}
+                  onClick={() => void handleManualSendToMeta()}
+                  className="rounded-full px-3.5 text-xs font-semibold whitespace-nowrap shrink-0"
+                  title="Müşteri verilerini Meta'ya gönder (Otomatik göndermeyi açmak/kapatmak için sağ tıklayın)"
+                >
+                  {isSendingToMeta
+                    ? "Meta'ya Gönderiliyor..."
+                    : pendingMetaLeads.length > 0
+                    ? `Veriyi Gönder (${pendingMetaLeads.length})`
+                    : 'Veriyi Gönder'}
+                </GlassButton>
+              </div>
+
+              {sendBtnContextMenu && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: sendBtnContextMenu.y + 6,
+                    left: Math.min(sendBtnContextMenu.x, window.innerWidth - 260),
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="context-menu dropdown-panel z-[200] min-w-[235px] p-1.5 rounded-2xl bg-[#282522] border border-[#4a443f] shadow-xl space-y-1"
+                >
+                  <button
+                    type="button"
+                    onClick={handleToggleAutoSend}
+                    className="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-full text-xs font-semibold text-white hover:bg-[#34302d] transition-colors cursor-pointer text-left"
+                  >
+                    <span>
+                      {metaConfig.autoSyncStages
+                        ? 'Otomatik Göndermeyi Kapat'
+                        : 'Otomatik Göndermeyi Aç'}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        metaConfig.autoSyncStages
+                          ? 'bg-emerald-500/15 text-emerald-400'
+                          : 'bg-[#34302d] text-[#a69f99]'
+                      }`}
+                    >
+                      {metaConfig.autoSyncStages ? 'Açık' : 'Kapalı'}
+                    </span>
+                  </button>
+                </div>
+              )}
               <GlassButton
                 variant="subtle"
                 size="sm"
@@ -460,10 +521,8 @@ export const MarketingCampaignsView: React.FC = () => {
           type="button"
           onClick={() => setActivePlatform('all')}
           title={`Tümü (${grandTotalLeads})`}
-          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-            activePlatform === 'all'
-              ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
-              : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
+          className={`tab-pill-btn w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+            activePlatform === 'all' ? 'is-active-tab-pill' : ''
           }`}
         >
           <Layers className="w-4 h-4 shrink-0" />
@@ -473,10 +532,8 @@ export const MarketingCampaignsView: React.FC = () => {
         <button
           type="button"
           onClick={() => setActivePlatform('meta')}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-            activePlatform === 'meta'
-              ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
-              : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+          className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+            activePlatform === 'meta' ? 'is-active-tab-pill' : ''
           }`}
         >
           <svg
@@ -497,10 +554,8 @@ export const MarketingCampaignsView: React.FC = () => {
         <button
           type="button"
           onClick={() => setActivePlatform('google')}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-            activePlatform === 'google'
-              ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
-              : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+          className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+            activePlatform === 'google' ? 'is-active-tab-pill' : ''
           }`}
         >
           <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -513,10 +568,8 @@ export const MarketingCampaignsView: React.FC = () => {
         <button
           type="button"
           onClick={() => setActivePlatform('web')}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-            activePlatform === 'web'
-              ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
-              : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+          className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+            activePlatform === 'web' ? 'is-active-tab-pill' : ''
           }`}
         >
           <BookLogo animated={false} className="w-4 h-4 shrink-0" />
@@ -598,21 +651,17 @@ export const MarketingCampaignsView: React.FC = () => {
             </GlassCard>
           </div>
 
-          {/* Meta'ya Manuel Veri Gönderimi Kısa Kontrol Kartı */}
+          {/* Meta'ya Veri Gönderimi Kısa Kontrol Kartı */}
           <GlassCard className="p-4 bg-[#282522] border-[#4a443f] flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Send className="w-3.5 h-3.5 text-[#b99881]" />
-                  <span>Meta'ya Potansiyel Müşteri Durumu ve Aşaması Gönderimi</span>
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  Manuel Gönderim Modu (Otomatik Gönderim Kapalı)
+                  <span>Meta'ya Veri Gönderimi</span>
                 </span>
               </div>
               <p className="text-xs text-[#a69f99]">
-                Müşteri aşaması ve durumu (PM, İletişim, Nitelikli, Teklif, Dönüşüm, Potansiyel Değil) Meta'ya otomatik gönderilmez; yalnızca{' '}
-                <strong className="text-white">Veriyi Gönder</strong> butonuna bastığınızda iletilir.
+                Müşteri aşama ve durum güncellemelerini Meta Conversions API'ye iletin.
               </p>
             </div>
             <div className="flex items-center gap-2.5">
@@ -787,24 +836,18 @@ export const MarketingCampaignsView: React.FC = () => {
             </GlassCard>
           </div>
 
-          {/* Meta'ya Manuel Veri Gönderimi & Dönüşümler API (CAPI) Sinyalleri */}
+          {/* Meta'ya Veri Gönderimi & Dönüşümler API (CAPI) Sinyalleri */}
           <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <Send className="w-4 h-4 text-[#b99881]" />
-                    <span>
-                      Meta'ya Veri Gönderimi — Potansiyel Müşteri Durumu ve Aşaması
-                    </span>
+                    <span>Meta'ya Veri Gönderimi</span>
                   </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                    Sadece Manuel Gönderim (Otomatik Kapalı)
-                  </span>
                 </div>
                 <p className="text-xs text-[#a69f99]">
-                  Müşterilerin aşama ve durum değişiklikleri (Potansiyel Müşteri, İletişim, Nitelikli, Teklif, Dönüşüm, Potansiyel Değil) Meta'ya otomatik olarak gönderilmez. Yalnızca sağdaki{' '}
-                  <strong className="text-white">Veriyi Gönder</strong> butonuna tıkladığınızda Meta'ya iletilir.
+                  Müşteri aşama ve durum güncellemelerini Meta Conversions API'ye iletin.
                 </p>
               </div>
 

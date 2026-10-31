@@ -13,10 +13,13 @@ const electronDir = path.join(rootDir, 'electron')
 const dataDir = path.join(rootDir, 'data')
 
 const DELETED_IDS_KEY = 'demirturk_deleted_ids_v1'
+const CLEAN_LEADS_V8_KEY = 'demirturk_clean_leads_v8_zero'
 
 const BUSINESS_KEYS = new Set([
   'demirturk_clean_slate_v7_demo_ready',
+  CLEAN_LEADS_V8_KEY,
   DELETED_IDS_KEY,
+  'demirturk_trash_bin_v1',
   'demirturk_users_v2',
   'demirturk_leads_v2',
   'demirturk_activities_v2',
@@ -166,14 +169,23 @@ function exportSharedCompanyDb() {
 
   const sharedDb = {
     demirturk_clean_slate_v7_demo_ready: 'true',
+    [CLEAN_LEADS_V8_KEY]: 'true',
     [DELETED_IDS_KEY]: mergedDeletedJson,
   }
 
+  const isCloudV8Clean = existingCloud[CLEAN_LEADS_V8_KEY] === 'true'
+  const isLocalV8Clean = localDb[CLEAN_LEADS_V8_KEY] === 'true'
+
   const allKeys = new Set([...Object.keys(existingCloud), ...Object.keys(localDb)])
   for (const k of allKeys) {
-    if (!isBusinessKey(k) || k === DELETED_IDS_KEY) continue
-    const vCloud = existingCloud[k]
-    const vLocal = localDb[k]
+    if (!isBusinessKey(k) || k === DELETED_IDS_KEY || k === CLEAN_LEADS_V8_KEY) continue
+    const isLeadKey =
+      k === 'demirturk_leads_v2' ||
+      k === 'demirturk_activities_v2' ||
+      k === 'demirturk_customer_requests_v2' ||
+      k === 'demirturk_meta_capi_logs_v1'
+    const vCloud = isLeadKey && !isCloudV8Clean ? (k === 'demirturk_activities_v2' ? '{}' : '[]') : existingCloud[k]
+    const vLocal = isLeadKey && !isLocalV8Clean ? (k === 'demirturk_activities_v2' ? '{}' : '[]') : localDb[k]
     if (k.endsWith('_v2') || k.endsWith('_v1')) {
       if (
         (typeof vCloud === 'string' && vCloud.trim().startsWith('[')) ||

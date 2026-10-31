@@ -3,12 +3,15 @@
 // and real-time bidirectional synchronization across all computers running portföyapp.exe.
 
 import { SEED_COMPANY_DB } from './seedCompanyData'
+import { TRASH_STORAGE_KEY, TRASH_RETENTION_MS, describeTrashTarget, TrashItem } from './trashStore'
 
 const CLEAN_SLATE_VERSION_KEY = 'demirturk_clean_slate_v7_demo_ready'
+const CLEAN_LEADS_V8_KEY = 'demirturk_clean_leads_v8_zero'
 const DELETED_IDS_KEY = 'demirturk_deleted_ids_v1'
 
 const ARRAY_MERGE_KEYS = new Set([
   DELETED_IDS_KEY,
+  TRASH_STORAGE_KEY,
   'demirturk_users_v2',
   'demirturk_leads_v2',
   'demirturk_shared_projects_v2',
@@ -40,6 +43,7 @@ const OBJECT_MAP_MERGE_KEYS = new Set([
 function isCloudSyncedBusinessKey(key: string): boolean {
   if (ARRAY_MERGE_KEYS.has(key) || OBJECT_MAP_MERGE_KEYS.has(key)) return true
   if (key === 'demirturk_meta_api_config' || key === 'demirturk_google_ads_config') return true
+  if (key === CLEAN_LEADS_V8_KEY) return true
   if (key.startsWith('demirturk_avatar_')) return true
   if (key.startsWith('demirturk_calendar_')) return true
   return false
@@ -70,6 +74,9 @@ const LOCAL_MACHINE_ONLY_KEYS = new Set([
 function getArrayItemKey(item: any, idx: number, key: string): string {
   if (typeof item === 'string') return item
   if (!item || typeof item !== 'object') return String(idx)
+  if (key === TRASH_STORAGE_KEY && item.trashId) {
+    return String(item.trashId)
+  }
   if (key === 'demirturk_users_v2' && item.username) {
     return String(item.username).toLowerCase()
   }
@@ -96,7 +103,7 @@ function parseDeletedSet(rawJson: string | undefined): Set<string> {
     const arr = JSON.parse(rawJson || '[]')
     if (Array.isArray(arr)) {
       for (const x of arr) {
-        if (typeof x === 'string' && !x.startsWith('phone:')) {
+        if (typeof x === 'string' && x) {
           permanentDeleted.add(x)
         }
       }
@@ -106,6 +113,12 @@ function parseDeletedSet(rawJson: string | undefined): Set<string> {
 }
 
 function isItemDeleted(item: any, idx: number, key: string, deletedSet?: Set<string>): boolean {
+  if (key === TRASH_STORAGE_KEY) {
+    if (!item || typeof item !== 'object') return true
+    const exp = new Date(item.expiresAt || 0).getTime()
+    if (!isNaN(exp) && exp <= Date.now()) return true
+    return false
+  }
   if (!deletedSet || deletedSet.size === 0 || key === DELETED_IDS_KEY) return false
   if (!item || typeof item !== 'object') return false
   if (item.id && deletedSet.has(String(item.id))) return true
@@ -407,7 +420,30 @@ try {
 
     // 3.5 ALWAYS merge SEED_COMPANY_DB into diskStore synchronously so all company users
     // (@berkant, @tugce, @nazli, @melisa, etc.) and shared data are immediately available on EVERY PC!
-    const seedMerged = mergeStoresNonDestructively(diskStore, SEED_COMPANY_DB)
+    let seedMerged = mergeStoresNonDestructively(diskStore, SEED_COMPANY_DB)
+
+    // 3.6 One-time v8 customer data reset ("mevcuttaki tüm müşteri verisini kaldır")
+    const isLocalLeadsV8Clean = rawGetItem(CLEAN_LEADS_V8_KEY) === 'true'
+    const isDiskLeadsV8Clean = diskStore[CLEAN_LEADS_V8_KEY] === 'true'
+    if (!isLocalLeadsV8Clean || (diskAvailable && !isDiskLeadsV8Clean)) {
+      diskStore['demirturk_leads_v2'] = '[]'
+      diskStore['demirturk_activities_v2'] = '{}'
+      diskStore['demirturk_customer_requests_v2'] = '[]'
+      diskStore['demirturk_meta_capi_logs_v1'] = '[]'
+      diskStore['demirturk_company_lead_seq_v1'] = '0'
+      diskStore['demirturk_company_lead_map_v1'] = '{}'
+      diskStore[CLEAN_LEADS_V8_KEY] = 'true'
+      try {
+        rawSetItem('demirturk_leads_v2', '[]')
+        rawSetItem('demirturk_activities_v2', '{}')
+        rawSetItem('demirturk_customer_requests_v2', '[]')
+        rawSetItem('demirturk_meta_capi_logs_v1', '[]')
+        rawSetItem('demirturk_company_lead_seq_v1', '0')
+        rawSetItem('demirturk_company_lead_map_v1', '{}')
+        rawSetItem(CLEAN_LEADS_V8_KEY, 'true')
+      } catch {}
+      seedMerged = true
+    }
 
     // 4. Hydrate memoryMirror & localStorage from diskStore (shared source of truth)
     for (const [k, v] of Object.entries(diskStore)) {
@@ -488,6 +524,7 @@ try {
     const buildExportableCloudStore = (): Record<string, string> => {
       const out: Record<string, string> = {
         [CLEAN_SLATE_VERSION_KEY]: 'true',
+        [CLEAN_LEADS_V8_KEY]: 'true',
       }
       for (const [k, v] of memoryMirror.entries()) {
         if (!isCloudSyncedBusinessKey(k)) continue
@@ -539,8 +576,21 @@ try {
       const deletedSet = parseDeletedSet(mergedDelStr)
 
       // 1. Merge remote keys into local memoryMirror while honoring deletedSet
+      const isRemoteV8Clean = remoteStore[CLEAN_LEADS_V8_KEY] === 'true'
+      if (!isRemoteV8Clean) {
+        remoteMissingLocalData = true
+      }
       for (const [k, remoteVal] of Object.entries(remoteStore)) {
         if (!isCloudSyncedBusinessKey(k) || k === DELETED_IDS_KEY || typeof remoteVal !== 'string') continue
+        if (
+          !isRemoteV8Clean &&
+          (k === 'demirturk_leads_v2' ||
+            k === 'demirturk_activities_v2' ||
+            k === 'demirturk_customer_requests_v2' ||
+            k === 'demirturk_meta_capi_logs_v1')
+        ) {
+          continue
+        }
         const localVal = memoryMirror.get(k)
         if (ARRAY_MERGE_KEYS.has(k)) {
           const merged = mergeJsonArrayStrings(localVal, remoteVal, k, deletedSet)
@@ -799,11 +849,12 @@ try {
       if (this === window.localStorage) {
         const prevVal = memoryMirror.get(key)
 
-        // Track item deletions and re-additions automatically in DELETED_IDS_KEY
+        // Track item deletions and re-additions automatically in DELETED_IDS_KEY & 30-day TRASH_STORAGE_KEY
         if (
           prevVal !== strVal &&
           ARRAY_MERGE_KEYS.has(key) &&
-          key !== DELETED_IDS_KEY
+          key !== DELETED_IDS_KEY &&
+          key !== TRASH_STORAGE_KEY
         ) {
           try {
             const oldArr = prevVal ? JSON.parse(prevVal) : []
@@ -829,6 +880,7 @@ try {
 
               const deletedSet = parseDeletedSet(memoryMirror.get(DELETED_IDS_KEY))
               let delChanged = false
+              const newlyTrashed: TrashItem[] = []
 
               // Any item that was in oldArr and is missing from newArr was deleted by the user
               oldArr.forEach((item, i) => {
@@ -845,6 +897,23 @@ try {
                   if (kStr && !deletedSet.has(kStr)) {
                     deletedSet.add(kStr)
                     delChanged = true
+                  }
+                  const desc = describeTrashTarget(key, item)
+                  if (desc) {
+                    const nowMs = Date.now()
+                    newlyTrashed.push({
+                      trashId: `trash-${nowMs}-${Math.floor(1000 + Math.random() * 9000)}-${i}`,
+                      storeKey: key,
+                      itemId: idStr || kStr,
+                      itemKey: kStr,
+                      department: desc.department,
+                      pageName: desc.pageName,
+                      title: desc.title,
+                      subtitle: desc.subtitle,
+                      deletedAt: new Date(nowMs).toISOString(),
+                      expiresAt: new Date(nowMs + TRASH_RETENTION_MS).toISOString(),
+                      payload: item,
+                    })
                   }
                 }
               })
@@ -869,6 +938,35 @@ try {
                 writeSingleKeyToDisk(DELETED_IDS_KEY, delJson)
                 try {
                   rawSetItem(DELETED_IDS_KEY, delJson)
+                } catch {}
+              }
+
+              if (newlyTrashed.length > 0) {
+                try {
+                  const rawTrash = memoryMirror.get(TRASH_STORAGE_KEY) || '[]'
+                  const curTrashRaw = JSON.parse(rawTrash)
+                  const nowMs = Date.now()
+                  const curTrash: TrashItem[] = Array.isArray(curTrashRaw)
+                    ? curTrashRaw.filter((t) => {
+                        const exp = new Date(t?.expiresAt || 0).getTime()
+                        return !isNaN(exp) && exp > nowMs
+                      })
+                    : []
+                  // Deduplicate by storeKey + itemId so deleting the same record doesn't duplicate
+                  const newKeysSet = new Set(newlyTrashed.map((t) => `${t.storeKey}:${t.itemId}`))
+                  const mergedTrash = [
+                    ...newlyTrashed,
+                    ...curTrash.filter((t) => !newKeysSet.has(`${t.storeKey}:${t.itemId}`)),
+                  ]
+                  const trashJson = JSON.stringify(mergedTrash)
+                  memoryMirror.set(TRASH_STORAGE_KEY, trashJson)
+                  diskStore[TRASH_STORAGE_KEY] = trashJson
+                  writeSingleKeyToDisk(TRASH_STORAGE_KEY, trashJson)
+                  try {
+                    rawSetItem(TRASH_STORAGE_KEY, trashJson)
+                  } catch {}
+                  scheduleCloudPush(TRASH_STORAGE_KEY)
+                  window.dispatchEvent(new CustomEvent('demirturk:trash-updated'))
                 } catch {}
               }
             }

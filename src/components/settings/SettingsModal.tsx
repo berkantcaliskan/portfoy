@@ -37,9 +37,11 @@ import {
   EyeOff,
   Zap,
   ExternalLink,
+  RotateCcw,
 } from 'lucide-react'
 import { AppUser, Department, generateInitialPassword, generateUsername, userStore } from '@/services/userStore'
 import { metaStore } from '@/services/metaStore'
+import { trashStore, TrashItem } from '@/services/trashStore'
 import { CANONICAL_DEPARTMENTS } from '@/types/department'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { PermissionsMatrixPanel } from './PermissionsMatrixPanel'
@@ -56,6 +58,7 @@ export type SettingsTab =
   | 'appearance'
   | 'company'
   | 'permissions'
+  | 'trash'
   | 'dept-meta'
   | 'dept-leads'
   | 'dept-notifications'
@@ -459,13 +462,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [testingCapi, setTestingCapi] = useState(false)
   const [capiTestResult, setCapiTestResult] = useState<{ success: boolean; msg: string } | null>(null)
   const [capiLogs, setCapiLogs] = useState(() => metaStore.getCapiLogs())
+  const [trashItems, setTrashItems] = useState<TrashItem[]>(() => trashStore.getAll())
+  const [trashDeptFilter, setTrashDeptFilter] = useState<string>('ALL')
+  const [trashNotice, setTrashNotice] = useState<string | null>(null)
 
   useEffect(() => {
     const unsub = metaStore.subscribe(() => {
       setCapiLogs(metaStore.getCapiLogs())
     })
-    return unsub
+    const unsubTrash = trashStore.subscribe(() => {
+      setTrashItems(trashStore.getAll())
+    })
+    return () => {
+      unsub()
+      unsubTrash()
+    }
   }, [])
+
+  useEffect(() => {
+    if (isOpen) {
+      setTrashItems(trashStore.getAll())
+    }
+  }, [isOpen, activeTab])
 
   const copyMetaToClipboard = (text: string, fieldId: string) => {
     navigator.clipboard.writeText(text)
@@ -628,6 +646,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <span className="truncate">Yetkiler</span>
                   </button>
                 )}
+
+                <button
+                  onClick={() => setActiveTab('trash')}
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${
+                    activeTab === 'trash'
+                      ? 'bg-[#b99881] text-white font-bold is-active-aside-btn'
+                      : 'hover:bg-white/12 font-medium'
+                  }`}
+                >
+                  <span className="flex items-center gap-3 min-w-0">
+                    <Trash2 className="w-4 h-4 shrink-0" />
+                    <span className="truncate">Çöp Kutusu</span>
+                  </span>
+                  {trashItems.length > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-white/15">
+                      {trashItems.length}
+                    </span>
+                  )}
+                </button>
               </nav>
             </div>
 
@@ -1832,6 +1869,167 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {(activeTab === 'permissions' || activeTab === 'dept-admin-permissions') && (
               <div className="animate-in fade-in duration-200">
                 <PermissionsMatrixPanel />
+              </div>
+            )}
+
+            {activeTab === 'trash' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-wide flex items-center gap-2">
+                      <Trash2 className="w-4 h-4 text-[#b99881]" />
+                      <span>Çöp Kutusu (30 Günlük Saklama Alanı)</span>
+                    </h3>
+                    <p className="text-xs text-[#a69f99] mt-0.5">
+                      Her departmanın ve her sayfanın silinen ögeleri 30 gün boyunca burada saklanır; dilediğiniz zaman geri yükleyebilirsiniz.
+                    </p>
+                  </div>
+
+                  {trashItems.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        trashStore.emptyTrash()
+                        setTrashItems([])
+                        setTrashNotice('Çöp kutusu tamamen boşaltıldı.')
+                        setTimeout(() => setTrashNotice(null), 2500)
+                      }}
+                      className="px-3.5 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Çöp Kutusunu Boşalt</span>
+                    </button>
+                  )}
+                </div>
+
+                {trashNotice && (
+                  <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span>{trashNotice}</span>
+                  </div>
+                )}
+
+                {/* Departman Filtre Sekmeleri */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { id: 'ALL', label: `Tümü (${trashItems.length})` },
+                    { id: 'Pazarlama', label: 'Pazarlama' },
+                    { id: 'Satış', label: 'Satış' },
+                    { id: 'Müşteri İlişkileri', label: 'Müşteri İlişkileri' },
+                    { id: 'Kreatif', label: 'Kreatif' },
+                    { id: 'Muhasebe', label: 'Muhasebe' },
+                    { id: 'Yönetim', label: 'Yönetim' },
+                    { id: 'Ortak', label: 'Paylaşılanlar / Ortak' },
+                  ].map((tab) => {
+                    const isSelected = trashDeptFilter === tab.id
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setTrashDeptFilter(tab.id)}
+                        className={`tab-pill-btn px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                          isSelected ? 'is-active-tab-pill' : ''
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Silinen Ögeler Listesi */}
+                {(() => {
+                  const filteredTrash = trashItems.filter((item) => {
+                    if (trashDeptFilter === 'ALL') return true
+                    return item.department.toLowerCase().includes(trashDeptFilter.toLowerCase())
+                  })
+
+                  if (filteredTrash.length === 0) {
+                    return (
+                      <div className="p-10 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] text-center space-y-2">
+                        <Trash2 className="w-8 h-8 text-[#8c857f] mx-auto opacity-45" />
+                        <div className="text-xs font-bold text-white">Çöp kutusunda silinen öge bulunmuyor</div>
+                        <p className="text-[11px] text-[#a69f99]">
+                          Müşteriler, Talepler, Randevular, Kreatif, Paylaşılanlar ve diğer tüm sayfalardan silinen kayıtlar 30 gün boyunca burada listelenir.
+                        </p>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="space-y-2.5">
+                      {filteredTrash.map((item) => {
+                        const daysLeft = trashStore.getDaysRemaining(item)
+                        const deletedDateStr = new Date(item.deletedAt).toLocaleString('tr-TR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                        return (
+                          <div
+                            key={item.trashId}
+                            className="p-3.5 rounded-2xl bg-[#24211f]/70 border border-[#4a443f] flex flex-wrap items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#34302d] text-[#d6beae]">
+                                  {item.department} • {item.pageName}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400">
+                                  {daysLeft} gün kaldı
+                                </span>
+                                <span className="text-[10px] text-[#8c857f]">
+                                  Silinme: {deletedDateStr}
+                                </span>
+                              </div>
+                              <div className="text-xs font-bold text-white truncate">
+                                {item.title}
+                              </div>
+                              {item.subtitle && (
+                                <div className="text-[11px] text-[#a69f99] truncate">
+                                  {item.subtitle}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const ok = trashStore.restoreItem(item.trashId)
+                                  setTrashItems(trashStore.getAll())
+                                  if (ok) {
+                                    setTrashNotice(`"${item.title}" başarıyla ${item.pageName} sayfasına geri yüklendi.`)
+                                    setTimeout(() => setTrashNotice(null), 3000)
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-full bg-[#b99881] hover:bg-[#a6856e] text-white text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>Geri Yükle</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  trashStore.deletePermanently(item.trashId)
+                                  setTrashItems(trashStore.getAll())
+                                }}
+                                className="px-3 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1"
+                                title="Kalıcı Olarak Sil"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Kalıcı Sil</span>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
               </div>
             )}
 

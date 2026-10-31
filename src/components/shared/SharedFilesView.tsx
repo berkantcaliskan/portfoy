@@ -614,10 +614,8 @@ export const SharedFilesView: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setSelectedKindFilter(tab.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
-                    : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
+                className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                  isSelected ? 'is-active-tab-pill' : ''
                 }`}
               >
                 {tab.label} ({count})
@@ -659,14 +657,12 @@ export const SharedFilesView: React.FC = () => {
           </div>
 
           {/* Görünüm Seçici: Liste / Büyük / Küçük */}
-          <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#282522] border border-[#4a443f]">
+          <div className="inline-flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setViewMode('LIST')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'LIST'
-                  ? 'bg-[#b99881] text-white shadow-sm'
-                  : 'no-layer-btn text-[#a69f99] hover:text-white'
+              className={`tab-pill-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'LIST' ? 'is-active-tab-pill' : ''
               }`}
               title="Liste Görünümü"
             >
@@ -676,10 +672,8 @@ export const SharedFilesView: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('LARGE')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'LARGE'
-                  ? 'bg-[#b99881] text-white shadow-sm'
-                  : 'no-layer-btn text-[#a69f99] hover:text-white'
+              className={`tab-pill-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'LARGE' ? 'is-active-tab-pill' : ''
               }`}
               title="Büyük Kart Görünümü"
             >
@@ -689,10 +683,8 @@ export const SharedFilesView: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('SMALL')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'SMALL'
-                  ? 'bg-[#b99881] text-white shadow-sm'
-                  : 'no-layer-btn text-[#a69f99] hover:text-white'
+              className={`tab-pill-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'SMALL' ? 'is-active-tab-pill' : ''
               }`}
               title="Küçük Kompakt Görünüm"
             >

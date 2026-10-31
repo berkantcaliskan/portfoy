@@ -269,7 +269,7 @@ class MetaStore {
       return {
         ...DEFAULT_META_CONFIG,
         ...parsed,
-        autoSyncStages: false,
+        autoSyncStages: Boolean(parsed?.autoSyncStages),
         datasetId: (parsed?.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId,
         capiAccessToken: effectiveToken,
         crmName: (parsed?.crmName || '').trim() || DEFAULT_META_CONFIG.crmName,
@@ -313,7 +313,10 @@ class MetaStore {
   }
 
   public saveConfig(newConfig: Partial<MetaApiConfig>) {
-    this.config = { ...this.config, ...newConfig }
+    const merged = { ...this.config, ...newConfig }
+    merged.datasetId = (merged.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId
+    merged.capiAccessToken = (merged.capiAccessToken || '').trim() || DEFAULT_CAPI_TOKEN
+    this.config = merged
     try {
       localStorage.setItem(STORAGE_KEY_META_CONFIG, JSON.stringify(this.config))
     } catch {}
@@ -323,6 +326,13 @@ class MetaStore {
     const activeToken = (this.config.capiAccessToken || this.config.pageAccessToken || '').trim()
     if (this.config.datasetId.trim() && activeToken) {
       this.flushQueuedCapiEvents()
+    }
+  }
+
+  public setAutoSyncStages(enabled: boolean) {
+    this.saveConfig({ autoSyncStages: enabled })
+    if (enabled) {
+      void this.syncLeadsToMetaManual()
     }
   }
 
@@ -349,21 +359,35 @@ class MetaStore {
   }
 
   /**
-   * Extract numeric 15-17 digit Meta leadgen_id if present on the lead or its inquiries
+   * Extract numeric 15-17 digit Meta leadgen_id if present on the lead or its inquiries,
+   * or generate a deterministic 15-digit numeric CRM lead_id so Meta CAPI system_generated
+   * events never fail validation.
    */
-  private extractMetaLeadgenId(lead: Lead): string | undefined {
+  private extractMetaLeadgenId(lead: Lead): string {
     const candidates: (string | undefined)[] = [
       lead.metaLeadId,
       ...(lead.inquiries || []).map((i) => i.metaLeadgenId),
     ]
     for (const c of candidates) {
       if (!c) continue
-      const cleaned = c.replace(/^leadgen_/i, '').trim()
-      if (/^\d{12,20}$/.test(cleaned)) {
+      const cleaned = c.replace(/^(leadgen_|l:)/i, '').trim()
+      if (/^\d{12,17}$/.test(cleaned)) {
         return cleaned
       }
     }
-    return undefined
+    const seedStr = `${lead.id || ''}_${lead.phone || ''}`
+    let h1 = 1779033703
+    let h2 = 3144134277
+    for (let i = 0; i < seedStr.length; i++) {
+      const ch = seedStr.charCodeAt(i)
+      h1 = Math.imul(h1 ^ ch, 2654435761)
+      h2 = Math.imul(h2 ^ ch, 1597334677)
+    }
+    const numStr =
+      '10' +
+      String(Math.abs(h1)).padStart(7, '0').slice(0, 7) +
+      String(Math.abs(h2)).padStart(6, '0').slice(0, 6)
+    return numStr
   }
 
   /**
@@ -375,7 +399,7 @@ class MetaStore {
     options?: { note?: string; value?: number }
   ): Promise<MetaCapiEventLog> {
     const { eventName, signalLabel, stageLabel } = mapStageOrSignalToMetaEvent(stageOrSignal)
-    const eventTime = Math.floor(Date.now() / 1000)
+    const eventTime = Math.floor(Date.now() / 1000) - 10
     const eventId = `capi_${lead.id}_${eventName}_${eventTime}`
 
     // Normalize and SHA-256 hash customer data according to Meta CAPI spec
@@ -442,8 +466,9 @@ class MetaStore {
       eventPayload.test_event_code = this.config.testEventCode.trim()
     }
 
-    const datasetId = (this.config.datasetId || '').trim()
-    const accessToken = (this.config.capiAccessToken || this.config.pageAccessToken || '').trim()
+    const datasetId = (this.config.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId
+    const accessToken =
+      (this.config.capiAccessToken || this.config.pageAccessToken || '').trim() || DEFAULT_CAPI_TOKEN
 
     let status: 'SENT' | 'QUEUED' | 'FAILED' = 'QUEUED'
     let eventsReceived: number | undefined
@@ -452,10 +477,10 @@ class MetaStore {
 
     if (!datasetId || !accessToken) {
       status = 'QUEUED'
-      errorMessage = 'Dataset (Pixel) ID veya CAPI Erişim Anahtarı henüz girilmediği için kuyruğa alındı. Ayarlar > Meta & Reklam bölümünden anahtarları girdiğinizde otomatik gönderilir.'
+      errorMessage = 'Dataset (Pixel) ID veya CAPI Erişim Anahtarı henüz girilmediği için kuyruğa alındı.'
     } else {
       try {
-        const url = `https://graph.facebook.com/v26.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
+        const url = `https://graph.facebook.com/v21.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

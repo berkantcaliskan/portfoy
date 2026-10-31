@@ -11,41 +11,47 @@ import {
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 
+function isLightBackgroundHex(hex: string): boolean {
+  const clean = hex.replace('#', '').trim()
+  if (clean.length !== 6) return false
+  const r = parseInt(clean.slice(0, 2), 16)
+  const g = parseInt(clean.slice(2, 4), 16)
+  const b = parseInt(clean.slice(4, 6), 16)
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return false
+  const perceivedBrightness = 0.299 * r + 0.587 * g + 0.114 * b
+  return perceivedBrightness > 185
+}
+
 const BRAND_COLORS = [
   {
     name: 'Demirtürk Kurumsal Lacivert',
     hex: '#0F172A',
     rgb: '15, 23, 42',
     usage: 'Ana zemin, kurumsal antet ve katalog arka planları',
-    isLight: false,
   },
   {
     name: 'Demirtürk Prestij Altın',
     hex: '#D4AF37',
     rgb: '212, 175, 55',
     usage: 'Ödeme kampanyası vurguları, rozetler ve CTA butonları',
-    isLight: true,
   },
   {
     name: 'Portföy İndigo Aksan',
     hex: '#6366F1',
     rgb: '99, 102, 241',
     usage: 'Dijital reklam çerçeveleri ve modern proje vurguları',
-    isLight: false,
   },
   {
     name: 'Karasu Sahil Turkuazı',
     hex: '#0EA5E9',
     rgb: '14, 165, 233',
     usage: 'Havuz, deniz mesafesi ve yaz lansmanı kreatifleri',
-    isLight: false,
   },
   {
     name: 'Mimari Kırık Beyaz',
     hex: '#F8FAFC',
     rgb: '248, 250, 252',
     usage: 'Ana tipografi, okunabilir başlıklar ve açık tema kataloglar',
-    isLight: true,
   },
 ]
 
@@ -104,10 +110,10 @@ export function BrandKitView() {
         </p>
       </div>
 
-      {/* Üst Satır: Sol %75 Kurumsal Renk Paleti (Bitişik) + Sağ %25 Kurumsal Tipografi */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-stretch">
-        {/* Sol %75: Kurumsal Renk Paleti */}
-        <GlassCard className="xl:col-span-3 p-5 bg-[#282522] border-[#4a443f] flex flex-col justify-between space-y-4">
+      {/* Üst Satır: Sol %68 Kurumsal Renk Paleti (Bitişik) + Sağ %32 Kurumsal Tipografi */}
+      <div className="grid grid-cols-1 xl:grid-cols-[68fr_32fr] gap-4 items-stretch">
+        {/* Sol: Kurumsal Renk Paleti */}
+        <GlassCard className="p-5 bg-[#282522] border-[#4a443f] flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold text-white">Kurumsal Renk Paleti</h2>
@@ -117,16 +123,18 @@ export function BrandKitView() {
             </div>
           </div>
 
-          <div className="dark-preview-canvas grid grid-cols-1 sm:grid-cols-5 gap-0 rounded-[20px] overflow-hidden border border-black/10 shadow-sm flex-1 min-h-[290px]">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-0 rounded-[20px] overflow-hidden border border-black/10 shadow-sm flex-1 min-h-[290px]">
             {BRAND_COLORS.map((color) => {
-              const fgMain = color.isLight ? '#0F172A' : '#FFFFFF'
-              const fgSub = color.isLight ? 'rgba(15, 23, 42, 0.78)' : 'rgba(255, 255, 255, 0.85)'
-              const fgMuted = color.isLight ? 'rgba(15, 23, 42, 0.62)' : 'rgba(255, 255, 255, 0.70)'
-              const pillBg = color.isLight ? 'rgba(15, 23, 42, 0.10)' : 'rgba(0, 0, 0, 0.28)'
+              const isLight = isLightBackgroundHex(color.hex)
+              const fgMain = isLight ? '#0F172A' : '#FFFFFF'
+              const fgSub = isLight ? 'rgba(15, 23, 42, 0.82)' : 'rgba(255, 255, 255, 0.88)'
+              const fgMuted = isLight ? 'rgba(15, 23, 42, 0.68)' : 'rgba(255, 255, 255, 0.75)'
+              const pillBg = isLight ? 'rgba(15, 23, 42, 0.10)' : 'rgba(0, 0, 0, 0.28)'
 
               return (
                 <div
                   key={color.hex}
+                  data-auto-contrast={isLight ? 'light' : 'dark'}
                   onClick={() => handleCopyHex(color.hex)}
                   style={{ backgroundColor: color.hex, color: fgMain }}
                   className="group relative flex flex-col justify-between p-4 sm:p-4 min-h-[220px] sm:min-h-[290px] cursor-pointer transition-all duration-200 hover:brightness-[1.03]"
@@ -178,8 +186,8 @@ export function BrandKitView() {
           </div>
         </GlassCard>
 
-        {/* Sağ %25: Kurumsal Tipografi */}
-        <GlassCard className="xl:col-span-1 p-5 bg-[#282522] border-[#4a443f] flex flex-col justify-between space-y-4">
+        {/* Sağ: Kurumsal Tipografi */}
+        <GlassCard className="p-5 bg-[#282522] border-[#4a443f] flex flex-col justify-between space-y-4">
           <div className="flex items-center gap-2">
             <Type className="w-4 h-4 text-[#b99881]" />
             <h2 className="text-sm font-bold text-white">
