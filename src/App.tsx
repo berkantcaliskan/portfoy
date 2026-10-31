@@ -59,6 +59,7 @@ import {
   getDepartmentForPage,
 } from '@/types/department'
 import { notificationStore } from '@/services/notificationStore'
+import { SearchResultItem, normalizeTr } from '@/services/departmentSearchService'
 
 export function App() {
   const [showOpening, setShowOpening] = useState(false)
@@ -315,6 +316,71 @@ export function App() {
   const handleStageChange = (leadId: string, newStage: LeadStage) => {
     leadStore.updateStage(leadId, newStage, currentUser)
   }
+
+  useEffect(() => {
+    let lastHandledKey = ''
+    const handleSearchSelect = (e: Event) => {
+      const customEvent = e as CustomEvent<SearchResultItem>
+      const item = customEvent.detail
+      if (!item) return
+
+      const payload = item.payload || { pageId: item.pageId }
+      if (payload.leadId) {
+        const found =
+          leadStore.getById(payload.leadId, userStore.getCurrentUser()) ||
+          leadStore.getAllRaw().find((l) => l.id === payload.leadId)
+        if (found) {
+          setSelectedLead(found)
+          setIsLeadDetailOpen(true)
+        }
+      }
+
+      if (payload.stageFilter) {
+        window.dispatchEvent(
+          new CustomEvent('demirturk:switch-customer-stage-tab', {
+            detail: payload.stageFilter,
+          })
+        )
+      }
+
+      const rawSearchText = (payload.sectionQuery || item.title || '')
+        .split('—')[0]
+        .split('(')[0]
+        .trim()
+      const normTarget = normalizeTr(rawSearchText)
+      const dedupeKey = `${item.id}:${Math.floor(Date.now() / 600)}`
+      if (normTarget && normTarget.length >= 2 && lastHandledKey !== dedupeKey) {
+        const mainEl = document.querySelector('main')
+        if (mainEl) {
+          const nodes = Array.from(
+            mainEl.querySelectorAll('h1, h2, h3, h4, span, div, td, p')
+          ) as HTMLElement[]
+          const matchEl = nodes.find((el) => {
+            if (el.children.length > 4) return false
+            const txt = normalizeTr(el.textContent || '')
+            return txt.length > 0 && txt.length < 180 && txt.includes(normTarget)
+          })
+          if (matchEl) {
+            lastHandledKey = dedupeKey
+            const targetCard = (matchEl.closest('.glass-card') || matchEl) as HTMLElement
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            try {
+              targetCard.animate(
+                [
+                  { outline: '2px solid var(--accent-color, #5c6ac4)', outlineOffset: '2px' },
+                  { outline: '2px solid transparent', outlineOffset: '6px' },
+                ],
+                { duration: 1500, easing: 'ease-out' }
+              )
+            } catch {}
+          }
+        }
+      }
+    }
+
+    window.addEventListener('demirturk:search-select', handleSearchSelect)
+    return () => window.removeEventListener('demirturk:search-select', handleSearchSelect)
+  }, [])
 
   // Not logged in: Show dedicated modern Sign In & Sign Up screen
   if (!currentUser) {

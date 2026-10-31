@@ -77,6 +77,17 @@ export const MarketingCampaignsView: React.FC = () => {
   const [sendBtnContextMenu, setSendBtnContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
+    const handleSearchSelect = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.payload?.platformTab) {
+        setActivePlatform(detail.payload.platformTab)
+      }
+    }
+    window.addEventListener('demirturk:search-select', handleSearchSelect)
+    return () => window.removeEventListener('demirturk:search-select', handleSearchSelect)
+  }, [])
+
+  useEffect(() => {
     if (!sendBtnContextMenu) return
     const close = () => setSendBtnContextMenu(null)
     window.addEventListener('click', close)

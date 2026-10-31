@@ -153,7 +153,23 @@ export const CreativeScheduleView: React.FC = () => {
 
   useEffect(() => {
     const sync = () => setItems(creativeStore.getSchedule())
-    return creativeStore.subscribe(sync)
+    const unsub = creativeStore.subscribe(sync)
+    const handleSearchSelect = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      const dateStr = detail?.payload?.scheduleDate
+      if (dateStr && typeof dateStr === 'string') {
+        const parts = dateStr.split('-').map(Number)
+        if (parts.length === 3) {
+          setCurrentMonthDate(new Date(parts[0], parts[1] - 1, 1))
+          setSelectedDayIso(dateStr)
+        }
+      }
+    }
+    window.addEventListener('demirturk:search-select', handleSearchSelect)
+    return () => {
+      unsub()
+      window.removeEventListener('demirturk:search-select', handleSearchSelect)
+    }
   }, [])
 
   // Takvim görünümündeyken sayfa aşağı kaydırmasını tamamen kapat

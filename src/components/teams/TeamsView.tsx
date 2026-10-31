@@ -139,9 +139,17 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
       setAssetLogs(teamOperationsStore.getAssetLogs())
       setLeaves(teamOperationsStore.getLeaves())
     })
+    const handleSearchSelect = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.payload?.subTab) {
+        setActiveSubTab(detail.payload.subTab)
+      }
+    }
+    window.addEventListener('demirturk:search-select', handleSearchSelect)
     return () => {
       unsubUsers()
       unsubOps()
+      window.removeEventListener('demirturk:search-select', handleSearchSelect)
     }
   }, [])
 

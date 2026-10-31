@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search,
@@ -48,6 +48,10 @@ import {
   NavPageId,
   getPrimaryPageForDepartment,
 } from '@/types/department'
+import {
+  searchDepartmentWorkspace,
+  SearchResultItem,
+} from '@/services/departmentSearchService'
 import { BookLogo, BrandLogoLockup } from '@/components/common/BookLogo'
 import { ToolType } from '@/components/tools/QuickToolsModal'
 import { WindowControls } from '@/components/common/WindowControls'
@@ -344,6 +348,55 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Exact 6 pages for this active department
   const navItems = DEPARTMENT_MENU_CONFIG[activeDept] || DEPARTMENT_MENU_CONFIG['Pazarlama']
 
+  // Departman alanındaki tüm sayfalarda canlı arama sonuçları (Önce en alakalı başlıksız, sonra sayfasına göre)
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false)
+  const [selectedSearchIndex, setSelectedSearchIndex] = useState(0)
+
+  const searchResponse = useMemo(
+    () => searchDepartmentWorkspace(searchQuery, activeDept, currentUser || null, activeTab),
+    [searchQuery, activeDept, currentUser, activeTab]
+  )
+
+  const flatSearchResults = useMemo(() => {
+    const list: SearchResultItem[] = [...searchResponse.topResults]
+    for (const grp of searchResponse.pageGroups) {
+      for (const it of grp.items) {
+        if (!list.some((x) => x.id === it.id)) {
+          list.push(it)
+        }
+      }
+    }
+    return list
+  }, [searchResponse])
+
+  useEffect(() => {
+    setSelectedSearchIndex(0)
+    if (searchQuery.trim().length > 0 && isSearchOpen) {
+      setIsSearchDropdownOpen(true)
+    } else {
+      setIsSearchDropdownOpen(false)
+    }
+  }, [searchQuery, isSearchOpen])
+
+  const handleSelectSearchResult = (item: SearchResultItem) => {
+    setIsSearchDropdownOpen(false)
+    setIsSearchOpen(false)
+    if (onSearchChange) {
+      onSearchChange('')
+    }
+    notificationStore.markTabAsViewed(item.pageId)
+    onTabChange(item.pageId)
+
+    const dispatchSelect = () => {
+      window.dispatchEvent(
+        new CustomEvent('demirturk:search-select', { detail: item })
+      )
+    }
+    dispatchSelect()
+    window.setTimeout(dispatchSelect, 140)
+    window.setTimeout(dispatchSelect, 320)
+  }
+
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false)
   const overflowMenuRef = useRef<HTMLDivElement>(null)
   const navContainerRef = useRef<HTMLDivElement>(null)
@@ -357,6 +410,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         searchContainerRef.current &&
         !searchContainerRef.current.contains(event.target as Node)
       ) {
+        setIsSearchDropdownOpen(false)
         if (!searchQuery) {
           setIsSearchOpen(false)
         }
@@ -629,13 +683,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* 1. Arama (Yuvarlak beyaz kapsül buton; tıklandığında sola doğru genişler) */}
         <div
           ref={searchContainerRef}
-          className="relative flex items-center justify-end"
+          className={`relative flex items-center justify-end ${isSearchDropdownOpen ? 'z-[70]' : 'z-30'}`}
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <motion.div
             initial={false}
             animate={{
-              width: isSearchOpen ? 260 : 40,
+              width: isSearchOpen ? 280 : 40,
             }}
             transition={{
               type: 'spring',
@@ -652,6 +706,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               if (!isSearchOpen) {
                 setIsSearchOpen(true)
                 setTimeout(() => searchInputRef.current?.focus(), 80)
+              } else if (searchQuery.trim().length > 0) {
+                setIsSearchDropdownOpen(true)
               }
             }}
             title={!isSearchOpen ? 'Arama Yap' : undefined}
@@ -672,13 +728,43 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <input
                     ref={searchInputRef}
                     type="text"
-                    placeholder="Kayıtlarda ara..."
+                    placeholder={`${activeDept} sayfalarında ara...`}
                     value={searchQuery}
-                    onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+                    onFocus={() => {
+                      if (searchQuery.trim().length > 0) {
+                        setIsSearchDropdownOpen(true)
+                      }
+                    }}
+                    onChange={(e) => {
+                      onSearchChange && onSearchChange(e.target.value)
+                      setIsSearchDropdownOpen(e.target.value.trim().length > 0)
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {
-                        if (!searchQuery) setIsSearchOpen(false)
-                        else onSearchChange && onSearchChange('')
+                        if (isSearchDropdownOpen) {
+                          setIsSearchDropdownOpen(false)
+                        } else if (!searchQuery) {
+                          setIsSearchOpen(false)
+                        } else {
+                          onSearchChange && onSearchChange('')
+                        }
+                      } else if (e.key === 'ArrowDown' && flatSearchResults.length > 0) {
+                        e.preventDefault()
+                        setIsSearchDropdownOpen(true)
+                        setSelectedSearchIndex((prev) => (prev + 1) % flatSearchResults.length)
+                      } else if (e.key === 'ArrowUp' && flatSearchResults.length > 0) {
+                        e.preventDefault()
+                        setIsSearchDropdownOpen(true)
+                        setSelectedSearchIndex((prev) =>
+                          prev <= 0 ? flatSearchResults.length - 1 : prev - 1
+                        )
+                      } else if (e.key === 'Enter' && flatSearchResults.length > 0) {
+                        e.preventDefault()
+                        const target =
+                          flatSearchResults[selectedSearchIndex] || flatSearchResults[0]
+                        if (target) {
+                          handleSelectSearchResult(target)
+                        }
                       }
                     }}
                     className="w-full bg-transparent border-none text-xs text-[#f3efe9] placeholder-[#a69f99] focus:outline-none font-sans"
@@ -687,6 +773,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
+                      setIsSearchDropdownOpen(false)
                       if (searchQuery) {
                         onSearchChange && onSearchChange('')
                       } else {
@@ -702,6 +789,133 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </AnimatePresence>
           </motion.div>
+
+          {/* Departman Alanı Arama Sonuçları (Önce En Alakalı Başlıksız, Sonra Sayfasına Göre) */}
+          <AnimatePresence>
+            {isSearchOpen && isSearchDropdownOpen && searchQuery.trim().length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="dropdown-panel absolute right-0 top-full mt-2.5 w-[390px] sm:w-[440px] max-h-[72vh] overflow-y-auto rounded-[24px] p-3 z-[80] border border-[#4a443f] space-y-2.5"
+              >
+                {searchResponse.totalCount === 0 ? (
+                  <div className="py-6 px-3 text-center space-y-1">
+                    <div className="text-xs font-semibold text-white">
+                      Sonuç bulunamadı
+                    </div>
+                    <div className="text-[11px] text-[#8c857f]">
+                      {activeDept} çalışma alanındaki sayfalarda &ldquo;{searchQuery}&rdquo; ile eşleşen içerik bulunamadı.
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* 1. BÖLÜM: ÖNCE EN ALAKALI (BAŞLIKSIZ) */}
+                    {searchResponse.topResults.length > 0 && (
+                      <div className="space-y-1">
+                        {searchResponse.topResults.map((item) => {
+                          const TopIcon = getNavPageIcon(item.pageId)
+                          const isHighlighted =
+                            flatSearchResults[selectedSearchIndex]?.id === item.id
+                          return (
+                            <button
+                              key={`top-${item.id}`}
+                              type="button"
+                              onClick={() => handleSelectSearchResult(item)}
+                              className={`w-full flex items-center justify-between gap-2.5 p-2.5 rounded-2xl text-left transition-colors cursor-pointer group ${
+                                isHighlighted
+                                  ? 'bg-[#34302d] border border-[#4a443f]'
+                                  : 'hover:bg-[#34302d] border border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div className="w-8 h-8 rounded-xl bg-[#34302d] border border-[#4a443f]/70 flex items-center justify-center shrink-0">
+                                  <TopIcon className="w-4 h-4 text-[#b99881]" strokeWidth={2} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-[12.5px] font-semibold text-white truncate">
+                                    {item.title}
+                                  </div>
+                                  <div className="text-[11px] text-[#8c857f] truncate mt-0.5">
+                                    {item.subtitle}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#34302d] text-[#d6beae] border border-[#4a443f]/60">
+                                  {item.pageLabel}
+                                </span>
+                                <ArrowUpRight className="w-3.5 h-3.5 text-[#8c857f] group-hover:text-white transition-colors shrink-0" />
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* 2. BÖLÜM: SONRA SAYFASINA GÖRE */}
+                    {searchResponse.pageGroups.length > 0 && (
+                      <div className="pt-2 border-t border-[#4a443f]/60 space-y-3">
+                        {searchResponse.pageGroups.map((group) => {
+                          const GroupIcon = getNavPageIcon(group.pageId)
+                          return (
+                            <div key={group.pageId} className="space-y-1">
+                              <div className="flex items-center justify-between px-2 pb-0.5">
+                                <div className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wider text-[#8c857f]">
+                                  <GroupIcon className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                                  <span>{group.pageLabel}</span>
+                                </div>
+                                <span className="text-[10px] font-medium text-[#8c857f]">
+                                  {group.items.length} sonuç
+                                </span>
+                              </div>
+
+                              <div className="space-y-1">
+                                {group.items.map((item) => {
+                                  const isHighlighted =
+                                    flatSearchResults[selectedSearchIndex]?.id === item.id
+                                  return (
+                                    <button
+                                      key={`grp-${item.id}`}
+                                      type="button"
+                                      onClick={() => handleSelectSearchResult(item)}
+                                      className={`w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                                        isHighlighted
+                                          ? 'bg-[#34302d] border border-[#4a443f]'
+                                          : 'hover:bg-[#34302d] border border-transparent'
+                                      }`}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-semibold text-white truncate">
+                                          {item.title}
+                                        </div>
+                                        <div className="text-[10.5px] text-[#8c857f] truncate mt-0.5">
+                                          {item.subtitle}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        {item.badge && (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#34302d] text-[#a69f99] border border-[#4a443f]/60">
+                                            {item.badge}
+                                          </span>
+                                        )}
+                                        <ArrowUpRight className="w-3.5 h-3.5 text-[#8c857f] group-hover:text-white transition-colors shrink-0" />
+                                      </div>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* 2. Hızlı Araçlar / Uygulama Menüsü (Yuvarlak Beyaz Buton) */}
@@ -1527,44 +1741,128 @@ export const Navbar: React.FC<NavbarProps> = ({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden px-3 py-2 bg-[#282522]/95 border-t border-[#4a443f]/60 backdrop-blur-xl flex items-center gap-2 overflow-hidden"
+              className="md:hidden px-3 py-2 bg-[#282522]/95 border-t border-[#4a443f]/60 backdrop-blur-xl flex flex-col gap-2 overflow-hidden"
             >
-              <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#34302d] border border-[#b99881]/40 shadow-inner">
-                <Search className="w-4 h-4 text-[#b99881] shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Kayıtlarda ara..."
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      if (!searchQuery) setIsSearchOpen(false)
-                      else onSearchChange && onSearchChange('')
-                    }
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] shadow-inner">
+                  <Search className="w-4 h-4 text-[#b99881] shrink-0" />
+                  <input
+                    type="text"
+                    placeholder={`${activeDept} sayfalarında ara...`}
+                    value={searchQuery}
+                    onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        if (!searchQuery) setIsSearchOpen(false)
+                        else onSearchChange && onSearchChange('')
+                      } else if (e.key === 'Enter' && flatSearchResults.length > 0) {
+                        e.preventDefault()
+                        handleSelectSearchResult(flatSearchResults[0])
+                      }
+                    }}
+                    className="w-full bg-transparent border-none text-xs text-[#f3efe9] placeholder-[#a69f99] focus:outline-none font-sans"
+                    autoFocus
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => onSearchChange && onSearchChange('')}
+                      className="text-[#a69f99] hover:text-white p-0.5 shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchOpen(false)
+                    onSearchChange && onSearchChange('')
                   }}
-                  className="w-full bg-transparent border-none text-xs text-[#f3efe9] placeholder-[#a69f99] focus:outline-none font-sans"
-                  autoFocus
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => onSearchChange && onSearchChange('')}
-                    className="text-[#a69f99] hover:text-white p-0.5 shrink-0"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                  className="text-xs text-[#b99881] font-semibold hover:text-white shrink-0 px-1 cursor-pointer"
+                >
+                  Kapat
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSearchOpen(false)
-                  onSearchChange && onSearchChange('')
-                }}
-                className="text-xs text-[#b99881] font-semibold hover:text-white shrink-0 px-1 cursor-pointer"
-              >
-                Kapat
-              </button>
+
+              {searchQuery.trim().length > 0 && (
+                <div className="max-h-[60vh] overflow-y-auto rounded-2xl bg-[#282522] border border-[#4a443f] p-2.5 space-y-2.5">
+                  {searchResponse.totalCount === 0 ? (
+                    <div className="py-4 text-center text-xs text-[#8c857f]">
+                      Sonuç bulunamadı
+                    </div>
+                  ) : (
+                    <>
+                      {/* 1. Önce En Alakalı (Başlıksız) */}
+                      {searchResponse.topResults.length > 0 && (
+                        <div className="space-y-1">
+                          {searchResponse.topResults.map((item) => {
+                            const TopIcon = getNavPageIcon(item.pageId)
+                            return (
+                              <button
+                                key={`m-top-${item.id}`}
+                                type="button"
+                                onClick={() => handleSelectSearchResult(item)}
+                                className="w-full flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-[#34302d] text-left transition-colors cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <TopIcon className="w-4 h-4 text-[#b99881] shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-xs font-semibold text-white truncate">
+                                      {item.title}
+                                    </div>
+                                    <div className="text-[10.5px] text-[#8c857f] truncate">
+                                      {item.subtitle}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#34302d] text-[#d6beae] border border-[#4a443f]/60 shrink-0">
+                                  {item.pageLabel}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* 2. Sonra Sayfasına Göre */}
+                      {searchResponse.pageGroups.length > 0 && (
+                        <div className="pt-2 border-t border-[#4a443f]/60 space-y-2.5">
+                          {searchResponse.pageGroups.map((group) => {
+                            const GroupIcon = getNavPageIcon(group.pageId)
+                            return (
+                              <div key={`m-grp-${group.pageId}`} className="space-y-1">
+                                <div className="flex items-center gap-1.5 px-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8c857f]">
+                                  <GroupIcon className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                                  <span>{group.pageLabel}</span>
+                                </div>
+                                {group.items.map((item) => (
+                                  <button
+                                    key={`m-item-${item.id}`}
+                                    type="button"
+                                    onClick={() => handleSelectSearchResult(item)}
+                                    className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl hover:bg-[#34302d] text-left transition-colors cursor-pointer"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs font-semibold text-white truncate">
+                                        {item.title}
+                                      </div>
+                                      <div className="text-[10.5px] text-[#8c857f] truncate">
+                                        {item.subtitle}
+                                      </div>
+                                    </div>
+                                    <ArrowUpRight className="w-3.5 h-3.5 text-[#8c857f] shrink-0" />
+                                  </button>
+                                ))}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

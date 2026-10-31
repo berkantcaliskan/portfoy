@@ -100,7 +100,17 @@ export function CreativesGalleryView() {
       setCreatives(creativeStore.getCreatives())
       setComments(creativeStore.getComments())
     })
-    return unsub
+    const handleSearchSelect = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.payload?.creativeId) {
+        setSelectedCreativeId(detail.payload.creativeId)
+      }
+    }
+    window.addEventListener('demirturk:search-select', handleSearchSelect)
+    return () => {
+      unsub()
+      window.removeEventListener('demirturk:search-select', handleSearchSelect)
+    }
   }, [])
 
   const selectedCreative =

@@ -191,9 +191,28 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     const unsubUser = userStore.subscribe(() => {
       setCurrentUser(userStore.getCurrentUser())
     })
+    const handleSearchSelect = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      const payload = detail?.payload
+      if (!payload || payload.pageId !== 'projects') return
+      if (payload.projectId) {
+        setSelectedProjectId(payload.projectId)
+        setViewMode('detail')
+        if (payload.unitId) {
+          const proj = projectStore.getAll().find((p) => p.id === payload.projectId)
+          const unit = proj?.units?.find((u) => u.id === payload.unitId)
+          if (unit) {
+            setSelectedUnit(unit)
+            setActiveListUnitId(unit.id)
+          }
+        }
+      }
+    }
+    window.addEventListener('demirturk:search-select', handleSearchSelect)
     return () => {
       unsubProject()
       unsubUser()
+      window.removeEventListener('demirturk:search-select', handleSearchSelect)
     }
   }, [selectedProjectId])
 
