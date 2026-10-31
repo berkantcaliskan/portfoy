@@ -746,17 +746,17 @@ html:not([data-theme-accent]) {
    - Ana Metin: #292d2b
    - Vurgu Rengi (Varsayılan İndigo): var(--accent-color, #5c6ac4)
    ========================================================================== */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) body,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .min-h-screen {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) body,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .min-h-screen {
   background: #f5f5f2 !important;
   background-color: #f5f5f2 !important;
   color: #292d2b !important;
 }
 
 /* Navigasyon (Sol Dikey Bar & Görev Çubuğu): #e3e5e1 */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header[class*="bg-[#34302c]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header[class*="bg-[#34302c]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header {
   background: #e3e5e1 !important;
   background-color: #e3e5e1 !important;
   border-bottom: 1px solid rgba(41, 45, 43, 0.12) !important;
@@ -765,9 +765,9 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 /* Üst bar ve sağ üst aksiyon kapsülleri (Arama, Hızlı Aksiyon, Bildirim, Profil Hapı): #ffffff */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header [class*="bg-[#24211f]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header [class*="bg-[#282522]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .top-utility-pill {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header [class*="bg-[#24211f]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header [class*="bg-[#282522]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .top-utility-pill {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border-color: rgba(41, 45, 43, 0.10) !important;
@@ -776,161 +776,161 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 /* Sol dikey bardaki menü ve aksiyon katmanları (pill shaped hover) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header .sidebar-pill-item:not(.bg-\[\#b99881\]):hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header .sidebar-pill-item:not(.bg-\[\#b99881\]):hover {
   background: rgba(255, 255, 255, 0.72) !important;
   background-color: rgba(255, 255, 255, 0.72) !important;
   color: #292d2b !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#413f3d]/90"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#383834]/90"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#383830]/90"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#413f3d]/90"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#383834]/90"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#383830]/90"] {
   background: rgba(227, 229, 225, 0.96) !important;
   background-color: rgba(227, 229, 225, 0.96) !important;
   border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 30%, transparent) !important;
 }
 
 /* Ana Metin, Başlıklar ve Sayısal Metrikler -> #292d2b */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h1,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h2,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h3,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h4,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h5,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h6,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) label,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-white,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-white"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-100"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-100"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#f3efe9]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#e6dfd9]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#d6beae]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#c4bcb5]"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h1,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h2,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h3,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h4,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h5,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) h6,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) label,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-white,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-white"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-100"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-100"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#f3efe9]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#e6dfd9]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#d6beae]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#c4bcb5]"] {
   color: #292d2b !important;
 }
 
 /* Vurgu Rengi (İkonlar ve Vurgulu Metinler) -> var(--accent-color, #5c6ac4) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#dfb76c]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#b99881]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-\[\#b99881\],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#e4c9b3]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-brand-gold,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-brand-goldLight,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#dfb76c]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#b99881]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-\[\#b99881\],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#e4c9b3]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-brand-gold,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .text-brand-goldLight,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg {
   color: var(--accent-color, #5c6ac4) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-amber-"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-yellow-"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-amber-"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-yellow-"] {
   color: #f59e0b !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-emerald-"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-teal-"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-emerald-"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-teal-"] {
   color: #059669 !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-rose-"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) svg[class*="text-rose-"] {
   color: #e11d48 !important;
 }
 
 /* Aydınlık temada renkli rozet ve butonların içindeki yazıların yüksek kontrastlı okunabilir olması */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-400"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-700"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-800"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-400"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-700"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-emerald-800"] {
   color: #047857 !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-400"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-teal-400"] {
   color: #0f766e !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-100"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-400"]:not(svg),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-700"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-100"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-400"]:not(svg),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-amber-700"] {
   color: #b45309 !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-400"]:not(svg) {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-sky-400"]:not(svg) {
   color: #0369a1 !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-400"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-700"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-400"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-blue-700"] {
   color: #1d4ed8 !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-200"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-300"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-400"]:not(svg),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-700"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-200"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-300"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-400"]:not(svg),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-rose-700"] {
   color: #be123c !important;
 }
 
 /* Dolgulu yeşil/kırmızı aksiyon butonlarında (örn. WhatsApp'ta Aç) yazı ve ikon beyaz kalmalı */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dark-preview-canvas,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dark-preview-canvas *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-emerald-600"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-emerald-600"] *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-rose-600"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-rose-600"] *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-red-600"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-red-600"] *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn:hover * {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dark-preview-canvas,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dark-preview-canvas *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .whatsapp-action-btn *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-emerald-600"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-emerald-600"] *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-rose-600"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-rose-600"] *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-red-600"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class~="bg-red-600"] *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn:hover * {
   color: #ffffff !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn span,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn svg {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn span,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .delete-lead-btn svg {
   color: #dc2626 !important;
 }
 
 /* Açıklama & Yardımcı Metinler: #292d2b tonunda hafif yumuşatılmış */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#a69f99]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#8c857f]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-400"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-400"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-400"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#a69f99]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-[#8c857f]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-slate-400"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-gray-400"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="text-zinc-400"] {
   color: rgba(41, 45, 43, 0.68) !important;
 }
 
 /* Kart Yüzeyi: #ffffff */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel-elevated,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#282522]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#24211f]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#24211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#25211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#1e1c1a]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#221f1d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#2a2622]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#34302d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3a3430]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#181614]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#1f1c19]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel-elevated,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#282522]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#24211f]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#24211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#25211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#1e1c1a]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#221f1d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#2a2622]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#34302d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3a3430]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#181614]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#1f1c19]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border: 1px solid rgba(41, 45, 43, 0.10) !important;
@@ -939,11 +939,11 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 /* İkincil Yüzey (#ebece9): Kart içi alt elemanlarda kenarlık kalabalığı (katman içinde çerçeve) olmasın */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#34302d]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static [class*="bg-[#34302d]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#282522]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#24211f]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel [class*="bg-[#34302d]"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#34302d]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static [class*="bg-[#34302d]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#282522]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#24211f]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel [class*="bg-[#34302d]"] {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
   border-color: transparent !important;
@@ -981,24 +981,24 @@ main [class*="rounded-[24px]"] [class~="border-t"]:not(tr):not(thead):not(td):no
   border-bottom-color: transparent !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="hover:bg-[#282522]"]:hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="hover:bg-[#282522]"]:hover {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 35%, transparent) !important;
 }
 
 /* Açılır Menüler (Dropdowns), Başlat Menüsü, Modallar ve Popover'lar: Kart Yüzeyi #ffffff & İkincil Yüzey #ebece9 */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-menu,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .popover-panel,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="listbox"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header .dropdown-panel,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.dropdown-panel,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-modal {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-menu,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .popover-panel,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="listbox"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header .dropdown-panel,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.dropdown-panel,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-modal {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border-color: rgba(41, 45, 43, 0.14) !important;
@@ -1006,22 +1006,22 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   box-shadow: 0 12px 32px -4px rgba(41, 45, 43, 0.12), 0 4px 12px -2px rgba(41, 45, 43, 0.06) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#34302d]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#3a3430]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2d2926]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2e2a27]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#282522]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211f]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211e]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1c1a18]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b18]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b19]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1c1a]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1d1b]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1a1715]"]:not(.dropdown-panel):not(.popover-panel),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#181614]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1c19]"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-navy-900"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#34302d]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#3a3430]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2d2926]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2e2a27]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#282522]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211f]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211e]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1c1a18]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b18]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b19]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1c1a]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1d1b]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1a1715]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#181614]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1c19]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-navy-900"] {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
   border-color: rgba(41, 45, 43, 0.12) !important;
@@ -1029,9 +1029,9 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 /* Sağ üst aksiyon ikon katmanları ve profil hapı kesinlikle saf beyaz (#ffffff) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.top-utility-pill,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.top-utility-pill,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .top-utility-pill {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.top-utility-pill,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.top-utility-pill,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .top-utility-pill {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border-color: rgba(41, 45, 43, 0.10) !important;
@@ -1049,7 +1049,7 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 65%, transparent) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.perspective-deck-card {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.perspective-deck-card {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border: 1px solid rgba(41, 45, 43, 0.13) !important;
@@ -1057,17 +1057,17 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   color: #292d2b !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.perspective-deck-card.is-focused {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.perspective-deck-card.is-focused {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border: 1px solid color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
   box-shadow: 0 24px 48px -10px rgba(41, 45, 43, 0.22), -8px 12px 24px -6px color-mix(in srgb, var(--accent-color, #5c6ac4) 22%, transparent) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"] button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"] button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
   color: #292d2b !important;
@@ -1096,25 +1096,25 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 
 html .modal-layerless-aside .modal-aside-heading,
 html .modal-layerless-aside .modal-aside-heading span,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside .modal-aside-heading,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside .modal-aside-heading span {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside .modal-aside-heading,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside .modal-aside-heading span {
   color: rgba(245, 245, 242, 0.72) !important;
 }
 
 html .modal-layerless-aside button:not(.is-active-aside-btn),
 html .modal-layerless-aside button:not(.is-active-aside-btn) span,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn) span {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn) span {
   color: #f5f5f2 !important;
 }
 
 html .modal-layerless-aside button:not(.is-active-aside-btn) svg,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn) svg {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn) svg {
   color: rgba(245, 245, 242, 0.88) !important;
 }
 
 html .modal-layerless-aside button:not(.is-active-aside-btn):hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover {
   background: rgba(255, 255, 255, 0.14) !important;
   background-color: rgba(255, 255, 255, 0.14) !important;
   color: #ffffff !important;
@@ -1122,58 +1122,58 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 
 html .modal-layerless-aside button:not(.is-active-aside-btn):hover span,
 html .modal-layerless-aside button:not(.is-active-aside-btn):hover svg,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover span,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover svg {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover span,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button:not(.is-active-aside-btn):hover svg {
   color: #ffffff !important;
 }
 
 html .modal-layerless-aside button.is-active-aside-btn,
 html .modal-layerless-aside button.is-active-aside-btn span,
 html .modal-layerless-aside button.is-active-aside-btn svg,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn span,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn svg {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn span,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside button.is-active-aside-btn svg {
   color: #ffffff !important;
 }
 
 html .modal-layerless-aside ::-webkit-scrollbar,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar {
   width: 4px !important;
 }
 
 html .modal-layerless-aside ::-webkit-scrollbar-track,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-track {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-track {
   background: transparent !important;
 }
 
 html .modal-layerless-aside ::-webkit-scrollbar-thumb,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-thumb {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-thumb {
   background: rgba(245, 245, 242, 0.28) !important;
   border-radius: 9999px !important;
 }
 
 html .modal-layerless-aside ::-webkit-scrollbar-thumb:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-thumb:hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .modal-layerless-aside ::-webkit-scrollbar-thumb:hover {
   background: rgba(245, 245, 242, 0.5) !important;
 }
 
 /* Açılır menüde ve sekmelerde aktif/seçili öge */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button[class*="bg-[#b99881]/20"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button[class*="bg-[#b99881]/25"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button[class*="bg-[#b99881]/20"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button[class*="bg-[#b99881]/25"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu button[class*="bg-[#b99881]/20"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"] button[class*="bg-[#b99881]/20"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button[class*="bg-[#b99881]/20"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button[class*="bg-[#b99881]/25"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button[class*="bg-[#b99881]/20"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button[class*="bg-[#b99881]/25"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .context-menu button[class*="bg-[#b99881]/20"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [role="menu"] button[class*="bg-[#b99881]/20"] {
   background: color-mix(in srgb, var(--accent-color, #5c6ac4) 16%, transparent) !important;
   background-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 16%, transparent) !important;
   color: #292d2b !important;
 }
 
 /* Input, Select, Textarea -> İkincil Yüzey (#ebece9), Focus (#ffffff + var(--accent-color)) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not([class*="bg-transparent"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select:not(.bg-transparent):not([class*="bg-transparent"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea:not(.bg-transparent):not([class*="bg-transparent"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-input {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not([class*="bg-transparent"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select:not(.bg-transparent):not([class*="bg-transparent"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea:not(.bg-transparent):not([class*="bg-transparent"]),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-input {
   color-scheme: light !important;
   background: #ebece9 !important;
   background-color: #ebece9 !important;
@@ -1181,14 +1181,14 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   border-color: rgba(41, 45, 43, 0.16) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input.bg-transparent,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input[class*="bg-transparent"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea.bg-transparent,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea[class*="bg-transparent"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input.bg-transparent:focus,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input[class*="bg-transparent"]:focus,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea.bg-transparent:focus,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea[class*="bg-transparent"]:focus {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input.bg-transparent,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input[class*="bg-transparent"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea.bg-transparent,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea[class*="bg-transparent"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input.bg-transparent:focus,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input[class*="bg-transparent"]:focus,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea.bg-transparent:focus,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea[class*="bg-transparent"]:focus {
   color-scheme: light !important;
   background: transparent !important;
   background-color: transparent !important;
@@ -1197,49 +1197,49 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   box-shadow: none !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:not(.bg-transparent):not([class*="bg-transparent"]):focus,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select:not(.bg-transparent):not([class*="bg-transparent"]):focus,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea:not(.bg-transparent):not([class*="bg-transparent"]):focus,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-input:focus {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input:not(.bg-transparent):not([class*="bg-transparent"]):focus,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) select:not(.bg-transparent):not([class*="bg-transparent"]):focus,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea:not(.bg-transparent):not([class*="bg-transparent"]):focus,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-input:focus {
   background: #ffffff !important;
   background-color: #ffffff !important;
   border-color: var(--accent-color, #5c6ac4) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input::placeholder,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea::placeholder {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) input::placeholder,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) textarea::placeholder {
   color: rgba(41, 45, 43, 0.5) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) option,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) optgroup {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) option,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) optgroup {
   color-scheme: light !important;
   background-color: #ffffff !important;
   color: #292d2b !important;
 }
 
 /* Birincil Vurgu Butonları ve Aktif Seçili Rozetler: var(--accent-color) Zemin + #ffffff Yazı/İkon */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\] {
   background: var(--accent-color, #5c6ac4) !important;
   background-color: var(--accent-color, #5c6ac4) !important;
   color: #ffffff !important;
   border: 1px solid color-mix(in srgb, var(--accent-color, #5c6ac4) 65%, transparent) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\] *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\] * {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\] *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\] * {
   color: #ffffff !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\]:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\]:hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .btn-primary:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-gold:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.bg-\[\#b99881\]:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .bg-\[\#b99881\]:hover {
   background: var(--accent-hover, #4c59b0) !important;
   background-color: var(--accent-hover, #4c59b0) !important;
   border: 1px solid var(--accent-color, #5c6ac4) !important;
@@ -1247,33 +1247,33 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 /* Üst bardaki aktif sekme alt çizgisi (vurgu rengi) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header span.h-0\.5.bg-\[\#b99881\] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header span.h-0\.5.bg-\[\#b99881\] {
   background: var(--accent-color, #5c6ac4) !important;
   background-color: var(--accent-color, #5c6ac4) !important;
   border: none !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle {
   background: #ebece9 !important;
   border: 1px solid rgba(41, 45, 43, 0.2) !important;
   color: #292d2b !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle:hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle:hover {
   background: #dfe1dd !important;
   border: 1px solid color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
   color: #292d2b !important;
 }
 
 /* Kenarlıklar (Borders) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#4a443f]"]:not(:hover),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .border-\[\#4a443f\]:not(:hover),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#b99881]"]:not(:hover) {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#4a443f]"]:not(:hover),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .border-\[\#4a443f\]:not(:hover),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#b99881]"]:not(:hover) {
   border-color: rgba(41, 45, 43, 0.14) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button[class*="hover:border-[#b99881]"]:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-day-cell:hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button[class*="hover:border-[#b99881]"]:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-day-cell:hover {
   border-color: var(--accent-color, #5c6ac4) !important;
 }
 
@@ -1286,18 +1286,18 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   background-color: #4a443f !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dock-vertical-divider {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dock-vertical-divider {
   background-color: rgba(41, 45, 43, 0.22) !important;
 }
 
 /* Scrollbar (#e3e5e1 & var(--accent-color)) */
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-track {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-track {
   background: #e3e5e1;
 }
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-thumb {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--accent-color, #5c6ac4) 45%, transparent);
 }
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-thumb:hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color, #5c6ac4);
 }
 
@@ -1433,32 +1433,32 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   color: #ffffff !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-available,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-available *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-deposit,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-deposit *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-sold,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-sold *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-dark,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-dark * {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-available,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-available *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-deposit,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-deposit *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-sold,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-badge-sold *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-dark,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-dark * {
   color: #ffffff !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-light,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-light * {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-light,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-pill-light * {
   color: #1e293b !important;
 }
 
 .unit-box-deposit .unit-inline-title,
 .unit-box-sold .unit-inline-title,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-deposit .unit-inline-title,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-sold .unit-inline-title {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-deposit .unit-inline-title,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-sold .unit-inline-title {
   color: #ffffff !important;
   background: transparent !important;
 }
 
 .unit-box-available .unit-inline-title,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-available .unit-inline-title {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-box-available .unit-inline-title {
   color: #111827 !important;
   background: transparent !important;
 }
@@ -1497,14 +1497,14 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   background-color: #b91c1c !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit span:not(.unit-pill-light),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit div,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit p,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold span:not(.unit-pill-light),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold div,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold p {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit span:not(.unit-pill-light),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit div,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-deposit p,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold span:not(.unit-pill-light),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold div,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .unit-card-sold p {
   color: #ffffff !important;
 }
 
@@ -1519,8 +1519,8 @@ tr.customer-table-row {
 
 tr.customer-table-row:hover,
 tr.customer-table-row:has([data-dropdown-open="true"]),
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main tr.customer-table-row:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main tr.customer-table-row:has([data-dropdown-open="true"]) {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main tr.customer-table-row:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main tr.customer-table-row:has([data-dropdown-open="true"]) {
   background: color-mix(in srgb, var(--accent-color, #5c6ac4) 14%, transparent) !important;
   background-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 14%, transparent) !important;
   box-shadow: inset 3px 0 0 0 var(--accent-color, #5c6ac4);
@@ -1533,8 +1533,8 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 button.meta-stage-trigger-pill,
 main button.meta-stage-trigger-pill,
 main .glass-card button.meta-stage-trigger-pill,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill {
   border: 1.5px solid var(--accent-color, #b99881) !important;
   border-color: var(--accent-color, #b99881) !important;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color, #b99881) 22%, transparent), 0 2px 6px -1px rgba(0, 0, 0, 0.08) !important;
@@ -1546,17 +1546,17 @@ main button.meta-stage-trigger-pill:hover,
 main button.meta-stage-trigger-pill[data-dropdown-open="true"],
 main .glass-card button.meta-stage-trigger-pill:hover,
 main .glass-card button.meta-stage-trigger-pill[data-dropdown-open="true"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill[data-dropdown-open="true"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill[data-dropdown-open="true"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill[data-dropdown-open="true"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill[data-dropdown-open="true"] {
   border: 1.5px solid var(--accent-color, #b99881) !important;
   border-color: var(--accent-color, #b99881) !important;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #b99881) 35%, transparent), 0 4px 10px -2px rgba(0, 0, 0, 0.12) !important;
 }
 
 div.dropdown-panel.meta-stage-dropdown-panel,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.dropdown-panel.meta-stage-dropdown-panel {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.dropdown-panel.meta-stage-dropdown-panel {
   border: 1.5px solid var(--accent-color, #b99881) !important;
   border-color: var(--accent-color, #b99881) !important;
 }
@@ -1567,7 +1567,7 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
    ========================================================================== */
 div.crm-segment-divider-line,
 main div.crm-segment-divider-line,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.crm-segment-divider-line {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.crm-segment-divider-line {
   width: 260px !important;
   max-width: 55% !important;
   height: 2px !important;
@@ -1581,7 +1581,7 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 
 div.crm-segment-divider-line.is-milestone-line,
 main div.crm-segment-divider-line.is-milestone-line,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.crm-segment-divider-line.is-milestone-line {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.crm-segment-divider-line.is-milestone-line {
   width: 320px !important;
   max-width: 65% !important;
   height: 2.5px !important;
@@ -1598,10 +1598,10 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 main .calendar-today-cell,
 main .glass-card-static .calendar-today-cell,
 .glass-modal .calendar-today-cell,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-today-cell,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .calendar-today-cell,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static .calendar-today-cell,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-modal .calendar-today-cell {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-today-cell,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .calendar-today-cell,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static .calendar-today-cell,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-modal .calendar-today-cell {
   background: var(--accent-color, #5c6ac4) !important;
   background-color: var(--accent-color, #5c6ac4) !important;
   border-color: var(--accent-color, #5c6ac4) !important;
@@ -1609,7 +1609,7 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
 }
 
 .calendar-today-cell *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-today-cell * {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-today-cell * {
   color: #ffffff !important;
 }
 
@@ -1620,15 +1620,15 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
    ========================================================================== */
 [data-auto-contrast="light"],
 [data-auto-contrast="light"] *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="light"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="light"] * {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="light"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="light"] * {
   color: #0f172a !important;
 }
 
 [data-auto-contrast="dark"],
 [data-auto-contrast="dark"] *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="dark"],
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="dark"] * {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="dark"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [data-auto-contrast="dark"] * {
   color: #ffffff !important;
 }
 
@@ -1667,8 +1667,8 @@ main button.tab-pill-btn.is-active-tab-pill * {
   color: #ffffff !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn {
   background: #ffffff !important;
   background-color: #ffffff !important;
   color: rgba(41, 45, 43, 0.72) !important;
@@ -1676,16 +1676,16 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   box-shadow: none !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn:hover,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn:hover {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn:hover,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn:hover {
   background: #ffffff !important;
   background-color: #ffffff !important;
   color: #292d2b !important;
   border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn.is-active-tab-pill,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn.is-active-tab-pill {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn.is-active-tab-pill,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn.is-active-tab-pill {
   background: #ffffff !important;
   background-color: #ffffff !important;
   color: #292d2b !important;
@@ -1694,8 +1694,8 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
   box-shadow: none !important;
 }
 
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn.is-active-tab-pill *,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn.is-active-tab-pill * {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn.is-active-tab-pill *,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn.is-active-tab-pill * {
   color: #292d2b !important;
 }
 
@@ -1704,11 +1704,325 @@ html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([da
    ========================================================================== */
 .campaigns-no-shadow .glass-card,
 .campaigns-no-shadow .glass-card-static,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow .glass-card,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow .glass-card-static,
-html:not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow [class*="bg-[#282522]"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow .glass-card,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow .glass-card-static,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .campaigns-no-shadow [class*="bg-[#282522]"] {
   box-shadow: none !important;
 }
+
+/* ==========================================================================
+   GECE IŞIĞI (KOYU MOD - data-theme-accent="night") YÜZEY SİSTEMİ
+   - Ana Arka Plan (Yumuşak Siyah): #181918
+   - Sol Menü / Navigasyon (Biraz Daha Koyu, #000000 değil): #131413
+   - Kart Yüzeyi (Hafif Açık Koyu): #202220
+   - Butonlar / Sekmeler / İkincil Katmanlar (Biraz Daha Açık Koyu): #282b28
+   - Yazı Rengi (Beyaza Yakın Ekru): #f4f1ea
+   - Varsayılan Vurgu: Pastel yeşil (#657a72) veya seçili vurgu rengi
+   ========================================================================== */
+html[data-theme-accent="night"] {
+  --bg-base: #181918 !important;
+  --card-surface: #202220 !important;
+  --secondary-surface: #282b28 !important;
+  --nav-surface: #131413 !important;
+  --primary-anthracite: #202220 !important;
+  --tertiary-white: #f4f1ea !important;
+}
+
+html[data-theme-accent="night"],
+html[data-theme-accent="night"] body,
+html[data-theme-accent="night"] .min-h-screen {
+  background: #181918 !important;
+  background-color: #181918 !important;
+  color: #f4f1ea !important;
+}
+
+/* Sol Dikey Menü (Biraz daha koyu, ama #000000 kadar koyu değil: #131413) */
+html[data-theme-accent="night"] header[class*="bg-[#34302c]"],
+html[data-theme-accent="night"] header {
+  background: #131413 !important;
+  background-color: #131413 !important;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.08) !important;
+  border-right: 1px solid rgba(244, 241, 234, 0.08) !important;
+  color: #f4f1ea !important;
+}
+
+/* Sol menüdeki buton hover katmanı */
+html[data-theme-accent="night"] header .sidebar-pill-item:not(.bg-\[\#b99881\]):hover {
+  background: #232623 !important;
+  background-color: #232623 !important;
+  color: #f4f1ea !important;
+}
+
+/* Görev Çubuğu (AppDock) */
+html[data-theme-accent="night"] [class*="bg-[#413f3d]/90"],
+html[data-theme-accent="night"] [class*="bg-[#383834]/90"],
+html[data-theme-accent="night"] [class*="bg-[#383830]/90"] {
+  background: rgba(19, 20, 19, 0.96) !important;
+  background-color: rgba(19, 20, 19, 0.96) !important;
+  border-color: color-mix(in srgb, var(--accent-color, #657a72) 35%, transparent) !important;
+}
+
+/* Ana Yazı Rengi: Beyaza Yakın Ekru (#f4f1ea) */
+html[data-theme-accent="night"] h1,
+html[data-theme-accent="night"] h2,
+html[data-theme-accent="night"] h3,
+html[data-theme-accent="night"] h4,
+html[data-theme-accent="night"] h5,
+html[data-theme-accent="night"] h6,
+html[data-theme-accent="night"] label,
+html[data-theme-accent="night"] .text-white,
+html[data-theme-accent="night"] [class*="text-white"],
+html[data-theme-accent="night"] [class*="text-slate-100"],
+html[data-theme-accent="night"] [class*="text-slate-200"],
+html[data-theme-accent="night"] [class*="text-slate-300"],
+html[data-theme-accent="night"] [class*="text-gray-100"],
+html[data-theme-accent="night"] [class*="text-gray-200"],
+html[data-theme-accent="night"] [class*="text-gray-300"],
+html[data-theme-accent="night"] [class*="text-zinc-200"],
+html[data-theme-accent="night"] [class*="text-zinc-300"],
+html[data-theme-accent="night"] [class*="text-[#f3efe9]"],
+html[data-theme-accent="night"] [class*="text-[#e6dfd9]"],
+html[data-theme-accent="night"] [class*="text-[#d6beae]"],
+html[data-theme-accent="night"] [class*="text-[#c4bcb5]"] {
+  color: #f4f1ea !important;
+}
+
+/* Yardımcı / Açıklama Metinleri: Yumuşak Ekru */
+html[data-theme-accent="night"] [class*="text-[#a69f99]"],
+html[data-theme-accent="night"] [class*="text-[#8c857f]"],
+html[data-theme-accent="night"] [class*="text-slate-400"],
+html[data-theme-accent="night"] [class*="text-gray-400"],
+html[data-theme-accent="night"] [class*="text-zinc-400"] {
+  color: rgba(244, 241, 234, 0.68) !important;
+}
+
+/* Vurgu Rengi (İkonlar ve Vurgulu Metinler) */
+html[data-theme-accent="night"] [class*="text-[#dfb76c]"],
+html[data-theme-accent="night"] [class*="text-[#b99881]"],
+html[data-theme-accent="night"] .text-\[\#b99881\],
+html[data-theme-accent="night"] [class*="text-[#e4c9b3]"],
+html[data-theme-accent="night"] .text-brand-gold,
+html[data-theme-accent="night"] .text-brand-goldLight,
+html[data-theme-accent="night"] svg {
+  color: var(--accent-color, #657a72) !important;
+}
+
+html[data-theme-accent="night"] svg[class*="text-amber-"],
+html[data-theme-accent="night"] svg[class*="text-yellow-"] {
+  color: #fbbf24 !important;
+}
+
+html[data-theme-accent="night"] svg[class*="text-emerald-"],
+html[data-theme-accent="night"] svg[class*="text-teal-"] {
+  color: #34d399 !important;
+}
+
+html[data-theme-accent="night"] svg[class*="text-rose-"] {
+  color: #fb7185 !important;
+}
+
+/* Sayfa İçi Kart Yüzeyi: Yumuşak siyahtan (#181918) bir kademe açık koyu (#202220) */
+html[data-theme-accent="night"] main .glass-panel,
+html[data-theme-accent="night"] main .glass-panel-elevated,
+html[data-theme-accent="night"] main .glass-card,
+html[data-theme-accent="night"] main .glass-card-static,
+html[data-theme-accent="night"] main [class*="bg-[#282522]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#24211f]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#24211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#25211e]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#1e1c1a]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#221f1d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#2a2622]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#34302d]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#3a3430]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#181614]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#1f1c19]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
+html[data-theme-accent="night"] main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
+  background: #202220 !important;
+  background-color: #202220 !important;
+  border: 1px solid rgba(244, 241, 234, 0.09) !important;
+  box-shadow: none !important;
+  color: #f4f1ea !important;
+}
+
+html[data-theme-accent="night"] main .glass-card:hover,
+html[data-theme-accent="night"] main .glass-panel:hover,
+html[data-theme-accent="night"] main [class*="hover:bg-[#282522]"]:hover {
+  background: #232623 !important;
+  background-color: #232623 !important;
+  border-color: color-mix(in srgb, var(--accent-color, #657a72) 40%, transparent) !important;
+}
+
+/* Butonlar, Sekmeler, Üst Bar Kapsülleri ve Kart İçi İkincil Yüzeyler: Biraz Daha Açık Koyu (#282b28) */
+html[data-theme-accent="night"] div.top-utility-pill,
+html[data-theme-accent="night"] button.top-utility-pill,
+html[data-theme-accent="night"] .top-utility-pill,
+html[data-theme-accent="night"] header [class*="bg-[#24211f]"],
+html[data-theme-accent="night"] header [class*="bg-[#282522]"] {
+  background: #282b28 !important;
+  background-color: #282b28 !important;
+  border-color: rgba(244, 241, 234, 0.12) !important;
+  box-shadow: none !important;
+  color: #f4f1ea !important;
+}
+
+html[data-theme-accent="night"] main .glass-card [class*="bg-[#34302d]"],
+html[data-theme-accent="night"] main .glass-card-static [class*="bg-[#34302d]"],
+html[data-theme-accent="night"] main .glass-card [class*="bg-[#282522]"],
+html[data-theme-accent="night"] main .glass-card [class*="bg-[#24211f]"],
+html[data-theme-accent="night"] main .glass-panel [class*="bg-[#34302d]"],
+html[data-theme-accent="night"] [class*="bg-[#34302d]"],
+html[data-theme-accent="night"] [class*="bg-[#3a3430]"],
+html[data-theme-accent="night"] [class*="bg-[#2d2926]"],
+html[data-theme-accent="night"] [class*="bg-[#2e2a27]"],
+html[data-theme-accent="night"] [class*="bg-[#282522]"],
+html[data-theme-accent="night"] [class*="bg-[#24211f]"],
+html[data-theme-accent="night"] [class*="bg-[#24211e]"],
+html[data-theme-accent="night"] [class*="bg-[#1c1a18]"],
+html[data-theme-accent="night"] [class*="bg-[#1e1b18]"],
+html[data-theme-accent="night"] [class*="bg-[#1e1b19]"],
+html[data-theme-accent="night"] [class*="bg-[#1e1c1a]"],
+html[data-theme-accent="night"] [class*="bg-[#1f1d1b]"],
+html[data-theme-accent="night"] [class*="bg-[#181614]"],
+html[data-theme-accent="night"] [class*="bg-[#1f1c19]"] {
+  background: #282b28 !important;
+  background-color: #282b28 !important;
+  border-color: rgba(244, 241, 234, 0.11) !important;
+  color: #f4f1ea !important;
+}
+
+/* Sekme ve Filtre Butonları (.tab-pill-btn): Biraz daha açık koyu (#282b28) + aktifte vurgu kontürü */
+html[data-theme-accent="night"] button.tab-pill-btn,
+html[data-theme-accent="night"] main button.tab-pill-btn {
+  background: #282b28 !important;
+  background-color: #282b28 !important;
+  color: rgba(244, 241, 234, 0.78) !important;
+  border: 1.5px solid rgba(244, 241, 234, 0.13) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme-accent="night"] button.tab-pill-btn:hover,
+html[data-theme-accent="night"] main button.tab-pill-btn:hover {
+  background: #303430 !important;
+  background-color: #303430 !important;
+  color: #f4f1ea !important;
+  border-color: color-mix(in srgb, var(--accent-color, #657a72) 65%, transparent) !important;
+}
+
+html[data-theme-accent="night"] button.tab-pill-btn.is-active-tab-pill,
+html[data-theme-accent="night"] main button.tab-pill-btn.is-active-tab-pill {
+  background: #2c302c !important;
+  background-color: #2c302c !important;
+  color: #f4f1ea !important;
+  border: 2px solid var(--accent-color, #657a72) !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme-accent="night"] button.tab-pill-btn.is-active-tab-pill *,
+html[data-theme-accent="night"] main button.tab-pill-btn.is-active-tab-pill * {
+  color: #f4f1ea !important;
+}
+
+/* İkincil Butonlar (.glass-button-subtle) */
+html[data-theme-accent="night"] .glass-button-subtle {
+  background: #282b28 !important;
+  background-color: #282b28 !important;
+  border: 1px solid rgba(244, 241, 234, 0.14) !important;
+  color: #f4f1ea !important;
+}
+
+html[data-theme-accent="night"] .glass-button-subtle:hover {
+  background: #313531 !important;
+  background-color: #313531 !important;
+  border-color: color-mix(in srgb, var(--accent-color, #657a72) 55%, transparent) !important;
+  color: #f4f1ea !important;
+}
+
+/* Birincil Vurgu Butonları (Yeni Ekle vb.): Seçili Vurgu Rengi + Ekru Metin (#f4f1ea) */
+html[data-theme-accent="night"] .btn-primary,
+html[data-theme-accent="night"] .glass-button-gold,
+html[data-theme-accent="night"] button.bg-\[\#b99881\],
+html[data-theme-accent="night"] .bg-\[\#b99881\] {
+  background: var(--accent-color, #657a72) !important;
+  background-color: var(--accent-color, #657a72) !important;
+  color: #f4f1ea !important;
+  border: 1px solid color-mix(in srgb, var(--accent-color, #657a72) 70%, transparent) !important;
+}
+
+html[data-theme-accent="night"] .btn-primary *,
+html[data-theme-accent="night"] .glass-button-gold *,
+html[data-theme-accent="night"] button.bg-\[\#b99881\] *,
+html[data-theme-accent="night"] .bg-\[\#b99881\] * {
+  color: #f4f1ea !important;
+}
+
+html[data-theme-accent="night"] .btn-primary:hover,
+html[data-theme-accent="night"] .glass-button-gold:hover,
+html[data-theme-accent="night"] button.bg-\[\#b99881\]:hover,
+html[data-theme-accent="night"] .bg-\[\#b99881\]:hover {
+  background: var(--accent-hover, #556860) !important;
+  background-color: var(--accent-hover, #556860) !important;
+  border-color: var(--accent-color, #657a72) !important;
+  color: #f4f1ea !important;
+}
+
+/* Açılır Menüler (Dropdowns), Başlat Menüsü ve Modallar */
+html[data-theme-accent="night"] .dropdown-panel,
+html[data-theme-accent="night"] .dropdown-menu,
+html[data-theme-accent="night"] .popover-panel,
+html[data-theme-accent="night"] .context-menu,
+html[data-theme-accent="night"] [role="menu"],
+html[data-theme-accent="night"] [role="listbox"],
+html[data-theme-accent="night"] header .dropdown-panel,
+html[data-theme-accent="night"] div.dropdown-panel,
+html[data-theme-accent="night"] .glass-modal {
+  background: #1e201e !important;
+  background-color: #1e201e !important;
+  border-color: rgba(244, 241, 234, 0.13) !important;
+  color: #f4f1ea !important;
+  box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* Input, Select, Textarea -> Biraz daha açık koyu (#282b28) + Ekru yazı (#f4f1ea) */
+html[data-theme-accent="night"] input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not([class*="bg-transparent"]),
+html[data-theme-accent="night"] select:not(.bg-transparent):not([class*="bg-transparent"]),
+html[data-theme-accent="night"] textarea:not(.bg-transparent):not([class*="bg-transparent"]),
+html[data-theme-accent="night"] .glass-input {
+  color-scheme: dark !important;
+  background: #282b28 !important;
+  background-color: #282b28 !important;
+  color: #f4f1ea !important;
+  border-color: rgba(244, 241, 234, 0.14) !important;
+}
+
+html[data-theme-accent="night"] input:not(.bg-transparent):not([class*="bg-transparent"]):focus,
+html[data-theme-accent="night"] select:not(.bg-transparent):not([class*="bg-transparent"]):focus,
+html[data-theme-accent="night"] textarea:not(.bg-transparent):not([class*="bg-transparent"]):focus,
+html[data-theme-accent="night"] .glass-input:focus {
+  background: #2e322e !important;
+  background-color: #2e322e !important;
+  border-color: var(--accent-color, #657a72) !important;
+}
+
+html[data-theme-accent="night"] input::placeholder,
+html[data-theme-accent="night"] textarea::placeholder {
+  color: rgba(244, 241, 234, 0.45) !important;
+}
+
+html[data-theme-accent="night"] option,
+html[data-theme-accent="night"] optgroup {
+  color-scheme: dark !important;
+  background-color: #202220 !important;
+  color: #f4f1ea !important;
+}
+
+/* Kenarlıklar (Borders) */
+html[data-theme-accent="night"] [class*="border-[#4a443f]"]:not(:hover),
+html[data-theme-accent="night"] .border-\[\#4a443f\]:not(:hover) {
+  border-color: rgba(244, 241, 234, 0.11) !important;
+}
+
 
 
 

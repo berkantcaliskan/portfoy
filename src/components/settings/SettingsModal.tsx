@@ -122,16 +122,16 @@ export interface AccentColorOption {
 }
 
 export const ACCENT_COLOR_OPTIONS: AccentColorOption[] = [
-  { id: 'indigo', name: 'İndigo', color: '#5c6ac4', hover: '#4c59b0', badge: 'Varsayılan' },
-  { id: 'beige', name: 'Bej', color: '#b99881', hover: '#a6856e' },
-  { id: 'sage', name: 'Vurgu Yeşili', color: '#657a72', hover: '#556860' },
-  { id: 'burgundy', name: 'Burgonya', color: '#8b3a4a', hover: '#752e3c' },
-  { id: 'pastel-yellow', name: 'Pastel Sarı', color: '#d4a359', hover: '#bf8f47' },
-  { id: 'pastel-purple', name: 'Pastel Mor', color: '#8b6bb1', hover: '#78599d' },
+  { id: 'indigo', name: 'İndigo', color: '#5c6ac4', hover: '#4c59b0' },
+  { id: 'sage', name: 'Pastel yeşil', color: '#657a72', hover: '#556860' },
+  { id: 'pastel-mint', name: 'Su yeşili', color: '#68a691', hover: '#56927e' },
+  { id: 'pastel-sky', name: 'Buz mavisi', color: '#6b9ac4', hover: '#5987b0' },
   { id: 'lavender', name: 'Lavanta', color: '#9381ff', hover: '#7f6ce6' },
-  { id: 'pastel-rose', name: 'Pastel Gül', color: '#c97a8b', hover: '#b56677' },
-  { id: 'pastel-sky', name: 'Pastel Mavi', color: '#6b9ac4', hover: '#5987b0' },
-  { id: 'pastel-mint', name: 'Pastel Mint', color: '#68a691', hover: '#56927e' },
+  { id: 'pastel-purple', name: 'Leylak', color: '#8b6bb1', hover: '#78599d' },
+  { id: 'burgundy', name: 'Burgonya', color: '#8b3a4a', hover: '#752e3c' },
+  { id: 'pastel-rose', name: 'Gül kurusu', color: '#c97a8b', hover: '#b56677' },
+  { id: 'pastel-yellow', name: 'Kehribar', color: '#d4a359', hover: '#bf8f47' },
+  { id: 'beige', name: 'Kum beji', color: '#b99881', hover: '#a6856e' },
 ]
 
 export function applyAccentColorChoice(accentId: string) {
@@ -187,84 +187,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     applyAccentColorChoice(id)
   }
 
-  // 6 Luxury Themes (Primary big circle + Secondary small badge)
-  const THEMES: {
-    id: 'gold' | 'light' | 'amber' | 'emerald' | 'sapphire' | 'platinum'
-    name: string
-    desc: string
-    primary: string
-    secondary: string
-  }[] = [
-    {
-      id: 'gold',
-      name: 'Reelms Ana Tema (Varsayılan)',
-      desc: `Kırık beyaz (#f5f5f2), kart (#ffffff), nav (#e3e5e1) & vurgu (${activeAccentObj.name})`,
-      primary: '#F4F0E7',
-      secondary: activeAccentObj.color,
-    },
-    {
-      id: 'light',
-      name: 'Reelms Açık Ton',
-      desc: `Kırık beyaz (#f5f5f2), kart (#ffffff), ikincil (#ebece9) & vurgu (${activeAccentObj.name})`,
-      primary: '#ffffff',
-      secondary: activeAccentObj.color,
-    },
-    {
-      id: 'amber',
-      name: 'Kehribar Noir',
-      desc: 'Sıcak gece kömürü & mat kehribar',
-      primary: '#1c1916',
-      secondary: '#d97706',
-    },
-    {
-      id: 'emerald',
-      name: 'Orman Zümrütü',
-      desc: 'Derin orman obsidyeni & platin yeşili',
-      primary: '#14221d',
-      secondary: '#10b981',
-    },
-    {
-      id: 'sapphire',
-      name: 'Gece Safiri',
-      desc: 'Gece safiri & arktik gök mavisi',
-      primary: '#151c28',
-      secondary: '#38bdf8',
-    },
-    {
-      id: 'platinum',
-      name: 'Titanyum Grafit',
-      desc: 'Mat antrasit & gümüş platin',
-      primary: '#202023',
-      secondary: '#94a3b8',
-    },
-  ]
-
-  // Theme Accent state
-  const [themeAccent, setThemeAccent] = useState<'gold' | 'light' | 'amber' | 'emerald' | 'sapphire' | 'platinum'>(() => {
+  // Theme Accent state ('gold' = Gün ışığı, 'night' = Gece ışığı)
+  const [themeAccent, setThemeAccent] = useState<'gold' | 'night'>(() => {
     try {
       const saved = localStorage.getItem('demirturk_theme_accent')
-      if (saved === 'light' || saved === 'amber' || saved === 'emerald' || saved === 'sapphire' || saved === 'platinum') {
-        return saved
+      if (saved === 'night' || saved === 'amber' || saved === 'emerald' || saved === 'sapphire' || saved === 'platinum') {
+        return 'night'
       }
     } catch {}
     return 'gold'
   })
 
-  const handleSetAccent = (acc: 'gold' | 'light' | 'amber' | 'emerald' | 'sapphire' | 'platinum') => {
+  const THEMES: {
+    id: 'gold' | 'night'
+    name: string
+    primary: string
+    secondary: string
+  }[] = [
+    {
+      id: 'gold',
+      name: 'Gün ışığı',
+      primary: '#f5f5f2',
+      secondary: themeAccent === 'gold' ? activeAccentObj.color : '#5c6ac4',
+    },
+    {
+      id: 'night',
+      name: 'Gece ışığı',
+      primary: '#181918',
+      secondary: themeAccent === 'night' ? activeAccentObj.color : '#657a72',
+    },
+  ]
+
+  const handleSetAccent = (acc: 'gold' | 'night') => {
     setThemeAccent(acc)
     localStorage.setItem('demirturk_theme_accent', acc)
+    const defaultAccentForTheme = acc === 'night' ? 'sage' : 'indigo'
+    setAccentColorId(defaultAccentForTheme)
+    localStorage.setItem('demirturk_accent_color', defaultAccentForTheme)
     if (acc === 'gold') {
       document.documentElement.removeAttribute('data-theme-accent')
-      applyAccentColorChoice(accentColorId)
-    } else if (acc === 'light') {
-      document.documentElement.setAttribute('data-theme-accent', acc)
-      applyAccentColorChoice(accentColorId)
     } else {
-      document.documentElement.setAttribute('data-theme-accent', acc)
-      document.documentElement.style.removeProperty('--accent-color')
-      document.documentElement.style.removeProperty('--accent-light')
-      document.documentElement.style.removeProperty('--accent-hover')
+      document.documentElement.setAttribute('data-theme-accent', 'night')
     }
+    applyAccentColorChoice(defaultAccentForTheme)
   }
 
   // Font Size state ('small' | 'standard' | 'large')
@@ -980,18 +945,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                 </div>
 
-                {/* 
-                  5 LUXURY THEMES:
-                  - Primary color: Large circle
-                  - Secondary color: Small badge circle overlapping at bottom-right
-                */}
+                {/* TEMA SEÇİCİ: Gün ışığı & Gece ışığı */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                       <Palette className="w-3.5 h-3.5 text-[#b99881]" />
-                      <span>Renk Temaları (6 Seçenek)</span>
+                      <span>Tema</span>
                     </h4>
-                    <span className="text-[11px] text-[#8c857f]">Büyük daire: Zemin • Küçük rozet: Vurgu</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1009,13 +969,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           }`}
                         >
                           {/* DUAL CIRCLE: Big Primary + Small Badge Secondary */}
-                          <div className="relative w-10 h-10 shrink-0">
+                          <div className="relative w-9 h-9 shrink-0">
                             <div
-                              className="w-9 h-9 rounded-full border border-white/20 shadow-md"
+                              className="w-8 h-8 rounded-full border border-white/20 shadow-sm"
                               style={{ backgroundColor: t.primary }}
                             />
                             <div
-                              className="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-[#2b2724] shadow-sm"
+                              className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#2b2724] shadow-sm"
                               style={{ backgroundColor: t.secondary }}
                             />
                           </div>
@@ -1025,7 +985,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <span>{t.name}</span>
                               {isSelected && <Check className="w-3.5 h-3.5 text-[#b99881]" />}
                             </div>
-                            <div className="text-[10px] text-[#8c857f] truncate mt-0.5">{t.desc}</div>
                           </div>
                         </button>
                       )
@@ -1041,24 +1000,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span>Vurgu Rengi</span>
                     </h4>
                     <span className="text-[11px] text-[#8c857f]">
-                      Seçili: <strong className="text-white">{activeAccentObj.name}</strong> ({activeAccentObj.color})
+                      Seçili: <strong className="text-white">{activeAccentObj.name}</strong>
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    {ACCENT_COLOR_OPTIONS.map((opt, idx) => {
+                    {ACCENT_COLOR_OPTIONS.map((opt) => {
                       const isSelected = accentColorId === opt.id
                       return (
                         <button
                           key={opt.id}
                           type="button"
                           onClick={() => handleSelectAccentColor(opt.id)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-full border text-left transition-all cursor-pointer ${
+                          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-full border text-left transition-all cursor-pointer ${
                             isSelected
                               ? 'border-[#b99881] bg-[#b99881]/15 shadow-sm'
                               : 'border-[#4a443f]/60 hover:border-[#b99881]/40 bg-[#1e1c1a]/50'
                           }`}
-                          title={`${idx + 1}. ${opt.name} (${opt.color})`}
+                          title={opt.name}
                         >
                           <span
                             className="w-4 h-4 rounded-full shrink-0 border border-black/15 shadow-sm flex items-center justify-center"
@@ -1071,9 +1030,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <div className="min-w-0 flex-1">
                             <div className="text-[11px] font-bold text-white truncate">
                               {opt.name}
-                            </div>
-                            <div className="text-[9px] text-[#8c857f] truncate font-mono">
-                              {opt.badge ? opt.badge : opt.color}
                             </div>
                           </div>
                         </button>

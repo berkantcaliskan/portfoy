@@ -169,13 +169,21 @@ export function App() {
   useEffect(() => {
     try {
       const savedAccent = localStorage.getItem('demirturk_theme_accent')
-      if (savedAccent && savedAccent !== 'gold') {
-        document.documentElement.setAttribute('data-theme-accent', savedAccent)
+      const isNightTheme =
+        savedAccent === 'night' ||
+        savedAccent === 'amber' ||
+        savedAccent === 'emerald' ||
+        savedAccent === 'sapphire' ||
+        savedAccent === 'platinum'
+      if (isNightTheme) {
+        document.documentElement.setAttribute('data-theme-accent', 'night')
+      } else {
+        document.documentElement.removeAttribute('data-theme-accent')
       }
-      const savedCustomAccentColor = localStorage.getItem('demirturk_accent_color') || 'indigo'
-      if (!savedAccent || savedAccent === 'gold' || savedAccent === 'light') {
-        applyAccentColorChoice(savedCustomAccentColor)
-      }
+      const defaultAccentId = isNightTheme ? 'sage' : 'indigo'
+      const savedCustomAccentColor = localStorage.getItem('demirturk_accent_color') || defaultAccentId
+      applyAccentColorChoice(savedCustomAccentColor)
+
       const savedContrast = localStorage.getItem('demirturk_theme_contrast')
       if (savedContrast === 'deep') {
         document.documentElement.setAttribute('data-theme-contrast', 'deep')
