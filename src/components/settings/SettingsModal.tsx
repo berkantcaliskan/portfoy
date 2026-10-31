@@ -445,6 +445,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [dailyKpiReportEnabled, setDailyKpiReportEnabled] = useState(true)
   const [deptSavedMessage, setDeptSavedMessage] = useState<string | null>(null)
 
+  const [deptSettings, setDeptSettings] = useState(() => {
+    const defaults = {
+      // Müşteri İlişkileri - 1. SLA & Yanıt Süresi
+      crmFirstResponseMins: '15',
+      crmFollowupCallbackMins: '60',
+      crmOverdueEscalationHours: '4',
+      crmWorkingHoursStart: '09:00',
+      crmWorkingHoursEnd: '19:00',
+      crmSlaAlertEnabled: true,
+      crmAutoReassignOnBreach: false,
+
+      // Müşteri İlişkileri - 2. İletişim Kanalları
+      crmWhatsappLine: '+90 532 000 00 00',
+      crmWhatsappGreeting: 'Merhaba, Demirtürk Holding Müşteri İlişkileri ekibinden ulaşıyorum. Talebinizle ilgili size nasıl yardımcı olabilirim?',
+      crmSwitchboardPrefix: '0850',
+      crmRequireCallNote: true,
+      crmWebFormRoundRobin: true,
+      crmAutoOpenWhatsappWeb: true,
+
+      // Müşteri İlişkileri - 3. Talep Önceliği
+      crmWebRequestDefaultPriority: 'Yüksek',
+      crmManualRequestDefaultPriority: 'Normal',
+      crmVipBudgetThreshold: '5000000',
+      crmPinUrgentToTop: true,
+      crmRequireNoteOnSalesHandover: true,
+      crmCallbackPriorityBoost: true,
+
+      // Satış Departmanı
+      salesCommissionRate: '1.5',
+      salesMonthlyTargetAmount: '15000000',
+      salesBonusAcceleratorEnabled: true,
+      salesDefaultSlotMins: '45',
+      salesBufferBetweenApptsMins: '15',
+      salesSendSmsBeforeAppt: true,
+      salesOptionHoldHours: '72',
+      salesMaxOptionsPerRep: '3',
+      salesAutoReleaseExpiredOption: true,
+
+      // Muhasebe Departmanı
+      accDefaultBankName: 'Ziraat Bankası - Kurumsal Ticari Hesap',
+      accDefaultIban: 'TR00 0001 0000 0000 0000 0000 01',
+      accDefaultCurrency: 'TRY',
+      accInvoicePrefix: 'DMT2026',
+      accReceiptPrefix: 'MKB-2026',
+      accDefaultVatRate: '20',
+      accAutoArchivePdf: true,
+      accReminderDaysBefore: '3',
+      accOverdueWarningDays: '7',
+      accSendOverdueWhatsapp: true,
+
+      // Yönetim & Güvenlik
+      adminRepMaxDiscountPct: '3',
+      adminManagerMaxDiscountPct: '8',
+      adminRequireBoardApprovalAbovePct: '10',
+      adminSessionTimeoutMins: '120',
+      adminAuditRetentionDays: '365',
+      adminLogExportAlerts: true,
+    }
+    try {
+      const raw = localStorage.getItem('demirturk_dept_settings_v1')
+      if (raw) {
+        return { ...defaults, ...(JSON.parse(raw) as Partial<typeof defaults>) }
+      }
+    } catch {}
+    return defaults
+  })
+
+  const updateDeptSetting = <K extends keyof typeof deptSettings>(key: K, value: (typeof deptSettings)[K]) => {
+    setDeptSettings((prev: typeof deptSettings) => {
+      const next = { ...prev, [key]: value }
+      try {
+        localStorage.setItem('demirturk_dept_settings_v1', JSON.stringify(next))
+      } catch {}
+      return next
+    })
+  }
+
   // Direct Meta API & Conversions API (CAPI) Connection State
   const metaConfig = metaStore.getConfig()
   const [metaPageToken, setMetaPageToken] = useState(metaConfig.pageAccessToken)
@@ -517,6 +594,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }
 
   const handleSaveDeptConfig = (msg = 'Departman ayarları başarıyla kaydedildi.') => {
+    try {
+      localStorage.setItem('demirturk_dept_settings_v1', JSON.stringify(deptSettings))
+    } catch {}
     metaStore.saveConfig({
       pageAccessToken: metaPageToken,
       datasetId: metaDatasetId.trim(),
@@ -1829,39 +1909,827 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {/* FALLBACK FOR OTHER DEPARTMENTS IF ACCESSED */}
-            {activeTab.startsWith('dept-sales-') && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <h3 className="text-sm font-bold text-white">Satış Departmanı Yapılandırması</h3>
-                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
-                  <div className="text-xs text-white">Satış komisyon oranları ve rezervasyon kuralları aktif.</div>
-                  <GlassButton variant="gold" size="sm" onClick={() => handleSaveDeptConfig()} className="rounded-full px-5">
-                    Kaydet
-                  </GlassButton>
+            {/* MÜŞTERİ İLİŞKİLERİ: 1. SLA & YANIT SÜRESİ */}
+            {activeTab === 'dept-crm-sla' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    SLA & Yanıt Süresi Kuralları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Yeni düşen müşteri adaylarına ilk dönüş hedef süreleri, tekrar arama hatırlatıcıları ve çalışma saatleri.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        İlk Yanıt Hedef Süresi (Dakika)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.crmFirstResponseMins}
+                        onChange={(e) => updateDeptSetting('crmFirstResponseMins', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Tekrar Arama Hatırlatıcısı (Dakika)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.crmFollowupCallbackMins}
+                        onChange={(e) => updateDeptSetting('crmFollowupCallbackMins', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Gecikme Eskalasyon Eşiği (Saat)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.crmOverdueEscalationHours}
+                        onChange={(e) => updateDeptSetting('crmOverdueEscalationHours', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Mesai Başlangıç Saati
+                      </label>
+                      <input
+                        type="time"
+                        value={deptSettings.crmWorkingHoursStart}
+                        onChange={(e) => updateDeptSetting('crmWorkingHoursStart', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Mesai Bitiş Saati
+                      </label>
+                      <input
+                        type="time"
+                        value={deptSettings.crmWorkingHoursEnd}
+                        onChange={(e) => updateDeptSetting('crmWorkingHoursEnd', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">SLA Aşımında Bildirim Gönder</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Hedef yanıt süresi aşılan müşteri kayıtları için anlık uyarı gösterilir
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('crmSlaAlertEnabled', !deptSettings.crmSlaAlertEnabled)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.crmSlaAlertEnabled ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.crmSlaAlertEnabled ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Geciken Adayı Boştaki Temsilciye Devret</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Eskalasyon süresini aşan ve aranmayan kayıtları aktif temsilciye otomatik aktarır
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('crmAutoReassignOnBreach', !deptSettings.crmAutoReassignOnBreach)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.crmAutoReassignOnBreach ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.crmAutoReassignOnBreach ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? (
+                      <span className="text-xs text-emerald-400">{deptSavedMessage}</span>
+                    ) : (
+                      <span />
+                    )}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('SLA ve yanıt süresi kuralları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
                 </div>
               </div>
             )}
 
-            {activeTab.startsWith('dept-crm-') && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <h3 className="text-sm font-bold text-white">Müşteri İlişkileri Yapılandırması</h3>
-                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
-                  <div className="text-xs text-white">SLA süreleri ve çağrı merkezi öncelik kuralları aktif.</div>
-                  <GlassButton variant="gold" size="sm" onClick={() => handleSaveDeptConfig()} className="rounded-full px-5">
-                    Kaydet
-                  </GlassButton>
+            {/* MÜŞTERİ İLİŞKİLERİ: 2. İLETİŞİM KANALLARI */}
+            {activeTab === 'dept-crm-channels' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    İletişim Kanalları & Santral Ayarları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    WhatsApp kurumsal hattı, hazır mesaj şablonu, santral arama öneki ve web form dağıtım tercihleri.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Kurumsal WhatsApp Hattı
+                      </label>
+                      <input
+                        type="text"
+                        value={deptSettings.crmWhatsappLine}
+                        onChange={(e) => updateDeptSetting('crmWhatsappLine', e.target.value)}
+                        placeholder="+90 532 000 00 00"
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Santral / Softphone Çıkış Kodu
+                      </label>
+                      <input
+                        type="text"
+                        value={deptSettings.crmSwitchboardPrefix}
+                        onChange={(e) => updateDeptSetting('crmSwitchboardPrefix', e.target.value)}
+                        placeholder="0850"
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] text-[#a69f99] block mb-1">
+                      Varsayılan WhatsApp İlk Temas Mesaj Şablonu
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={deptSettings.crmWhatsappGreeting}
+                      onChange={(e) => updateDeptSetting('crmWhatsappGreeting', e.target.value)}
+                      className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none resize-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Görüşme Sonrası Çağrı Notu Zorunluluğu</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Müşteri durumu güncellenirken kısa görüşme özeti girilmesini zorunlu tutar
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('crmRequireCallNote', !deptSettings.crmRequireCallNote)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.crmRequireCallNote ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.crmRequireCallNote ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Web Sitesi Başvurularında Sıralı Dağıtım (Round-Robin)</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        İnternet sitesinden gelen başvuruları temsilciler arasında eşit sırayla atar
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('crmWebFormRoundRobin', !deptSettings.crmWebFormRoundRobin)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.crmWebFormRoundRobin ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.crmWebFormRoundRobin ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? (
+                      <span className="text-xs text-emerald-400">{deptSavedMessage}</span>
+                    ) : (
+                      <span />
+                    )}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('İletişim kanalı ayarları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
                 </div>
               </div>
             )}
 
-            {activeTab.startsWith('dept-acc-') && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <h3 className="text-sm font-bold text-white">Muhasebe Yapılandırması</h3>
-                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
-                  <div className="text-xs text-white">Fatura şablonları ve tahsilat vade uyarı kuralları aktif.</div>
-                  <GlassButton variant="gold" size="sm" onClick={() => handleSaveDeptConfig()} className="rounded-full px-5">
-                    Kaydet
-                  </GlassButton>
+            {/* MÜŞTERİ İLİŞKİLERİ: 3. TALEP ÖNCELİĞİ */}
+            {activeTab === 'dept-crm-priority' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    Talep Önceliği & Sıralama Kuralları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    İnternet sitesi başvuruları ve manuel girilen müşteri istekleri için varsayılan öncelik seviyeleri ve devir kuralları.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Web Sitesi Başvurusu Önceliği
+                      </label>
+                      <select
+                        value={deptSettings.crmWebRequestDefaultPriority}
+                        onChange={(e) => updateDeptSetting('crmWebRequestDefaultPriority', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      >
+                        <option value="Acil">Acil</option>
+                        <option value="Yüksek">Yüksek</option>
+                        <option value="Normal">Normal</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Manuel Müşteri İsteği Önceliği
+                      </label>
+                      <select
+                        value={deptSettings.crmManualRequestDefaultPriority}
+                        onChange={(e) => updateDeptSetting('crmManualRequestDefaultPriority', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      >
+                        <option value="Acil">Acil</option>
+                        <option value="Yüksek">Yüksek</option>
+                        <option value="Normal">Normal</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        VIP Yatırımcı Bütçe Eşiği (₺)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.crmVipBudgetThreshold}
+                        onChange={(e) => updateDeptSetting('crmVipBudgetThreshold', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Acil ve VIP Talepleri Listenin En Üstüne Sabitle</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Talepler ve Müşteriler sayfasında yüksek öncelikli kayıtları her zaman üst sırada gösterir
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('crmPinUrgentToTop', !deptSettings.crmPinUrgentToTop)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.crmPinUrgentToTop ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.crmPinUrgentToTop ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Satış Ekibine Devirde Müşteri Beklenti Notu Zorunluluğu</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Nitelikli adayı satış temsilcisine aktarırken daire tipi ve bütçe notu girilmesini şart koşar
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('crmRequireNoteOnSalesHandover', !deptSettings.crmRequireNoteOnSalesHandover)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.crmRequireNoteOnSalesHandover ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.crmRequireNoteOnSalesHandover ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? (
+                      <span className="text-xs text-emerald-400">{deptSavedMessage}</span>
+                    ) : (
+                      <span />
+                    )}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('Talep önceliği kuralları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SATIŞ: 1. KOMİSYON & HEDEF */}
+            {activeTab === 'dept-sales-commission' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    Komisyon Oranları & Aylık Satış Hedefi
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Satış temsilcilerinin prim hesaplama yüzdeleri ve aylık ciro hedefleri.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Varsayılan Satış Komisyon Oranı (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={deptSettings.salesCommissionRate}
+                        onChange={(e) => updateDeptSetting('salesCommissionRate', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Temsilci Aylık Hedef Ciro (₺)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.salesMonthlyTargetAmount}
+                        onChange={(e) => updateDeptSetting('salesMonthlyTargetAmount', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Hedef Üstü Kademeli Prim Çarpanı</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Aylık hedefini %100 aşan temsilcilerin sonraki satışlarında ek prim çarpanı uygular
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('salesBonusAcceleratorEnabled', !deptSettings.salesBonusAcceleratorEnabled)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.salesBonusAcceleratorEnabled ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.salesBonusAcceleratorEnabled ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('Satış komisyon ve hedef ayarları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SATIŞ: 2. RANDEVU KURALLARI */}
+            {activeTab === 'dept-sales-appointments' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    Satış Ofisi Randevu Kuralları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Numune daire gösterimi ve satış görüşmesi süreleri ile otomatik müşteri hatırlatmaları.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Varsayılan Görüşme Süresi (Dakika)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.salesDefaultSlotMins}
+                        onChange={(e) => updateDeptSetting('salesDefaultSlotMins', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Randevular Arası Hazırlık Süresi (Dakika)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.salesBufferBetweenApptsMins}
+                        onChange={(e) => updateDeptSetting('salesBufferBetweenApptsMins', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Randevu Öncesi Konum ve Hatırlatma Mesajı</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Görüşmeden 2 saat önce müşteriye satış ofisi konumu ve hatırlatma bildirimi gönderir
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('salesSendSmsBeforeAppt', !deptSettings.salesSendSmsBeforeAppt)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.salesSendSmsBeforeAppt ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.salesSendSmsBeforeAppt ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('Randevu kuralları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SATIŞ: 3. DAİRE OPSİYON SÜRESİ */}
+            {activeTab === 'dept-sales-reservations' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    Daire Opsiyon & Rezervasyon Kuralları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Kapora öncesi geçici opsiyon blokaj süreleri ve temsilci başına maksimum opsiyon limitleri.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Varsayılan Opsiyon Tutma Süresi (Saat)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.salesOptionHoldHours}
+                        onChange={(e) => updateDeptSetting('salesOptionHoldHours', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Temsilci Başına Maksimum Eşzamanlı Opsiyon
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.salesMaxOptionsPerRep}
+                        onChange={(e) => updateDeptSetting('salesMaxOptionsPerRep', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Süresi Dolan Opsiyonu Otomatik Satışa Aç</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Belirtilen saat içinde kapora girişi yapılmayan dairelerin blokajını otomatik kaldırır
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('salesAutoReleaseExpiredOption', !deptSettings.salesAutoReleaseExpiredOption)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.salesAutoReleaseExpiredOption ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.salesAutoReleaseExpiredOption ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('Daire opsiyon kuralları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MUHASEBE: 1. KASA & BANKA TANIMLARI */}
+            {activeTab === 'dept-acc-accounts' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    Kasa & Banka Hesap Tanımları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Tahsilat makbuzlarında ve sözleşmelerde yer alacak varsayılan kurumsal banka ve para birimi bilgileri.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Varsayılan Banka & Şube Adı
+                      </label>
+                      <input
+                        type="text"
+                        value={deptSettings.accDefaultBankName}
+                        onChange={(e) => updateDeptSetting('accDefaultBankName', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Varsayılan Para Birimi
+                      </label>
+                      <select
+                        value={deptSettings.accDefaultCurrency}
+                        onChange={(e) => updateDeptSetting('accDefaultCurrency', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      >
+                        <option value="TRY">Türk Lirası (₺ - TRY)</option>
+                        <option value="USD">ABD Doları ($ - USD)</option>
+                        <option value="EUR">Euro (€ - EUR)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] text-[#a69f99] block mb-1">
+                      Kurumsal Tahsilat IBAN Numarası
+                    </label>
+                    <input
+                      type="text"
+                      value={deptSettings.accDefaultIban}
+                      onChange={(e) => updateDeptSetting('accDefaultIban', e.target.value)}
+                      className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white font-mono focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('Kasa ve banka tanımları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MUHASEBE: 2. FATURA & MAKBUZ SERİSİ */}
+            {activeTab === 'dept-acc-invoicing' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    Fatura & Tahsilat Makbuzu Serisi
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Resmi e-Arşiv / e-Fatura seri önekleri, KDV oranı ve otomatik belge arşivleme kuralları.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        e-Fatura Seri Öneki
+                      </label>
+                      <input
+                        type="text"
+                        value={deptSettings.accInvoicePrefix}
+                        onChange={(e) => updateDeptSetting('accInvoicePrefix', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Tahsilat Makbuzu Öneki
+                      </label>
+                      <input
+                        type="text"
+                        value={deptSettings.accReceiptPrefix}
+                        onChange={(e) => updateDeptSetting('accReceiptPrefix', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Varsayılan KDV Oranı (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.accDefaultVatRate}
+                        onChange={(e) => updateDeptSetting('accDefaultVatRate', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Kesilen Makbuzları Paylaşılanlar'a Otomatik Arşivle</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Oluşturulan PDF tahsilat makbuzlarının bir kopyasını müşteri dosyasına kaydeder
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('accAutoArchivePdf', !deptSettings.accAutoArchivePdf)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.accAutoArchivePdf ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.accAutoArchivePdf ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('Fatura ve makbuz serisi ayarları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MUHASEBE: 3. VADE HATIRLATICILARI */}
+            {activeTab === 'dept-acc-reminders' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    Senet & Taksit Vade Hatırlatıcıları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Yaklaşan ve geciken taksit ödemeleri için otomatik bildirim zamanlamaları.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Vade Öncesi Hatırlatma (Gün)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.accReminderDaysBefore}
+                        onChange={(e) => updateDeptSetting('accReminderDaysBefore', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Gecikmiş Tahsilat Eskalasyon Süresi (Gün)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.accOverdueWarningDays}
+                        onChange={(e) => updateDeptSetting('accOverdueWarningDays', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Vadesi Yaklaşan Ödemelerde WhatsApp Hatırlatma</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Vade tarihine belirtilen gün kala müşteriye ödeme planı hatırlatması hazırlar
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('accSendOverdueWhatsapp', !deptSettings.accSendOverdueWhatsapp)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.accSendOverdueWhatsapp ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.accSendOverdueWhatsapp ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('Vade hatırlatıcı kuralları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
                 </div>
               </div>
             )}
@@ -2033,14 +2901,139 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {activeTab.startsWith('dept-admin-') && activeTab !== 'dept-admin-permissions' && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <h3 className="text-sm font-bold text-white">Yönetim ve Güvenlik Yapılandırması</h3>
-                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
-                  <div className="text-xs text-white">İskonto sınırları ve denetim logları aktif.</div>
-                  <GlassButton variant="gold" size="sm" onClick={() => handleSaveDeptConfig()} className="rounded-full px-5">
-                    Kaydet
-                  </GlassButton>
+            {activeTab === 'dept-admin-approvals' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    İskonto & Yönetici Onay Sınırları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Satış temsilcisi, departman müdürü ve yönetim kurulu onayına tabi maksimum iskonto oranları.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Temsilci İskonto Yetkisi (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.adminRepMaxDiscountPct}
+                        onChange={(e) => updateDeptSetting('adminRepMaxDiscountPct', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Departman Müdürü Yetkisi (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.adminManagerMaxDiscountPct}
+                        onChange={(e) => updateDeptSetting('adminManagerMaxDiscountPct', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Yönetim Kurulu Onay Eşiği (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.adminRequireBoardApprovalAbovePct}
+                        onChange={(e) => updateDeptSetting('adminRequireBoardApprovalAbovePct', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('İskonto ve onay sınırları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'dept-admin-audit' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">
+                    Güvenlik & Denetim Kayıtları
+                  </h3>
+                  <p className="text-xs text-[#a69f99] mt-0.5">
+                    Oturum zaman aşımı süresi, işlem kütüğü saklama periyodu ve dışa aktarım güvenlik bildirimleri.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Otomatik Oturum Zaman Aşımı (Dakika)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.adminSessionTimeoutMins}
+                        onChange={(e) => updateDeptSetting('adminSessionTimeoutMins', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-[#a69f99] block mb-1">
+                        Denetim Logu Saklama Süresi (Gün)
+                      </label>
+                      <input
+                        type="number"
+                        value={deptSettings.adminAuditRetentionDays}
+                        onChange={(e) => updateDeptSetting('adminAuditRetentionDays', e.target.value)}
+                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
+                    <div>
+                      <div className="text-xs font-medium text-white">Toplu Veri Dışa Aktarımında Yönetici Bildirimi</div>
+                      <div className="text-[11px] text-[#8c857f]">
+                        Müşteri veya muhasebe listeleri dışa aktarıldığında güvenlik kaydı oluşturur
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateDeptSetting('adminLogExportAlerts', !deptSettings.adminLogExportAlerts)}
+                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                        deptSettings.adminLogExportAlerts ? 'bg-[#b99881]' : 'bg-[#4a443f]'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                          deptSettings.adminLogExportAlerts ? 'left-6' : 'left-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
+                    <GlassButton
+                      variant="gold"
+                      size="sm"
+                      onClick={() => handleSaveDeptConfig('Güvenlik ve denetim ayarları kaydedildi.')}
+                      className="rounded-full px-5"
+                    >
+                      Kaydet
+                    </GlassButton>
+                  </div>
                 </div>
               </div>
             )}
