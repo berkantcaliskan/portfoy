@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { Calculator, DollarSign, Percent, Check, Copy, Sparkles, X } from 'lucide-react'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassButton } from '@/components/ui/GlassButton'
@@ -88,7 +89,7 @@ export const CommissionCalculatorModal: React.FC<CommissionCalculatorModalProps>
               </label>
               <div className="relative">
                 <Percent className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b99881]" />
-                <select
+                <CustomSelect
                   value={commissionRate}
                   onChange={(e) => setCommissionRate(Number(e.target.value))}
                   className="w-full bg-[#24211f] border border-[#4a443f] focus:border-[#b99881] rounded-full pl-9 pr-4 py-2 text-xs text-white focus:outline-none transition-colors"
@@ -98,7 +99,7 @@ export const CommissionCalculatorModal: React.FC<CommissionCalculatorModalProps>
                   <option value={2}>%2.0 Üst Danışman</option>
                   <option value={2.5}>%2.5 Kıdemli Uzman</option>
                   <option value={3}>%3.0 Partner</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
 
@@ -108,7 +109,7 @@ export const CommissionCalculatorModal: React.FC<CommissionCalculatorModalProps>
               </label>
               <div className="relative">
                 <Percent className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a69f99]" />
-                <select
+                <CustomSelect
                   value={agencyRate}
                   onChange={(e) => setAgencyRate(Number(e.target.value))}
                   className="w-full bg-[#24211f] border border-[#4a443f] focus:border-[#b99881] rounded-full pl-9 pr-4 py-2 text-xs text-white focus:outline-none transition-colors"
@@ -117,7 +118,7 @@ export const CommissionCalculatorModal: React.FC<CommissionCalculatorModalProps>
                   <option value={3}>%3 (Özel Anlaşma)</option>
                   <option value={4}>%4 (Çift Taraflı Standart)</option>
                   <option value={5}>%5 (Proje Lansman)</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
           </div>

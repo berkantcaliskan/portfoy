@@ -1,4 +1,5 @@
 import React from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { motion } from 'framer-motion'
 import {
   MapPin,
@@ -117,7 +118,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Card Footer: Status Switcher */}
         <div className="pt-3 border-t border-white/5 flex items-center justify-between gap-2">
           <span className="text-[11px] text-slate-400">Durumu Değiştir:</span>
-          <select
+          <CustomSelect
             value={property.status}
             onChange={(e) => onStatusChange(property.id, e.target.value as PropertyStatus)}
             className="text-xs font-semibold rounded-full px-3 py-1 bg-navy-950 border border-white/10 text-slate-200 focus:outline-none focus:border-brand-gold/60 cursor-pointer"
@@ -125,7 +126,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <option value="AVAILABLE">Satışta</option>
             <option value="RESERVED">Rezerve</option>
             <option value="SOLD">Satıldı</option>
-          </select>
+          </CustomSelect>
         </div>
       </div>
     </motion.div>

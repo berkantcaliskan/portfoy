@@ -1,4 +1,5 @@
 import { AppUser } from './userStore'
+import { trashStore } from './trashStore'
 
 export type PresenceStatusType =
   | 'OFISTE'
@@ -185,6 +186,12 @@ class TeamOperationsStore {
 
   constructor() {
     this.loadFromStorage()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('demirturk:cloud-db-synced', () => {
+        this.loadFromStorage()
+        this.notify()
+      })
+    }
   }
 
   private loadFromStorage() {
@@ -316,6 +323,10 @@ class TeamOperationsStore {
   }
 
   public deleteAsset(assetId: string) {
+    const target = this.assets.find((a) => a.id === assetId)
+    if (target) {
+      trashStore.addItemToTrash(STORAGE_KEY_ASSETS, target)
+    }
     this.assets = this.assets.filter((a) => a.id !== assetId)
     this.saveToStorage()
   }
@@ -485,6 +496,10 @@ class TeamOperationsStore {
   }
 
   public deleteLeaveRequest(leaveId: string) {
+    const target = this.leaves.find((l) => l.id === leaveId)
+    if (target) {
+      trashStore.addItemToTrash(STORAGE_KEY_LEAVES, target)
+    }
     this.leaves = this.leaves.filter((l) => l.id !== leaveId)
     this.saveToStorage()
   }

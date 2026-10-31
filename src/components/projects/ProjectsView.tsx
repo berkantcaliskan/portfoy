@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2,
@@ -1528,7 +1529,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Opsiyon Süresi (Gün)
               </label>
-              <select
+              <CustomSelect
                 value={reserveDays}
                 onChange={(e) => setReserveDays(Number(e.target.value))}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -1537,7 +1538,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value={5}>5 Gün (Standart)</option>
                 <option value={7}>7 Gün</option>
                 <option value={10}>10 Gün (Yönetici Onaylı)</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <div>
@@ -1770,7 +1771,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Şehir *
               </label>
-              <select
+              <CustomSelect
                 value={newProject.city}
                 onChange={(e) => setNewProject({ ...newProject, city: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] transition-colors cursor-pointer"
@@ -1787,7 +1788,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value="Kocaeli">Kocaeli</option>
                 <option value="Balıkesir">Balıkesir</option>
                 <option value="Çanakkale">Çanakkale</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -1887,7 +1888,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
                   Kat Sayısı
                 </label>
-                <select
+                <CustomSelect
                   value={newProject.maxFloors}
                   onChange={(e) => {
                     const mf = Number(e.target.value) as 1 | 2 | 3
@@ -1903,7 +1904,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                   <option value={1}>1 Kat (Sadece Zemin Kat)</option>
                   <option value={2}>2 Kat (Zemin + 1. Kat)</option>
                   <option value={3}>3 Kat (Zemin + 1. Kat + 2. Kat)</option>
-                </select>
+                </CustomSelect>
               </div>
 
               {/* Kat Başına Hazır Daire Sayısı (4, 5, 6, 12 — manuel de eklenebilir) */}
@@ -1911,7 +1912,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
                   Kat Başına Hazır Daire Sayısı
                 </label>
-                <select
+                <CustomSelect
                   value={newProject.unitsPerFloor}
                   onChange={(e) => {
                     const upf = Number(e.target.value)
@@ -1929,7 +1930,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                   <option value={6}>6 Daire</option>
                   <option value={8}>8 Daire</option>
                   <option value={12}>12 Daire</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
 
@@ -1939,7 +1940,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
                   Oda Tipi
                 </label>
-                <select
+                <CustomSelect
                   value={newProject.defaultRoomType}
                   onChange={(e) =>
                     setNewProject({
@@ -1955,7 +1956,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                   <option value="3+1">3+1 Daireler</option>
                   <option value="4+1">4+1 Daireler</option>
                   <option value="Villa">Müstakil Villa</option>
-                </select>
+                </CustomSelect>
               </div>
 
               {/* Mimari Kat Planı Görünümü */}
@@ -1975,7 +1976,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Tip *
               </label>
-              <select
+              <CustomSelect
                 value={newProject.type}
                 onChange={(e) => setNewProject({ ...newProject, type: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] transition-colors cursor-pointer"
@@ -1986,14 +1987,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value="Yazlık & Sayfiye Evleri">Yazlık & Sayfiye Evleri</option>
                 <option value="Ticari & Ofis Alanı">Ticari & Ofis Alanı</option>
                 <option value="Arsa & Parsel Projesi">Arsa & Parsel Projesi</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Tahmini Teslim / Durum
               </label>
-              <select
+              <CustomSelect
                 value={newProject.deliveryDate}
                 onChange={(e) => setNewProject({ ...newProject, deliveryDate: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] transition-colors cursor-pointer"
@@ -2004,7 +2005,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value="Aralık 2027">Aralık 2027</option>
                 <option value="2028">2028</option>
                 <option value="Proje Aşamasında (Yakında)">Proje Aşamasında (Yakında)</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -2115,7 +2116,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Satış Durumu
               </label>
-              <select
+              <CustomSelect
                 value={editUnitForm.statusLabel}
                 onChange={(e) => setEditUnitForm({ ...editUnitForm, statusLabel: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
@@ -2125,14 +2126,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value="Rezerve">Rezerve (Navy Lacivert)</option>
                 <option value="SATILDI">Satıldı (Kırmızı)</option>
                 <option value="KAPALI">Kapalı (Kırmızı)</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Oda Tipi *
               </label>
-              <select
+              <CustomSelect
                 value={editUnitForm.roomType}
                 onChange={(e) => setEditUnitForm({ ...editUnitForm, roomType: e.target.value as RoomType })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
@@ -2144,7 +2145,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value="Villa">Villa</option>
                 <option value="Penthouse">Penthouse</option>
                 <option value="Ticari">Ticari</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -2166,7 +2167,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Bulunduğu Kat
               </label>
-              <select
+              <CustomSelect
                 value={Number(editUnitForm.floor) || 0}
                 onChange={(e) =>
                   setEditUnitForm({
@@ -2179,7 +2180,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value={0}>{FLOOR_LABELS[0].full}</option>
                 <option value={1}>{FLOOR_LABELS[1].full}</option>
                 <option value={2}>{FLOOR_LABELS[2].full}</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -2339,7 +2340,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Şehir *
               </label>
-              <select
+              <CustomSelect
                 value={projectSettingsForm.city}
                 onChange={(e) => setProjectSettingsForm({ ...projectSettingsForm, city: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
@@ -2356,7 +2357,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value="Kocaeli">Kocaeli</option>
                 <option value="Balıkesir">Balıkesir</option>
                 <option value="Çanakkale">Çanakkale</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -2378,7 +2379,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Proje Tipi *
               </label>
-              <select
+              <CustomSelect
                 value={projectSettingsForm.type}
                 onChange={(e) => setProjectSettingsForm({ ...projectSettingsForm, type: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
@@ -2389,7 +2390,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value="Yazlık & Sayfiye Evleri">Yazlık & Sayfiye Evleri</option>
                 <option value="Ticari & Ofis Alanı">Ticari & Ofis Alanı</option>
                 <option value="Arsa & Parsel Projesi">Arsa & Parsel Projesi</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -2411,7 +2412,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Satış Durumu
               </label>
-              <select
+              <CustomSelect
                 value={projectSettingsForm.status}
                 onChange={(e) => setProjectSettingsForm({ ...projectSettingsForm, status: e.target.value as any })}
                 className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
@@ -2419,7 +2420,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
                 <option value="SATISTA">Satışta</option>
                 <option value="YAKINDA">Yakında</option>
                 <option value="TAMAMLANDI">Tamamlandı</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 

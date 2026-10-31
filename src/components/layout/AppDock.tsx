@@ -1147,7 +1147,7 @@ export const AppDock: React.FC<AppDockProps> = ({
               top: `${contextMenu.y}px`,
               left: `${contextMenu.x}px`,
             }}
-            className="fixed z-[9999] min-w-[210px] rounded-[22px] bg-[#24211f]/95 backdrop-blur-2xl p-3 select-none text-left border border-[#4a443f] shadow-2xl shadow-black/80 space-y-1"
+            className="dropdown-panel fixed z-[9999] min-w-[210px] rounded-[22px] bg-[#282522] backdrop-blur-2xl p-3 select-none text-left border border-[#4a443f] shadow-2xl shadow-black/80 space-y-1"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header: Katmansız, kutusuz, sadece ikon ve başlık */}

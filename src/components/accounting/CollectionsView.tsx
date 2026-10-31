@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   TurkishLira,
   Plus,
@@ -379,7 +380,7 @@ export const CollectionsView: React.FC = () => {
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Tahsilat Türü
               </label>
-              <select
+              <CustomSelect
                 value={type}
                 onChange={(e) => setType(e.target.value as CollectionType)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -388,7 +389,7 @@ export const CollectionsView: React.FC = () => {
                 <option value="DOWN_PAYMENT">Peşinat</option>
                 <option value="INSTALLMENT">Taksit</option>
                 <option value="FULL_PAYMENT">Tam Ödeme</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <div>

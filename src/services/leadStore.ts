@@ -20,6 +20,8 @@ import { metaStore } from './metaStore'
 
 import { playNewLeadChime } from '@/utils/audioAlert'
 import { formatSentenceNote } from '@/utils/formatters'
+import { trashStore } from './trashStore'
+import { isWebsiteRecord, allowManualWebsiteDelete } from './zeroStatePurge'
 
 const STORAGE_KEY_LEADS = 'demirturk_leads_v2'
 const STORAGE_KEY_ACTIVITIES = 'demirturk_activities_v2'
@@ -1493,17 +1495,26 @@ class LeadStore {
 
   public delete(id: string): boolean {
     const target = this.leads.find((l) => l.id === id)
+    allowManualWebsiteDelete(id)
     const idsToMarkDeleted = [id]
     if (target?.phone) {
       const cleanPhone = String(target.phone).replace(/\D/g, '').slice(-10)
       if (cleanPhone && cleanPhone.length >= 7) {
-        idsToMarkDeleted.push(`phone:${cleanPhone}`)
+        const phoneKey = `phone:${cleanPhone}`
+        idsToMarkDeleted.push(phoneKey)
+        allowManualWebsiteDelete(phoneKey)
       }
     }
     if (target?.inquiries) {
       for (const inq of target.inquiries) {
-        if (inq.id) idsToMarkDeleted.push(inq.id)
+        if (inq.id) {
+          idsToMarkDeleted.push(inq.id)
+          allowManualWebsiteDelete(inq.id)
+        }
       }
+    }
+    if (target) {
+      trashStore.addItemToTrash(STORAGE_KEY_LEADS, target)
     }
     this.addDeletedIds(idsToMarkDeleted)
     const beforeLen = this.leads.length
@@ -1544,8 +1555,12 @@ class LeadStore {
   }
 
   public resetToDefault(): void {
-    this.leads = []
-    this.activities = {}
+    // Web sitesinden gelen kayıtlar kodla/sıfırlamayla kesinlikle silinmez; diğerleri çöp kutusuna taşınır
+    const nonWebLeads = this.leads.filter((l) => !isWebsiteRecord(l))
+    for (const item of nonWebLeads) {
+      trashStore.addItemToTrash(STORAGE_KEY_LEADS, item)
+    }
+    this.leads = this.leads.filter((l) => isWebsiteRecord(l))
     this.saveToStorage()
   }
 }

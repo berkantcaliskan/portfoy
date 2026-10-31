@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Shield,
   Users,
@@ -346,7 +347,7 @@ export const PermissionsMatrixPanel: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <select
+              <CustomSelect
                 value={selectedUser.department}
                 onChange={(e) =>
                   handleUpdateUserMeta({ department: e.target.value as Department })
@@ -359,9 +360,9 @@ export const PermissionsMatrixPanel: React.FC = () => {
                     {d}
                   </option>
                 ))}
-              </select>
+              </CustomSelect>
 
-              <select
+              <CustomSelect
                 value={selectedUser.scope}
                 onChange={(e) =>
                   handleUpdateUserMeta({ scope: e.target.value as AccessScope })
@@ -372,9 +373,9 @@ export const PermissionsMatrixPanel: React.FC = () => {
                 <option value="ASSIGNED_ONLY">Sadece Kendine Atananları Görsün</option>
                 <option value="DEPARTMENT">Departmanındaki Kayıtları Görsün</option>
                 <option value="ALL">Tüm Şirket Kayıtlarını Görsün</option>
-              </select>
+              </CustomSelect>
 
-              <select
+              <CustomSelect
                 value={selectedUser.role}
                 onChange={(e) => {
                   const newRole = e.target.value as UserRole
@@ -390,7 +391,7 @@ export const PermissionsMatrixPanel: React.FC = () => {
                 <option value="SPECIALIST">Uzman</option>
                 <option value="MANAGER">Departman Yetkilisi</option>
                 <option value="ADMIN">Yönetim (Admin)</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 

@@ -4,6 +4,7 @@ import { appointmentStore, Appointment } from './appointmentStore'
 import { leadStore } from './leadStore'
 import { accountingStore } from './accountingStore'
 import { requestStore } from './requestStore'
+import { trashStore } from './trashStore'
 
 export type CalendarEventCategory =
   | 'APPOINTMENT'      // Randevu
@@ -214,6 +215,13 @@ class CalendarStore {
 
   constructor() {
     this.loadFromStorage()
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('demirturk:cloud-db-synced', () => {
+        this.loadFromStorage()
+        this.notify()
+      })
+    }
 
     // Diğer store'lar güncellendiğinde takvimi otomatik senkronize et
     appointmentStore.subscribe(() => this.notify())
@@ -810,6 +818,10 @@ class CalendarStore {
    * Etkinliği siler.
    */
   public deleteEvent(id: string): void {
+    const target = this.getAllRaw().find((e) => e.id === id)
+    if (target) {
+      trashStore.addItemToTrash(STORAGE_KEY_CALENDAR, target)
+    }
     const isManual = this.manualEvents.some((e) => e.id === id)
     if (isManual) {
       this.manualEvents = this.manualEvents.filter((e) => e.id !== id)

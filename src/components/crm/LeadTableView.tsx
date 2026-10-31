@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Phone,
   ArrowUpDown,
@@ -141,7 +142,7 @@ export const LeadTableView: React.FC<LeadTableViewProps> = ({
 
                       {/* Stage Dropdown */}
                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                        <select
+                        <CustomSelect
                           value={lead.stage}
                           onChange={(e) => onStageChange(lead.id, e.target.value as LeadStage)}
                           className="text-xs font-semibold rounded-full px-3 py-1 bg-navy-950 border border-white/10 text-slate-200 focus:outline-none focus:border-brand-gold/60 cursor-pointer"
@@ -151,7 +152,7 @@ export const LeadTableView: React.FC<LeadTableViewProps> = ({
                               {STAGE_CONFIGS[s as LeadStage].label}
                             </option>
                           ))}
-                        </select>
+                        </CustomSelect>
                       </td>
 
                       {/* Preferred Housing & Budget */}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Megaphone,
   Plus,
@@ -431,7 +432,7 @@ export const MarketingCampaignsView: React.FC = () => {
                     left: Math.min(sendBtnContextMenu.x, window.innerWidth - 260),
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="context-menu dropdown-panel z-[200] min-w-[235px] p-1.5 rounded-2xl bg-[#282522] border border-[#4a443f] shadow-xl space-y-1"
+                  className="context-menu dropdown-panel z-[200] min-w-[235px] p-2 rounded-[22px] bg-[#282522] border border-[#4a443f] shadow-xl space-y-1"
                 >
                   <button
                     type="button"
@@ -1562,7 +1563,7 @@ export const MarketingCampaignsView: React.FC = () => {
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 İlgilendiği Konut Tipi
               </label>
-              <select
+              <CustomSelect
                 value={housingType}
                 onChange={(e) => setHousingType(e.target.value)}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -1571,7 +1572,7 @@ export const MarketingCampaignsView: React.FC = () => {
                 <option value="2+1 Rezidans">2+1 Rezidans</option>
                 <option value="3+1 Aile Dairesi">3+1 Aile Dairesi</option>
                 <option value="Müstakil Villa">Müstakil Villa</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <div>
@@ -1592,7 +1593,7 @@ export const MarketingCampaignsView: React.FC = () => {
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Form Sorusu: Alım Amacı
               </label>
-              <select
+              <CustomSelect
                 value={investmentPurpose}
                 onChange={(e) => setInvestmentPurpose(e.target.value)}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -1603,14 +1604,14 @@ export const MarketingCampaignsView: React.FC = () => {
                   Çocuklarım İçin Geleceğe Yatırım
                 </option>
                 <option value="Ticari / Ofis Kullanımı">Ticari / Ofis Kullanımı</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Form Sorusu: Satın Alma Süresi
               </label>
-              <select
+              <CustomSelect
                 value={moveInTiming}
                 onChange={(e) => setMoveInTiming(e.target.value)}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -1621,7 +1622,7 @@ export const MarketingCampaignsView: React.FC = () => {
                   6 - 12 Ay (Proje Teslimine Kadar)
                 </option>
                 <option value="Sadece Piyasa Araştırması">Sadece Piyasa Araştırması</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -1674,7 +1675,7 @@ export const MarketingCampaignsView: React.FC = () => {
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Kampanya Türü
               </label>
-              <select
+              <CustomSelect
                 value={gCampaignType}
                 onChange={(e) =>
                   setGCampaignType(e.target.value as GoogleCampaignItem['campaignType'])
@@ -1685,7 +1686,7 @@ export const MarketingCampaignsView: React.FC = () => {
                 <option value="Performance Max">Performance Max</option>
                 <option value="YouTube Lead Form">YouTube Lead Form</option>
                 <option value="Display & Keşfet">Display & Keşfet</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -1737,7 +1738,7 @@ export const MarketingCampaignsView: React.FC = () => {
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 İlgilendiği Konut Tipi
               </label>
-              <select
+              <CustomSelect
                 value={gHousingType}
                 onChange={(e) => setGHousingType(e.target.value)}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -1746,7 +1747,7 @@ export const MarketingCampaignsView: React.FC = () => {
                 <option value="2+1 Rezidans">2+1 Rezidans</option>
                 <option value="3+1 Aile Dairesi">3+1 Aile Dairesi</option>
                 <option value="Müstakil Villa">Müstakil Villa</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -1893,7 +1894,7 @@ export const MarketingCampaignsView: React.FC = () => {
             <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
               Kampanya Türü
             </label>
-            <select
+            <CustomSelect
               value={newGCampType}
               onChange={(e) =>
                 setNewGCampType(e.target.value as GoogleCampaignItem['campaignType'])
@@ -1904,7 +1905,7 @@ export const MarketingCampaignsView: React.FC = () => {
               <option value="Performance Max">Performance Max</option>
               <option value="YouTube Lead Form">YouTube Lead Form</option>
               <option value="Display & Keşfet">Display & Keşfet</option>
-            </select>
+            </CustomSelect>
           </div>
 
           <div>

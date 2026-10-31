@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -1583,7 +1584,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </div>
               <div className="w-32">
                 <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Para Birimi</label>
-                <select
+                <CustomSelect
                   value={baseCurrency}
                   onChange={(e) => setBaseCurrency(e.target.value as any)}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
@@ -1592,7 +1593,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                   <option value="EUR">EUR (€)</option>
                   <option value="GBP">GBP (£)</option>
                   <option value="TRY">TRY (₺)</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
 
@@ -1649,7 +1650,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </div>
               <div>
                 <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Vade (Ay)</label>
-                <select
+                <CustomSelect
                   value={mortgageMonths}
                   onChange={(e) => setMortgageMonths(parseInt(e.target.value) || 120)}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
@@ -1658,7 +1659,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                   <option value="60">60 Ay (5 Yıl)</option>
                   <option value="84">84 Ay (7 Yıl)</option>
                   <option value="120">120 Ay (10 Yıl)</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
 
@@ -1700,14 +1701,14 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </div>
               <div>
                 <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Harç Ödeme Dağılımı</label>
-                <select
+                <CustomSelect
                   value={deedPayer}
                   onChange={(e) => setDeedPayer(e.target.value as any)}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
                 >
                   <option value="split">Yarı Yarıya (%2 Alıcı + %2 Satıcı - Yasal Standart)</option>
                   <option value="buyerOnly">Tümü Alıcı Tarafından (%4 Alıcı Tarafından)</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
 
@@ -1757,7 +1758,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </div>
               <div>
                 <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Şablon Türü</label>
-                <select
+                <CustomSelect
                   value={waTemplateType}
                   onChange={(e) => setWaTemplateType(e.target.value as any)}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none"
@@ -1766,7 +1767,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                   <option value="randevu">Lansman Ofisi Randevusu</option>
                   <option value="teklif">Fiyat & Teklif Özeti</option>
                   <option value="kapora">Kapora & Rezervasyon Bilgisi</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
 
@@ -2210,7 +2211,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </div>
               <div>
                 <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Bina Yaşı</label>
-                <select
+                <CustomSelect
                   value={valAge}
                   onChange={(e: any) => setValAge(e.target.value)}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-sm text-white"
@@ -2219,11 +2220,11 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                   <option value="1-5">1 - 5 Yaş</option>
                   <option value="6-15">6 - 15 Yaş</option>
                   <option value="16+">16+ Yaş</option>
-                </select>
+                </CustomSelect>
               </div>
               <div>
                 <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Kat Konumu</label>
-                <select
+                <CustomSelect
                   value={valFloor}
                   onChange={(e: any) => setValFloor(e.target.value)}
                   className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-sm text-white"
@@ -2231,7 +2232,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                   <option value="ara">Ara Kat</option>
                   <option value="giris">Giriş / Bahçe</option>
                   <option value="dubleks">Çatı Dubleks</option>
-                </select>
+                </CustomSelect>
               </div>
             </div>
 

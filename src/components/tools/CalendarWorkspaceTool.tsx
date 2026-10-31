@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -517,7 +518,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
               <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
                 Plan Türü
               </label>
-              <select
+              <CustomSelect
                 value={formCategory}
                 onChange={(e) => setFormCategory(e.target.value as CalendarEventCategory)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
@@ -530,7 +531,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
                 <option value="FOLLOW_UP">Müşteri Takip / Arama</option>
                 <option value="FINANCE">Finans / Tahsilat / Ödeme</option>
                 <option value="TASK">Görev / Hatırlatma</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 

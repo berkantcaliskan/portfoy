@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
@@ -1528,7 +1529,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 className="p-3 rounded-2xl bg-[#34302d] border border-[#4a443f] space-y-2.5 mb-3.5"
               >
                 <div className="flex items-center gap-2">
-                  <select
+                  <CustomSelect
                     value={quickCommentCreativeId}
                     onChange={(e) => setQuickCommentCreativeId(e.target.value)}
                     className="flex-1 px-2.5 py-1.5 rounded-xl bg-[#282522] border border-[#4a443f] text-[11.5px] text-white focus:outline-none truncate"
@@ -1538,9 +1539,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {c.code} — {c.title}
                       </option>
                     ))}
-                  </select>
+                  </CustomSelect>
 
-                  <select
+                  <CustomSelect
                     value={quickCommentType}
                     onChange={(e) => setQuickCommentType(e.target.value as CommentBadgeType)}
                     className="px-2.5 py-1.5 rounded-xl bg-[#282522] border border-[#4a443f] text-[11.5px] text-white focus:outline-none shrink-0"
@@ -1548,7 +1549,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <option value="YORUM">💬 Yorum</option>
                     <option value="REVIZE">🛠️ Revize</option>
                     <option value="ONAY">✅ Onay</option>
-                  </select>
+                  </CustomSelect>
                 </div>
 
                 <div className="flex items-center gap-2">

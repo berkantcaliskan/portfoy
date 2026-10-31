@@ -923,11 +923,11 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 }
 
 /* İkincil Yüzey (#ebece9): Kart içi alt elemanlarda kenarlık kalabalığı (katman içinde çerçeve) olmasın (buton ve sekmeler hariç) */
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn),
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn),
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#282522]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn),
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#24211f]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn),
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn) {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn):not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn):not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#282522]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn):not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#24211f]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn):not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn):not(.dropdown-panel):not(.popover-panel) {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
   border-color: transparent !important;
@@ -990,22 +990,22 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
   box-shadow: 0 12px 32px -4px rgba(41, 45, 43, 0.12), 0 4px 12px -2px rgba(41, 45, 43, 0.06) !important;
 }
 
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#34302d]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#3a3430]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2d2926]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2e2a27]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#282522]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211f]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211e]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1c1a18]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b18]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b19]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1c1a]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1d1b]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#34302d]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#3a3430]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2d2926]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#2e2a27]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#282522]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211f]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#24211e]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1c1a18]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b18]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1b19]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1e1c1a]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1d1b]"]:not(.dropdown-panel):not(.popover-panel),
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1a1715]"]:not(.dropdown-panel):not(.popover-panel),
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#181614]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1c19]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-navy-900"] {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#181614]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#1f1c19]"]:not(.dropdown-panel):not(.popover-panel),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-navy-900"]:not(.dropdown-panel):not(.popover-panel) {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
   border-color: rgba(41, 45, 43, 0.20) !important;
@@ -1871,25 +1871,25 @@ html[data-theme-accent="night"] header [class*="bg-[#282522]"] {
   color: #f4f1ea !important;
 }
 
-html[data-theme-accent="night"] main .glass-card [class*="bg-[#34302d]"],
-html[data-theme-accent="night"] main .glass-card-static [class*="bg-[#34302d]"],
-html[data-theme-accent="night"] main .glass-card [class*="bg-[#282522]"],
-html[data-theme-accent="night"] main .glass-card [class*="bg-[#24211f]"],
-html[data-theme-accent="night"] main .glass-panel [class*="bg-[#34302d]"],
-html[data-theme-accent="night"] [class*="bg-[#34302d]"],
-html[data-theme-accent="night"] [class*="bg-[#3a3430]"],
-html[data-theme-accent="night"] [class*="bg-[#2d2926]"],
-html[data-theme-accent="night"] [class*="bg-[#2e2a27]"],
-html[data-theme-accent="night"] [class*="bg-[#282522]"],
-html[data-theme-accent="night"] [class*="bg-[#24211f]"],
-html[data-theme-accent="night"] [class*="bg-[#24211e]"],
-html[data-theme-accent="night"] [class*="bg-[#1c1a18]"],
-html[data-theme-accent="night"] [class*="bg-[#1e1b18]"],
-html[data-theme-accent="night"] [class*="bg-[#1e1b19]"],
-html[data-theme-accent="night"] [class*="bg-[#1e1c1a]"],
-html[data-theme-accent="night"] [class*="bg-[#1f1d1b]"],
-html[data-theme-accent="night"] [class*="bg-[#181614]"],
-html[data-theme-accent="night"] [class*="bg-[#1f1c19]"] {
+html[data-theme-accent="night"] main .glass-card [class*="bg-[#34302d]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] main .glass-card-static [class*="bg-[#34302d]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] main .glass-card [class*="bg-[#282522]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] main .glass-card [class*="bg-[#24211f]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] main .glass-panel [class*="bg-[#34302d]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#34302d]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#3a3430]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#2d2926]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#2e2a27]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#282522]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#24211f]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#24211e]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#1c1a18]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#1e1b18]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#1e1b19]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#1e1c1a]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#1f1d1b]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#181614]"]:not(.dropdown-panel):not(.popover-panel),
+html[data-theme-accent="night"] [class*="bg-[#1f1c19]"]:not(.dropdown-panel):not(.popover-panel) {
   background: #282b28 !important;
   background-color: #282b28 !important;
   border-color: rgba(244, 241, 234, 0.19) !important;
@@ -2169,3 +2169,35 @@ aside button,
 
 
 
+
+
+/* UNIFIED DROPDOWN PANEL SYSTEM (Departman Menüsü & Bildirim Paneli Standardı) */
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel,
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.dropdown-panel {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(41, 45, 43, 0.20) !important;
+  box-shadow: none !important;
+  color: #292d2b !important;
+}
+
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .dropdown-panel button:hover:not(.is-active-dropdown-item):not([class*="bg-[#b99881]"]) {
+  background: #ebece9 !important;
+  background-color: #ebece9 !important;
+  color: #292d2b !important;
+}
+
+html[data-theme-accent="night"] .dropdown-panel,
+html[data-theme-accent="night"] div.dropdown-panel {
+  background: #1e201e !important;
+  background-color: #1e201e !important;
+  border: 1px solid rgba(244, 241, 234, 0.19) !important;
+  box-shadow: none !important;
+  color: #f4f1ea !important;
+}
+
+html[data-theme-accent="night"] .dropdown-panel button:hover:not(.is-active-dropdown-item):not([class*="bg-[#b99881]"]) {
+  background: #282b28 !important;
+  background-color: #282b28 !important;
+  color: #f4f1ea !important;
+}

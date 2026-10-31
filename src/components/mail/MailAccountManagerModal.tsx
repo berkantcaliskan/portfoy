@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Shield,
   Plus,
@@ -116,7 +117,7 @@ export const MailAccountManagerModal: React.FC<MailAccountManagerModalProps> = (
 
             <div>
               <label className="text-xs text-[#a69f99] block mb-1">Bağlı Departman</label>
-              <select
+              <CustomSelect
                 value={department}
                 onChange={(e) => setDepartment(e.target.value as Department)}
                 className="w-full rounded-xl bg-[#1c1a18] border border-[#4a443f] px-3 py-2 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
@@ -126,7 +127,7 @@ export const MailAccountManagerModal: React.FC<MailAccountManagerModalProps> = (
                     {dept} Departmanı
                   </option>
                 ))}
-              </select>
+              </CustomSelect>
             </div>
 
             <div>

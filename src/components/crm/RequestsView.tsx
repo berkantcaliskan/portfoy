@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   AlertCircle,
   Plus,
@@ -295,8 +296,8 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
         }
       }
 
-      // Only add lead itself if it is a website submission
-      if (!isLeadWebsite) continue
+      // Only add lead itself if it is a website submission without inquiries
+      if (webInquiries.length > 0 || !isLeadWebsite) continue
 
       const leadKey = `lead-${lead.id}`
       if (!seenItemIds.has(leadKey)) {
@@ -863,7 +864,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Kategori
               </label>
-              <select
+              <CustomSelect
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -873,14 +874,14 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                 <option value="Ödeme & Finansman">Ödeme & Finansman</option>
                 <option value="Satış Sonrası Destek">Satış Sonrası Destek</option>
                 <option value="Genel Talep">Genel Talep</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Öncelik
               </label>
-              <select
+              <CustomSelect
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as RequestPriority)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -889,7 +890,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                 <option value="Orta">Orta</option>
                 <option value="Yüksek">Yüksek</option>
                 <option value="Acil">Acil</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 

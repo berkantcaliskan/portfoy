@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { createPortal } from 'react-dom'
 import {
   Building2,
@@ -1277,7 +1278,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <label className="text-[11px] text-[#a69f99] block mb-1">
                             Departman *
                           </label>
-                          <select
+                          <CustomSelect
                             value={newMemberDepartment}
                             onChange={(e) => setNewMemberDepartment(e.target.value as Department)}
                             className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-3.5 py-2 text-xs text-white focus:outline-none cursor-pointer"
@@ -1287,7 +1288,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 {dept}
                               </option>
                             ))}
-                          </select>
+                          </CustomSelect>
                         </div>
 
                         <div className="sm:col-span-2 sm:pt-[21px]">
@@ -2181,7 +2182,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <label className="text-[11px] text-[#a69f99] block mb-1">
                         Web Sitesi Başvurusu Önceliği
                       </label>
-                      <select
+                      <CustomSelect
                         value={deptSettings.crmWebRequestDefaultPriority}
                         onChange={(e) => updateDeptSetting('crmWebRequestDefaultPriority', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
@@ -2189,13 +2190,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <option value="Acil">Acil</option>
                         <option value="Yüksek">Yüksek</option>
                         <option value="Normal">Normal</option>
-                      </select>
+                      </CustomSelect>
                     </div>
                     <div>
                       <label className="text-[11px] text-[#a69f99] block mb-1">
                         Manuel Müşteri İsteği Önceliği
                       </label>
-                      <select
+                      <CustomSelect
                         value={deptSettings.crmManualRequestDefaultPriority}
                         onChange={(e) => updateDeptSetting('crmManualRequestDefaultPriority', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
@@ -2203,7 +2204,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <option value="Acil">Acil</option>
                         <option value="Yüksek">Yüksek</option>
                         <option value="Normal">Normal</option>
-                      </select>
+                      </CustomSelect>
                     </div>
                     <div>
                       <label className="text-[11px] text-[#a69f99] block mb-1">
@@ -2536,7 +2537,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <label className="text-[11px] text-[#a69f99] block mb-1">
                         Varsayılan Para Birimi
                       </label>
-                      <select
+                      <CustomSelect
                         value={deptSettings.accDefaultCurrency}
                         onChange={(e) => updateDeptSetting('accDefaultCurrency', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
@@ -2544,7 +2545,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <option value="TRY">Türk Lirası (₺ - TRY)</option>
                         <option value="USD">ABD Doları ($ - USD)</option>
                         <option value="EUR">Euro (€ - EUR)</option>
-                      </select>
+                      </CustomSelect>
                     </div>
                   </div>
 
@@ -2756,10 +2757,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
 
                   {trashItems.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        trashStore.emptyTrash()
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const count = trashStore.restoreAll()
+                          setTrashItems(trashStore.getAll())
+                          if (count > 0) {
+                            setTrashNotice(`${count} öge ilgili sayfalarına başarıyla geri yüklendi.`)
+                            setTimeout(() => setTrashNotice(null), 3000)
+                          }
+                        }}
+                        className="px-3.5 py-1.5 rounded-full bg-[#b99881] hover:bg-[#a6856e] text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Tümünü Geri Yükle</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          trashStore.emptyTrash()
                         setTrashItems([])
                         setTrashNotice('Çöp kutusu tamamen boşaltıldı.')
                         setTimeout(() => setTrashNotice(null), 2500)
@@ -2768,7 +2785,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Çöp Kutusunu Boşalt</span>
-                    </button>
+                      </button>
+                    </div>
                   )}
                 </div>
 

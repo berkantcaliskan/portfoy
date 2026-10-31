@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassInput } from '@/components/ui/GlassInput'
@@ -161,7 +162,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             <label className="block text-xs font-semibold text-[#f3efe9]">
               Bilgi (Call Center)
             </label>
-            <select
+            <CustomSelect
               value={formData.callStatus}
               onChange={(e) =>
                 setFormData({ ...formData, callStatus: e.target.value as CallCenterStatus })
@@ -173,14 +174,14 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
                   {cs.label}
                 </option>
               ))}
-            </select>
+            </CustomSelect>
           </div>
 
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-[#f3efe9]">
               Aşama (Meta)
             </label>
-            <select
+            <CustomSelect
               value={formData.stage}
               onChange={(e) => setFormData({ ...formData, stage: e.target.value as LeadStage })}
               className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
@@ -190,7 +191,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
                   {s.label}
                 </option>
               ))}
-            </select>
+            </CustomSelect>
           </div>
         </div>
 
@@ -200,7 +201,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             <label className="block text-xs font-semibold text-[#f3efe9]">
               Danışman Ata
             </label>
-            <select
+            <CustomSelect
               value={formData.assignedUserId}
               onChange={(e) => setFormData({ ...formData, assignedUserId: e.target.value })}
               className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
@@ -213,14 +214,14 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
                   {u.fullName}
                 </option>
               ))}
-            </select>
+            </CustomSelect>
           </div>
 
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-[#f3efe9]">
               Konut Tipi Tercihi
             </label>
-            <select
+            <CustomSelect
               value={formData.preferredHousingType}
               onChange={(e) =>
                 setFormData({ ...formData, preferredHousingType: e.target.value })
@@ -232,7 +233,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
                   {type}
                 </option>
               ))}
-            </select>
+            </CustomSelect>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   X,
   Send,
@@ -223,7 +224,7 @@ export const MailComposeModal: React.FC<MailComposeModalProps> = ({
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#282522] border border-[#4a443f]">
           <span className="text-xs text-[#a69f99] w-14 shrink-0 font-medium">Kimden:</span>
           <div className="relative flex-1">
-            <select
+            <CustomSelect
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
               className="w-full bg-[#34302d] border border-[#4a443f] text-[#f3efe9] text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#b99881] cursor-pointer"
@@ -233,7 +234,7 @@ export const MailComposeModal: React.FC<MailComposeModalProps> = ({
                   {acc.displayName} &lt;{acc.email}&gt; ({acc.department})
                 </option>
               ))}
-            </select>
+            </CustomSelect>
           </div>
         </div>
 

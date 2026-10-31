@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Calendar,
   Clock,
@@ -362,7 +363,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Görüşme Türü
               </label>
-              <select
+              <CustomSelect
                 value={type}
                 onChange={(e) => setType(e.target.value as AppointmentType)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -370,7 +371,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 <option value="ON_SITE">Şantiye / Proje</option>
                 <option value="OFFICE">Satış Ofisi</option>
                 <option value="ONLINE">Online (Meet/Zoom)</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 
@@ -391,7 +392,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Atanan Danışman
               </label>
-              <select
+              <CustomSelect
                 value={assignedToUserName}
                 onChange={(e) => setAssignedToUserName(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -401,7 +402,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     {u.fullName} ({u.department})
                   </option>
                 ))}
-              </select>
+              </CustomSelect>
             </div>
           </div>
 

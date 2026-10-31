@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Users,
   Shield,
@@ -291,7 +292,7 @@ export const TeamPermissionsView: React.FC = () => {
             <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
               Departman *
             </label>
-            <select
+            <CustomSelect
               value={department}
               onChange={(e) => setDepartment(e.target.value as Department)}
               className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer"
@@ -299,7 +300,7 @@ export const TeamPermissionsView: React.FC = () => {
               {CANONICAL_DEPARTMENTS.map((d) => (
                 <option key={d} value={d}>{d}</option>
               ))}
-            </select>
+            </CustomSelect>
           </div>
 
           <p className="text-[11px] text-[#8c857f]">
@@ -333,7 +334,7 @@ export const TeamPermissionsView: React.FC = () => {
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Varsayılan Alan
               </label>
-              <select
+              <CustomSelect
                 value={department}
                 onChange={(e) => setDepartment(e.target.value as Department)}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -341,14 +342,14 @@ export const TeamPermissionsView: React.FC = () => {
                 {CANONICAL_DEPARTMENTS.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
-              </select>
+              </CustomSelect>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Rol
               </label>
-              <select
+              <CustomSelect
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -357,14 +358,14 @@ export const TeamPermissionsView: React.FC = () => {
                 <option value="SPECIALIST">Uzman</option>
                 <option value="MANAGER">Yönetici</option>
                 <option value="ADMIN">ADMIN</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Kayıt Görme (Scope)
               </label>
-              <select
+              <CustomSelect
                 value={scope}
                 onChange={(e) => setScope(e.target.value as AccessScope)}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -372,7 +373,7 @@ export const TeamPermissionsView: React.FC = () => {
                 <option value="ASSIGNED_ONLY">Yalnızca Kendine Atanan</option>
                 <option value="DEPARTMENT">Kendi Departmanı</option>
                 <option value="ALL">Tüm Kayıtlar</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 

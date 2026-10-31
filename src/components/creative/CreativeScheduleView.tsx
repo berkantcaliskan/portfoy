@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import React, { useState, useEffect, useMemo } from 'react'
 import {
   Calendar as CalendarIcon,
@@ -759,7 +760,7 @@ export const CreativeScheduleView: React.FC = () => {
 
                   {/* Sağ Kontroller */}
                   <div className="flex items-center gap-2.5 self-end lg:self-center shrink-0">
-                    <select
+                    <CustomSelect
                       value={item.status}
                       onChange={(e) =>
                         creativeStore.updateScheduleStatus(
@@ -774,7 +775,7 @@ export const CreativeScheduleView: React.FC = () => {
                       <option value="ONAY_BEKLIYOR">Onay Bekliyor</option>
                       <option value="HAZIR">Yayına Hazır</option>
                       <option value="YAYINLANDI">Yayınlandı</option>
-                    </select>
+                    </CustomSelect>
 
                     <button
                       type="button"
@@ -864,7 +865,7 @@ export const CreativeScheduleView: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <select
+                          <CustomSelect
                             value={item.status}
                             onChange={(e) =>
                               creativeStore.updateScheduleStatus(
@@ -879,7 +880,7 @@ export const CreativeScheduleView: React.FC = () => {
                             <option value="ONAY_BEKLIYOR">Onay Bekliyor</option>
                             <option value="HAZIR">Yayına Hazır</option>
                             <option value="YAYINLANDI">Yayınlandı</option>
-                          </select>
+                          </CustomSelect>
 
                           <button
                             type="button"
@@ -1000,7 +1001,7 @@ export const CreativeScheduleView: React.FC = () => {
                   <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                     Kategori
                   </label>
-                  <select
+                  <CustomSelect
                     value={category}
                     onChange={(e) => setCategory(e.target.value as ScheduleCategory)}
                     className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
@@ -1010,7 +1011,7 @@ export const CreativeScheduleView: React.FC = () => {
                     <option value="KAMPANYA">Kampanya & Lansman</option>
                     <option value="CEKIM">Prodüksiyon / Çekim</option>
                     <option value="ICERIK">Düzenli İçerik</option>
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 
@@ -1031,7 +1032,7 @@ export const CreativeScheduleView: React.FC = () => {
                   <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                     Hazırlık Durumu
                   </label>
-                  <select
+                  <CustomSelect
                     value={status}
                     onChange={(e) => setStatus(e.target.value as SchedulePrepStatus)}
                     className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
@@ -1041,7 +1042,7 @@ export const CreativeScheduleView: React.FC = () => {
                     <option value="ONAY_BEKLIYOR">Onay Bekliyor</option>
                     <option value="HAZIR">Yayına Hazır</option>
                     <option value="YAYINLANDI">Yayınlandı</option>
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 

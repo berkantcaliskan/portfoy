@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import React, { useState, useEffect } from 'react'
 import {
   Palette,
@@ -398,7 +399,7 @@ export function CreativesGalleryView() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <select
+                  <CustomSelect
                     value={selectedCreative.status}
                     onChange={(e) =>
                       creativeStore.updateCreativeStatus(
@@ -413,7 +414,7 @@ export function CreativesGalleryView() {
                     <option value="REVIZE">Revize Bekliyor</option>
                     <option value="ONAYLANDI">Onaylandı</option>
                     <option value="YAYINDA">Yayında</option>
-                  </select>
+                  </CustomSelect>
 
                   <button
                     type="button"
@@ -581,7 +582,7 @@ export function CreativesGalleryView() {
               {/* Add Comment Form */}
               <form onSubmit={handlePostComment} className="pt-3 space-y-2.5">
                 <div className="flex items-center gap-2">
-                  <select
+                  <CustomSelect
                     value={commentType}
                     onChange={(e) => setCommentType(e.target.value as CommentBadgeType)}
                     className="px-3 py-1.5 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
@@ -589,7 +590,7 @@ export function CreativesGalleryView() {
                     <option value="YORUM">💬 Yorum</option>
                     <option value="REVIZE">🛠️ Revize İste</option>
                     <option value="ONAY">✅ Onay Ver</option>
-                  </select>
+                  </CustomSelect>
 
                   <input
                     type="text"
@@ -665,7 +666,7 @@ export function CreativesGalleryView() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Proje</label>
-                  <select
+                  <CustomSelect
                     value={newProject}
                     onChange={(e) => setNewProject(e.target.value)}
                     className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
@@ -676,12 +677,12 @@ export function CreativesGalleryView() {
                     <option value="Modern">Modern</option>
                     <option value="Tria">Tria</option>
                     <option value="Kurumsal">Kurumsal • Tüm Projeler</option>
-                  </select>
+                  </CustomSelect>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Format</label>
-                  <select
+                  <CustomSelect
                     value={newFormat}
                     onChange={(e) => setNewFormat(e.target.value as CreativeFormat)}
                     className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
@@ -692,7 +693,7 @@ export function CreativesGalleryView() {
                     <option value="Karusel">Karusel</option>
                     <option value="3D Render">3D Render</option>
                     <option value="Katalog / Broşür">Katalog / Broşür</option>
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 
@@ -763,7 +764,7 @@ export function CreativesGalleryView() {
                   <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                     Tema Rengi
                   </label>
-                  <select
+                  <CustomSelect
                     value={newGradient}
                     onChange={(e) => setNewGradient(e.target.value)}
                     className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
@@ -773,7 +774,7 @@ export function CreativesGalleryView() {
                         {g.label}
                       </option>
                     ))}
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 

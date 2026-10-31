@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -381,7 +382,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                           <label className="text-[11px] text-[#a69f99] block mb-1">
                             Çıkarken Araç / Anahtar Al (Opsiyonel)
                           </label>
-                          <select
+                          <CustomSelect
                             value={selectedQuickAssetId}
                             onChange={(e) => setSelectedQuickAssetId(e.target.value)}
                             className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
@@ -393,7 +394,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                                 {a.name} ({a.codeOrPlate})
                               </option>
                             ))}
-                          </select>
+                          </CustomSelect>
                         </div>
                       )}
                     </div>
@@ -584,7 +585,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       <label className="text-xs font-semibold text-[#f3efe9] block mb-1">
                         Departman
                       </label>
-                      <select
+                      <CustomSelect
                         value={adminDept}
                         onChange={(e) => setAdminDept(e.target.value as Department)}
                         className="w-full bg-[#24211f] border border-[#4a443f] focus:border-[#b99881] rounded-full px-3 py-2 text-xs text-[#f3efe9] focus:outline-none cursor-pointer"
@@ -595,7 +596,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                         <option value="Müşteri İlişkileri">Müşteri İlişkileri</option>
                         <option value="Muhasebe">Muhasebe</option>
                         <option value="Yönetim">Yönetim</option>
-                      </select>
+                      </CustomSelect>
                     </div>
                   </div>
 

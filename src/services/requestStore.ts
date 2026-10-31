@@ -1,7 +1,8 @@
-import { AppUser } from './userStore'
 import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { syncService } from './syncService'
 import { rowToRequest } from './dbMapper'
+import { trashStore } from './trashStore'
+import { allowManualWebsiteDelete } from './zeroStatePurge'
 
 export type RequestPriority = 'Düşük' | 'Orta' | 'Yüksek' | 'Acil'
 export type RequestStatus = 'Açık' | 'İşlemde' | 'Çözüldü' | 'İptal'
@@ -11,7 +12,12 @@ export interface CustomerRequest {
   customerName: string
   customerPhone: string
   subject: string
-  category: 'Satış Öncesi Bilgi' | 'Proje & Kat Planı' | 'Ödeme & Finansman' | 'Satış Sonrası Destek' | 'Genel Talep'
+  category:
+    | 'Satış Öncesi Bilgi'
+    | 'Proje & Kat Planı'
+    | 'Ödeme & Finansman'
+    | 'Satış Sonrası Destek'
+    | 'Genel Talep'
   priority: RequestPriority
   status: RequestStatus
   assignedToUserName: string
@@ -62,31 +68,37 @@ class RequestStore {
     if (!isSupabaseConfigured() || this.realtimeChannel) return
     this.realtimeChannel = supabase
       .channel('realtime:customer_requests')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_requests' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const incoming = rowToRequest(payload.new)
-          if (!this.requests.some((r) => r.id === incoming.id)) {
-            this.requests = [incoming, ...this.requests]
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'customer_requests' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const incoming = rowToRequest(payload.new)
+            if (!this.requests.some((r) => r.id === incoming.id)) {
+              this.requests = [incoming, ...this.requests]
+              this.saveToStorage()
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const incoming = rowToRequest(payload.new)
+            const idx = this.requests.findIndex((r) => r.id === incoming.id)
+            if (idx !== -1) {
+              this.requests[idx] = incoming
+              this.saveToStorage()
+            }
+          } else if (payload.eventType === 'DELETE') {
+            this.requests = this.requests.filter((r) => r.id !== (payload.old as any).id)
             this.saveToStorage()
           }
-        } else if (payload.eventType === 'UPDATE') {
-          const incoming = rowToRequest(payload.new)
-          const idx = this.requests.findIndex((r) => r.id === incoming.id)
-          if (idx !== -1) {
-            this.requests[idx] = incoming
-            this.saveToStorage()
-          }
-        } else if (payload.eventType === 'DELETE') {
-          this.requests = this.requests.filter((r) => r.id !== (payload.old as any).id)
-          this.saveToStorage()
         }
-      })
+      )
       .subscribe()
   }
 
   private loadFromStorage() {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_REQUESTS)
+      const saved =
+        localStorage.getItem(STORAGE_KEY_REQUESTS) ||
+        localStorage.getItem('demirturk_customer_requests_v2')
       this.requests = saved ? JSON.parse(saved) : INITIAL_REQUESTS
     } catch {
       this.requests = INITIAL_REQUESTS
@@ -95,7 +107,9 @@ class RequestStore {
 
   private saveToStorage() {
     try {
-      localStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(this.requests))
+      const json = JSON.stringify(this.requests)
+      localStorage.setItem(STORAGE_KEY_REQUESTS, json)
+      localStorage.setItem('demirturk_customer_requests_v2', json)
     } catch (e) {
       console.error('RequestStore save error:', e)
     }
@@ -159,6 +173,11 @@ class RequestStore {
   }
 
   public deleteRequest(id: string): boolean {
+    const target = this.requests.find((r) => r.id === id)
+    allowManualWebsiteDelete(id)
+    if (target) {
+      trashStore.addItemToTrash(STORAGE_KEY_REQUESTS, target)
+    }
     const beforeLen = this.requests.length
     this.requests = this.requests.filter((r) => r.id !== id)
     try {

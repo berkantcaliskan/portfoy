@@ -393,7 +393,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.97 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="dropdown-panel absolute left-0 top-full mt-2 w-72 max-h-80 rounded-2xl p-2 z-50 flex flex-col gap-2 backdrop-blur-2xl border border-[#4a443f]"
+            className="dropdown-panel absolute left-0 top-full mt-2 w-72 max-h-80 rounded-[22px] bg-[#282522] p-2 z-50 flex flex-col gap-2 backdrop-blur-2xl border border-[#4a443f]"
             style={{ colorScheme: 'dark' }}
           >
             {/* Search Box */}

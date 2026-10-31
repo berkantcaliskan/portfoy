@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassInput } from '@/components/ui/GlassInput'
@@ -82,7 +83,7 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
             <label className="block text-xs font-medium text-slate-300">
               Konut Tipi
             </label>
-            <select
+            <CustomSelect
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value as PropertyType })}
               className="w-full rounded-full bg-navy-950 border border-white/10 px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-gold/60"
@@ -96,7 +97,7 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
               <option value="Penthouse">Penthouse</option>
               <option value="Ticari">Ticari / Ofis</option>
               <option value="Arsa">Arsa</option>
-            </select>
+            </CustomSelect>
           </div>
 
           <GlassInput

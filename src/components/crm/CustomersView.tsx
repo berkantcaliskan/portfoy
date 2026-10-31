@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { createPortal } from 'react-dom'
 import {
   Users,
@@ -941,7 +942,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           {/* Sıralama Seçimi (Varsayılan: Yeniden eskiye) */}
           <div className="relative flex items-center">
             <ArrowUpDown className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <select
+            <CustomSelect
               value={sortOrder}
               onChange={(e) =>
                 setSortOrder(e.target.value as 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC')
@@ -953,7 +954,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               <option value="OLDEST">Sırala: Eskiden yeniye</option>
               <option value="NAME_ASC">Sırala: İsim (A - Z)</option>
               <option value="NAME_DESC">Sırala: İsim (Z - A)</option>
-            </select>
+            </CustomSelect>
           </div>
 
           {/* Tarih Seçimi (Meta Stili Date Range Picker) */}
@@ -1303,7 +1304,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               zIndex: 99999,
             }}
             onClick={(e) => e.stopPropagation()}
-            className="dropdown-panel context-menu rounded-[16px] backdrop-blur-2xl p-1.5 min-w-[195px] border border-[#4a443f] shadow-xl"
+            className="dropdown-panel context-menu rounded-[22px] bg-[#282522] p-2 min-w-[195px] border border-[#4a443f] shadow-xl"
           >
             <div className="px-2.5 py-1 text-[10px] font-semibold text-[#8c857f] truncate border-b border-[#4a443f]/40 mb-1">
               {rowContextMenu.lead.fullName}

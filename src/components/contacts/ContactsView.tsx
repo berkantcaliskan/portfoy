@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Users,
   Search,
@@ -386,7 +387,7 @@ export const ContactsView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[#a69f99] block mb-1">Kategori *</label>
-                  <select
+                  <CustomSelect
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value as ContactCategory })}
                     className="w-full bg-[#34302d] border border-[#4a443f] rounded-full px-4 py-2 text-white focus:outline-none focus:border-[#b99881]"
@@ -395,7 +396,7 @@ export const ContactsView: React.FC = () => {
                     <option value="EKIP">Ekip & Danışman</option>
                     <option value="ORTAK">İş Ortağı & Noter</option>
                     <option value="DIGER">Diğer</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div>
                   <PhoneInput

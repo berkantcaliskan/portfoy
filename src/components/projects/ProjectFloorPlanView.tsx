@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -2429,7 +2430,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                     Oda Tipi
                   </label>
-                  <select
+                  <CustomSelect
                     value={newUnitDraft.roomType}
                     onChange={(e) =>
                       setNewUnitDraft({ ...newUnitDraft, roomType: e.target.value as RoomType })
@@ -2442,13 +2443,13 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     <option value="4+1">4+1</option>
                     <option value="Villa">Villa</option>
                     <option value="Ticari">Ticari / Dükkan</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div>
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                     Plan Ölçeği
                   </label>
-                  <select
+                  <CustomSelect
                     value={newUnitDraft.sizePreset}
                     onChange={(e) =>
                       setNewUnitDraft({
@@ -2463,13 +2464,13 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         {UNIT_SIZE_PRESETS[k].label}
                       </option>
                     ))}
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div>
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                     Durum / Etiket
                   </label>
-                  <select
+                  <CustomSelect
                     value={newUnitDraft.statusLabel}
                     onChange={(e) => {
                       const lbl = e.target.value
@@ -2488,7 +2489,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     <option value="Rezerve">Rezerve (Navy Lacivert)</option>
                     <option value="SATILDI">SATILDI (Kırmızı)</option>
                     <option value="KAPALI">KAPALI (Kırmızı)</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button
@@ -2518,7 +2519,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                     Alan Türü
                   </label>
-                  <select
+                  <CustomSelect
                     value={newAreaDraft.kind}
                     onChange={(e) => {
                       const k = e.target.value as KrokiAreaKind
@@ -2541,7 +2542,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     <option value="parking">Otopark</option>
                     <option value="corridor">Merdiven / Koridor</option>
                     <option value="custom">Özel Alan</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div>
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
@@ -2559,7 +2560,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                     Plan Ölçeği
                   </label>
-                  <select
+                  <CustomSelect
                     value={newAreaDraft.sizePreset}
                     onChange={(e) =>
                       setNewAreaDraft({
@@ -2574,7 +2575,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         {UNIT_SIZE_PRESETS[k].label}
                       </option>
                     ))}
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div className="col-span-2 flex items-center gap-2 pt-3">
                   <label className="inline-flex items-center gap-1.5 text-xs text-white cursor-pointer">
@@ -2647,7 +2648,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                     Giriş Yazı Yönü
                   </label>
-                  <select
+                  <CustomSelect
                     value={newBlockDraft.entranceVertical ? 'vertical' : 'horizontal'}
                     onChange={(e) =>
                       setNewBlockDraft({
@@ -2659,7 +2660,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   >
                     <option value="vertical">Düşey Yazı (Dikey)</option>
                     <option value="horizontal">Yatay Yazı</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div className="col-span-2 flex items-center gap-3 pt-3">
                   <label className="inline-flex items-center gap-1.5 text-xs text-white cursor-pointer">
@@ -2716,7 +2717,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                     Yazı Yönü
                   </label>
-                  <select
+                  <CustomSelect
                     value={newEntranceDraft.textOrientation}
                     onChange={(e) =>
                       setNewEntranceDraft({
@@ -2728,13 +2729,13 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                   >
                     <option value="vertical">Düşey Yazı (Dikey)</option>
                     <option value="horizontal">Yatay Yazı</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div>
                   <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                     Ok Yönü
                   </label>
-                  <select
+                  <CustomSelect
                     value={newEntranceDraft.direction}
                     onChange={(e) =>
                       setNewEntranceDraft({
@@ -2748,7 +2749,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     <option value="right">Sağa Ok (→)</option>
                     <option value="down">Aşağı Ok (↓)</option>
                     <option value="left">Sola Ok (←)</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div className="col-span-2 flex items-center gap-2 pt-3">
                   <label className="inline-flex items-center gap-1.5 text-xs text-white cursor-pointer">
@@ -2837,7 +2838,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                     <label className="block text-[10.5px] font-semibold text-[#a69f99] mb-1">
                       Sabit Kroki Konumu (Yön / Köşe)
                     </label>
-                    <select
+                    <CustomSelect
                       value={newFacadeDraft.edge}
                       onChange={(e) =>
                         setNewFacadeDraft({
@@ -2852,7 +2853,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           {FACADE_EDGE_CONFIG[edgeKey].fullOptionLabel}
                         </option>
                       ))}
-                    </select>
+                    </CustomSelect>
                   </div>
                   <button
                     type="submit"
@@ -2898,7 +2899,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                       )}
 
                       {/* Sabit Konum Değiştirici (8 Yön & Köşe) */}
-                      <select
+                      <CustomSelect
                         value={fac.edge}
                         onChange={(e) =>
                           handleChangeFacadeEdge(fac.id, e.target.value as FacadeEdge)
@@ -2912,7 +2913,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                             {FACADE_EDGE_CONFIG[edgeKey].shortPos}
                           </option>
                         ))}
-                      </select>
+                      </CustomSelect>
 
                       <button
                         type="button"

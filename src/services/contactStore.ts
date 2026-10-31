@@ -1,3 +1,5 @@
+import { trashStore } from './trashStore'
+
 export type ContactCategory = 'EKIP' | 'MUSTERI' | 'ORTAK' | 'DIGER'
 
 export interface Contact {
@@ -20,6 +22,12 @@ class ContactStore {
 
   constructor() {
     this.loadFromStorage()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('demirturk:cloud-db-synced', () => {
+        this.loadFromStorage()
+        this.notify()
+      })
+    }
   }
 
   private loadFromStorage() {
@@ -84,6 +92,10 @@ class ContactStore {
   }
 
   delete(id: string): boolean {
+    const target = this.contacts.find((c) => c.id === id)
+    if (target) {
+      trashStore.addItemToTrash(STORAGE_KEY_CONTACTS, target)
+    }
     const initialLen = this.contacts.length
     this.contacts = this.contacts.filter((c) => c.id !== id)
     if (this.contacts.length !== initialLen) {

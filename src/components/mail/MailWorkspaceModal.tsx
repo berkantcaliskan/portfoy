@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Inbox,
   Send,
@@ -212,7 +213,7 @@ export const MailWorkspaceModal: React.FC<MailWorkspaceModalProps> = ({
           {/* Sol: Hesap Seçici Açılır Menüsü */}
           <div className="flex items-center gap-2.5">
             <div className="relative">
-              <select
+              <CustomSelect
                 value={selectedAccountId}
                 onChange={(e) => {
                   setSelectedAccountId(e.target.value)
@@ -225,7 +226,7 @@ export const MailWorkspaceModal: React.FC<MailWorkspaceModalProps> = ({
                     {acc.displayName} ({acc.email})
                   </option>
                 ))}
-              </select>
+              </CustomSelect>
               <ChevronDown className="w-3.5 h-3.5 text-[#b99881] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
 

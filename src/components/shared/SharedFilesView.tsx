@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Cloud,
   Download,
@@ -636,7 +637,7 @@ export const SharedFilesView: React.FC = () => {
           {/* Sıralama Seçici */}
           <div className="relative flex items-center">
             <ArrowUpDown className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <select
+            <CustomSelect
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as FileSortOrder)}
               className="pl-8 pr-6 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs font-semibold text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
@@ -648,7 +649,7 @@ export const SharedFilesView: React.FC = () => {
               <option value="NAME_DESC">Sırala: İsim (Z - A)</option>
               <option value="SIZE_DESC">Sırala: Boyut (Büyükten küçüğe)</option>
               <option value="SIZE_ASC">Sırala: Boyut (Küçükten büyüğe)</option>
-            </select>
+            </CustomSelect>
           </div>
 
           {/* Görünüm Seçici: Liste / Büyük / Küçük */}

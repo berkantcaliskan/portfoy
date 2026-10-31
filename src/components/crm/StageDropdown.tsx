@@ -169,7 +169,7 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
                 minWidth: `${coords.width}px`,
                 zIndex: 99999,
               }}
-              className="dropdown-panel meta-stage-dropdown-panel rounded-[16px] backdrop-blur-2xl p-1.5 space-y-0.5 border border-[#b99881]"
+              className="dropdown-panel meta-stage-dropdown-panel bg-[#282522] rounded-[22px] p-2 space-y-0.5 border border-[#4a443f]"
               onClick={(e) => e.stopPropagation()}
             >
               {STAGE_OPTIONS.map((opt) => {
@@ -182,10 +182,10 @@ export const StageDropdown: React.FC<StageDropdownProps> = ({
                       onChange(opt.id)
                       setIsOpen(false)
                     }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[10px] text-xs font-medium cursor-pointer transition-colors text-left ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-full text-xs cursor-pointer transition-colors text-left ${
                       isSelected
-                        ? 'bg-[#b99881]/25 text-white font-bold'
-                        : 'text-[#d6beae] hover:bg-[#34302d] hover:text-white'
+                        ? 'is-active-dropdown-item bg-[#b99881]/20 text-white font-semibold'
+                        : 'text-[#a69f99] hover:bg-[#34302d] hover:text-[#f3efe9]'
                     }`}
                   >
                     <div className="flex items-center gap-2">

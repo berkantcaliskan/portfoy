@@ -13,7 +13,7 @@ const electronDir = path.join(rootDir, 'electron')
 const dataDir = path.join(rootDir, 'data')
 
 const DELETED_IDS_KEY = 'demirturk_deleted_ids_v1'
-const CLEAN_LEADS_V8_KEY = 'demirturk_clean_leads_v8_zero'
+const CLEAN_LEADS_V8_KEY = 'demirturk_clean_leads_v9_keep_web'
 
 const BUSINESS_KEYS = new Set([
   'demirturk_clean_slate_v7_demo_ready',
@@ -23,11 +23,14 @@ const BUSINESS_KEYS = new Set([
   'demirturk_users_v2',
   'demirturk_leads_v2',
   'demirturk_activities_v2',
+  'demirturk_projects_v2',
   'demirturk_shared_projects_v2',
   'demirturk_appointments_v2',
+  'demirturk_requests_v2',
   'demirturk_customer_requests_v2',
   'demirturk_collections_v2',
   'demirturk_payments_v2',
+  'demirturk_tool_payments_v1',
   'demirturk_approvals_v2',
   'demirturk_shared_files_v2',
   'demirturk_mail_accounts_v2',
@@ -37,7 +40,33 @@ const BUSINESS_KEYS = new Set([
   'demirturk_team_leaves_v1',
   'demirturk_meta_api_config',
   'demirturk_meta_capi_logs_v1',
+  'demirturk_creatives_v1',
+  'demirturk_creative_schedule_v1',
+  'demirturk_creative_comments_v1',
+  'demirturk_creative_briefs_v1',
+  'demirturk_google_ads_campaigns_v1',
+  'demirturk_google_conversion_logs_v1',
+  'demirturk_contacts_v2',
+  'demirturk_properties_v2',
 ])
+
+function isWebsiteRecord(item) {
+  if (!item || typeof item !== 'object') return false
+  const id = String(item.id || '')
+  if (id.startsWith('lead-web-') || id.startsWith('req-web-') || id.startsWith('inq-web-')) {
+    return true
+  }
+  if (item.source === 'WEBSITE' || item.sourceType === 'WEBSITE') return true
+  if (
+    Array.isArray(item.inquiries) &&
+    item.inquiries.some(
+      (inq) => inq?.source === 'WEBSITE' || String(inq?.id || '').startsWith('inq-web-')
+    )
+  ) {
+    return true
+  }
+  return false
+}
 
 function isBusinessKey(k) {
   return (
@@ -50,8 +79,10 @@ function isBusinessKey(k) {
 function getArrayItemKey(item, i, key) {
   if (typeof item === 'string') return item
   if (!item || typeof item !== 'object') return String(i)
+  if (key === 'demirturk_trash_bin_v1' && item.trashId) return String(item.trashId)
   if (key === 'demirturk_users_v2' && item.username) return String(item.username).toLowerCase()
   if (key === 'demirturk_leads_v2') {
+    if (isWebsiteRecord(item) && item.id) return String(item.id)
     const ph = String(item.phone || '').replace(/\D/g, '').slice(-10)
     if (ph && ph.length >= 7) return `phone:${ph}`
   }
@@ -59,17 +90,12 @@ function getArrayItemKey(item, i, key) {
 }
 
 function parseDeletedSet(rawJson) {
-  const permanentDeleted = new Set([
-    'lead-web-1793205148675-464',
-    'lead-web-1793205113366-350',
-    'inq-1793205148675',
-    'inq-1793205113366',
-  ])
+  const permanentDeleted = new Set()
   try {
     const arr = JSON.parse(rawJson || '[]')
     if (Array.isArray(arr)) {
       for (const x of arr) {
-        if (typeof x === 'string') permanentDeleted.add(x)
+        if (typeof x === 'string' && x) permanentDeleted.add(x)
       }
     }
   } catch {}
@@ -83,34 +109,6 @@ function isItemDeleted(item, i, key, deletedSet) {
   const k = getArrayItemKey(item, i, key)
   if (k && deletedSet.has(k)) return true
   return false
-}
-
-
-function repairLeadItem(l) {
-  if (!l || typeof l !== 'object') return l
-  let updatedFullName = l.fullName
-  let updatedCreatedAt = l.createdAt
-  const answers = Array.isArray(l.metaAnswers)
-    ? l.metaAnswers
-    : Array.isArray(l.inquiries?.[0]?.metaAnswers)
-    ? l.inquiries[0].metaAnswers
-    : []
-  for (const ans of answers) {
-    const q = String(ans?.question || '').toLowerCase().trim()
-    const val = String(ans?.answer || '').trim()
-    if (!val) continue
-    if (
-      (q === 'adı' || q === 'adi' || q === 'ad' || q === 'ad soyad' || q === 'isim' || q === 'full_name') &&
-      (!updatedFullName || updatedFullName === 'Meta Müşterisi' || updatedFullName === 'Meta Müşteri Adayı')
-    ) {
-      updatedFullName = val
-    } else if (q.includes('oluşturul') || q.includes('olusturul') || q.includes('created') || q === 'tarih') {
-      const cleaned = val.replace(/(\d)(am|pm)$/i, '$1 $2')
-      const d = new Date(cleaned)
-      if (!isNaN(d.getTime())) updatedCreatedAt = d.toISOString()
-    }
-  }
-  return { ...l, fullName: updatedFullName, createdAt: updatedCreatedAt }
 }
 
 function mergeJsonArrays(aStr, bStr, key, deletedSet) {
@@ -182,10 +180,22 @@ function exportSharedCompanyDb() {
     const isLeadKey =
       k === 'demirturk_leads_v2' ||
       k === 'demirturk_activities_v2' ||
+      k === 'demirturk_requests_v2' ||
       k === 'demirturk_customer_requests_v2' ||
       k === 'demirturk_meta_capi_logs_v1'
-    const vCloud = isLeadKey && !isCloudV8Clean ? (k === 'demirturk_activities_v2' ? '{}' : '[]') : existingCloud[k]
-    const vLocal = isLeadKey && !isLocalV8Clean ? (k === 'demirturk_activities_v2' ? '{}' : '[]') : localDb[k]
+    const filterWebOnlyIfUnclean = (rawStr, isClean) => {
+      if (!isLeadKey || isClean) return rawStr
+      if (k === 'demirturk_activities_v2') return '{}'
+      try {
+        const arr = JSON.parse(rawStr || '[]')
+        if (Array.isArray(arr)) {
+          return JSON.stringify(arr.filter((x) => isWebsiteRecord(x)))
+        }
+      } catch {}
+      return '[]'
+    }
+    const vCloud = filterWebOnlyIfUnclean(existingCloud[k], isCloudV8Clean)
+    const vLocal = filterWebOnlyIfUnclean(localDb[k], isLocalV8Clean)
     if (k.endsWith('_v2') || k.endsWith('_v1')) {
       if (
         (typeof vCloud === 'string' && vCloud.trim().startsWith('[')) ||

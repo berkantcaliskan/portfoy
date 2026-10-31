@@ -264,7 +264,7 @@ export const OverflowTabs: React.FC<OverflowTabsProps> = ({
               left: `${menuPos.left}px`,
               zIndex: 99999,
             }}
-            className="dropdown-panel rounded-[18px] bg-[#282522] border border-[#4a443f] p-1.5 min-w-[215px] max-w-[280px] max-h-[300px] overflow-y-auto space-y-1 backdrop-blur-2xl"
+            className="dropdown-panel rounded-[22px] bg-[#282522] border border-[#4a443f] p-2 min-w-[215px] max-w-[280px] max-h-[300px] overflow-y-auto space-y-1 backdrop-blur-2xl"
           >
             {overflowTabs.map((tab) => {
               const isActive = tab.id === activeId

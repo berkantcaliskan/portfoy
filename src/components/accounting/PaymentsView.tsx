@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   CreditCard,
   Plus,
@@ -265,7 +266,7 @@ export const PaymentsView: React.FC = () => {
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Kategori
               </label>
-              <select
+              <CustomSelect
                 value={category}
                 onChange={(e) => setCategory(e.target.value as PaymentCategory)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -274,7 +275,7 @@ export const PaymentsView: React.FC = () => {
                 <option value="CONSTRUCTION">Şantiye Hakedişi</option>
                 <option value="MARKETING">Reklam & Pazarlama</option>
                 <option value="OFFICE">Ofis & Operasyon</option>
-              </select>
+              </CustomSelect>
             </div>
           </div>
 

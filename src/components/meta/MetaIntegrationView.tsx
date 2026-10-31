@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Zap,
   Radio,
@@ -181,7 +182,7 @@ export const MetaIntegrationView: React.FC = () => {
               <label className="block text-xs font-medium text-slate-300 mb-1">
                 Hedef Meta Formu
               </label>
-              <select
+              <CustomSelect
                 value={testFormName}
                 onChange={(e) => setTestFormName(e.target.value)}
                 className="w-full rounded-xl bg-navy-950 border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-gold"
@@ -191,7 +192,7 @@ export const MetaIntegrationView: React.FC = () => {
                     {f.name}
                   </option>
                 ))}
-              </select>
+              </CustomSelect>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -224,7 +225,7 @@ export const MetaIntegrationView: React.FC = () => {
               <label className="block text-xs font-medium text-slate-300 mb-1">
                 İlgilendiği Konut Tipi
               </label>
-              <select
+              <CustomSelect
                 value={testType}
                 onChange={(e) => setTestType(e.target.value)}
                 className="w-full rounded-xl bg-navy-950 border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-gold"
@@ -232,7 +233,7 @@ export const MetaIntegrationView: React.FC = () => {
                 <option value="1+1">1+1 Rezidans</option>
                 <option value="2+1">2+1 Konut</option>
                 <option value="Villa">Müstakil Villa</option>
-              </select>
+              </CustomSelect>
             </div>
 
             <GlassButton

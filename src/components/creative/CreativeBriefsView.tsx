@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import React, { useState, useEffect } from 'react'
 import {
   FileText,
@@ -209,7 +210,7 @@ export function CreativeBriefsView() {
                     </strong>
                   </span>
 
-                  <select
+                  <CustomSelect
                     value={brief.status}
                     onChange={(e) =>
                       creativeStore.updateBriefStatus(brief.id, e.target.value as BriefStatus)
@@ -219,7 +220,7 @@ export function CreativeBriefsView() {
                     <option value="YENI_BRIEF">Yeni Brief</option>
                     <option value="URETIMDE">Üretimde</option>
                     <option value="TESLIM_EDILDI">Teslim Edildi</option>
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 
@@ -292,7 +293,7 @@ export function CreativeBriefsView() {
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
                   <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Proje</label>
-                  <select
+                  <CustomSelect
                     value={project}
                     onChange={(e) => setProject(e.target.value)}
                     className="w-full px-3 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
@@ -303,11 +304,11 @@ export function CreativeBriefsView() {
                     <option value="Modern">Modern</option>
                     <option value="Tria">Tria</option>
                     <option value="Kurumsal">Kurumsal</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Öncelik</label>
-                  <select
+                  <CustomSelect
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as BriefPriority)}
                     className="w-full px-3 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
@@ -315,7 +316,7 @@ export function CreativeBriefsView() {
                     <option value="ACIL">Acil</option>
                     <option value="YUKSEK">Yüksek</option>
                     <option value="NORMAL">Normal</option>
-                  </select>
+                  </CustomSelect>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
@@ -332,7 +333,7 @@ export function CreativeBriefsView() {
 
               <div>
                 <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Format</label>
-                <select
+                <CustomSelect
                   value={format}
                   onChange={(e) => setFormat(e.target.value as CreativeFormat)}
                   className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
@@ -343,7 +344,7 @@ export function CreativeBriefsView() {
                   <option value="Karusel">Karusel</option>
                   <option value="3D Render">3D Render</option>
                   <option value="Katalog / Broşür">Katalog / Broşür</option>
-                </select>
+                </CustomSelect>
               </div>
 
               <div>

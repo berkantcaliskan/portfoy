@@ -6,19 +6,53 @@ import { SEED_COMPANY_DB } from './seedCompanyData'
 import { TRASH_STORAGE_KEY, TRASH_RETENTION_MS, describeTrashTarget, TrashItem } from './trashStore'
 
 const CLEAN_SLATE_VERSION_KEY = 'demirturk_clean_slate_v7_demo_ready'
-const CLEAN_LEADS_V8_KEY = 'demirturk_clean_leads_v8_zero'
+const CLEAN_LEADS_V8_KEY = 'demirturk_clean_leads_v9_keep_web'
 const DELETED_IDS_KEY = 'demirturk_deleted_ids_v1'
+
+export function isWebsiteRecord(item: any): boolean {
+  if (!item || typeof item !== 'object') return false
+  const id = String(item.id || '')
+  if (
+    id.startsWith('lead-web-') ||
+    id.startsWith('req-web-') ||
+    id.startsWith('inq-web-')
+  ) {
+    return true
+  }
+  if (item.source === 'WEBSITE' || item.sourceType === 'WEBSITE') {
+    return true
+  }
+  if (
+    Array.isArray(item.inquiries) &&
+    item.inquiries.some(
+      (inq: any) =>
+        inq?.source === 'WEBSITE' || String(inq?.id || '').startsWith('inq-web-')
+    )
+  ) {
+    return true
+  }
+  return false
+}
+
+const manualAllowedWebsiteDeletes = new Set<string>()
+
+export function allowManualWebsiteDelete(id: string): void {
+  if (id) manualAllowedWebsiteDeletes.add(String(id))
+}
 
 const ARRAY_MERGE_KEYS = new Set([
   DELETED_IDS_KEY,
   TRASH_STORAGE_KEY,
   'demirturk_users_v2',
   'demirturk_leads_v2',
+  'demirturk_projects_v2',
   'demirturk_shared_projects_v2',
   'demirturk_appointments_v2',
+  'demirturk_requests_v2',
   'demirturk_customer_requests_v2',
   'demirturk_collections_v2',
   'demirturk_payments_v2',
+  'demirturk_tool_payments_v1',
   'demirturk_approvals_v2',
   'demirturk_shared_files_v2',
   'demirturk_mail_accounts_v2',
@@ -33,6 +67,8 @@ const ARRAY_MERGE_KEYS = new Set([
   'demirturk_creative_briefs_v1',
   'demirturk_google_ads_campaigns_v1',
   'demirturk_google_conversion_logs_v1',
+  'demirturk_contacts_v2',
+  'demirturk_properties_v2',
 ])
 
 const OBJECT_MAP_MERGE_KEYS = new Set([
@@ -93,12 +129,7 @@ function getArrayItemKey(item: any, idx: number, key: string): string {
 }
 
 function parseDeletedSet(rawJson: string | undefined): Set<string> {
-  const permanentDeleted = new Set([
-    'lead-web-1793205148675-464',
-    'lead-web-1793205113366-350',
-    'inq-1793205148675',
-    'inq-1793205113366',
-  ])
+  const permanentDeleted = new Set<string>()
   try {
     const arr = JSON.parse(rawJson || '[]')
     if (Array.isArray(arr)) {
@@ -281,8 +312,31 @@ function mergeStoresNonDestructively(
   }
   const deletedSet = parseDeletedSet(mergedDeletedJson)
 
-  for (const [k, srcVal] of Object.entries(source)) {
-    if (LOCAL_MACHINE_ONLY_KEYS.has(k) || k === DELETED_IDS_KEY || typeof srcVal !== 'string') continue
+  const isSourceClean = source[CLEAN_LEADS_V8_KEY] === 'true'
+  for (const [k, rawSrcVal] of Object.entries(source)) {
+    if (LOCAL_MACHINE_ONLY_KEYS.has(k) || k === DELETED_IDS_KEY || typeof rawSrcVal !== 'string') continue
+    let srcVal = rawSrcVal
+    if (
+      !isSourceClean &&
+      (k === 'demirturk_leads_v2' ||
+        k === 'demirturk_activities_v2' ||
+        k === 'demirturk_requests_v2' ||
+        k === 'demirturk_customer_requests_v2' ||
+        k === 'demirturk_meta_capi_logs_v1')
+    ) {
+      if (k === 'demirturk_activities_v2') {
+        srcVal = '{}'
+      } else {
+        try {
+          const parsed = JSON.parse(rawSrcVal || '[]')
+          srcVal = Array.isArray(parsed)
+            ? JSON.stringify(parsed.filter((x: any) => isWebsiteRecord(x)))
+            : '[]'
+        } catch {
+          srcVal = '[]'
+        }
+      }
+    }
     const curVal = target[k]
     if (ARRAY_MERGE_KEYS.has(k)) {
       const merged = mergeJsonArrayStrings(curVal, srcVal, k, deletedSet)
@@ -422,21 +476,44 @@ try {
     // (@berkant, @tugce, @nazli, @melisa, etc.) and shared data are immediately available on EVERY PC!
     let seedMerged = mergeStoresNonDestructively(diskStore, SEED_COMPANY_DB)
 
-    // 3.6 One-time v8 customer data reset ("mevcuttaki tüm müşteri verisini kaldır")
+    // 3.6 One-time v8 customer data reset ("mevcuttaki tüm müşteri verisini kaldır", website datası hariç!)
     const isLocalLeadsV8Clean = rawGetItem(CLEAN_LEADS_V8_KEY) === 'true'
     const isDiskLeadsV8Clean = diskStore[CLEAN_LEADS_V8_KEY] === 'true'
     if (!isLocalLeadsV8Clean || (diskAvailable && !isDiskLeadsV8Clean)) {
-      diskStore['demirturk_leads_v2'] = '[]'
+      let webLeadsJson = '[]'
+      try {
+        const curLeads = JSON.parse(
+          diskStore['demirturk_leads_v2'] || rawGetItem('demirturk_leads_v2') || '[]'
+        )
+        if (Array.isArray(curLeads)) {
+          webLeadsJson = JSON.stringify(curLeads.filter((l: any) => isWebsiteRecord(l)))
+        }
+      } catch {}
+      let webReqsJson = '[]'
+      try {
+        const curReqs = JSON.parse(
+          diskStore['demirturk_requests_v2'] ||
+            diskStore['demirturk_customer_requests_v2'] ||
+            rawGetItem('demirturk_requests_v2') ||
+            '[]'
+        )
+        if (Array.isArray(curReqs)) {
+          webReqsJson = JSON.stringify(curReqs.filter((r: any) => isWebsiteRecord(r)))
+        }
+      } catch {}
+      diskStore['demirturk_leads_v2'] = webLeadsJson
       diskStore['demirturk_activities_v2'] = '{}'
-      diskStore['demirturk_customer_requests_v2'] = '[]'
+      diskStore['demirturk_requests_v2'] = webReqsJson
+      diskStore['demirturk_customer_requests_v2'] = webReqsJson
       diskStore['demirturk_meta_capi_logs_v1'] = '[]'
       diskStore['demirturk_company_lead_seq_v1'] = '{}'
       diskStore['demirturk_company_lead_map_v1'] = '{}'
       diskStore[CLEAN_LEADS_V8_KEY] = 'true'
       try {
-        rawSetItem('demirturk_leads_v2', '[]')
+        rawSetItem('demirturk_leads_v2', webLeadsJson)
         rawSetItem('demirturk_activities_v2', '{}')
-        rawSetItem('demirturk_customer_requests_v2', '[]')
+        rawSetItem('demirturk_requests_v2', webReqsJson)
+        rawSetItem('demirturk_customer_requests_v2', webReqsJson)
         rawSetItem('demirturk_meta_capi_logs_v1', '[]')
         rawSetItem('demirturk_company_lead_seq_v1', '{}')
         rawSetItem('demirturk_company_lead_map_v1', '{}')
@@ -589,16 +666,29 @@ try {
       if (!isRemoteV8Clean) {
         remoteMissingLocalData = true
       }
-      for (const [k, remoteVal] of Object.entries(remoteStore)) {
-        if (!isCloudSyncedBusinessKey(k) || k === DELETED_IDS_KEY || typeof remoteVal !== 'string') continue
+      for (const [k, rawRemoteVal] of Object.entries(remoteStore)) {
+        if (!isCloudSyncedBusinessKey(k) || k === DELETED_IDS_KEY || typeof rawRemoteVal !== 'string') continue
+        let remoteVal = rawRemoteVal
         if (
           !isRemoteV8Clean &&
           (k === 'demirturk_leads_v2' ||
             k === 'demirturk_activities_v2' ||
+            k === 'demirturk_requests_v2' ||
             k === 'demirturk_customer_requests_v2' ||
             k === 'demirturk_meta_capi_logs_v1')
         ) {
-          continue
+          if (k === 'demirturk_activities_v2') {
+            remoteVal = '{}'
+          } else {
+            try {
+              const parsed = JSON.parse(rawRemoteVal || '[]')
+              remoteVal = Array.isArray(parsed)
+                ? JSON.stringify(parsed.filter((x: any) => isWebsiteRecord(x)))
+                : '[]'
+            } catch {
+              remoteVal = '[]'
+            }
+          }
         }
         const localVal = memoryMirror.get(k)
         if (ARRAY_MERGE_KEYS.has(k)) {
@@ -854,7 +944,7 @@ try {
     }
 
     Storage.prototype.setItem = function (key: string, value: string): void {
-      const strVal = String(value)
+      let strVal = String(value)
       if (this === window.localStorage) {
         const prevVal = memoryMirror.get(key)
 
@@ -891,7 +981,8 @@ try {
               let delChanged = false
               const newlyTrashed: TrashItem[] = []
 
-              // Any item that was in oldArr and is missing from newArr was deleted by the user
+              // Any item that was in oldArr and is missing from newArr was deleted
+              const protectedWebsiteItemsToKeep: any[] = []
               oldArr.forEach((item, i) => {
                 if (!item || typeof item !== 'object') return
                 const idStr = item.id ? String(item.id) : ''
@@ -899,6 +990,17 @@ try {
                 const stillExists =
                   (idStr && newIds.has(idStr)) || (kStr && newKeys.has(kStr))
                 if (!stillExists) {
+                  // Protect website data against any code-level deletion: only allow if user manually clicked delete
+                  if (
+                    isWebsiteRecord(item) &&
+                    !manualAllowedWebsiteDeletes.has(idStr) &&
+                    !manualAllowedWebsiteDeletes.has(kStr)
+                  ) {
+                    protectedWebsiteItemsToKeep.push(item)
+                    if (idStr) newIds.add(idStr)
+                    if (kStr) newKeys.add(kStr)
+                    return
+                  }
                   if (idStr && !deletedSet.has(idStr)) {
                     deletedSet.add(idStr)
                     delChanged = true
@@ -926,6 +1028,11 @@ try {
                   }
                 }
               })
+
+              if (protectedWebsiteItemsToKeep.length > 0) {
+                newArr.unshift(...protectedWebsiteItemsToKeep)
+                strVal = JSON.stringify(newArr)
+              }
 
               // Any item that was newly added to newArr is un-deleted if its phone/id was previously in deletedSet
               newArr.forEach((item, i) => {

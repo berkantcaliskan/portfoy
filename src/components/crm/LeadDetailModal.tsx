@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Mail,
   Sparkles,
@@ -387,7 +388,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 <label className="block text-xs font-semibold text-[#f3efe9]">
                   Konut tipi tercihi
                 </label>
-                <select
+                <CustomSelect
                   value={editForm.preferredHousingType}
                   onChange={(e) => setEditForm({ ...editForm, preferredHousingType: e.target.value })}
                   className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
@@ -397,14 +398,14 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                       {type}
                     </option>
                   ))}
-                </select>
+                </CustomSelect>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-[#f3efe9]">
                   Danışman ata
                 </label>
-                <select
+                <CustomSelect
                   value={editForm.assignedUserId}
                   onChange={(e) => setEditForm({ ...editForm, assignedUserId: e.target.value })}
                   className="w-full rounded-full bg-[#24211f] border border-[#4a443f] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
@@ -417,7 +418,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                       {u.fullName}
                     </option>
                   ))}
-                </select>
+                </CustomSelect>
               </div>
             </div>
 

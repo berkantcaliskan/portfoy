@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, Lock, User, Mail, Building2, ShieldCheck, Sparkles, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { BookLogo, BrandLogoLockup } from '@/components/common/BookLogo'
@@ -378,7 +379,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   <label className="text-xs font-semibold text-[#d6beae] block pl-1">
                     Departman
                   </label>
-                  <select
+                  <CustomSelect
                     value={department}
                     onChange={(e) => setDepartment(e.target.value as Department)}
                     className="w-full bg-[#1e1b19] border border-[#443d37] focus:border-[#b99881] rounded-2xl px-3 py-2.5 text-xs text-[#f3efe9] focus:outline-none cursor-pointer"
@@ -389,7 +390,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     <option value="Müşteri İlişkileri">Müşteri İlişkileri</option>
                     <option value="Muhasebe">Muhasebe</option>
                     <option value="Yönetim">Yönetim</option>
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 

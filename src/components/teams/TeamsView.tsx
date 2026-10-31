@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CustomSelect } from '@/components/ui/CustomSelect'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
@@ -546,7 +547,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
 
             <div className="flex items-center gap-2">
               {canSeeMultipleDepartments && (
-                <select
+                <CustomSelect
                   value={deptFilter}
                   onChange={(e) => setDeptFilter(e.target.value)}
                   className="bg-[#282522] border border-[#4a443f] rounded-full px-3.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -557,7 +558,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                       {d}
                     </option>
                   ))}
-                </select>
+                </CustomSelect>
               )}
 
               <div className="relative">
@@ -1172,7 +1173,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
             <label className="text-xs font-semibold text-[#d6beae] block mb-1.5">
               Kategori *
             </label>
-            <select
+            <CustomSelect
               value={newAssetCategory}
               onChange={(e) => setNewAssetCategory(e.target.value as SharedAssetCategory)}
               className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none"
@@ -1180,7 +1181,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
               <option value="ARAC">🚗 Şirket Aracı & Anahtarı</option>
               <option value="PORTFOY_ANAHTARI">🔑 Portföy / Numune Daire Anahtarı</option>
               <option value="EKIPMAN">🧰 Ortak Ofis / Saha Ekipmanı (POS, Lazer Metre vb.)</option>
-            </select>
+            </CustomSelect>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
@@ -1347,7 +1348,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
             <label className="text-xs font-semibold text-[#d6beae] block mb-1.5">
               İzin / Çıkış Türü *
             </label>
-            <select
+            <CustomSelect
               value={leaveType}
               onChange={(e) => setLeaveType(e.target.value as LeaveType)}
               className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none"
@@ -1356,7 +1357,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
               <option value="YILLIK_IZIN">Yıllık İzin</option>
               <option value="MAZERET_IZNI">Mazeret İzni</option>
               <option value="RAPOR">Sağlık Raporu</option>
-            </select>
+            </CustomSelect>
           </div>
 
           {leaveType === 'SAATLIK_CIKIS' ? (
@@ -1519,7 +1520,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
             <label className="text-xs font-semibold text-[#d6beae] block mb-1.5">
               Departman *
             </label>
-            <select
+            <CustomSelect
               value={newMemberDepartment}
               onChange={(e) => setNewMemberDepartment(e.target.value as Department)}
               className="w-full bg-[#1c1a18] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none cursor-pointer"
@@ -1529,7 +1530,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                   {dept}
                 </option>
               ))}
-            </select>
+            </CustomSelect>
           </div>
 
           <p className="text-[11px] text-[#8c857f]">
