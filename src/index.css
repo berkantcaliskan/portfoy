@@ -1717,35 +1717,35 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 
 /* ==========================================================================
    GECE IŞIĞI (KOYU MOD - data-theme-accent="night") YÜZEY SİSTEMİ
-   - Ana Arka Plan (Yumuşak Siyah): #181918
-   - Sol Menü / Navigasyon (Biraz Daha Koyu, #000000 değil): #131413
-   - Kart Yüzeyi (Hafif Açık Koyu): #202220
-   - Butonlar / Sekmeler / İkincil Katmanlar (Biraz Daha Açık Koyu): #282b28
+   - Ana Arka Plan (Yumuşak Siyah): #1e201e
+   - Sol Menü / Navigasyon (Biraz Daha Koyu, #000000 değil): #191b19
+   - Kart Yüzeyi (Hafif Açık Koyu): #262926
+   - Butonlar / Sekmeler / İkincil Katmanlar (Biraz Daha Açık Koyu): #2f332f
    - Yazı Rengi (Beyaza Yakın Ekru): #f4f1ea
    - Varsayılan Vurgu: Pastel yeşil (#657a72) veya seçili vurgu rengi
    ========================================================================== */
 html[data-theme-accent="night"] {
-  --bg-base: #181918 !important;
-  --card-surface: #202220 !important;
-  --secondary-surface: #282b28 !important;
-  --nav-surface: #131413 !important;
-  --primary-anthracite: #202220 !important;
+  --bg-base: #1e201e !important;
+  --card-surface: #262926 !important;
+  --secondary-surface: #2f332f !important;
+  --nav-surface: #191b19 !important;
+  --primary-anthracite: #262926 !important;
   --tertiary-white: #f4f1ea !important;
 }
 
 html[data-theme-accent="night"],
 html[data-theme-accent="night"] body,
 html[data-theme-accent="night"] .min-h-screen {
-  background: #181918 !important;
-  background-color: #181918 !important;
+  background: #1e201e !important;
+  background-color: #1e201e !important;
   color: #f4f1ea !important;
 }
 
-/* Sol Dikey Menü (Biraz daha koyu, ama #000000 kadar koyu değil: #131413) */
+/* Sol Dikey Menü (Biraz daha koyu, ama #000000 kadar koyu değil: #191b19) */
 html[data-theme-accent="night"] header[class*="bg-[#34302c]"],
 html[data-theme-accent="night"] header {
-  background: #131413 !important;
-  background-color: #131413 !important;
+  background: #191b19 !important;
+  background-color: #191b19 !important;
   border-bottom: 1px solid rgba(244, 241, 234, 0.08) !important;
   border-right: 1px solid rgba(244, 241, 234, 0.08) !important;
   color: #f4f1ea !important;
@@ -1753,8 +1753,8 @@ html[data-theme-accent="night"] header {
 
 /* Sol menüdeki buton hover katmanı */
 html[data-theme-accent="night"] header .sidebar-pill-item:not(.bg-\[\#b99881\]):hover {
-  background: #232623 !important;
-  background-color: #232623 !important;
+  background: #2a2d2a !important;
+  background-color: #2a2d2a !important;
   color: #f4f1ea !important;
 }
 
@@ -1762,8 +1762,8 @@ html[data-theme-accent="night"] header .sidebar-pill-item:not(.bg-\[\#b99881\]):
 html[data-theme-accent="night"] [class*="bg-[#413f3d]/90"],
 html[data-theme-accent="night"] [class*="bg-[#383834]/90"],
 html[data-theme-accent="night"] [class*="bg-[#383830]/90"] {
-  background: rgba(19, 20, 19, 0.96) !important;
-  background-color: rgba(19, 20, 19, 0.96) !important;
+  background: rgba(25, 27, 25, 0.96) !important;
+  background-color: rgba(25, 27, 25, 0.96) !important;
   border-color: rgba(244, 241, 234, 0.19) !important;
 }
 
@@ -1826,7 +1826,7 @@ html[data-theme-accent="night"] svg[class*="text-rose-"] {
   color: #fb7185 !important;
 }
 
-/* Sayfa İçi Kart Yüzeyi: Yumuşak siyahtan (#181918) bir kademe açık koyu (#202220) */
+/* Sayfa İçi Kart Yüzeyi: Yumuşak siyahtan (#1e201e) bir kademe açık koyu (#262926) */
 html[data-theme-accent="night"] main .glass-panel,
 html[data-theme-accent="night"] main .glass-panel-elevated,
 html[data-theme-accent="night"] main .glass-card,
@@ -1843,8 +1843,8 @@ html[data-theme-accent="night"] main [class*="bg-[#3a3430]"]:not([class*="z-50"]
 html[data-theme-accent="night"] main [class*="bg-[#181614]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
 html[data-theme-accent="night"] main [class*="bg-[#1f1c19]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]),
 html[data-theme-accent="night"] main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
-  background: #202220 !important;
-  background-color: #202220 !important;
+  background: #262926 !important;
+  background-color: #262926 !important;
   border: 1px solid rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
@@ -1853,19 +1853,19 @@ html[data-theme-accent="night"] main [class*="bg-[#3d3733]"]:not([class*="z-50"]
 html[data-theme-accent="night"] main .glass-card:hover,
 html[data-theme-accent="night"] main .glass-panel:hover,
 html[data-theme-accent="night"] main [class*="hover:bg-[#282522]"]:hover {
-  background: #232623 !important;
-  background-color: #232623 !important;
+  background: #2a2d2a !important;
+  background-color: #2a2d2a !important;
   border-color: rgba(244, 241, 234, 0.30) !important;
 }
 
-/* Butonlar, Sekmeler, Üst Bar Kapsülleri ve Kart İçi İkincil Yüzeyler: Biraz Daha Açık Koyu (#282b28) */
+/* Butonlar, Sekmeler, Üst Bar Kapsülleri ve Kart İçi İkincil Yüzeyler: Biraz Daha Açık Koyu (#2f332f) */
 html[data-theme-accent="night"] div.top-utility-pill,
 html[data-theme-accent="night"] button.top-utility-pill,
 html[data-theme-accent="night"] .top-utility-pill,
 html[data-theme-accent="night"] header [class*="bg-[#24211f]"],
 html[data-theme-accent="night"] header [class*="bg-[#282522]"] {
-  background: #282b28 !important;
-  background-color: #282b28 !important;
+  background: #2f332f !important;
+  background-color: #2f332f !important;
   border-color: rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
@@ -1890,18 +1890,18 @@ html[data-theme-accent="night"] [class*="bg-[#1e1c1a]"]:not(.dropdown-panel):not
 html[data-theme-accent="night"] [class*="bg-[#1f1d1b]"]:not(.dropdown-panel):not(.popover-panel),
 html[data-theme-accent="night"] [class*="bg-[#181614]"]:not(.dropdown-panel):not(.popover-panel),
 html[data-theme-accent="night"] [class*="bg-[#1f1c19]"]:not(.dropdown-panel):not(.popover-panel) {
-  background: #282b28 !important;
-  background-color: #282b28 !important;
+  background: #2f332f !important;
+  background-color: #2f332f !important;
   border-color: rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
 }
 
-/* Sekme ve Filtre Butonları (.tab-pill-btn): Biraz daha açık koyu (#282b28) + nötr hafif belirgin kontür, gölge yok */
+/* Sekme ve Filtre Butonları (.tab-pill-btn): Biraz daha açık koyu (#2f332f) + nötr hafif belirgin kontür, gölge yok */
 html[data-theme-accent="night"] button.tab-pill-btn,
 html[data-theme-accent="night"] main button.tab-pill-btn {
-  background: #282b28 !important;
-  background-color: #282b28 !important;
+  background: #2f332f !important;
+  background-color: #2f332f !important;
   color: rgba(244, 241, 234, 0.78) !important;
   border: 1px solid rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
@@ -1909,8 +1909,8 @@ html[data-theme-accent="night"] main button.tab-pill-btn {
 
 html[data-theme-accent="night"] button.tab-pill-btn:hover,
 html[data-theme-accent="night"] main button.tab-pill-btn:hover {
-  background: #303430 !important;
-  background-color: #303430 !important;
+  background: #373b37 !important;
+  background-color: #373b37 !important;
   color: #f4f1ea !important;
   border-color: rgba(244, 241, 234, 0.34) !important;
   box-shadow: none !important;
@@ -1918,8 +1918,8 @@ html[data-theme-accent="night"] main button.tab-pill-btn:hover {
 
 html[data-theme-accent="night"] button.tab-pill-btn.is-active-tab-pill,
 html[data-theme-accent="night"] main button.tab-pill-btn.is-active-tab-pill {
-  background: #343834 !important;
-  background-color: #343834 !important;
+  background: #3c403c !important;
+  background-color: #3c403c !important;
   color: #f4f1ea !important;
   border: 1.5px solid rgba(244, 241, 234, 0.40) !important;
   font-weight: 700 !important;
@@ -1933,16 +1933,16 @@ html[data-theme-accent="night"] main button.tab-pill-btn.is-active-tab-pill * {
 
 /* İkincil Butonlar (.glass-button-subtle) */
 html[data-theme-accent="night"] .glass-button-subtle {
-  background: #282b28 !important;
-  background-color: #282b28 !important;
+  background: #2f332f !important;
+  background-color: #2f332f !important;
   border: 1px solid rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
 }
 
 html[data-theme-accent="night"] .glass-button-subtle:hover {
-  background: #313531 !important;
-  background-color: #313531 !important;
+  background: #373b37 !important;
+  background-color: #373b37 !important;
   border-color: rgba(244, 241, 234, 0.34) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
@@ -1988,21 +1988,21 @@ html[data-theme-accent="night"] [role="listbox"],
 html[data-theme-accent="night"] header .dropdown-panel,
 html[data-theme-accent="night"] div.dropdown-panel,
 html[data-theme-accent="night"] .glass-modal {
-  background: #1e201e !important;
-  background-color: #1e201e !important;
+  background: #262926 !important;
+  background-color: #262926 !important;
   border-color: rgba(244, 241, 234, 0.19) !important;
   color: #f4f1ea !important;
   box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.55) !important;
 }
 
-/* Input, Select, Textarea -> Biraz daha açık koyu (#282b28) + Ekru yazı (#f4f1ea) */
+/* Input, Select, Textarea -> Biraz daha açık koyu (#2f332f) + Ekru yazı (#f4f1ea) */
 html[data-theme-accent="night"] input:not([type="checkbox"]):not([type="radio"]):not(.bg-transparent):not([class*="bg-transparent"]),
 html[data-theme-accent="night"] select:not(.bg-transparent):not([class*="bg-transparent"]),
 html[data-theme-accent="night"] textarea:not(.bg-transparent):not([class*="bg-transparent"]),
 html[data-theme-accent="night"] .glass-input {
   color-scheme: dark !important;
-  background: #282b28 !important;
-  background-color: #282b28 !important;
+  background: #2f332f !important;
+  background-color: #2f332f !important;
   color: #f4f1ea !important;
   border-color: rgba(244, 241, 234, 0.19) !important;
 }
@@ -2011,8 +2011,8 @@ html[data-theme-accent="night"] input:not(.bg-transparent):not([class*="bg-trans
 html[data-theme-accent="night"] select:not(.bg-transparent):not([class*="bg-transparent"]):focus,
 html[data-theme-accent="night"] textarea:not(.bg-transparent):not([class*="bg-transparent"]):focus,
 html[data-theme-accent="night"] .glass-input:focus {
-  background: #2e322e !important;
-  background-color: #2e322e !important;
+  background: #353935 !important;
+  background-color: #353935 !important;
   border-color: rgba(244, 241, 234, 0.36) !important;
 }
 
@@ -2024,7 +2024,7 @@ html[data-theme-accent="night"] textarea::placeholder {
 html[data-theme-accent="night"] option,
 html[data-theme-accent="night"] optgroup {
   color-scheme: dark !important;
-  background-color: #202220 !important;
+  background-color: #262926 !important;
   color: #f4f1ea !important;
 }
 
@@ -2189,15 +2189,15 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 
 html[data-theme-accent="night"] .dropdown-panel,
 html[data-theme-accent="night"] div.dropdown-panel {
-  background: #1e201e !important;
-  background-color: #1e201e !important;
+  background: #262926 !important;
+  background-color: #262926 !important;
   border: 1px solid rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
 }
 
 html[data-theme-accent="night"] .dropdown-panel button:hover:not(.is-active-dropdown-item):not([class*="bg-[#b99881]"]) {
-  background: #282b28 !important;
-  background-color: #282b28 !important;
+  background: #2f332f !important;
+  background-color: #2f332f !important;
   color: #f4f1ea !important;
 }

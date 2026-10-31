@@ -220,7 +220,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     {
       id: 'night',
       name: 'Gece ışığı',
-      primary: '#181918',
+      primary: '#1e201e',
       secondary: themeAccent === 'night' ? activeAccentObj.color : '#657a72',
     },
   ]
