@@ -770,8 +770,8 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .top-utility-pill {
   background: #ffffff !important;
   background-color: #ffffff !important;
-  border-color: rgba(41, 45, 43, 0.10) !important;
-  box-shadow: 0 2px 8px -2px rgba(41, 45, 43, 0.06), 0 1px 2px 0 rgba(41, 45, 43, 0.03) !important;
+  border-color: rgba(41, 45, 43, 0.20) !important;
+  box-shadow: none !important;
   color: #292d2b !important;
 }
 
@@ -933,8 +933,8 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
   background: #ffffff !important;
   background-color: #ffffff !important;
-  border: 1px solid rgba(41, 45, 43, 0.10) !important;
-  box-shadow: 0 2px 8px -2px rgba(41, 45, 43, 0.05), 0 1px 2px 0 rgba(41, 45, 43, 0.03) !important;
+  border: 1px solid rgba(41, 45, 43, 0.20) !important;
+  box-shadow: none !important;
   color: #292d2b !important;
 }
 
@@ -1034,26 +1034,26 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .top-utility-pill {
   background: #ffffff !important;
   background-color: #ffffff !important;
-  border-color: rgba(41, 45, 43, 0.10) !important;
-  box-shadow: 0 2px 8px -2px rgba(41, 45, 43, 0.06), 0 1px 2px 0 rgba(41, 45, 43, 0.03) !important;
+  border-color: rgba(41, 45, 43, 0.20) !important;
+  box-shadow: none !important;
   color: #292d2b !important;
 }
 
 /* İç İçe Geçmeli 3D Perspektif Kartlar (Satış Hattı / Kanban Deck) */
 .perspective-deck-card {
-  box-shadow: -12px 10px 26px -6px rgba(0, 0, 0, 0.35), 0 4px 12px -2px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: none !important;
 }
 
 .perspective-deck-card.is-focused {
-  box-shadow: 0 24px 48px -10px rgba(0, 0, 0, 0.55), -6px 12px 24px -6px color-mix(in srgb, var(--accent-color, #5c6ac4) 25%, transparent) !important;
+  box-shadow: none !important;
   border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 65%, transparent) !important;
 }
 
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main div.perspective-deck-card {
   background: #ffffff !important;
   background-color: #ffffff !important;
-  border: 1px solid rgba(41, 45, 43, 0.13) !important;
-  box-shadow: -10px 8px 24px -6px rgba(41, 45, 43, 0.14), 0 4px 12px -2px rgba(41, 45, 43, 0.06) !important;
+  border: 1px solid rgba(41, 45, 43, 0.20) !important;
+  box-shadow: none !important;
   color: #292d2b !important;
 }
 
@@ -1061,7 +1061,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
   background: #ffffff !important;
   background-color: #ffffff !important;
   border: 1px solid color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
-  box-shadow: 0 24px 48px -10px rgba(41, 45, 43, 0.22), -8px 12px 24px -6px color-mix(in srgb, var(--accent-color, #5c6ac4) 22%, transparent) !important;
+  box-shadow: none !important;
 }
 
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) header div[class*="absolute"] button:not(.no-layer-btn):not(.btn-primary):not(.glass-button-gold):not([class*="bg-[#b99881]"]):hover,
@@ -1269,7 +1269,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#4a443f]"]:not(:hover),
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .border-\[\#4a443f\]:not(:hover),
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#b99881]"]:not(:hover) {
-  border-color: rgba(41, 45, 43, 0.14) !important;
+  border-color: rgba(41, 45, 43, 0.20) !important;
 }
 
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button[class*="hover:border-[#b99881]"]:hover,
@@ -1840,7 +1840,7 @@ html[data-theme-accent="night"] main [class*="bg-[#1f1c19]"]:not([class*="z-50"]
 html[data-theme-accent="night"] main [class*="bg-[#3d3733]"]:not([class*="z-50"]):not([class*="absolute"]):not([class*="fixed"]) {
   background: #202220 !important;
   background-color: #202220 !important;
-  border: 1px solid rgba(244, 241, 234, 0.09) !important;
+  border: 1px solid rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
 }
@@ -2020,7 +2020,16 @@ html[data-theme-accent="night"] optgroup {
 /* Kenarlıklar (Borders) */
 html[data-theme-accent="night"] [class*="border-[#4a443f]"]:not(:hover),
 html[data-theme-accent="night"] .border-\[\#4a443f\]:not(:hover) {
-  border-color: rgba(244, 241, 234, 0.11) !important;
+  border-color: rgba(244, 241, 234, 0.19) !important;
+}
+
+/* Tüm sayfa içi kartların gölge efektini tamamen kaldır */
+main .glass-card,
+main .glass-card-static,
+main .glass-panel,
+main .glass-panel-elevated,
+main [class*="shadow-"] {
+  box-shadow: none !important;
 }
 
 
