@@ -320,7 +320,7 @@ export const CreativeScheduleView: React.FC = () => {
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
-                Özel Günler & Kreatif Üretim Çizelgesi
+                Çizelge
               </h2>
               <p className="text-[11px] text-[#a69f99] hidden sm:block">
                 {viewMode === 'calendar'

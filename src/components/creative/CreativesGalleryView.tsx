@@ -199,7 +199,7 @@ export function CreativesGalleryView() {
           </div>
           <div>
             <h1 className="text-base font-bold text-white tracking-tight">
-              Kreatif Stüdyo & Onay Panosu
+              Stüdyo
             </h1>
             <p className="text-xs text-[#a69f99]">
               Reklam kreatifleri, sosyal medya tasarımları, 3D renderlar ve ekip içi revize/yorum akışı

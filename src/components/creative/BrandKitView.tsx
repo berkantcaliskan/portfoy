@@ -98,7 +98,7 @@ export function BrandKitView() {
         </div>
         <div>
           <h1 className="text-base font-bold text-white tracking-tight">
-            Marka Rehberi & Kurumsal Materyal Standartları
+            Marka Rehberi
           </h1>
           <p className="text-xs text-[#a69f99]">
             Demirtürk İnşaat renk paleti, tipografi kuralları ve sosyal medya/Meta reklam güvenli alan ölçüleri

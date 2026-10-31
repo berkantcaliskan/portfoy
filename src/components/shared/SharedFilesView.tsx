@@ -25,6 +25,7 @@ import {
   ZoomOut,
   RotateCcw,
   Play,
+  Pencil,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassModal } from '@/components/ui/GlassModal'
@@ -32,7 +33,7 @@ import {
   sharedFileStore,
   SharedFile,
   ShareTarget,
-  FileCategory,
+  sanitizeFileNotes,
 } from '@/services/sharedFileStore'
 import { userStore, AppUser } from '@/services/userStore'
 import { Department, CANONICAL_DEPARTMENTS } from '@/types/department'
@@ -44,6 +45,7 @@ import {
 
 type FileViewMode = 'LIST' | 'LARGE' | 'SMALL'
 type FileSortOrder = 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC' | 'SIZE_DESC' | 'SIZE_ASC'
+type FileKindFilter = 'ALL' | 'PHOTO' | 'VIDEO' | 'DOCUMENT'
 
 interface PendingUploadItem {
   id: string
@@ -154,7 +156,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 export const SharedFilesView: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
   const [files, setFiles] = useState<SharedFile[]>(() => sharedFileStore.getFilesForUser(currentUser))
-  const [selectedFolder, setSelectedFolder] = useState<string>('ALL')
+  const [selectedKindFilter, setSelectedKindFilter] = useState<FileKindFilter>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<FileViewMode>('LARGE')
   const [sortOrder, setSortOrder] = useState<FileSortOrder>('NEWEST')
@@ -162,6 +164,10 @@ export const SharedFilesView: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [downloadSuccessMessage, setDownloadSuccessMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Inline note editing state
+  const [editingNoteFileId, setEditingNoteFileId] = useState<string | null>(null)
+  const [editingNoteValue, setEditingNoteValue] = useState('')
 
   // In-App Preview Modal State
   const [previewFile, setPreviewFile] = useState<SharedFile | null>(null)
@@ -177,7 +183,7 @@ export const SharedFilesView: React.FC = () => {
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [isReadingFiles, setIsReadingFiles] = useState(false)
 
-  const [folder, setFolder] = useState<FileCategory>('Proje Katalogları')
+  const [uploadNotes, setUploadNotes] = useState('')
   const [shareTarget, setShareTarget] = useState<ShareTarget>('DEPARTMENTS')
   const [selectedDepts, setSelectedDepts] = useState<Department[]>(() => {
     const d = userStore.getCurrentUser()?.department
@@ -255,17 +261,68 @@ export const SharedFilesView: React.FC = () => {
     }
   }, [previewFile])
 
-  const categories: FileCategory[] = [
-    'Proje Katalogları',
-    'Satış Sözleşmeleri',
-    'Mimari Çizimler',
-    'Lansman Videoları',
-    'Finans & Muhasebe',
+  const getFileKindCategory = (type: SharedFile['type']): 'PHOTO' | 'VIDEO' | 'DOCUMENT' => {
+    if (type === 'image') return 'PHOTO'
+    if (type === 'video') return 'VIDEO'
+    return 'DOCUMENT'
+  }
+
+  const getFileKindLabel = (type: SharedFile['type']): string => {
+    if (type === 'image') return 'Fotoğraf'
+    if (type === 'video') return 'Video'
+    if (type === 'audio') return 'Ses'
+    return 'Belge'
+  }
+
+  const getFileNotesText = (file: SharedFile): string => {
+    return sanitizeFileNotes(file.notes, file.folder)
+  }
+
+  const handleSaveNote = (fileId: string) => {
+    if (!currentUser) return
+    sharedFileStore.updateFileNotes(fileId, editingNoteValue, currentUser)
+    if (previewFile && previewFile.id === fileId) {
+      setPreviewFile({ ...previewFile, notes: editingNoteValue.trim(), folder: editingNoteValue.trim() })
+    }
+    setEditingNoteFileId(null)
+    setEditingNoteValue('')
+  }
+
+  const kindTabs: { id: FileKindFilter; label: string; count: number }[] = [
+    { id: 'ALL', label: 'Tümü', count: files.length },
+    {
+      id: 'PHOTO',
+      label: 'Fotoğraf',
+      count: files.filter((f) => getFileKindCategory(f.type) === 'PHOTO').length,
+    },
+    {
+      id: 'VIDEO',
+      label: 'Video',
+      count: files.filter((f) => getFileKindCategory(f.type) === 'VIDEO').length,
+    },
+    {
+      id: 'DOCUMENT',
+      label: 'Belge',
+      count: files.filter((f) => getFileKindCategory(f.type) === 'DOCUMENT').length,
+    },
   ]
 
   const filteredFiles = files.filter((f) => {
-    if (selectedFolder !== 'ALL' && f.folder !== selectedFolder) return false
-    if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
+    if (selectedKindFilter !== 'ALL' && getFileKindCategory(f.type) !== selectedKindFilter) {
+      return false
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      const noteText = getFileNotesText(f).toLowerCase()
+      const kindText = getFileKindLabel(f.type).toLowerCase()
+      if (
+        !f.name.toLowerCase().includes(q) &&
+        !noteText.includes(q) &&
+        !kindText.includes(q)
+      ) {
+        return false
+      }
+    }
     return true
   })
 
@@ -413,7 +470,7 @@ export const SharedFilesView: React.FC = () => {
       sharedFileStore.uploadFile(
         {
           name: item.customName.trim() || item.file.name,
-          folder,
+          notes: uploadNotes.trim(),
           type: item.detectedType,
           size: item.sizeText,
           mimeType: item.mimeType,
@@ -434,6 +491,7 @@ export const SharedFilesView: React.FC = () => {
     const uploadedCount = pendingFiles.length
     setIsUploadModalOpen(false)
     setPendingFiles([])
+    setUploadNotes('')
     setSelectedMemberIds([])
     setDownloadSuccessMessage(
       uploadedCount === 1
@@ -542,34 +600,27 @@ export const SharedFilesView: React.FC = () => {
         </div>
       )}
 
-      {/* Kategori, Arama, Sıralama ve Görünüm Çubuğu */}
+      {/* Dosya Türü Sekmeleri, Arama, Sıralama ve Görünüm Çubuğu */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Sol: Klasör Sekmeleri */}
+        {/* Sol: Tür Sekmeleri (Tümü / Fotoğraf / Video / Belge) */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <button
-            onClick={() => setSelectedFolder('ALL')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
-              selectedFolder === 'ALL'
-                ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
-            }`}
-          >
-            Tümü ({files.length})
-          </button>
-          {categories.map((cat) => {
-            const count = files.filter((f) => f.folder === cat).length
-            const isSelected = selectedFolder === cat
+          {kindTabs.map((tab) => {
+            const count =
+              tab.id === 'ALL'
+                ? files.length
+                : files.filter((f) => getFileKindCategory(f.type) === tab.id).length
+            const isSelected = selectedKindFilter === tab.id
             return (
               <button
-                key={cat}
-                onClick={() => setSelectedFolder(cat)}
+                key={tab.id}
+                onClick={() => setSelectedKindFilter(tab.id)}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
                   isSelected
                     ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
                     : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
                 }`}
               >
-                {cat} ({count})
+                {tab.label} ({count})
               </button>
             )
           })}
@@ -582,7 +633,7 @@ export const SharedFilesView: React.FC = () => {
             <Search className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Dosyalarda ara..."
+              placeholder="Dosya veya notlarda ara..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
@@ -669,7 +720,8 @@ export const SharedFilesView: React.FC = () => {
               <thead>
                 <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
                   <th className="py-3 px-4">Dosya Adı</th>
-                  <th className="py-3 px-4">Kategori</th>
+                  <th className="py-3 px-4">Tür</th>
+                  <th className="py-3 px-4">Notlar</th>
                   <th className="py-3 px-4">Erişim Hedefi</th>
                   <th className="py-3 px-4">Boyut</th>
                   <th className="py-3 px-4">Yükleyen</th>
@@ -683,6 +735,9 @@ export const SharedFilesView: React.FC = () => {
                     file.uploadedByUserId === currentUser?.id ||
                     currentUser?.role === 'ADMIN' ||
                     currentUser?.isManager
+                  const canEditNote = isOwner || file.permissions.canEdit
+                  const noteText = getFileNotesText(file)
+                  const isEditingThisNote = editingNoteFileId === file.id
                   return (
                     <tr
                       key={file.id}
@@ -697,7 +752,64 @@ export const SharedFilesView: React.FC = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-[#d6beae] whitespace-nowrap">{file.folder}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#34302d] text-[#d6beae] border border-[#4a443f]">
+                          {getFileKindLabel(file.type)}
+                        </span>
+                      </td>
+                      <td
+                        className="py-3 px-4 max-w-[260px]"
+                        onClick={(e) => {
+                          if (isEditingThisNote) e.stopPropagation()
+                        }}
+                      >
+                        {isEditingThisNote ? (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingNoteValue}
+                              onChange={(e) => setEditingNoteValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveNote(file.id)
+                                if (e.key === 'Escape') setEditingNoteFileId(null)
+                              }}
+                              placeholder="Not yazın..."
+                              className="w-full px-2.5 py-1 rounded-lg bg-[#1d1b19] border border-[#b99881] text-xs text-white focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveNote(file.id)}
+                              className="p-1 rounded-full bg-[#b99881] text-[#282522] hover:opacity-90 cursor-pointer shrink-0"
+                              title="Notu Kaydet"
+                            >
+                              <Check className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 group/note">
+                            <span
+                              className={`truncate ${noteText ? 'text-[#d6beae]' : 'text-[#6e6862] italic'}`}
+                              title={noteText || 'Not eklenmemiş'}
+                            >
+                              {noteText || '—'}
+                            </span>
+                            {canEditNote && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setEditingNoteFileId(file.id)
+                                  setEditingNoteValue(noteText)
+                                }}
+                                className="opacity-0 group-hover/note:opacity-100 text-[10px] text-[#b99881] hover:underline shrink-0 cursor-pointer"
+                              >
+                                {noteText ? 'Düzenle' : '+ Not'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {getTargetBadge(file)}
@@ -749,27 +861,31 @@ export const SharedFilesView: React.FC = () => {
           </div>
         </div>
       ) : viewMode === 'LARGE' ? (
-        /* 2. BÜYÜK GÖRÜNÜM (Geniş Kartlar & Canlı Görsel/Video/Belge Önizleme) */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        /* 2. BÜYÜK GÖRÜNÜM (Birkaç px küçültülmüş kartlar & Canlı Fotoğraf/Video/Belge Önizleme) */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
           {sortedFiles.map((file) => {
             const isOwner =
               file.uploadedByUserId === currentUser?.id ||
               currentUser?.role === 'ADMIN' ||
               currentUser?.isManager
+            const canEditNote = isOwner || file.permissions.canEdit
+            const noteText = getFileNotesText(file)
+            const isEditingThisNote = editingNoteFileId === file.id
             const isImagePreview =
               file.type === 'image' && file.fileDataUrl && file.fileDataUrl.startsWith('data:image/')
             const isVideoPreview =
               file.type === 'video' && file.fileDataUrl && file.fileDataUrl.startsWith('data:video/')
+            const kindLabel = getFileKindLabel(file.type)
 
             return (
               <div
                 key={file.id}
                 onClick={() => setPreviewFile(file)}
-                className="group p-5 rounded-[22px] bg-[#282522] border border-[#4a443f] hover:border-[#b99881]/70 transition-all duration-200 flex flex-col justify-between space-y-3.5 cursor-pointer"
+                className="group p-3.5 rounded-[18px] bg-[#282522] border border-[#4a443f] hover:border-[#b99881]/70 transition-all duration-200 flex flex-col justify-between space-y-2.5 cursor-pointer"
               >
-                <div className="space-y-3">
-                  {/* Üst Önizleme Kutusu */}
-                  <div className="h-32 rounded-[16px] bg-[#34302d] flex items-center justify-center overflow-hidden relative border border-[#4a443f]/50">
+                <div className="space-y-2.5">
+                  {/* Üst Önizleme Kutusu (Birkaç px küçültüldü: h-[108px]) */}
+                  <div className="h-[108px] rounded-[14px] bg-[#34302d] flex items-center justify-center overflow-hidden relative border border-[#4a443f]/50">
                     {isImagePreview ? (
                       <img
                         src={file.fileDataUrl}
@@ -785,40 +901,108 @@ export const SharedFilesView: React.FC = () => {
                           className="w-full h-full object-cover opacity-85"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                          <div className="w-10 h-10 rounded-full bg-[#b99881]/90 text-[#282522] flex items-center justify-center shadow-lg">
-                            <Play className="w-5 h-5 fill-current ml-0.5" />
+                          <div className="w-9 h-9 rounded-full bg-[#b99881]/90 text-[#282522] flex items-center justify-center shadow-lg">
+                            <Play className="w-4 h-4 fill-current ml-0.5" />
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-1.5">
-                        {getFileIcon(file.type, 'w-9 h-9')}
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8c857f]">
-                          {file.type} • {file.size}
+                      <div className="flex flex-col items-center gap-1">
+                        {getFileIcon(file.type, 'w-8 h-8')}
+                        <span className="text-[10px] font-bold tracking-wide text-[#d6beae]">
+                          {kindLabel} • {file.size}
                         </span>
                       </div>
                     )}
 
+                    {/* Sol üst tür ibaresi (Fotoğraf / Video / Belge) */}
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[#282522]/85 backdrop-blur-sm border border-[#4a443f]/70 text-[10px] font-semibold text-[#f3efe9]">
+                      {kindLabel}
+                    </span>
+
                     {/* Hover Önizle Etiketi */}
                     <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#b99881] text-[#282522] text-xs font-bold shadow-md">
-                        <Eye className="w-3.5 h-3.5" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#b99881] text-[#282522] text-[11px] font-bold shadow-md">
+                        <Eye className="w-3 h-3" />
                         Önizle
                       </span>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-bold text-white group-hover:text-[#b99881] transition-colors truncate" title={file.name}>
+                    <h4 className="text-[13px] font-bold text-white group-hover:text-[#b99881] transition-colors truncate" title={file.name}>
                       {file.name}
                     </h4>
-                    <div className="text-[11px] text-[#8c857f] mt-0.5">
-                      {file.folder} • {formatDateOnly(file.createdAt)}
+                    <div className="text-[10.5px] text-[#8c857f] mt-0.5 flex items-center gap-1.5">
+                      <span className="text-[#d6beae] font-medium">{kindLabel}</span>
+                      <span>•</span>
+                      <span>{formatDateOnly(file.createdAt)}</span>
+                      <span>•</span>
+                      <span className="font-mono">{file.size}</span>
                     </div>
                   </div>
 
+                  {/* Notlar Alanı */}
+                  <div
+                    onClick={(e) => {
+                      if (isEditingThisNote) e.stopPropagation()
+                    }}
+                  >
+                    {isEditingThisNote ? (
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingNoteValue}
+                          onChange={(e) => setEditingNoteValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveNote(file.id)
+                            if (e.key === 'Escape') setEditingNoteFileId(null)
+                          }}
+                          placeholder="Neyle ilgili olduğunu yazın..."
+                          className="w-full px-2.5 py-1 rounded-lg bg-[#1d1b19] border border-[#b99881] text-[11px] text-white focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveNote(file.id)}
+                          className="p-1 rounded-full bg-[#b99881] text-[#282522] hover:opacity-90 cursor-pointer shrink-0"
+                          title="Notu Kaydet"
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : noteText ? (
+                      <div
+                        onClick={(e) => {
+                          if (!canEditNote) return
+                          e.stopPropagation()
+                          setEditingNoteFileId(file.id)
+                          setEditingNoteValue(noteText)
+                        }}
+                        className={`text-[11px] text-[#d6beae] bg-[#34302d]/70 border border-[#4a443f]/60 rounded-[10px] px-2.5 py-1.5 line-clamp-2 ${
+                          canEditNote ? 'hover:border-[#b99881]/60' : ''
+                        }`}
+                        title={canEditNote ? `${noteText} (Düzenlemek için tıklayın)` : noteText}
+                      >
+                        {noteText}
+                      </div>
+                    ) : canEditNote ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingNoteFileId(file.id)
+                          setEditingNoteValue('')
+                        }}
+                        className="text-[10.5px] text-[#8c857f] hover:text-[#b99881] transition-colors cursor-pointer"
+                      >
+                        + Not ekle...
+                      </button>
+                    ) : null}
+                  </div>
+
                   {/* Hedef ve Yetki Etiketleri */}
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {getTargetBadge(file)}
                     {file.permissions.canEdit && (
                       <span className="text-[10px] text-emerald-400 font-medium">Düzenlenebilir</span>
@@ -827,15 +1011,15 @@ export const SharedFilesView: React.FC = () => {
                 </div>
 
                 <div
-                  className="pt-2 flex items-center justify-between text-[11px] text-[#8c857f]"
+                  className="pt-1.5 flex items-center justify-between text-[10.5px] text-[#8c857f]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="truncate">Yükleyen: {file.uploadedByUserName}</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       onClick={() => setPreviewFile(file)}
-                      className="p-2 rounded-full bg-[#34302d] hover:bg-[#b99881]/25 text-[#d6beae] hover:text-white transition-colors cursor-pointer"
+                      className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881]/25 text-[#d6beae] hover:text-white transition-colors cursor-pointer"
                       title="Uygulama İçinde Önizle"
                     >
                       <Eye className="w-3.5 h-3.5" />
@@ -843,7 +1027,7 @@ export const SharedFilesView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleDownload(file)}
-                      className="p-2 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#b99881] hover:text-[#282522] transition-colors cursor-pointer"
+                      className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#b99881] hover:text-[#282522] transition-colors cursor-pointer"
                       title="Dosyayı İndir"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -852,7 +1036,7 @@ export const SharedFilesView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDelete(file)}
-                        className="p-2 rounded-full bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-full bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
                         title="Dosyayı Sil"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -865,67 +1049,111 @@ export const SharedFilesView: React.FC = () => {
           })}
         </div>
       ) : (
-        /* 3. KÜÇÜK GÖRÜNÜM (Kompakt Çoklu Izgara) */
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        /* 3. KÜÇÜK GÖRÜNÜM (Kartın solunda canlı önizleme, bilgi sağ yanda) */
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {sortedFiles.map((file) => {
             const isOwner =
               file.uploadedByUserId === currentUser?.id ||
               currentUser?.role === 'ADMIN' ||
               currentUser?.isManager
+            const isImagePreview =
+              file.type === 'image' && file.fileDataUrl && file.fileDataUrl.startsWith('data:image/')
+            const isVideoPreview =
+              file.type === 'video' && file.fileDataUrl && file.fileDataUrl.startsWith('data:video/')
+            const kindLabel = getFileKindLabel(file.type)
+            const noteText = getFileNotesText(file)
 
             return (
               <div
                 key={file.id}
                 onClick={() => setPreviewFile(file)}
-                className="p-3.5 rounded-[18px] bg-[#282522] border border-[#4a443f] hover:border-[#b99881]/70 transition-all duration-200 flex flex-col justify-between space-y-2.5 cursor-pointer"
+                className="group p-2.5 sm:p-3 rounded-[18px] bg-[#282522] border border-[#4a443f] hover:border-[#b99881]/70 transition-all duration-200 flex items-center gap-3 cursor-pointer"
               >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    {getFileIcon(file.type, 'w-5 h-5')}
-                    <span className="text-[10px] font-mono text-[#8c857f]">{file.size}</span>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white hover:text-[#b99881] transition-colors truncate" title={file.name}>
-                      {file.name}
-                    </h4>
-                    <div className="text-[10px] text-[#8c857f] truncate mt-0.5">
-                      {file.folder}
+                {/* Sol: Canlı Önizleme Kutusu */}
+                <div className="w-20 h-20 sm:w-24 sm:h-20 rounded-[13px] bg-[#34302d] shrink-0 overflow-hidden relative border border-[#4a443f]/50 flex items-center justify-center">
+                  {isImagePreview ? (
+                    <img
+                      src={file.fileDataUrl}
+                      alt={file.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : isVideoPreview ? (
+                    <div className="relative w-full h-full flex items-center justify-center bg-black/50">
+                      <video
+                        src={file.fileDataUrl}
+                        muted
+                        preload="metadata"
+                        className="w-full h-full object-cover opacity-85"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <div className="w-7 h-7 rounded-full bg-[#b99881]/90 text-[#282522] flex items-center justify-center shadow">
+                          <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-1 px-1 text-center">
+                      {getFileIcon(file.type, 'w-6 h-6')}
+                      <span className="text-[9.5px] font-bold text-[#d6beae]">
+                        {kindLabel}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                <div
-                  className="pt-1 flex items-center justify-between gap-1"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="truncate">{getTargetBadge(file)}</div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewFile(file)}
-                      className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881]/25 text-[#d6beae] hover:text-white transition-colors cursor-pointer"
-                      title="Önizle"
-                    >
-                      <Eye className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(file)}
-                      className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#b99881] hover:text-[#282522] transition-colors cursor-pointer"
-                      title="Dosyayı İndir"
-                    >
-                      <Download className="w-3 h-3" />
-                    </button>
-                    {isOwner && (
+                {/* Sağ: Dosya Bilgileri ve İşlemler */}
+                <div className="min-w-0 flex-1 flex flex-col justify-between min-h-[80px]">
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-white group-hover:text-[#b99881] transition-colors truncate" title={file.name}>
+                      {file.name}
+                    </h4>
+                    <div className="text-[10px] text-[#8c857f] flex items-center gap-1.5 mt-0.5 truncate">
+                      <span className="text-[#d6beae] font-semibold">{kindLabel}</span>
+                      <span>•</span>
+                      <span className="font-mono">{file.size}</span>
+                      <span>•</span>
+                      <span>{formatDateOnly(file.createdAt)}</span>
+                    </div>
+                    {noteText && (
+                      <div className="text-[10.5px] text-[#d6beae]/90 truncate mt-1" title={noteText}>
+                        {noteText}
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    className="pt-1.5 flex items-center justify-between gap-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="truncate">{getTargetBadge(file)}</div>
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleDelete(file)}
-                        className="p-1.5 rounded-full bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
-                        title="Dosyayı Sil"
+                        onClick={() => setPreviewFile(file)}
+                        className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881]/25 text-[#d6beae] hover:text-white transition-colors cursor-pointer"
+                        title="Önizle"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Eye className="w-3 h-3" />
                       </button>
-                    )}
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(file)}
+                        className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#b99881] text-[#b99881] hover:text-[#282522] transition-colors cursor-pointer"
+                        title="Dosyayı İndir"
+                      >
+                        <Download className="w-3 h-3" />
+                      </button>
+                      {isOwner && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(file)}
+                          className="p-1.5 rounded-full bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                          title="Dosyayı Sil"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -941,7 +1169,7 @@ export const SharedFilesView: React.FC = () => {
         title={previewFile ? previewFile.name : 'Dosya Önizleme'}
         description={
           previewFile
-            ? `${previewFile.folder} • ${previewFile.size} • Yükleyen: ${previewFile.uploadedByUserName} (${formatDateOnly(previewFile.createdAt)})`
+            ? `${getFileKindLabel(previewFile.type)} • ${previewFile.size} • Yükleyen: ${previewFile.uploadedByUserName} (${formatDateOnly(previewFile.createdAt)})${getFileNotesText(previewFile) ? ` • Not: ${getFileNotesText(previewFile)}` : ''}`
             : undefined
         }
         maxWidth="5xl"
@@ -1337,22 +1565,18 @@ export const SharedFilesView: React.FC = () => {
             </div>
           )}
 
-          {/* Kategori Seçimi */}
+          {/* Notlar (Dosyanın neyle ilgili olduğu) */}
           <div>
             <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
-              Kategori / Klasör
+              Notlar
             </label>
-            <select
-              value={folder}
-              onChange={(e) => setFolder(e.target.value as FileCategory)}
-              className="w-full px-3 py-1.5 rounded-[12px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
-            >
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={uploadNotes}
+              onChange={(e) => setUploadNotes(e.target.value)}
+              placeholder="Neyle ilgili olduğunu yazın (Örn: Portre projesi güncel katalog ve kat planları)..."
+              className="w-full px-3 py-1.5 rounded-[12px] bg-[#24211f] border border-[#4a443f] text-xs text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
+            />
           </div>
 
           {/* Hedef Seçimi (Tüm Ekip, Departmanlar, Kişilerle Paylaş, Yönetim) */}

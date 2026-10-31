@@ -5,7 +5,21 @@ import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { sharedFileToRow, rowToSharedFile } from './dbMapper'
 
 export type ShareTarget = 'ALL_TEAM' | 'DEPARTMENTS' | 'MEMBERS' | 'MANAGEMENT'
-export type FileCategory = 'Proje Katalogları' | 'Satış Sözleşmeleri' | 'Mimari Çizimler' | 'Lansman Videoları' | 'Finans & Muhasebe'
+export type FileCategory = string
+
+const LEGACY_CATEGORIES = new Set([
+  'Proje Katalogları',
+  'Satış Sözleşmeleri',
+  'Mimari Çizimler',
+  'Lansman Videoları',
+  'Finans & Muhasebe',
+])
+
+export function sanitizeFileNotes(notes?: string, folder?: string): string {
+  const raw = (notes ?? folder ?? '').trim()
+  if (!raw || LEGACY_CATEGORIES.has(raw)) return ''
+  return raw
+}
 
 export interface SharedFileAudit {
   userId: string
@@ -16,7 +30,8 @@ export interface SharedFileAudit {
 export interface SharedFile {
   id: string
   name: string
-  folder: FileCategory
+  folder?: FileCategory
+  notes?: string
   size: string
   type: 'pdf' | 'excel' | 'video' | 'image' | 'archive' | 'doc' | 'audio' | 'other'
   mimeType?: string
@@ -61,11 +76,16 @@ class SharedFileStore {
 
   public setLoadedFiles(files: SharedFile[]) {
     const byId = new Map<string, SharedFile>()
-    for (const f of files || []) byId.set(f.id, f)
+    for (const f of files || []) {
+      const cleanNotes = sanitizeFileNotes(f.notes, f.folder)
+      byId.set(f.id, { ...f, notes: cleanNotes, folder: cleanNotes })
+    }
     for (const local of this.files) {
       if (!byId.has(local.id)) {
-        byId.set(local.id, local)
-        this.persistCloudFile(local)
+        const cleanNotes = sanitizeFileNotes(local.notes, local.folder)
+        const normalized = { ...local, notes: cleanNotes, folder: cleanNotes }
+        byId.set(local.id, normalized)
+        this.persistCloudFile(normalized)
       }
     }
     this.files = Array.from(byId.values())
@@ -109,7 +129,12 @@ class SharedFileStore {
       const saved = localStorage.getItem(STORAGE_KEY_FILES)
       if (saved) {
         const parsed = JSON.parse(saved)
-        this.files = Array.isArray(parsed) ? parsed : []
+        this.files = Array.isArray(parsed)
+          ? parsed.map((f: any) => {
+              const cleanNotes = sanitizeFileNotes(f?.notes, f?.folder)
+              return { ...f, notes: cleanNotes, folder: cleanNotes }
+            })
+          : []
       } else {
         this.files = []
       }
@@ -157,7 +182,8 @@ class SharedFileStore {
   public uploadFile(
     data: {
       name: string
-      folder: FileCategory
+      folder?: FileCategory
+      notes?: string
       size?: string
       type?: SharedFile['type']
       mimeType?: string
@@ -173,10 +199,12 @@ class SharedFileStore {
     },
     user: AppUser
   ): SharedFile {
+    const cleanNotes = sanitizeFileNotes(data.notes, data.folder)
     const newFile: SharedFile = {
       id: 'f-' + Date.now() + '-' + Math.floor(100 + Math.random() * 900),
       name: data.name.trim(),
-      folder: data.folder,
+      folder: cleanNotes,
+      notes: cleanNotes,
       size: data.size || '1.0 MB',
       type: data.type || 'other',
       mimeType: data.mimeType,
@@ -201,6 +229,25 @@ class SharedFileStore {
     this.saveToStorage()
     this.persistCloudFile(newFile)
     return newFile
+  }
+
+  public updateFileNotes(
+    fileId: string,
+    notes: string,
+    user: AppUser
+  ): { success: boolean; error?: string } {
+    const file = this.files.find((f) => f.id === fileId)
+    if (!file) return { success: false, error: 'Dosya bulunamadı.' }
+    if (!permissionService.canAccessFile(user, file)) {
+      return { success: false, error: 'Bu dosyaya erişim yetkiniz yok.' }
+    }
+    const clean = notes.trim()
+    file.notes = clean
+    file.folder = clean
+    file.updatedAt = new Date().toISOString()
+    this.saveToStorage()
+    this.persistCloudFile(file)
+    return { success: true }
   }
 
   /**

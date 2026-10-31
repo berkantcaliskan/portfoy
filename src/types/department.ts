@@ -95,9 +95,9 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
   'Kreatif': [
     { id: 'dashboard', label: 'Başlangıç' },
     { id: 'creative-schedule', label: 'Çizelge' },
-    { id: 'creatives', label: 'Kreatifler' },
-    { id: 'creative-briefs', label: 'Brief & Talepler' },
-    { id: 'brand-kit', label: 'Marka & Materyal' },
+    { id: 'creatives', label: 'Stüdyo' },
+    { id: 'creative-briefs', label: "Brief'ler" },
+    { id: 'brand-kit', label: 'Marka Rehberi' },
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },

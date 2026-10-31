@@ -398,8 +398,8 @@ export async function buildFilePreview(file: SharedFile): Promise<ParsedPreviewR
           {
             name: 'Özet Tablo',
             rows: [
-              ['Kalem / Birim', 'Kategori', 'Durum', 'Bütçe / Tutar', 'Tarih'],
-              [file.name, file.folder, 'Onaylandı', '₺4.850.000', file.createdAt.slice(0, 10)],
+              ['Kalem / Birim', 'Not / Açıklama', 'Durum', 'Bütçe / Tutar', 'Tarih'],
+              [file.name, file.notes || file.folder || 'Belge', 'Onaylandı', '₺4.850.000', file.createdAt.slice(0, 10)],
               ['A Blok 1. Kat Daire 4', 'Konut Satış', 'Aktif', '₺6.200.000', file.createdAt.slice(0, 10)],
               ['B Blok Ticari Ünite 1', 'Ticari', 'Rezerve', '₺12.500.000', file.createdAt.slice(0, 10)],
             ],
@@ -414,7 +414,7 @@ export async function buildFilePreview(file: SharedFile): Promise<ParsedPreviewR
           { type: 'heading', level: 1, text: file.name },
           {
             type: 'paragraph',
-            text: `Bu belge ${file.uploadedByUserName} tarafından "${file.folder}" klasörü altında paylaşılmıştır.`,
+            text: `Bu belge ${file.uploadedByUserName} tarafından paylaşılmıştır.${file.notes ? ` Not: ${file.notes}` : ''}`,
           },
           {
             type: 'paragraph',

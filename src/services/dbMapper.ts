@@ -577,11 +577,25 @@ export function rowToApproval(r: any): ApprovalRequest {
 }
 
 // --- SHARED FILES ---
+const LEGACY_FILE_FOLDERS = new Set([
+  'Proje Katalogları',
+  'Satış Sözleşmeleri',
+  'Mimari Çizimler',
+  'Lansman Videoları',
+  'Finans & Muhasebe',
+])
+
 export function sharedFileToRow(f: SharedFile) {
+  const cleanNotes =
+    f.notes !== undefined
+      ? f.notes
+      : f.folder && !LEGACY_FILE_FOLDERS.has(f.folder)
+        ? f.folder
+        : ''
   return {
     id: f.id,
     name: f.name,
-    folder: f.folder,
+    folder: cleanNotes,
     size: f.size || null,
     type: f.type,
     uploaded_by_user_id: f.uploadedByUserId,
@@ -593,6 +607,7 @@ export function sharedFileToRow(f: SharedFile) {
     target_member_ids: f.targetMemberIds || [],
     permissions: {
       ...f.permissions,
+      notes: cleanNotes,
       mimeType: f.mimeType,
       fileDataUrl: f.fileDataUrl,
     },
@@ -603,10 +618,17 @@ export function sharedFileToRow(f: SharedFile) {
 
 export function rowToSharedFile(r: any): SharedFile {
   const perms = r.permissions || { canView: true, canEdit: false, canReshare: true }
+  const rawNotes =
+    perms.notes !== undefined
+      ? String(perms.notes || '')
+      : r.folder && !LEGACY_FILE_FOLDERS.has(String(r.folder))
+        ? String(r.folder)
+        : ''
   return {
     id: r.id,
     name: r.name,
-    folder: r.folder,
+    folder: rawNotes,
+    notes: rawNotes,
     size: r.size || '1.0 MB',
     type: r.type || 'other',
     mimeType: perms.mimeType || undefined,

@@ -111,7 +111,7 @@ export function CreativeBriefsView() {
           </div>
           <div>
             <h1 className="text-base font-bold text-white tracking-tight">
-              Kreatif Brief & Tasarım Talepleri
+              Brief&apos;ler
             </h1>
             <p className="text-xs text-[#a69f99]">
               Pazarlama, Satış ve Yönetim departmanlarından gelen kreatif briefler ve teslimat takibi
