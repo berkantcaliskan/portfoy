@@ -17,35 +17,35 @@ const BRAND_COLORS = [
     hex: '#0F172A',
     rgb: '15, 23, 42',
     usage: 'Ana zemin, kurumsal antet ve katalog arka planları',
-    previewClass: 'bg-[#0F172A]',
+    isLight: false,
   },
   {
     name: 'Demirtürk Prestij Altın',
     hex: '#D4AF37',
     rgb: '212, 175, 55',
     usage: 'Ödeme kampanyası vurguları, rozetler ve CTA butonları',
-    previewClass: 'bg-[#D4AF37]',
+    isLight: true,
   },
   {
     name: 'Portföy İndigo Aksan',
     hex: '#6366F1',
     rgb: '99, 102, 241',
     usage: 'Dijital reklam çerçeveleri ve modern proje vurguları',
-    previewClass: 'bg-[#6366F1]',
+    isLight: false,
   },
   {
     name: 'Karasu Sahil Turkuazı',
     hex: '#0EA5E9',
     rgb: '14, 165, 233',
     usage: 'Havuz, deniz mesafesi ve yaz lansmanı kreatifleri',
-    previewClass: 'bg-[#0EA5E9]',
+    isLight: false,
   },
   {
     name: 'Mimari Kırık Beyaz',
     hex: '#F8FAFC',
     rgb: '248, 250, 252',
     usage: 'Ana tipografi, okunabilir başlıklar ve açık tema kataloglar',
-    previewClass: 'bg-[#F8FAFC]',
+    isLight: true,
   },
 ]
 
@@ -104,141 +104,176 @@ export function BrandKitView() {
         </p>
       </div>
 
-      {/* Color Palette */}
-      <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-white">Kurumsal Renk Paleti</h2>
-            <p className="text-xs text-[#a69f99]">
-              HEX kodunu kopyalamak için renk kartına tıklayın
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-          {BRAND_COLORS.map((color) => (
-            <div
-              key={color.hex}
-              onClick={() => handleCopyHex(color.hex)}
-              className="group rounded-2xl bg-[#34302d] border border-[#4a443f] overflow-hidden cursor-pointer transition-all"
-            >
-              <div
-                className={`dark-preview-canvas h-24 ${color.previewClass} relative flex items-end justify-end p-2.5`}
-              >
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-[10px] font-bold text-white">
-                  {copiedHex === color.hex ? (
-                    <>
-                      <Check className="w-3 h-3" />
-                      Kopyalandı
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      {color.hex}
-                    </>
-                  )}
-                </span>
-              </div>
-              <div className="p-3.5 space-y-1">
-                <h3 className="text-xs font-bold text-white">{color.name}</h3>
-                <p className="text-[10px] text-[#8c857f] font-mono">RGB: {color.rgb}</p>
-                <p className="text-[11px] text-[#a69f99] leading-snug pt-1">{color.usage}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-
-      {/* Typography & Safe Zones */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Typography */}
-        <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-4">
-          <div className="flex items-center gap-2">
-            <Type className="w-4 h-4 text-[#b99881]" />
-            <h2 className="text-sm font-bold text-white">
-              Kurumsal Tipografi & Metin Hiyerarşisi
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            <div className="rounded-2xl bg-[#34302d] p-3.5">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold text-[#b99881]">
-                  Ana Başlık Fontu (Display / Headline)
-                </span>
-                <span className="text-[11px] text-[#a69f99]">
-                  Montserrat / Plus Jakarta Sans Bold
-                </span>
-              </div>
-              <p className="text-lg font-extrabold text-white tracking-tight">
-                KARASU’DA YENİ NESİL YATIRIM
-              </p>
-              <p className="text-[11px] text-[#a69f99] mt-1">
-                Büyük harf, sıkı satır aralığı (-2% tracking), yüksek kontrast.
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-[#34302d] p-3.5">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold text-[#b99881]">
-                  Gövde & Katalog Metni
-                </span>
-                <span className="text-[11px] text-[#a69f99]">Inter Medium / Regular</span>
-              </div>
-              <p className="text-xs text-white leading-relaxed">
-                %30 peşinat ve 36 ay Demirtürk İnşaat güvencesiyle elden senet imkanı tüm projelerimizde geçerlidir.
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-[#34302d] p-3.5">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold text-[#b99881]">
-                  Zorunlu Kurumsal Alt Bilgi (Footer)
-                </span>
-                <span className="text-[11px] text-[#a69f99]">Tüm Reklam Kreatifleri</span>
-              </div>
-              <p className="text-xs text-white">
-                demirturkinsaat.com • 444 / Kurumsal İletişim Hattı • Demirtürk İnşaat Logosu
+      {/* Üst Satır: Sol %75 Kurumsal Renk Paleti (Bitişik) + Sağ %25 Kurumsal Tipografi */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 items-stretch">
+        {/* Sol %75: Kurumsal Renk Paleti */}
+        <GlassCard className="xl:col-span-3 p-5 bg-[#282522] border-[#4a443f] flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-white">Kurumsal Renk Paleti</h2>
+              <p className="text-xs text-[#a69f99]">
+                HEX kodunu kopyalamak için ilgili renk sütununa tıklayın
               </p>
             </div>
           </div>
-        </GlassCard>
 
-        {/* Social & Ad Format Dimensions */}
-        <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-4">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[#b99881]" />
-            <h2 className="text-sm font-bold text-white">
-              Sosyal Medya & Meta Reklam Ölçü Standartları
-            </h2>
-          </div>
+          <div className="dark-preview-canvas grid grid-cols-1 sm:grid-cols-5 gap-0 rounded-[20px] overflow-hidden border border-black/10 shadow-sm flex-1 min-h-[290px]">
+            {BRAND_COLORS.map((color) => {
+              const fgMain = color.isLight ? '#0F172A' : '#FFFFFF'
+              const fgSub = color.isLight ? 'rgba(15, 23, 42, 0.78)' : 'rgba(255, 255, 255, 0.85)'
+              const fgMuted = color.isLight ? 'rgba(15, 23, 42, 0.62)' : 'rgba(255, 255, 255, 0.70)'
+              const pillBg = color.isLight ? 'rgba(15, 23, 42, 0.10)' : 'rgba(0, 0, 0, 0.28)'
 
-          <div className="space-y-2.5">
-            {FORMAT_SPECS.map((spec) => {
-              const Icon = spec.icon
               return (
                 <div
-                  key={spec.title}
-                  className="rounded-2xl bg-[#34302d] p-3.5 flex items-start gap-3"
+                  key={color.hex}
+                  onClick={() => handleCopyHex(color.hex)}
+                  style={{ backgroundColor: color.hex, color: fgMain }}
+                  className="group relative flex flex-col justify-between p-4 sm:p-4 min-h-[220px] sm:min-h-[290px] cursor-pointer transition-all duration-200 hover:brightness-[1.03]"
                 >
-                  <div className="w-9 h-9 rounded-2xl bg-[#282522] border border-[#4a443f] flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-[#b99881]" />
+                  {/* Üst: Kopyala / HEX Rozeti */}
+                  <div className="flex items-center justify-end">
+                    <span
+                      style={{ backgroundColor: pillBg, color: fgMain }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full backdrop-blur-md text-[11px] font-bold tracking-wide transition-transform group-hover:scale-105"
+                    >
+                      {copiedHex === color.hex ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          Kopyalandı
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 opacity-80" />
+                          {color.hex}
+                        </>
+                      )}
+                    </span>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-xs font-bold text-white">{spec.title}</h3>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#282522] text-[10px] font-bold text-[#d6beae]">
-                        {spec.ratio} • {spec.resolution}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#a69f99] leading-snug">{spec.safeZone}</p>
+
+                  {/* Alt: Renk Adı, RGB ve Kullanım Bilgisi doğrudan rengin içinde */}
+                  <div className="space-y-1.5 pt-8">
+                    <h3
+                      style={{ color: fgMain }}
+                      className="text-sm font-bold leading-snug"
+                    >
+                      {color.name}
+                    </h3>
+                    <p
+                      style={{ color: fgMuted }}
+                      className="text-[11px] font-mono font-semibold"
+                    >
+                      HEX: {color.hex} • RGB: {color.rgb}
+                    </p>
+                    <p
+                      style={{ color: fgSub }}
+                      className="text-xs leading-snug pt-0.5"
+                    >
+                      {color.usage}
+                    </p>
                   </div>
                 </div>
               )
             })}
           </div>
         </GlassCard>
+
+        {/* Sağ %25: Kurumsal Tipografi */}
+        <GlassCard className="xl:col-span-1 p-5 bg-[#282522] border-[#4a443f] flex flex-col justify-between space-y-4">
+          <div className="flex items-center gap-2">
+            <Type className="w-4 h-4 text-[#b99881]" />
+            <h2 className="text-sm font-bold text-white">
+              Tipografi
+            </h2>
+          </div>
+
+          <div className="space-y-3 flex-1 flex flex-col justify-between">
+            <div className="rounded-2xl bg-[#34302d] p-3.5 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-[#b99881] uppercase tracking-wider">
+                  Başlıklar
+                </span>
+                <span className="text-[11px] font-semibold text-[#a69f99]">
+                  Serif / Display
+                </span>
+              </div>
+              <div
+                style={{ fontFamily: "'The Seasons', 'Playfair Display', Georgia, serif" }}
+                className="text-xl font-bold text-white tracking-tight leading-tight pt-0.5"
+              >
+                The Seasons
+              </div>
+              <p className="text-[11px] text-[#a69f99] leading-snug">
+                Ana başlıklar, proje lansman kapakları ve prestij vurguları.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-[#34302d] p-3.5 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-[#b99881] uppercase tracking-wider">
+                  Gövde Metni
+                </span>
+                <span className="text-[11px] font-semibold text-[#a69f99]">
+                  Sans-Serif
+                </span>
+              </div>
+              <div
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                className="text-lg font-bold text-white tracking-tight leading-tight pt-0.5"
+              >
+                Plus Jakarta Sans
+              </div>
+              <p className="text-[11px] text-[#a69f99] leading-snug">
+                Açıklama metinleri, katalog içerikleri, alt başlıklar ve arayüz yazıları.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-[#34302d] p-3 space-y-1">
+              <span className="text-[11px] font-bold text-[#b99881] block">
+                Kurumsal Alt Bilgi (Footer)
+              </span>
+              <p className="text-[11px] text-white leading-snug">
+                demirturkinsaat.com • Kurumsal İletişim Hattı • Demirtürk İnşaat Logosu
+              </p>
+            </div>
+          </div>
+        </GlassCard>
       </div>
+
+      {/* Sosyal Medya & Meta Reklam Ölçü Standartları */}
+      <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-4">
+        <div className="flex items-center gap-2">
+          <Layers className="w-4 h-4 text-[#b99881]" />
+          <h2 className="text-sm font-bold text-white">
+            Sosyal Medya & Meta Reklam Ölçü Standartları
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {FORMAT_SPECS.map((spec) => {
+            const Icon = spec.icon
+            return (
+              <div
+                key={spec.title}
+                className="rounded-2xl bg-[#34302d] p-3.5 flex items-start gap-3"
+              >
+                <div className="w-9 h-9 rounded-2xl bg-[#282522] border border-[#4a443f] flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4 text-[#b99881]" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h3 className="text-xs font-bold text-white">{spec.title}</h3>
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#282522] text-[10px] font-bold text-[#d6beae]">
+                      {spec.ratio} • {spec.resolution}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#a69f99] leading-snug">{spec.safeZone}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </GlassCard>
     </div>
   )
 }
