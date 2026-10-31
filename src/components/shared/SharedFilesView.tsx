@@ -525,15 +525,15 @@ export const SharedFilesView: React.FC = () => {
   const getTargetBadge = (file: SharedFile) => {
     switch (file.shareTarget) {
       case 'ALL_TEAM':
-        return <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#3d3733] text-[#d6beae]">Tüm Ekip</span>
+        return <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#3d3733] text-[#d6beae] font-medium">Tüm Ekip</span>
       case 'DEPARTMENTS':
         return (
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 font-medium">
             {file.targetDepartments?.join(', ')}
           </span>
         )
       case 'MANAGEMENT':
-        return <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">Yönetim Özel</span>
+        return <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 font-medium">Yönetim Özel</span>
       case 'MEMBERS': {
         const names = (file.targetMemberIds || [])
           .map((id) => allUsers.find((u) => u.id === id)?.fullName)
@@ -546,7 +546,7 @@ export const SharedFilesView: React.FC = () => {
               : `${names[0]}, ${names[1]} +${names.length - 2}`
         return (
           <span
-            className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20"
+            className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium"
             title={names.length > 0 ? `Paylaşılan kişiler: ${names.join(', ')}` : 'Belirli kişilerle paylaşıldı'}
           >
             {label}
@@ -909,32 +909,32 @@ export const SharedFilesView: React.FC = () => {
                     ) : (
                       <div className="flex flex-col items-center gap-1">
                         {getFileIcon(file.type, 'w-8 h-8')}
-                        <span className="text-[10px] font-bold tracking-wide text-[#d6beae]">
+                        <span className="text-xs font-bold tracking-wide text-[#d6beae]">
                           {kindLabel} • {file.size}
                         </span>
                       </div>
                     )}
 
                     {/* Sol üst tür ibaresi (Fotoğraf / Video / Belge) */}
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[#282522]/85 backdrop-blur-sm border border-[#4a443f]/70 text-[10px] font-semibold text-[#f3efe9]">
+                    <span className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full bg-[#282522]/85 backdrop-blur-sm border border-[#4a443f]/70 text-xs font-semibold text-[#f3efe9]">
                       {kindLabel}
                     </span>
 
                     {/* Hover Önizle Etiketi */}
                     <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#b99881] text-[#282522] text-[11px] font-bold shadow-md">
-                        <Eye className="w-3 h-3" />
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#b99881] text-[#282522] text-xs font-bold shadow-md">
+                        <Eye className="w-3.5 h-3.5" />
                         Önizle
                       </span>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="text-[13px] font-bold text-white group-hover:text-[#b99881] transition-colors truncate" title={file.name}>
+                    <h4 className="text-[15px] font-bold text-white group-hover:text-[#b99881] transition-colors truncate" title={file.name}>
                       {file.name}
                     </h4>
-                    <div className="text-[10.5px] text-[#8c857f] mt-0.5 flex items-center gap-1.5">
-                      <span className="text-[#d6beae] font-medium">{kindLabel}</span>
+                    <div className="text-xs text-[#8c857f] mt-1 flex items-center gap-1.5">
+                      <span className="text-[#d6beae] font-semibold">{kindLabel}</span>
                       <span>•</span>
                       <span>{formatDateOnly(file.createdAt)}</span>
                       <span>•</span>
@@ -960,7 +960,7 @@ export const SharedFilesView: React.FC = () => {
                             if (e.key === 'Escape') setEditingNoteFileId(null)
                           }}
                           placeholder="Neyle ilgili olduğunu yazın..."
-                          className="w-full px-2.5 py-1 rounded-lg bg-[#1d1b19] border border-[#b99881] text-[11px] text-white focus:outline-none"
+                          className="w-full px-2.5 py-1 rounded-lg bg-[#1d1b19] border border-[#b99881] text-xs text-white focus:outline-none"
                         />
                         <button
                           type="button"
@@ -968,7 +968,7 @@ export const SharedFilesView: React.FC = () => {
                           className="p-1 rounded-full bg-[#b99881] text-[#282522] hover:opacity-90 cursor-pointer shrink-0"
                           title="Notu Kaydet"
                         >
-                          <Check className="w-3 h-3" />
+                          <Check className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ) : noteText ? (
@@ -979,7 +979,7 @@ export const SharedFilesView: React.FC = () => {
                           setEditingNoteFileId(file.id)
                           setEditingNoteValue(noteText)
                         }}
-                        className={`text-[11px] text-[#d6beae] bg-[#34302d]/70 border border-[#4a443f]/60 rounded-[10px] px-2.5 py-1.5 line-clamp-2 ${
+                        className={`text-xs text-[#d6beae] bg-[#34302d]/70 border border-[#4a443f]/60 rounded-[10px] px-2.5 py-1.5 line-clamp-2 ${
                           canEditNote ? 'hover:border-[#b99881]/60' : ''
                         }`}
                         title={canEditNote ? `${noteText} (Düzenlemek için tıklayın)` : noteText}
@@ -994,7 +994,7 @@ export const SharedFilesView: React.FC = () => {
                           setEditingNoteFileId(file.id)
                           setEditingNoteValue('')
                         }}
-                        className="text-[10.5px] text-[#8c857f] hover:text-[#b99881] transition-colors cursor-pointer"
+                        className="text-xs text-[#8c857f] hover:text-[#b99881] transition-colors cursor-pointer"
                       >
                         + Not ekle...
                       </button>
@@ -1005,13 +1005,13 @@ export const SharedFilesView: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-1.5">
                     {getTargetBadge(file)}
                     {file.permissions.canEdit && (
-                      <span className="text-[10px] text-emerald-400 font-medium">Düzenlenebilir</span>
+                      <span className="text-xs text-emerald-400 font-medium">Düzenlenebilir</span>
                     )}
                   </div>
                 </div>
 
                 <div
-                  className="pt-1.5 flex items-center justify-between text-[10.5px] text-[#8c857f]"
+                  className="pt-1.5 flex items-center justify-between text-xs text-[#8c857f]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="truncate">Yükleyen: {file.uploadedByUserName}</span>
@@ -1094,7 +1094,7 @@ export const SharedFilesView: React.FC = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center gap-1 px-1 text-center">
                       {getFileIcon(file.type, 'w-6 h-6')}
-                      <span className="text-[9.5px] font-bold text-[#d6beae]">
+                      <span className="text-[11px] font-bold text-[#d6beae]">
                         {kindLabel}
                       </span>
                     </div>
@@ -1104,10 +1104,10 @@ export const SharedFilesView: React.FC = () => {
                 {/* Sağ: Dosya Bilgileri ve İşlemler */}
                 <div className="min-w-0 flex-1 flex flex-col justify-between min-h-[80px]">
                   <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-white group-hover:text-[#b99881] transition-colors truncate" title={file.name}>
+                    <h4 className="text-sm font-bold text-white group-hover:text-[#b99881] transition-colors truncate" title={file.name}>
                       {file.name}
                     </h4>
-                    <div className="text-[10px] text-[#8c857f] flex items-center gap-1.5 mt-0.5 truncate">
+                    <div className="text-xs text-[#8c857f] flex items-center gap-1.5 mt-0.5 truncate">
                       <span className="text-[#d6beae] font-semibold">{kindLabel}</span>
                       <span>•</span>
                       <span className="font-mono">{file.size}</span>
@@ -1115,7 +1115,7 @@ export const SharedFilesView: React.FC = () => {
                       <span>{formatDateOnly(file.createdAt)}</span>
                     </div>
                     {noteText && (
-                      <div className="text-[10.5px] text-[#d6beae]/90 truncate mt-1" title={noteText}>
+                      <div className="text-xs text-[#d6beae]/90 truncate mt-1" title={noteText}>
                         {noteText}
                       </div>
                     )}

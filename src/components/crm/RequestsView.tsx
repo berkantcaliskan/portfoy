@@ -159,20 +159,29 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
     handleRefresh()
   }, [])
 
-  // Build unified list of requests (combining requestStore + website submissions + all leads)
+  // Build unified list of requests (combining ONLY website submissions + manually entered employee requests)
   const unifiedItems: UnifiedRequestItem[] = useMemo(() => {
     const items: UnifiedRequestItem[] = []
     const seenItemIds = new Set<string>()
 
-    // 1. Process items from requestStore (manual requests + edge function webhook requests)
+    // 1. Process items from requestStore (manual employee requests + website webhook requests)
     for (const req of requests) {
       if (seenItemIds.has(req.id)) continue
+
+      // Exclude any request that was accidentally auto-created from a Meta form lead
+      const isAccidentalMetaForm =
+        /^Başvuru Formu:/i.test(req.subject) ||
+        req.subject === 'Müşteri Kaydı' ||
+        req.subject.toLowerCase().includes('meta lead')
+      if (isAccidentalMetaForm) continue
+
       seenItemIds.add(req.id)
 
       const cleanPhone = cleanPhoneForLink(req.customerPhone)
       const isWeb =
         req.id.startsWith('req-web-') ||
-        req.subject.toLowerCase().includes('web') ||
+        req.subject.toLowerCase().includes('web sitesi') ||
+        req.subject.toLowerCase().includes('web başvurusu') ||
         req.assignedToUserName?.toLowerCase().includes('web')
 
       // Find matching lead in CRM if available
@@ -198,7 +207,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
         category: req.category,
         priority: req.priority,
         status: req.status,
-        assignedToUserName: req.assignedToUserName,
+        assignedToUserName: req.assignedToUserName || 'Çalışan',
         notes: req.notes,
         sourceType: isWeb ? 'WEBSITE' : 'MANUAL',
         formName: isWeb
@@ -215,14 +224,23 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       })
     }
 
-    // 2. Process all leads from Supabase / leadStore (ensuring website leads and inquiries are prominent)
+    // 2. Process ONLY website submissions from leads (NEVER include Meta Ads / form leads)
     for (const lead of allLeads) {
-      const isLeadWebsite =
-        lead.source === 'WEBSITE' ||
-        lead.channel?.toLowerCase().includes('web') ||
-        lead.tags?.some((t) => t.toLowerCase().includes('web'))
+      const isMetaFormLead =
+        lead.source === 'META_ADS' ||
+        Boolean(lead.metaLeadId) ||
+        lead.channel?.toLowerCase().includes('meta') ||
+        lead.channel?.toLowerCase().includes('facebook') ||
+        lead.channel?.toLowerCase().includes('instagram')
 
-      // Also check inquiries inside this lead
+      const isLeadWebsite =
+        !isMetaFormLead &&
+        (lead.source === 'WEBSITE' ||
+          lead.id.startsWith('lead-web-') ||
+          lead.channel?.toLowerCase().includes('web') ||
+          lead.tags?.some((t) => t.toLowerCase().includes('web')))
+
+      // Check inquiries inside this lead that specifically came from the website
       const webInquiries = (lead.inquiries || []).filter(
         (inq) =>
           inq.source === 'WEBSITE' ||
@@ -275,6 +293,9 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
         }
       }
 
+      // Only add lead itself if it is a website submission
+      if (!isLeadWebsite) continue
+
       const leadKey = `lead-${lead.id}`
       if (!seenItemIds.has(leadKey)) {
         seenItemIds.add(leadKey)
@@ -292,23 +313,19 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
           mappedStatus = 'İşlemde'
         }
 
-        const sourceType = isLeadWebsite ? 'WEBSITE' : lead.source === 'META_ADS' ? 'META_ADS' : 'MANUAL'
-
         items.push({
           id: leadKey,
           customerName: lead.fullName,
           customerPhone: lead.phone,
           customerEmail: lead.email,
-          subject: isLeadWebsite
-            ? (lead.formName ? `Web Sitesi: ${lead.formName}` : 'Web Sitesi İletişim / Başvuru')
-            : (lead.formName ? `Başvuru Formu: ${lead.formName}` : 'Müşteri Kaydı'),
-          category: isTour ? 'Satış Öncesi Bilgi' : isLeadWebsite ? 'Genel Talep' : 'Proje & Kat Planı',
+          subject: lead.formName ? `Web Sitesi: ${lead.formName}` : 'Web Sitesi İletişim / Başvuru',
+          category: isTour ? 'Satış Öncesi Bilgi' : 'Genel Talep',
           priority: isTour ? 'Yüksek' : 'Orta',
           status: mappedStatus,
-          assignedToUserName: lead.assignedToUserName || lead.owner || 'Demirtürk CRM',
-          notes: lead.notes || (lead.metaAnswers && lead.metaAnswers.length > 0 ? lead.metaAnswers.map(m => `${m.question}: ${m.answer}`).join(' | ') : ''),
-          sourceType,
-          formName: lead.formName || (isLeadWebsite ? 'Web Formu' : 'Meta Formu'),
+          assignedToUserName: lead.assignedToUserName || lead.owner || 'Web Sitesi',
+          notes: lead.notes || '',
+          sourceType: 'WEBSITE',
+          formName: lead.formName || 'Web Başvurusu',
           preferredHousingType: lead.preferredHousingType,
           budget: lead.budget,
           createdAt: lead.createdAt,
@@ -330,7 +347,9 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
 
   // Top KPI Counts
   const webItems = useMemo(() => unifiedItems.filter((i) => i.sourceType === 'WEBSITE'), [unifiedItems])
+  const manualItems = useMemo(() => unifiedItems.filter((i) => i.sourceType === 'MANUAL'), [unifiedItems])
   const webCount = webItems.length
+  const manualCount = manualItems.length
   const openCount = unifiedItems.filter((i) => i.status === 'Açık').length
   const inProgressCount = unifiedItems.filter((i) => i.status === 'İşlemde').length
   const resolvedCount = unifiedItems.filter((i) => i.status === 'Çözüldü').length
@@ -339,16 +358,10 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
   // Filtered items
   const filtered = useMemo(() => {
     return unifiedItems.filter((item) => {
-      // By default or when 'ALL' is selected: prioritize web entries and requests
-      if (filterStatus === 'ALL') {
-        // Show all items (web submissions and customer requests)
-        return true
-      }
-
       if (filterStatus === 'WEBSITE') {
         if (item.sourceType !== 'WEBSITE') return false
-      } else if (filterStatus === 'META_ADS') {
-        if (item.sourceType !== 'META_ADS') return false
+      } else if (filterStatus === 'MANUAL') {
+        if (item.sourceType !== 'MANUAL') return false
       } else if (filterStatus !== 'ALL') {
         if (item.status !== filterStatus) return false
       }
@@ -363,6 +376,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
           (item.formName && item.formName.toLowerCase().includes(q)) ||
           item.notes.toLowerCase().includes(q) ||
           item.category.toLowerCase().includes(q) ||
+          item.assignedToUserName.toLowerCase().includes(q) ||
           (item.preferredHousingType && item.preferredHousingType.toLowerCase().includes(q))
         if (!match) return false
       }
@@ -436,7 +450,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
             </div>
           </div>
           <p className="text-xs text-[#a69f99] mt-1">
-            Web sitesi form başvuruları (ücretsiz tanıtım turu, iletişim), müşteri bilgi ve destek talepleri.
+            İnternet sitesi başvuruları ve çalışanlar tarafından manuel girilen müşteri istekleri.
           </p>
         </div>
 
@@ -467,7 +481,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="p-4 rounded-[18px] bg-[#282522] border border-[#b99881]/40 flex items-center justify-between">
           <div>
-            <div className="text-[11px] text-[#dfb76c] font-medium uppercase tracking-wider">Web Girdileri</div>
+            <div className="text-[11px] text-[#dfb76c] font-medium uppercase tracking-wider">Web Başvuruları</div>
             <div className="mt-1 flex items-baseline gap-1.5">
               <span className="text-2xl font-bold text-[#dfb76c]">{webCount}</span>
               <span className="text-xs text-[#a69f99] font-medium">web başvurusu</span>
@@ -511,10 +525,10 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
 
         <div className="p-4 rounded-[18px] bg-[#282522] border border-[#4a443f] flex items-center justify-between">
           <div>
-            <div className="text-[11px] text-[#8c857f] font-medium uppercase tracking-wider">Tüm Havuz</div>
+            <div className="text-[11px] text-[#8c857f] font-medium uppercase tracking-wider">Manuel Talepler</div>
             <div className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-white">{totalCount}</span>
-              <span className="text-xs text-[#a69f99] font-medium">toplam kayıt</span>
+              <span className="text-2xl font-bold text-white">{manualCount}</span>
+              <span className="text-xs text-[#a69f99] font-medium">müşteri isteği</span>
             </div>
           </div>
           <Layers className="w-5 h-5 text-[#a69f99] opacity-80" />
@@ -527,12 +541,12 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs text-[#8c857f] mr-1">Filtre:</span>
           {[
-            { id: 'ALL', label: 'Tümü' },
-            { id: 'WEBSITE', label: `🌐 Web Başvuruları (${webCount})` },
+            { id: 'ALL', label: `Tümü (${totalCount})` },
+            { id: 'WEBSITE', label: `🌐 İnternet Sitesi Başvuruları (${webCount})` },
+            { id: 'MANUAL', label: `✍️ Manuel Müşteri İstekleri (${manualCount})` },
             { id: 'Açık', label: `Açık (${openCount})` },
             { id: 'İşlemde', label: `İşlemde (${inProgressCount})` },
             { id: 'Çözüldü', label: `Çözüldü (${resolvedCount})` },
-            { id: 'META_ADS', label: '📱 Meta Ads' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -694,9 +708,13 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
 
                 {/* Footer and Actions */}
                 <div className="pt-2 space-y-2.5">
-                  <div className="flex items-center justify-between text-[10px] text-[#8c857f]">
+                  <div className="flex items-center justify-between text-[11px] text-[#8c857f]">
                     <span>{formatDate(item.createdAt)}</span>
-                    <span>Temsilci: {item.assignedToUserName}</span>
+                    <span>
+                      {item.sourceType === 'MANUAL'
+                        ? `Manuel Giren: ${item.assignedToUserName}`
+                        : `Temsilci: ${item.assignedToUserName}`}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between gap-2 pt-1">
