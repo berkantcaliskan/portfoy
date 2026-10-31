@@ -844,10 +844,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               type="button"
               onClick={() => setFilterStage('ALL')}
               title={`Tümü (${dateFilteredLeads.length})`}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-                filterStage === 'ALL'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
+              className={`tab-pill-btn w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                filterStage === 'ALL' ? 'is-active-tab-pill' : ''
               }`}
             >
               <Layers className="w-4 h-4 shrink-0" />
@@ -857,10 +855,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <button
               type="button"
               onClick={() => setFilterStage('CHANNEL_META')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CHANNEL_META'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+              className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CHANNEL_META' ? 'is-active-tab-pill' : ''
               }`}
             >
               <svg
@@ -881,10 +877,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <button
               type="button"
               onClick={() => setFilterStage('CHANNEL_GOOGLE')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CHANNEL_GOOGLE'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+              className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CHANNEL_GOOGLE' ? 'is-active-tab-pill' : ''
               }`}
             >
               <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -897,10 +891,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <button
               type="button"
               onClick={() => setFilterStage('CHANNEL_WEB')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CHANNEL_WEB'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10 shadow-sm'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium border border-[#4a443f]'
+              className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CHANNEL_WEB' ? 'is-active-tab-pill' : ''
               }`}
             >
               <BookLogo animated={false} className="w-4 h-4 shrink-0" />
@@ -913,10 +905,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             {/* 1. Sekme: İletişim */}
             <button
               onClick={() => setFilterStage('UNCONTACTED')}
-              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'UNCONTACTED'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'UNCONTACTED' ? 'is-active-tab-pill' : ''
               }`}
             >
               İletişim ({uncontactedCount})
@@ -926,10 +916,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <button
               onClick={() => setFilterStage('CALL_AGAIN')}
               title="Tekrar ara ve Ulaşılamadı bilgisi seçilen müşteriler (Saatlik hatırlatma aktif)"
-              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CALL_AGAIN'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CALL_AGAIN' ? 'is-active-tab-pill' : ''
               }`}
             >
               Tekrar Ara ({callAgainCount})
@@ -938,10 +926,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             {/* 3. Sekme: Nitelikli */}
             <button
               onClick={() => setFilterStage('QUALIFIED')}
-              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'QUALIFIED'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'QUALIFIED' ? 'is-active-tab-pill' : ''
               }`}
             >
               Nitelikli ({qualifiedCount})
@@ -950,10 +936,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             {/* 3. Sekme: Teklif */}
             <button
               onClick={() => setFilterStage('OFFER')}
-              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'OFFER'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'OFFER' ? 'is-active-tab-pill' : ''
               }`}
             >
               Teklif ({offerCount})
@@ -962,10 +946,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             {/* 4. Sekme: Dönüşüm */}
             <button
               onClick={() => setFilterStage('CONVERTED')}
-              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CONVERTED'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'CONVERTED' ? 'is-active-tab-pill' : ''
               }`}
             >
               Dönüşüm ({convertedCount})
@@ -974,10 +956,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             {/* 5. Sekme: Diğer (Potansiyel Olmayanlar) */}
             <button
               onClick={() => setFilterStage('OTHER')}
-              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'OTHER'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'OTHER' ? 'is-active-tab-pill' : ''
               }`}
               title="Potansiyel olmayan (Potansiyel Değil / Satın alma niyeti yok) kayıtlar"
             >
@@ -987,10 +967,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             {/* 6. Sekme: Tümü */}
             <button
               onClick={() => setFilterStage('ALL')}
-              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'ALL'
-                  ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white font-medium'
+              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
+                filterStage === 'ALL' ? 'is-active-tab-pill' : ''
               }`}
             >
               Tümü ({dateFilteredLeads.length})
@@ -1303,7 +1281,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                               {lead.notes && lead.notes.trim() ? (
                                 <div
                                   onClick={() => handleOpenNoteEdit(lead)}
-                                  className="group flex items-center gap-2 cursor-pointer max-w-full min-w-0"
+                                  className="group flex items-center gap-2 pl-1 cursor-pointer max-w-full min-w-0"
                                   title="Açıklamayı düzenlemek için tıklayın"
                                 >
                                   <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] truncate transition-colors select-text">

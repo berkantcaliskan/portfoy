@@ -258,10 +258,8 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setViewMode('kanban')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              viewMode === 'kanban'
-                ? 'bg-[#b99881] text-white font-bold shadow-sm'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
+            className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              viewMode === 'kanban' ? 'is-active-tab-pill' : ''
             }`}
           >
             <Kanban className="w-3.5 h-3.5" />
@@ -270,10 +268,8 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
 
           <button
             onClick={() => setViewMode('table')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              viewMode === 'table'
-                ? 'bg-[#b99881] text-white font-bold shadow-sm'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
+            className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              viewMode === 'table' ? 'is-active-tab-pill' : ''
             }`}
           >
             <TableIcon className="w-3.5 h-3.5" />
