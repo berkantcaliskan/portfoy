@@ -1051,12 +1051,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
-                {/* HAREKETLİ ARKA PLAN SAHNESİ SEÇİCİ */}
+                {/* HAREKETLİ TEMA ANİMASYONLARI SEÇİCİ */}
                 <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                       <ImageIcon className="w-3.5 h-3.5 text-[#b99881]" />
-                      <span>Arka Plan Sahnesi</span>
+                      <span>Tema Animasyonları</span>
                     </h4>
                   </div>
 

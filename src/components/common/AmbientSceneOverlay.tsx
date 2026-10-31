@@ -6,26 +6,26 @@ export const AMBIENT_SCENE_OPTIONS: {
   id: AmbientSceneId
   name: string
 }[] = [
+  { id: 'none', name: 'Kapalı' },
   { id: 'cat-dog', name: 'Kedi & Köpek' },
   { id: 'knight-campfire', name: 'Şövalye & Kamp Ateşi' },
   { id: 'rose-garden', name: 'Gül & Çiçek Bahçesi' },
   { id: 'lighthouse', name: 'Deniz Feneri' },
-  { id: 'none', name: 'Kapalı' },
 ]
 
 export function getSavedAmbientScene(): AmbientSceneId {
   try {
-    const saved = localStorage.getItem('demirturk_ambient_scene') as AmbientSceneId | null
+    const saved = localStorage.getItem('demirturk_ambient_scene_v2') as AmbientSceneId | null
     if (saved && AMBIENT_SCENE_OPTIONS.some((o) => o.id === saved)) {
       return saved
     }
   } catch {}
-  return 'cat-dog'
+  return 'none'
 }
 
 export function setSavedAmbientScene(scene: AmbientSceneId) {
   try {
-    localStorage.setItem('demirturk_ambient_scene', scene)
+    localStorage.setItem('demirturk_ambient_scene_v2', scene)
     window.dispatchEvent(new CustomEvent('demirturk_ambient_scene_changed', { detail: scene }))
   } catch {}
 }
@@ -504,7 +504,7 @@ export const AmbientSceneOverlay: React.FC<{ sidebarCollapsed?: boolean }> = ({
             </div>
           </div>
 
-          {/* Sağdan Sola Ters Yönde Koşan İkinci Tur (Kesintisiz Canlılık İçin) */}
+          {/* Sağdan Sola Ters Yönde Koşan Lacivert/Gri Kedi (Bacakları ve Kuyruk Animasyonuyla) */}
           <div
             className="absolute bottom-[4px] left-0 flex items-end gap-4"
             style={{
@@ -512,24 +512,94 @@ export const AmbientSceneOverlay: React.FC<{ sidebarCollapsed?: boolean }> = ({
             }}
           >
             <div style={{ animation: 'petGallopBounce 0.3s ease-in-out infinite' }}>
-              <svg width="50" height="36" viewBox="0 0 54 40" fill="none">
+              <svg width="54" height="40" viewBox="0 0 54 40" fill="none">
+                {/* Kuyruk */}
                 <path
                   d="M10 22 Q2 12 6 5"
-                  stroke={isNight ? '#94a3b8' : '#475569'}
+                  stroke={isNight ? '#94a3b8' : '#334155'}
                   strokeWidth="3.5"
                   strokeLinecap="round"
+                  style={{
+                    transformOrigin: '10px 22px',
+                    animation: 'tailWagFast 0.34s ease-in-out infinite',
+                  }}
                 />
+                {/* Arka Bacaklar */}
+                <g
+                  style={{
+                    transformOrigin: '15px 26px',
+                    animation: 'legSwingBack 0.28s ease-in-out infinite',
+                  }}
+                >
+                  <line
+                    x1="15"
+                    y1="25"
+                    x2="10"
+                    y2="36"
+                    stroke={isNight ? '#64748b' : '#1e293b'}
+                    strokeWidth="3.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="18"
+                    y1="25"
+                    x2="15"
+                    y2="37"
+                    stroke={isNight ? '#94a3b8' : '#475569'}
+                    strokeWidth="3.2"
+                    strokeLinecap="round"
+                  />
+                </g>
+                {/* Ön Bacaklar */}
+                <g
+                  style={{
+                    transformOrigin: '33px 26px',
+                    animation: 'legSwingFront 0.28s ease-in-out infinite',
+                  }}
+                >
+                  <line
+                    x1="31"
+                    y1="25"
+                    x2="35"
+                    y2="37"
+                    stroke={isNight ? '#64748b' : '#1e293b'}
+                    strokeWidth="3.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="34"
+                    y1="25"
+                    x2="40"
+                    y2="36"
+                    stroke={isNight ? '#94a3b8' : '#475569'}
+                    strokeWidth="3.2"
+                    strokeLinecap="round"
+                  />
+                </g>
+                {/* Gövde */}
                 <ellipse
                   cx="24"
                   cy="22"
-                  rx="12.5"
-                  ry="7"
-                  fill={isNight ? '#cbd5e1' : '#64748b'}
+                  rx="13"
+                  ry="7.5"
+                  fill={isNight ? '#cbd5e1' : '#475569'}
                 />
-                <circle cx="38" cy="16" r="7" fill={isNight ? '#cbd5e1' : '#64748b'} />
-                <polygon points="33,11 35,4 39,10" fill={isNight ? '#94a3b8' : '#475569'} />
-                <polygon points="39,10 43,4 44,12" fill={isNight ? '#94a3b8' : '#475569'} />
-                <circle cx="41.5" cy="15" r="1.3" fill="#181918" />
+                {/* Sırt Çizgileri */}
+                <path
+                  d="M20 15 L19 19 M25 14.5 L24 19 M29 15.5 L28 19"
+                  stroke={isNight ? '#64748b' : '#1e293b'}
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                {/* Kafa */}
+                <circle cx="38" cy="16" r="7.5" fill={isNight ? '#cbd5e1' : '#475569'} />
+                {/* Kulaklar */}
+                <polygon points="33,11 35,4 39,10" fill={isNight ? '#94a3b8' : '#334155'} />
+                <polygon points="39,10 43,4 44,12" fill={isNight ? '#94a3b8' : '#334155'} />
+                {/* Göz ve Burun */}
+                <circle cx="41.5" cy="15" r="1.4" fill="#181918" />
+                <circle cx="42" cy="14.6" r="0.5" fill="#ffffff" />
+                <circle cx="45" cy="17.2" r="1.1" fill="#fb7185" />
               </svg>
             </div>
           </div>
