@@ -157,6 +157,22 @@ class RequestStore {
     syncService.saveRequest(this.requests[index])
     return true
   }
+
+  public deleteRequest(id: string): boolean {
+    const beforeLen = this.requests.length
+    this.requests = this.requests.filter((r) => r.id !== id)
+    try {
+      const raw = localStorage.getItem('demirturk_deleted_ids_v1')
+      const arr = raw ? JSON.parse(raw) : []
+      if (Array.isArray(arr) && !arr.includes(id)) {
+        arr.push(id)
+        localStorage.setItem('demirturk_deleted_ids_v1', JSON.stringify(arr))
+      }
+    } catch {}
+    this.saveToStorage()
+    syncService.deleteRequest(id)
+    return this.requests.length < beforeLen
+  }
 }
 
 export const requestStore = new RequestStore()

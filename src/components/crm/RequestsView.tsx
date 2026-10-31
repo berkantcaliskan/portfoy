@@ -19,6 +19,7 @@ import {
   X,
   Layers,
   ClipboardList,
+  Trash2,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -436,6 +437,18 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
     }
   }
 
+  // Handle Delete Request / Web Submission
+  const handleDeleteItem = (item: UnifiedRequestItem) => {
+    if (item.isFromRequestStore) {
+      requestStore.deleteRequest(item.id)
+    }
+    if (item.leadId) {
+      leadStore.delete(item.leadId)
+    }
+    setRequests(requestStore.getAll())
+    setAllLeads(leadStore.getAllRaw())
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -762,6 +775,14 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                           Çözüldü
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItem(item)}
+                        className="p-1.5 rounded-full bg-[#34302d] hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                        title="Talebi / Başvuruyu Sil"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>

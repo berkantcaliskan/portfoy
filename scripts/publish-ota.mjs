@@ -56,11 +56,21 @@ function getArrayItemKey(item, i, key) {
 }
 
 function parseDeletedSet(rawJson) {
+  const permanentDeleted = new Set([
+    'lead-web-1793205148675-464',
+    'lead-web-1793205113366-350',
+    'inq-1793205148675',
+    'inq-1793205113366',
+  ])
   try {
     const arr = JSON.parse(rawJson || '[]')
-    if (Array.isArray(arr)) return new Set(arr.filter((x) => typeof x === 'string'))
+    if (Array.isArray(arr)) {
+      for (const x of arr) {
+        if (typeof x === 'string') permanentDeleted.add(x)
+      }
+    }
   } catch {}
-  return new Set()
+  return permanentDeleted
 }
 
 function isItemDeleted(item, i, key, deletedSet) {

@@ -271,6 +271,15 @@ class SyncService {
     }
   }
 
+  public async deleteRequest(id: string) {
+    if (!isSupabaseConfigured()) return
+    try {
+      await supabase.from('customer_requests').delete().eq('id', id)
+    } catch (e) {
+      console.error('[Supabase Sync] Failed to delete request:', e)
+    }
+  }
+
   // --- USERS ---
   private async syncUsers(options: SyncInitOptions) {
     try {

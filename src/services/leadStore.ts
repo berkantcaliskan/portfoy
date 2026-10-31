@@ -174,78 +174,38 @@ class LeadStore {
    * oluşturulma sırasına (createdAt) göre şirket bazlı ardışık numara (#lead-1, #lead-2...) atar.
    */
 
-  private repairMetaCsvLeads(): void {
-    if (!this.leads) this.leads = []
-    const restoredWebLeads: Lead[] = [
-      {
-        id: 'lead-web-1793205148675-464',
-        leadNumber: 9,
-        fullName: 'berkant',
-        phone: '05448491125',
-        whatsappPhone: '05448491125',
-        email: '',
-        stage: 'NEW',
-        callStatus: 'WAITING',
-        owner: 'Atanmamış',
-        source: 'WEBSITE',
-        formName: 'Ücretsiz Tanıtım Turu',
-        channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
-        preferredHousingType: 'Tanıtım Turu (İstanbul)',
-        budget: 0,
-        notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Pazar Günü (VIP Servis)',
-        tags: ['Web Sitesi', 'Tanıtım Turu', 'İstanbul'],
-        inquiries: [
-          {
-            id: 'inq-1793205148675',
-            source: 'WEBSITE',
-            formName: 'Ücretsiz Tanıtım Turu',
-            channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
-            preferredHousingType: 'Tanıtım Turu (İstanbul)',
-            budget: 0,
-            notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Pazar Günü (VIP Servis)',
-            createdAt: '2026-10-28T16:32:28.073Z',
-          },
-        ],
-        createdAt: '2026-10-28T16:32:28.073Z',
-        updatedAt: '2026-10-28T16:32:28.073Z',
-      },
-      {
-        id: 'lead-web-1793205113366-350',
-        leadNumber: 8,
-        fullName: 'Test Web Live',
-        phone: '05309998877',
-        whatsappPhone: '05309998877',
-        email: '',
-        stage: 'NEW',
-        callStatus: 'WAITING',
-        owner: 'Atanmamış',
-        source: 'WEBSITE',
-        formName: 'Test Canli Form',
-        channel: 'Web Sitesi / Test Canli Form',
-        preferredHousingType: '2+1 Daire',
-        budget: 0,
-        notes: 'Canli test',
-        tags: ['Web Sitesi', '2+1 Daire'],
-        inquiries: [
-          {
-            id: 'inq-1793205113366',
-            source: 'WEBSITE',
-            formName: 'Test Canli Form',
-            channel: 'Web Sitesi / Test Canli Form',
-            preferredHousingType: '2+1 Daire',
-            budget: 0,
-            notes: 'Canli test',
-            createdAt: '2026-10-28T16:31:53.363Z',
-          },
-        ],
-        createdAt: '2026-10-28T16:31:53.363Z',
-        updatedAt: '2026-10-28T16:31:53.363Z',
-      },
-    ]
-    for (const wl of restoredWebLeads) {
-      if (!this.leads.some((l) => l.id === wl.id)) {
-        this.leads.unshift(wl)
+  private getDeletedIdsSet(): Set<string> {
+    try {
+      const raw = localStorage.getItem('demirturk_deleted_ids_v1')
+      const arr = raw ? JSON.parse(raw) : []
+      if (Array.isArray(arr)) {
+        return new Set(arr.filter((x) => typeof x === 'string'))
       }
+    } catch {}
+    return new Set()
+  }
+
+  private addDeletedIds(ids: string[]): void {
+    try {
+      const set = this.getDeletedIdsSet()
+      let changed = false
+      for (const id of ids) {
+        if (id && !set.has(id)) {
+          set.add(id)
+          changed = true
+        }
+      }
+      if (changed) {
+        localStorage.setItem('demirturk_deleted_ids_v1', JSON.stringify(Array.from(set)))
+      }
+    } catch {}
+  }
+
+  private repairMetaCsvLeads(): void {
+    const deletedIds = this.getDeletedIdsSet()
+    if (!this.leads) this.leads = []
+    if (deletedIds.size > 0) {
+      this.leads = this.leads.filter((l) => !deletedIds.has(l.id))
     }
     if (this.leads.length === 0) return
     const metaSkipQuestions = new Set([
@@ -360,12 +320,16 @@ class LeadStore {
   }
 
   public setLoadedLeads(leads: Lead[], activities: Record<string, LeadActivity[]>) {
-    // Merge loaded leads while preserving any local leads
-    const currentMap = new Map(this.leads.map((l) => [l.id, l]))
-    const merged = [...(leads || [])]
+    const deletedIds = this.getDeletedIdsSet()
+    // Merge loaded leads while preserving any local leads (excluding deleted IDs)
+    const currentMap = new Map(
+      this.leads.filter((l) => !deletedIds.has(l.id)).map((l) => [l.id, l])
+    )
+    const merged = [...(leads || [])].filter((l) => !deletedIds.has(l.id))
 
     // Keep any leads that exist locally but were not in the snapshot
     for (const [id, lead] of currentMap) {
+      if (deletedIds.has(id)) continue
       if (!merged.some((m) => m.id === id)) {
         merged.unshift(lead)
         syncService.saveLead(lead)
@@ -510,8 +474,10 @@ class LeadStore {
         if (error || !latestLeads || latestLeads.length === 0) return
 
         let hasNew = false
+        const deletedIds = this.getDeletedIdsSet()
         for (const raw of latestLeads) {
           const mapped = rowToLead(raw)
+          if (deletedIds.has(mapped.id)) continue
           if (!this.leads.some((l) => l.id === mapped.id)) {
             mapped.leadNumber = this.allocateLeadNumber(mapped.companyName, mapped.id)
             this.leads.unshift(mapped)
@@ -713,8 +679,10 @@ class LeadStore {
       if (error) {
         console.error('[LeadStore] pullLatestLeads query error:', error)
       } else if (newDbRows && newDbRows.length > 0) {
+        const deletedIds = this.getDeletedIdsSet()
         const mapped = newDbRows.map(rowToLead)
         for (const incoming of mapped) {
+          if (deletedIds.has(incoming.id)) continue
           incoming.leadNumber = this.allocateLeadNumber(incoming.companyName, incoming.id)
           const existingIdx = this.leads.findIndex((l) => l.id === incoming.id)
           if (existingIdx === -1) {
@@ -736,8 +704,10 @@ class LeadStore {
         .limit(50)
 
       if (recentRows && recentRows.length > 0) {
+        const deletedIds = this.getDeletedIdsSet()
         const mappedRecent = recentRows.map(rowToLead)
         for (const inc of mappedRecent) {
+          if (deletedIds.has(inc.id)) continue
           const existingIdx = this.leads.findIndex((l) => l.id === inc.id)
           if (existingIdx === -1) {
             inc.leadNumber = this.allocateLeadNumber(inc.companyName, inc.id)
@@ -1506,6 +1476,14 @@ class LeadStore {
   }
 
   public delete(id: string): boolean {
+    const target = this.leads.find((l) => l.id === id)
+    const idsToMarkDeleted = [id]
+    if (target?.inquiries) {
+      for (const inq of target.inquiries) {
+        if (inq.id) idsToMarkDeleted.push(inq.id)
+      }
+    }
+    this.addDeletedIds(idsToMarkDeleted)
     const beforeLen = this.leads.length
     this.leads = this.leads.filter((l) => l.id !== id)
     delete this.activities[id]
