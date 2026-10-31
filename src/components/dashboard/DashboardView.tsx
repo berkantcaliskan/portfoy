@@ -260,9 +260,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setChartRange(tab.id)}
-                  className={`px-3 py-1 rounded-full text-[11.5px] font-medium transition-colors cursor-pointer ${
+                  className={`tab-pill-btn px-3 py-1 rounded-full text-[11.5px] font-medium transition-colors cursor-pointer ${
                     active
-                      ? 'bg-[#b99881] text-[#282522] font-semibold'
+                      ? 'is-active-tab-pill font-semibold'
                       : 'bg-[#34302d] text-[#a69f99] hover:text-white'
                   }`}
                 >
@@ -402,26 +402,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const convRate = total > 0 ? Math.round((won / total) * 100) : 0
 
     const stages = [
-      { label: 'Toplam Başvuru', count: total, pct: total > 0 ? 100 : 0 },
+      {
+        label: 'Toplam Başvuru',
+        count: total,
+        pct: total > 0 ? 100 : 0,
+        barColor: 'var(--accent-color, #5c6ac4)',
+      },
       {
         label: 'İletişime Geçilen',
         count: contacted,
         pct: total > 0 ? Math.round((contacted / total) * 100) : 0,
+        barColor: 'color-mix(in srgb, #689f94 80%, var(--accent-color, #5c6ac4))',
       },
       {
         label: 'Nitelikli Aday',
         count: qualified,
         pct: total > 0 ? Math.round((qualified / total) * 100) : 0,
+        barColor: 'color-mix(in srgb, #6a92b5 80%, var(--accent-color, #5c6ac4))',
       },
       {
         label: 'Sunum & Teklif',
         count: offerStage,
         pct: total > 0 ? Math.round((offerStage / total) * 100) : 0,
+        barColor: 'color-mix(in srgb, #9482ba 80%, var(--accent-color, #5c6ac4))',
       },
       {
         label: 'Kazanılan Satış',
         count: won,
         pct: total > 0 ? Math.round((won / total) * 100) : 0,
+        barColor: 'color-mix(in srgb, #bf8597 80%, var(--accent-color, #5c6ac4))',
       },
     ]
 
@@ -447,8 +456,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
               <div className="w-full h-2 rounded-full bg-[#34302d] border border-[#4a443f] overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-[#b99881] transition-all duration-500"
-                  style={{ width: `${Math.max(st.count > 0 ? st.pct : 4, 4)}%`, opacity: st.count > 0 ? 1 : 0.25 }}
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.max(st.count > 0 ? st.pct : 6, 6)}%`,
+                    backgroundColor: st.barColor,
+                    opacity: st.count > 0 ? 1 : 0.72,
+                  }}
                 />
               </div>
             </div>
@@ -580,9 +593,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       key={f.id}
                       type="button"
                       onClick={() => setLeadFilter(f.id)}
-                      className={`px-3 py-1 rounded-full text-[11.5px] font-medium transition-colors cursor-pointer ${
+                      className={`tab-pill-btn px-3 py-1 rounded-full text-[11.5px] font-medium transition-colors cursor-pointer ${
                         leadFilter === f.id
-                          ? 'bg-[#b99881] text-[#282522] font-semibold'
+                          ? 'is-active-tab-pill font-semibold'
                           : 'bg-[#34302d] text-[#a69f99] hover:text-white'
                       }`}
                     >

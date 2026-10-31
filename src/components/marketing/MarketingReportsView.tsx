@@ -96,45 +96,51 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
             <span>Edinim Kanalları Dağılımı</span>
           </h3>
           <div className="space-y-3">
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-[#f3efe9]">
-                <span>Instagram Lead Ads</span>
-                <span className="font-bold">%{totalLeads > 0 ? 62 : 0} ({Math.round(totalLeads * 0.62)} Lead)</span>
+            {[
+              {
+                label: 'Instagram Lead Ads',
+                pct: totalLeads > 0 ? 62 : 0,
+                count: Math.round(totalLeads * 0.62),
+                barColor: 'var(--accent-color, #5c6ac4)',
+              },
+              {
+                label: 'Facebook Lead Ads',
+                pct: totalLeads > 0 ? 24 : 0,
+                count: Math.round(totalLeads * 0.24),
+                barColor: 'color-mix(in srgb, #689f94 80%, var(--accent-color, #5c6ac4))',
+              },
+              {
+                label: 'Web Sitesi & Doğrudan',
+                pct: totalLeads > 0 ? 10 : 0,
+                count: Math.round(totalLeads * 0.1),
+                barColor: 'color-mix(in srgb, #6a92b5 80%, var(--accent-color, #5c6ac4))',
+              },
+              {
+                label: 'Müşteri Tavsiyesi (Referral)',
+                pct: totalLeads > 0 ? 4 : 0,
+                count: Math.round(totalLeads * 0.04),
+                barColor: 'color-mix(in srgb, #9482ba 80%, var(--accent-color, #5c6ac4))',
+              },
+            ].map((ch) => (
+              <div key={ch.label} className="space-y-1">
+                <div className="flex justify-between text-xs text-[#f3efe9]">
+                  <span>{ch.label}</span>
+                  <span className="font-bold">
+                    %{ch.pct} ({ch.count} Lead)
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.max(ch.pct, 6)}%`,
+                      backgroundColor: ch.barColor,
+                      opacity: totalLeads > 0 ? 1 : 0.72,
+                    }}
+                  />
+                </div>
               </div>
-              <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#b99881] to-[#dfb76c]" style={{ width: totalLeads > 0 ? '62%' : '0%' }} />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-[#f3efe9]">
-                <span>Facebook Lead Ads</span>
-                <span className="font-bold">%{totalLeads > 0 ? 24 : 0} ({Math.round(totalLeads * 0.24)} Lead)</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-sky-400" style={{ width: totalLeads > 0 ? '24%' : '0%' }} />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-[#f3efe9]">
-                <span>Web Sitesi & Doğrudan</span>
-                <span className="font-bold">%{totalLeads > 0 ? 10 : 0} ({Math.round(totalLeads * 0.1)} Lead)</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-emerald-400" style={{ width: totalLeads > 0 ? '10%' : '0%' }} />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-[#f3efe9]">
-                <span>Müşteri Tavsiyesi (Referral)</span>
-                <span className="font-bold">%{totalLeads > 0 ? 4 : 0} ({Math.round(totalLeads * 0.04)} Lead)</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-purple-400" style={{ width: totalLeads > 0 ? '4%' : '0%' }} />
-              </div>
-            </div>
+            ))}
           </div>
         </GlassCard>
 
@@ -145,10 +151,26 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
           </h3>
           <div className="space-y-3">
             {[
-              { type: '2+1 Rezidans Daireler', pct: totalLeads > 0 ? 45 : 0, color: 'bg-emerald-400' },
-              { type: '1+1 Yatırımlık Konutlar', pct: totalLeads > 0 ? 28 : 0, color: 'bg-sky-400' },
-              { type: 'Müstakil Villalar', pct: totalLeads > 0 ? 18 : 0, color: 'bg-[#b99881]' },
-              { type: '3+1 ve Üzeri Aile Daireleri', pct: totalLeads > 0 ? 9 : 0, color: 'bg-amber-400' },
+              {
+                type: '2+1 Rezidans Daireler',
+                pct: totalLeads > 0 ? 45 : 0,
+                barColor: 'var(--accent-color, #5c6ac4)',
+              },
+              {
+                type: '1+1 Yatırımlık Konutlar',
+                pct: totalLeads > 0 ? 28 : 0,
+                barColor: 'color-mix(in srgb, #689f94 80%, var(--accent-color, #5c6ac4))',
+              },
+              {
+                type: 'Müstakil Villalar',
+                pct: totalLeads > 0 ? 18 : 0,
+                barColor: 'color-mix(in srgb, #6a92b5 80%, var(--accent-color, #5c6ac4))',
+              },
+              {
+                type: '3+1 ve Üzeri Aile Daireleri',
+                pct: totalLeads > 0 ? 9 : 0,
+                barColor: 'color-mix(in srgb, #9482ba 80%, var(--accent-color, #5c6ac4))',
+              },
             ].map((item) => (
               <div key={item.type} className="space-y-1">
                 <div className="flex justify-between text-xs text-[#f3efe9]">
@@ -156,7 +178,14 @@ export const MarketingReportsView: React.FC<MarketingReportsViewProps> = ({ lead
                   <span className="font-bold">%{item.pct}</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                  <div className={`h-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.max(item.pct, 6)}%`,
+                      backgroundColor: item.barColor,
+                      opacity: totalLeads > 0 ? 1 : 0.72,
+                    }}
+                  />
                 </div>
               </div>
             ))}

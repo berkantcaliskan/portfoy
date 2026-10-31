@@ -112,7 +112,14 @@ export const FinancialReportsView: React.FC = () => {
                 <span className="font-bold">{formatCurrency(totalInflow)}</span>
               </div>
               <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                <div className="h-full bg-emerald-400" style={{ width: totalInflow > 0 ? '100%' : '0%' }} />
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: totalInflow > 0 ? '100%' : '6%',
+                    backgroundColor: 'var(--accent-color, #5c6ac4)',
+                    opacity: totalInflow > 0 ? 1 : 0.72,
+                  }}
+                />
               </div>
             </div>
 
@@ -125,8 +132,12 @@ export const FinancialReportsView: React.FC = () => {
               </div>
               <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
                 <div
-                  className="h-full bg-rose-400"
-                  style={{ width: `${totalInflow > 0 ? Math.min(100, Math.round((totalOutflow / totalInflow) * 100)) : 0}%` }}
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${totalInflow > 0 ? Math.max(6, Math.min(100, Math.round((totalOutflow / totalInflow) * 100))) : 6}%`,
+                    backgroundColor: 'color-mix(in srgb, #bf8597 80%, var(--accent-color, #5c6ac4))',
+                    opacity: totalOutflow > 0 ? 1 : 0.72,
+                  }}
                 />
               </div>
             </div>
@@ -139,10 +150,26 @@ export const FinancialReportsView: React.FC = () => {
           </h3>
           <div className="space-y-3">
             {[
-              { label: 'Şantiye ve İnşaat Hakedişleri', pct: payments.length > 0 ? 68 : 0, color: 'bg-[#b99881]' },
-              { label: 'Satış Başarı Komisyonları', pct: payments.length > 0 ? 18 : 0, color: 'bg-emerald-400' },
-              { label: 'Meta & Dijital Reklam Bütçesi', pct: payments.length > 0 ? 10 : 0, color: 'bg-sky-400' },
-              { label: 'Ofis ve Genel Yönetim', pct: payments.length > 0 ? 4 : 0, color: 'bg-amber-400' },
+              {
+                label: 'Şantiye ve İnşaat Hakedişleri',
+                pct: payments.length > 0 ? 68 : 0,
+                barColor: 'var(--accent-color, #5c6ac4)',
+              },
+              {
+                label: 'Satış Başarı Komisyonları',
+                pct: payments.length > 0 ? 18 : 0,
+                barColor: 'color-mix(in srgb, #689f94 80%, var(--accent-color, #5c6ac4))',
+              },
+              {
+                label: 'Meta & Dijital Reklam Bütçesi',
+                pct: payments.length > 0 ? 10 : 0,
+                barColor: 'color-mix(in srgb, #6a92b5 80%, var(--accent-color, #5c6ac4))',
+              },
+              {
+                label: 'Ofis ve Genel Yönetim',
+                pct: payments.length > 0 ? 4 : 0,
+                barColor: 'color-mix(in srgb, #9482ba 80%, var(--accent-color, #5c6ac4))',
+              },
             ].map((item) => (
               <div key={item.label} className="space-y-1">
                 <div className="flex justify-between text-xs text-[#f3efe9]">
@@ -150,7 +177,14 @@ export const FinancialReportsView: React.FC = () => {
                   <span className="font-bold">%{item.pct}</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-[#34302d] overflow-hidden">
-                  <div className={`h-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.max(item.pct, 6)}%`,
+                      backgroundColor: item.barColor,
+                      opacity: payments.length > 0 ? 1 : 0.72,
+                    }}
+                  />
                 </div>
               </div>
             ))}
