@@ -92,18 +92,16 @@ export function BrandKitView() {
   return (
     <div className="space-y-4 pb-8">
       {/* Header */}
-      <div className="p-3.5 sm:px-5 rounded-[22px] bg-[#282522] border border-[#4a443f] glass-card-static flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-2xl bg-[#34302d] border border-[#4a443f] flex items-center justify-center shrink-0">
-          <Sparkles className="w-4 h-4 text-[#b99881]" />
-        </div>
-        <div>
-          <h1 className="text-base font-bold text-white tracking-tight">
+      <div>
+        <div className="flex items-center gap-2.5">
+          <Sparkles className="w-5 h-5 text-[#b99881]" />
+          <h2 className="text-2xl font-bold text-white tracking-wide">
             Marka Rehberi
-          </h1>
-          <p className="text-xs text-[#a69f99]">
-            Demirtürk İnşaat renk paleti, tipografi kuralları ve sosyal medya/Meta reklam güvenli alan ölçüleri
-          </p>
+          </h2>
         </div>
+        <p className="text-xs text-[#a69f99] mt-1">
+          Demirtürk İnşaat renk paleti, tipografi kuralları ve sosyal medya/Meta reklam güvenli alan ölçüleri.
+        </p>
       </div>
 
       {/* Color Palette */}

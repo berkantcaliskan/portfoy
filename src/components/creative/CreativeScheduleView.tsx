@@ -312,22 +312,20 @@ export const CreativeScheduleView: React.FC = () => {
       }
     >
       {/* ÜST BAŞLIK & GÖRÜNÜM SEÇİCİ BAR */}
-      <div className="p-3 sm:px-4 rounded-[22px] bg-[#282522] border border-[#4a443f] glass-card-static shrink-0 flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
+      <div className="shrink-0 flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
         <div className="flex flex-wrap items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-[#34302d] border border-[#4a443f] flex items-center justify-center shrink-0">
-              <CalendarIcon className="w-4 h-4 text-[#b99881]" />
-            </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <CalendarIcon className="w-5 h-5 text-[#b99881]" />
+              <h2 className="text-2xl font-bold text-white tracking-wide leading-tight">
                 Çizelge
               </h2>
-              <p className="text-[11px] text-[#a69f99] hidden sm:block">
-                {viewMode === 'calendar'
-                  ? 'Detayları görmek veya işlem yapmak için takvimde ilgili güne tıklayın'
-                  : 'Resmi bayramlar, anma günleri ve kampanya hazırlık listesi'}
-              </p>
             </div>
+            <p className="text-xs text-[#a69f99] mt-0.5 hidden sm:block">
+              {viewMode === 'calendar'
+                ? 'Detayları görmek veya işlem yapmak için takvimde ilgili güne tıklayın'
+                : 'Resmi bayramlar, anma günleri ve kampanya hazırlık listesi'}
+            </p>
           </div>
 
           {/* Takvim Görünümündeyken Ay Navigasyonu */}

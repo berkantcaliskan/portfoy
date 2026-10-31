@@ -192,19 +192,17 @@ export function CreativesGalleryView() {
   return (
     <div className="space-y-4 pb-8">
       {/* Header */}
-      <div className="p-3.5 sm:px-5 rounded-[22px] bg-[#282522] border border-[#4a443f] glass-card-static flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-2xl bg-[#34302d] border border-[#4a443f] flex items-center justify-center shrink-0">
-            <Palette className="w-4 h-4 text-[#b99881]" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-white tracking-tight">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <Palette className="w-5 h-5 text-[#b99881]" />
+            <h2 className="text-2xl font-bold text-white tracking-wide">
               Stüdyo
-            </h1>
-            <p className="text-xs text-[#a69f99]">
-              Reklam kreatifleri, sosyal medya tasarımları, 3D renderlar ve ekip içi revize/yorum akışı
-            </p>
+            </h2>
           </div>
+          <p className="text-xs text-[#a69f99] mt-1">
+            Reklam kreatifleri, sosyal medya tasarımları, 3D renderlar ve ekip içi revize/yorum akışı.
+          </p>
         </div>
 
         <GlassButton
