@@ -9,7 +9,6 @@ import {
   FileText,
   Filter,
   Kanban,
-  MessageCircle,
   Phone,
   Plus,
   Sparkles,
@@ -22,6 +21,7 @@ import {
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { LuxurySelect } from '@/components/ui/LuxurySelect'
 import { CommissionCalculatorModal } from './CommissionCalculatorModal'
 import { formatCurrency, formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
@@ -399,7 +399,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                                 className="p-1.5 rounded-full bg-[#24211f] hover:bg-emerald-500/20 text-[#a69f99] hover:text-emerald-400 transition-colors"
                                 title="WhatsApp'tan Yaz"
                               >
-                                <MessageCircle className="w-3 h-3" />
+                                <WhatsAppIcon className="w-3 h-3" />
                               </a>
                               <button
                                 type="button"
@@ -507,7 +507,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                             rel="noreferrer"
                             className="p-1.5 rounded-full bg-[#34302d] hover:bg-emerald-500/20 text-[#a69f99] hover:text-emerald-400 transition-colors"
                           >
-                            <MessageCircle className="w-3.5 h-3.5" />
+                            <WhatsAppIcon className="w-3.5 h-3.5" />
                           </a>
                           <button
                             onClick={(e) => handleOpenCalcForLead(lead, e)}

@@ -15,7 +15,6 @@ import {
   Pause,
   Layers,
   Share2,
-  MessageCircle,
   Send,
   RefreshCw,
 } from 'lucide-react'
@@ -23,6 +22,8 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 import {
   metaStore,
   getLeadTargetMetaEvent,
@@ -515,67 +516,50 @@ export const MarketingCampaignsView: React.FC = () => {
       </div>
 
       {/* Platform Navigation Tabs: En solda Tümü (sadece ikon olarak), sonra Meta ve ikonu, Google ve ikonu, sonra Web Sitesi ve Demirtürk ikonu */}
-      <div className="flex flex-wrap items-center gap-1.5 py-1">
-        {/* 1. En solda: Tümü (Sadece İkon Olarak) */}
-        <button
-          type="button"
-          onClick={() => setActivePlatform('all')}
-          title={`Tümü (${grandTotalLeads})`}
-          className={`tab-pill-btn w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-            activePlatform === 'all' ? 'is-active-tab-pill' : ''
-          }`}
-        >
-          <Layers className="w-4 h-4 shrink-0" />
-        </button>
-
-        {/* 2. Sonra: Meta ve İkonu */}
-        <button
-          type="button"
-          onClick={() => setActivePlatform('meta')}
-          className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-            activePlatform === 'meta' ? 'is-active-tab-pill' : ''
-          }`}
-        >
-          <svg
-            className="w-4 h-4 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
-          </svg>
-          <span>Meta ({totalMetaLeads})</span>
-        </button>
-
-        {/* 3. Sonra: Google ve İkonu */}
-        <button
-          type="button"
-          onClick={() => setActivePlatform('google')}
-          className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-            activePlatform === 'google' ? 'is-active-tab-pill' : ''
-          }`}
-        >
-          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
-          </svg>
-          <span>Google ({totalGoogleLeads})</span>
-        </button>
-
-        {/* 4. Sonra: Web Sitesi ve Demirtürk İkonu */}
-        <button
-          type="button"
-          onClick={() => setActivePlatform('web')}
-          className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-            activePlatform === 'web' ? 'is-active-tab-pill' : ''
-          }`}
-        >
-          <BookLogo animated={false} className="w-4 h-4 shrink-0" />
-          <span>Web Sitesi ({webLeads.length})</span>
-        </button>
-      </div>
+      <OverflowTabs
+        activeId={activePlatform}
+        onSelect={(id) => setActivePlatform(id as any)}
+        tabs={[
+          {
+            id: 'all',
+            iconOnly: true,
+            icon: <Layers className="w-4 h-4 shrink-0" />,
+            title: `Tümü (${grandTotalLeads})`,
+            dropdownLabel: `Tümü (${grandTotalLeads})`,
+          },
+          {
+            id: 'meta',
+            label: `Meta (${totalMetaLeads})`,
+            icon: (
+              <svg
+                className="w-4 h-4 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
+              </svg>
+            ),
+          },
+          {
+            id: 'google',
+            label: `Google (${totalGoogleLeads})`,
+            icon: (
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
+              </svg>
+            ),
+          },
+          {
+            id: 'web',
+            label: `Web Sitesi (${webLeads.length})`,
+            icon: <BookLogo animated={false} className="w-4 h-4 shrink-0" />,
+          },
+        ]}
+      />
 
       {successMsg && (
         <div className="p-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
@@ -1428,7 +1412,7 @@ export const MarketingCampaignsView: React.FC = () => {
             <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/25 font-semibold flex items-center gap-1.5">
-                  <MessageCircle className="w-3.5 h-3.5" />
+                  <WhatsAppIcon className="w-3.5 h-3.5" />
                   <span>WhatsApp Business & Dijital Portallar</span>
                 </span>
                 <GlassBadge size="sm" variant="success">

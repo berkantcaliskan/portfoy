@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import {
   Filter,
   Grid,
-  MessageCircle,
   Phone,
   Plus,
   Users,
@@ -20,6 +19,7 @@ import { GlassModal } from '@/components/ui/GlassModal'
 import { PortfolioItem, PropertyStatus } from '@/types/portfolio'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { LuxurySelect } from '@/components/ui/LuxurySelect'
 import { DateRangePicker, DateRange } from '@/components/ui/DateRangePicker'
 import { loadSavedDateRange, saveDateRange, checkDayRollover } from '@/services/dateFilterService'
@@ -497,7 +497,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                               className="p-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-400 transition-colors"
                               title="WhatsApp Görüşmesi Aç"
                             >
-                              <MessageCircle className="w-3.5 h-3.5" />
+                              <WhatsAppIcon className="w-3.5 h-3.5" />
                             </a>
                             <a
                               href={`tel:${lead.phone}`}
@@ -611,7 +611,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                 <div
                   key={lead.id}
                   onClick={() => onSelectLead(lead)}
-                  className="p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] hover:border-[#b99881]/50 backdrop-blur-md transition-all cursor-pointer group space-y-4"
+                  className="responsive-card p-5 rounded-[28px] bg-[#282522]/80 border border-[#4a443f] hover:border-[#b99881]/50 backdrop-blur-md transition-all cursor-pointer group space-y-4"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -655,10 +655,11 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                         href={generateWhatsAppUrl(lead.phone, `Merhaba Sayın ${lead.fullName}, Demirtürk Portföy'den yazıyorum.`)}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-xs text-emerald-400 transition-colors"
+                        className="card-action-btn flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-xs text-emerald-400 transition-colors"
+                        title="WhatsApp"
                       >
-                        <MessageCircle className="w-3 h-3" />
-                        <span>WhatsApp</span>
+                        <WhatsAppIcon className="w-3 h-3 shrink-0" />
+                        <span className="btn-label">WhatsApp</span>
                       </a>
                       <a
                         href={`tel:${lead.phone}`}

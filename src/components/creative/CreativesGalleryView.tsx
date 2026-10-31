@@ -24,6 +24,7 @@ import {
 import { userStore } from '@/services/userStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 
 export const CREATIVE_STATUS_META: Record<
   CreativeStatus,
@@ -218,9 +219,11 @@ export function CreativesGalleryView() {
       </div>
 
       {/* Filter Bar (Dış katmansız, her sekme kendi pill-shaped katmanıyla) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {[
+      <div className="flex items-center justify-between gap-3 min-w-0">
+        <OverflowTabs
+          activeId={statusFilter}
+          onSelect={(id) => setStatusFilter(id)}
+          tabs={[
             { id: 'ALL', label: `Tümü (${creatives.length})` },
             {
               id: 'INCELEMEDE',
@@ -242,19 +245,8 @@ export function CreativesGalleryView() {
               id: 'TASLAK',
               label: `Taslak (${creatives.filter((c) => c.status === 'TASLAK').length})`,
             },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setStatusFilter(tab.id)}
-              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                statusFilter === tab.id ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+          ]}
+        />
 
         <div className="relative min-w-[240px]">
           <Search className="w-3.5 h-3.5 text-[#8c857f] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -281,7 +273,7 @@ export function CreativesGalleryView() {
             <GlassCard
               key={item.id}
               onClick={() => setSelectedCreativeId(item.id)}
-              className="group bg-[#282522] border-[#4a443f] overflow-hidden flex flex-col cursor-pointer p-0"
+              className="responsive-card group bg-[#282522] border-[#4a443f] overflow-hidden flex flex-col cursor-pointer p-0"
             >
               {/* Visual Mockup / Preview Banner */}
               <div
@@ -347,23 +339,26 @@ export function CreativesGalleryView() {
                   </p>
                 </div>
 
-                <div className="pt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#d6beae]">
-                      <MessageSquare className="w-3.5 h-3.5 text-[#b99881]" />
-                      {itemComments.length} Yorum
+                <div className="pt-2 flex items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#d6beae] whitespace-nowrap">
+                      <MessageSquare className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                      <span>{itemComments.length} Yorum</span>
                     </span>
                     {unresolvedReviseCount > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-semibold">
-                        <AlertTriangle className="w-3 h-3" />
-                        {unresolvedReviseCount} Açık Revize
+                      <span className="card-badge-pill px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-semibold">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        <span>{unresolvedReviseCount} Açık Revize</span>
                       </span>
                     )}
                   </div>
 
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#b99881] group-hover:translate-x-0.5 transition-transform">
-                    <Eye className="w-3.5 h-3.5" />
-                    İncele & Yorum Yaz
+                  <span
+                    className="card-action-btn text-[11px] font-semibold text-[#b99881] group-hover:translate-x-0.5 transition-transform"
+                    title="İncele & Yorum Yaz"
+                  >
+                    <Eye className="w-3.5 h-3.5 shrink-0" />
+                    <span className="btn-label">İncele & Yorum Yaz</span>
                   </span>
                 </div>
               </div>

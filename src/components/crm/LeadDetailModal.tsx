@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import {
-  MessageCircle,
   Mail,
   Sparkles,
   ExternalLink,
@@ -26,6 +25,7 @@ import { HOUSING_TYPES } from './LeadAddModal'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassInput } from '@/components/ui/GlassInput'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { PhoneInput } from '@/components/common/PhoneInput'
 import { portfolioStore } from '@/services/portfolioStore'
 import { leadStore } from '@/services/leadStore'
@@ -651,7 +651,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             <div className="p-3.5 rounded-[22px] bg-transparent border border-[#4a443f] space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 tracking-wide">
-                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Hızlı WhatsApp mesajı</span>
                 </div>
                 <a
@@ -660,6 +660,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   rel="noopener noreferrer"
                   className="whatsapp-action-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-all shadow-sm cursor-pointer"
                 >
+                  <WhatsAppIcon className="w-3 h-3 text-white" />
                   <span>WhatsApp'ta aç</span>
                   <ExternalLink className="w-3 h-3 text-white" />
                 </a>

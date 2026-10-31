@@ -27,6 +27,7 @@ import {
 } from '@/services/creativeStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 
 const MONTH_NAMES_TR = [
   'Ocak',
@@ -362,34 +363,25 @@ export const CreativeScheduleView: React.FC = () => {
         </div>
 
         {/* Sağ: Kategori Filtreleri + Takvim/Liste Görünüm Değiştirici + Yeni Ekle */}
-        <div className="flex flex-wrap items-center gap-2 justify-between xl:justify-end">
-          {/* Hızlı Kategori Hapları (Takvim görünümünde doğrudan üst barda, her biri kendi pill-shaped katmanıyla) */}
+        <div className="flex items-center gap-2 justify-between xl:justify-end min-w-0 flex-1">
+          {/* Hızlı Kategori Hapları (Takvim görünümünde doğrudan üst barda, sığmayanlar ... menüsünde) */}
           {viewMode === 'calendar' && (
-            <div className="hidden 2xl:flex items-center gap-1.5">
-              {(
-                [
-                  { id: 'ALL', label: 'Tümü' },
-                  { id: 'RESMI_BAYRAM', label: 'Resmi Bayram' },
-                  { id: 'OZEL_GUN', label: 'Özel Gün' },
-                  { id: 'KAMPANYA', label: 'Kampanya' },
-                  { id: 'CEKIM', label: 'Çekim' },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setCategoryFilter(tab.id)}
-                  className={`tab-pill-btn px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
-                    categoryFilter === tab.id ? 'is-active-tab-pill' : ''
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            <OverflowTabs
+              size="sm"
+              className="justify-end"
+              activeId={categoryFilter}
+              onSelect={(id) => setCategoryFilter(id as any)}
+              tabs={[
+                { id: 'ALL', label: 'Tümü' },
+                { id: 'RESMI_BAYRAM', label: 'Resmi Bayram' },
+                { id: 'OZEL_GUN', label: 'Özel Gün' },
+                { id: 'KAMPANYA', label: 'Kampanya' },
+                { id: 'CEKIM', label: 'Çekim' },
+              ]}
+            />
           )}
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Görünüm Seçici: Takvim (Varsayılan) | Liste (Dış katmansız, kendi pill-shaped katmanlarıyla) */}
             <div className="inline-flex items-center gap-1.5">
               <button
@@ -623,32 +615,21 @@ export const CreativeScheduleView: React.FC = () => {
           </div>
 
           {/* Filtre & Arama Barı (Dış katmansız, her sekme kendi pill-shaped katmanıyla) */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              {(
-                [
-                  { id: 'ALL', label: 'Tümü' },
-                  { id: 'RESMI_BAYRAM', label: 'Resmi Bayramlar' },
-                  { id: 'OZEL_GUN', label: 'Özel Günler' },
-                  { id: 'KAMPANYA', label: 'Kampanya & Lansman' },
-                  { id: 'CEKIM', label: 'Prodüksiyon / Çekim' },
-                  { id: 'ICERIK', label: 'Düzenli İçerik' },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setCategoryFilter(tab.id)}
-                  className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    categoryFilter === tab.id ? 'is-active-tab-pill' : ''
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center justify-between gap-3 min-w-0">
+            <OverflowTabs
+              activeId={categoryFilter}
+              onSelect={(id) => setCategoryFilter(id as any)}
+              tabs={[
+                { id: 'ALL', label: 'Tümü' },
+                { id: 'RESMI_BAYRAM', label: 'Resmi Bayramlar' },
+                { id: 'OZEL_GUN', label: 'Özel Günler' },
+                { id: 'KAMPANYA', label: 'Kampanya & Lansman' },
+                { id: 'CEKIM', label: 'Prodüksiyon / Çekim' },
+                { id: 'ICERIK', label: 'Düzenli İçerik' },
+              ]}
+            />
 
-            <div className="relative w-full lg:w-72">
+            <div className="relative w-48 sm:w-72 shrink-0">
               <Search className="w-3.5 h-3.5 text-[#8c857f] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"

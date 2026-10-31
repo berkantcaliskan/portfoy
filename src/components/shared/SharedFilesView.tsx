@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassModal } from '@/components/ui/GlassModal'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 import {
   sharedFileStore,
   SharedFile,
@@ -601,31 +602,25 @@ export const SharedFilesView: React.FC = () => {
       )}
 
       {/* Dosya Türü Sekmeleri, Arama, Sıralama ve Görünüm Çubuğu */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 min-w-0">
         {/* Sol: Tür Sekmeleri (Tümü / Fotoğraf / Video / Belge) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          {kindTabs.map((tab) => {
+        <OverflowTabs
+          activeId={selectedKindFilter}
+          onSelect={(id) => setSelectedKindFilter(id as any)}
+          tabs={kindTabs.map((tab) => {
             const count =
               tab.id === 'ALL'
                 ? files.length
                 : files.filter((f) => getFileKindCategory(f.type) === tab.id).length
-            const isSelected = selectedKindFilter === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedKindFilter(tab.id)}
-                className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
-                  isSelected ? 'is-active-tab-pill' : ''
-                }`}
-              >
-                {tab.label} ({count})
-              </button>
-            )
+            return {
+              id: tab.id,
+              label: `${tab.label} (${count})`,
+            }
           })}
-        </div>
+        />
 
         {/* Sağ: Arama + Sıralama + Görünüm Modları */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Arama */}
           <div className="relative w-full sm:w-52">
             <Search className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2" />

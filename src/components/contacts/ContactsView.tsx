@@ -5,7 +5,6 @@ import {
   Plus,
   Phone,
   Mail,
-  MessageCircle,
   Building,
   Briefcase,
   Trash2,
@@ -20,6 +19,8 @@ import { userStore } from '@/services/userStore'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 import { PhoneInput } from '@/components/common/PhoneInput'
 import { formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
 
@@ -195,35 +196,21 @@ export const ContactsView: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar (Katmansız, Pill Shaped) */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 min-w-0">
         {/* Category Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: 'ALL', label: 'Tümü', count: combinedContacts.length },
-            { id: 'EKIP', label: 'Ekip & Danışmanlar', count: combinedContacts.filter((c) => c.category === 'EKIP').length },
-            { id: 'MUSTERI', label: 'Müşteriler', count: combinedContacts.filter((c) => c.category === 'MUSTERI').length },
-            { id: 'ORTAK', label: 'İş Ortakları & Noter', count: combinedContacts.filter((c) => c.category === 'ORTAK').length },
-          ].map((cat) => {
-            const isActive = selectedCategory === cat.id
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
-                    : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
-                }`}
-              >
-                <span>{cat.label}</span>
-                <span className="text-[10px] opacity-80">({cat.count})</span>
-              </button>
-            )
-          })}
-        </div>
+        <OverflowTabs
+          activeId={selectedCategory}
+          onSelect={(id) => setSelectedCategory(id)}
+          tabs={[
+            { id: 'ALL', label: `Tümü (${combinedContacts.length})` },
+            { id: 'EKIP', label: `Ekip & Danışmanlar (${combinedContacts.filter((c) => c.category === 'EKIP').length})` },
+            { id: 'MUSTERI', label: `Müşteriler (${combinedContacts.filter((c) => c.category === 'MUSTERI').length})` },
+            { id: 'ORTAK', label: `İş Ortakları & Noter (${combinedContacts.filter((c) => c.category === 'ORTAK').length})` },
+          ]}
+        />
 
         {/* Search Box */}
-        <div className="relative w-48 sm:w-64">
+        <div className="relative w-48 sm:w-64 shrink-0">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a69f99]" />
           <input
             type="text"
@@ -325,7 +312,7 @@ export const ContactsView: React.FC = () => {
                       className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors"
                       title="WhatsApp Mesajı Aç"
                     >
-                      <MessageCircle className="w-3.5 h-3.5" />
+                      <WhatsAppIcon className="w-3.5 h-3.5" />
                     </a>
 
                     {/* Phone Call */}

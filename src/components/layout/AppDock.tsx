@@ -20,7 +20,6 @@ import {
   TurkishLira,
   TrendingUp,
   PieChart,
-  MessageCircle,
   Layers,
   ArrowRightLeft,
   Scale,
@@ -47,6 +46,7 @@ import {
 } from 'lucide-react'
 import { NavTab } from './Navbar'
 import { BookLogo } from '@/components/common/BookLogo'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { AppUser } from '@/services/userStore'
 import { ToolType } from '@/components/tools/QuickToolsModal'
 
@@ -106,7 +106,7 @@ const START_MENU_ITEMS: StartMenuItem[] = [
   { id: 'currency', name: 'Döviz & Kur', icon: ArrowRightLeft, type: 'tool', toolId: 'currency' },
   { id: 'mortgage', name: 'Konut Kredisi', icon: TrendingUp, type: 'tool', toolId: 'mortgage' },
   { id: 'deedFee', name: 'Tapu Harcı', icon: PieChart, type: 'tool', toolId: 'deedFee' },
-  { id: 'whatsapp', name: 'WhatsApp', icon: MessageCircle, type: 'tool', toolId: 'whatsapp' },
+  { id: 'whatsapp', name: 'WhatsApp', icon: WhatsAppIcon, type: 'tool', toolId: 'whatsapp' },
   { id: 'sqmPrice', name: 'm² Birim Fiyat', icon: Layers, type: 'tool', toolId: 'sqmPrice' },
   { id: 'roi', name: 'Kira Amortisman', icon: Scale, type: 'tool', toolId: 'roi' },
   { id: 'bargain', name: 'Pazarlık Marjı', icon: Percent, type: 'tool', toolId: 'bargain' },

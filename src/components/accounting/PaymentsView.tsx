@@ -13,6 +13,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 import {
   accountingStore,
   PaymentRecord,
@@ -141,22 +142,18 @@ export const PaymentsView: React.FC = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-2 overflow-x-auto">
-        <span className="text-xs text-[#8c857f] mr-1">Kategori:</span>
-        {['ALL', 'COMMISSION', 'CONSTRUCTION', 'MARKETING', 'OFFICE'].map((c) => (
-          <button
-            key={c}
-            onClick={() => setFilterCategory(c)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer shrink-0 ${
-              filterCategory === c
-                ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
-            }`}
-          >
-            {c === 'ALL' ? 'Tümü' : c === 'COMMISSION' ? 'Danışman Komisyonu' : c === 'CONSTRUCTION' ? 'Şantiye Hakedişi' : c === 'MARKETING' ? 'Pazarlama' : 'Ofis Gideri'}
-          </button>
-        ))}
-      </div>
+      <OverflowTabs
+        prefixLabel="Kategori:"
+        activeId={filterCategory}
+        onSelect={(id) => setFilterCategory(id)}
+        tabs={[
+          { id: 'ALL', label: 'Tümü' },
+          { id: 'COMMISSION', label: 'Danışman Komisyonu' },
+          { id: 'CONSTRUCTION', label: 'Şantiye Hakedişi' },
+          { id: 'MARKETING', label: 'Pazarlama' },
+          { id: 'OFFICE', label: 'Ofis Gideri' },
+        ]}
+      />
 
       {/* Tablo (Boşken Katmansız ve Ortalı) */}
       {filtered.length === 0 ? (

@@ -14,6 +14,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 import {
   accountingStore,
   CollectionRecord,
@@ -176,22 +177,18 @@ export const CollectionsView: React.FC = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-[#8c857f] mr-1">Filtre:</span>
-        {['ALL', 'COLLECTED', 'PENDING', 'OVERDUE', 'REFUNDED'].map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilterStatus(s)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-              filterStatus === s
-                ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
-                : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
-            }`}
-          >
-            {s === 'ALL' ? 'Tümü' : s === 'COLLECTED' ? 'Tahsil Edildi' : s === 'PENDING' ? 'Bekliyor' : s === 'OVERDUE' ? 'Gecikmede' : 'İade Edildi'}
-          </button>
-        ))}
-      </div>
+      <OverflowTabs
+        prefixLabel="Filtre:"
+        activeId={filterStatus}
+        onSelect={(id) => setFilterStatus(id)}
+        tabs={[
+          { id: 'ALL', label: 'Tümü' },
+          { id: 'COLLECTED', label: 'Tahsil Edildi' },
+          { id: 'PENDING', label: 'Bekliyor' },
+          { id: 'OVERDUE', label: 'Gecikmede' },
+          { id: 'REFUNDED', label: 'İade Edildi' },
+        ]}
+      />
 
       {/* Tablo (Boşken Katmansız ve Ortalı) */}
       {filtered.length === 0 ? (

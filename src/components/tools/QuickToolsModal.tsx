@@ -13,7 +13,6 @@ import {
   Plus,
   Trash2,
   Calendar,
-  MessageCircle,
   Building,
   ArrowRightLeft,
   PieChart,
@@ -47,6 +46,7 @@ import {
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { formatCurrency, generateWhatsAppUrl } from '@/utils/formatters'
 import { CalendarWorkspaceTool } from './CalendarWorkspaceTool'
 import { userStore, AppUser } from '@/services/userStore'
@@ -732,7 +732,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     { id: 'currency', label: 'Döviz & Kur', icon: ArrowRightLeft },
     { id: 'mortgage', label: 'Konut Kredisi', icon: TrendingUp },
     { id: 'deedFee', label: 'Tapu Harcı', icon: PieChart },
-    { id: 'whatsapp', label: 'WhatsApp Şablon', icon: MessageCircle },
+    { id: 'whatsapp', label: 'WhatsApp Şablon', icon: WhatsAppIcon },
     { id: 'sqmPrice', label: 'm² Birim Fiyat', icon: Layers },
     { id: 'roi', label: 'Kira Amortismanı', icon: Scale },
     { id: 'bargain', label: 'Pazarlık Marjı', icon: Percent },
@@ -1791,7 +1791,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               <GlassButton
                 variant="gold"
                 size="sm"
-                icon={<MessageCircle className="w-3.5 h-3.5" />}
+                icon={<WhatsAppIcon className="w-3.5 h-3.5" />}
                 onClick={() => window.open(generateWhatsAppUrl('905320000000', generateWaText()), '_blank')}
                 className="rounded-full px-5"
               >

@@ -1,7 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import {
-  MessageCircle,
   Phone,
   ArrowRight,
   ArrowLeft,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { formatCurrency, formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
 
 interface LeadKanbanBoardProps {
@@ -171,7 +171,7 @@ export const LeadKanbanBoard: React.FC<LeadKanbanBoardProps> = ({
                             className="p-2 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-500/30 transition-colors"
                             title="WhatsApp İle Mesaj Gönder"
                           >
-                            <MessageCircle className="w-3.5 h-3.5" />
+                            <WhatsAppIcon className="w-3.5 h-3.5" />
                           </a>
                           <a
                             href={`tel:${lead.phone}`}

@@ -25,6 +25,8 @@ import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassSelect } from '@/components/ui/GlassSelect'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { StageDropdown } from './StageDropdown'
 import { CallStatusDropdown } from './CallStatusDropdown'
@@ -835,181 +837,95 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       </div>
 
       {/* Tabs & Search Bar (Katmansız, Pill Shape) */}
-      <div className="relative z-30 flex flex-wrap items-center justify-between gap-4">
+      <div className="relative z-30 flex items-center justify-between gap-3 min-w-0">
         {isMarketingView ? (
           /* PAZARLAMA SEKMELERİ: En solda Tümü (sadece ikon olarak), sonra Meta ve ikonu, Google ve ikonu, sonra Web Sitesi ve Demirtürk ikonu */
-          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-            {/* 1. En solda: Tümü (Sadece İkon Olarak) */}
-            <button
-              type="button"
-              onClick={() => setFilterStage('ALL')}
-              title={`Tümü (${dateFilteredLeads.length})`}
-              className={`tab-pill-btn w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-                filterStage === 'ALL' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              <Layers className="w-4 h-4 shrink-0" />
-            </button>
-
-            {/* 2. Sonra: Meta ve İkonu */}
-            <button
-              type="button"
-              onClick={() => setFilterStage('CHANNEL_META')}
-              className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CHANNEL_META' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              <svg
-                className="w-4 h-4 shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.1"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
-              </svg>
-              <span>Meta ({metaChannelCount})</span>
-            </button>
-
-            {/* 3. Sonra: Google ve İkonu */}
-            <button
-              type="button"
-              onClick={() => setFilterStage('CHANNEL_GOOGLE')}
-              className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CHANNEL_GOOGLE' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
-              </svg>
-              <span>Google ({googleChannelCount})</span>
-            </button>
-
-            {/* 4. Sonra: Web Sitesi ve Demirtürk İkonu */}
-            <button
-              type="button"
-              onClick={() => setFilterStage('CHANNEL_WEB')}
-              className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CHANNEL_WEB' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              <BookLogo animated={false} className="w-4 h-4 shrink-0" />
-              <span>Web Sitesi ({webChannelCount})</span>
-            </button>
-          </div>
+          <OverflowTabs
+            activeId={filterStage}
+            onSelect={(id) => setFilterStage(id as any)}
+            tabs={[
+              {
+                id: 'ALL',
+                iconOnly: true,
+                icon: <Layers className="w-4 h-4 shrink-0" />,
+                title: `Tümü (${dateFilteredLeads.length})`,
+                dropdownLabel: `Tümü (${dateFilteredLeads.length})`,
+              },
+              {
+                id: 'CHANNEL_META',
+                label: `Meta (${metaChannelCount})`,
+                icon: (
+                  <svg
+                    className="w-4 h-4 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
+                  </svg>
+                ),
+              },
+              {
+                id: 'CHANNEL_GOOGLE',
+                label: `Google (${googleChannelCount})`,
+                icon: (
+                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
+                  </svg>
+                ),
+              },
+              {
+                id: 'CHANNEL_WEB',
+                label: `Web Sitesi (${webChannelCount})`,
+                icon: <BookLogo animated={false} className="w-4 h-4 shrink-0" />,
+              },
+            ]}
+          />
         ) : (
           /* MÜŞTERİ İLİŞKİLERİ SEKMELERİ: İletişim (Varsayılan) -> Tekrar Ara -> Nitelikli -> Teklif -> Dönüşüm -> Diğer (Potansiyel Olmayanlar) -> Tümü -> Custom Tabs -> [+] */
-          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-            {/* 1. Sekme: İletişim */}
-            <button
-              onClick={() => setFilterStage('UNCONTACTED')}
-              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'UNCONTACTED' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              İletişim ({uncontactedCount})
-            </button>
-
-            {/* 2. Sekme: Tekrar Ara (Tekrar ara + Ulaşılamadı bilgisi seçilenler, Saatlik hatırlatmalı) */}
-            <button
-              onClick={() => setFilterStage('CALL_AGAIN')}
-              title="Tekrar ara ve Ulaşılamadı bilgisi seçilen müşteriler (Saatlik hatırlatma aktif)"
-              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CALL_AGAIN' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              Tekrar Ara ({callAgainCount})
-            </button>
-
-            {/* 3. Sekme: Nitelikli */}
-            <button
-              onClick={() => setFilterStage('QUALIFIED')}
-              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'QUALIFIED' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              Nitelikli ({qualifiedCount})
-            </button>
-
-            {/* 3. Sekme: Teklif */}
-            <button
-              onClick={() => setFilterStage('OFFER')}
-              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'OFFER' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              Teklif ({offerCount})
-            </button>
-
-            {/* 4. Sekme: Dönüşüm */}
-            <button
-              onClick={() => setFilterStage('CONVERTED')}
-              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'CONVERTED' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              Dönüşüm ({convertedCount})
-            </button>
-
-            {/* 5. Sekme: Diğer (Potansiyel Olmayanlar) */}
-            <button
-              onClick={() => setFilterStage('OTHER')}
-              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'OTHER' ? 'is-active-tab-pill' : ''
-              }`}
-              title="Potansiyel olmayan (Potansiyel Değil / Satın alma niyeti yok) kayıtlar"
-            >
-              Diğer ({otherCount})
-            </button>
-
-            {/* 6. Sekme: Tümü */}
-            <button
-              onClick={() => setFilterStage('ALL')}
-              className={`tab-pill-btn px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                filterStage === 'ALL' ? 'is-active-tab-pill' : ''
-              }`}
-            >
-              Tümü ({dateFilteredLeads.length})
-            </button>
-
-            {/* Kullanıcının Kendi Eklediği Özel Sekmeler */}
-            {customTabs.map((ct) => (
-              <div
-                key={ct.id}
-                onClick={() => setFilterStage(ct.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer shrink-0 ${
-                  filterStage === ct.id
-                    ? 'bg-[#b99881] text-white font-semibold border border-white/10'
-                    : 'text-[#a69f99] hover:text-white font-medium hover:bg-white/5'
-                }`}
+          <OverflowTabs
+            activeId={filterStage}
+            onSelect={(id) => setFilterStage(id as any)}
+            tabs={[
+              { id: 'UNCONTACTED', label: `İletişim (${uncontactedCount})` },
+              {
+                id: 'CALL_AGAIN',
+                label: `Tekrar Ara (${callAgainCount})`,
+                title: 'Tekrar ara ve Ulaşılamadı bilgisi seçilen müşteriler (Saatlik hatırlatma aktif)',
+              },
+              { id: 'QUALIFIED', label: `Nitelikli (${qualifiedCount})` },
+              { id: 'OFFER', label: `Teklif (${offerCount})` },
+              { id: 'CONVERTED', label: `Dönüşüm (${convertedCount})` },
+              {
+                id: 'OTHER',
+                label: `Diğer (${otherCount})`,
+                title: 'Potansiyel olmayan (Potansiyel Değil / Satın alma niyeti yok) kayıtlar',
+              },
+              { id: 'ALL', label: `Tümü (${dateFilteredLeads.length})` },
+              ...customTabs.map((ct) => ({
+                id: ct.id,
+                label: ct.name,
+                onRemove: (e: React.MouseEvent) => handleDeleteCustomTab(ct.id, e),
+              })),
+            ]}
+            trailingElement={
+              <button
+                onClick={() => setIsAddTabModalOpen(true)}
+                className="card-action-btn flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#34302d] text-[#b99881] hover:text-white hover:bg-[#3d3733] border border-[#4a443f] text-xs font-bold cursor-pointer transition-colors shrink-0"
+                title="Yeni Özel Sekme Ekle"
               >
-                <span>{ct.name}</span>
-                <button
-                  onClick={(e) => handleDeleteCustomTab(ct.id, e)}
-                  className="hover:text-rose-400 p-0.5 rounded-full"
-                  title="Sekmeyi Kaldır"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-
-            {/* + Butonu: Eleman oraya kendi sekmesini ekleyebilecek */}
-            <button
-              onClick={() => setIsAddTabModalOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#34302d] text-[#b99881] hover:text-white hover:bg-[#3d3733] border border-[#4a443f] text-xs font-bold cursor-pointer transition-colors shrink-0"
-              title="Yeni Özel Sekme Ekle"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Sekme Ekle</span>
-            </button>
-          </div>
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span className="btn-label">Sekme Ekle</span>
+              </button>
+            }
+          />
         )}
 
         {/* Sağ: Arama ve Tarih Seçimi */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Arama Alanı */}
           <div className="relative w-full sm:w-60">
             <Search className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1226,13 +1142,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                                     className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 transition-colors flex items-center justify-center shrink-0 ml-2"
                                     title="WhatsApp Mesajı Gönder"
                                   >
-                                    <svg
-                                      className="w-3.5 h-3.5 shrink-0"
-                                      viewBox="0 0 24 24"
-                                      fill="currentColor"
-                                    >
-                                      <path d="M12.031 2.01c-5.518 0-9.998 4.48-9.998 9.998 0 1.763.46 3.485 1.334 5.003L2 22l5.122-1.343a9.956 9.956 0 0 0 4.909 1.298h.004c5.517 0 9.997-4.48 9.997-9.998 0-2.671-1.04-5.182-2.928-7.07A9.935 9.935 0 0 0 12.031 2.01Zm5.847 14.307c-.246.693-1.434 1.326-1.997 1.41-.513.076-1.163.109-1.878-.118-.433-.138-.988-.321-1.7-.628-2.993-1.292-4.947-4.306-5.097-4.505-.149-.2-1.216-1.618-1.216-3.086 0-1.468.769-2.19 1.042-2.489.274-.298.597-.373.796-.373.199 0 .398.002.572.01.183.009.429-.07.671.512.248.597.845 2.065.92 2.214.075.15.124.324.025.523-.099.199-.149.323-.298.497-.15.174-.314.389-.448.523-.149.149-.304.311-.131.609.174.298.773 1.275 1.66 2.065 1.14.996 2.101 1.305 2.4 1.454.298.15.472.125.646-.075.174-.199.746-.87.945-1.169.199-.298.398-.248.671-.149.274.1 1.741.821 2.039.97.298.149.497.224.572.348.075.125.075.722-.171 1.415Z" />
-                                    </svg>
+                                    <WhatsAppIcon className="w-3.5 h-3.5 shrink-0" />
                                   </a>
                                 ) : (
                                   <span className="w-6 h-6" />

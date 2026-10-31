@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import {
-  MessageCircle,
   Phone,
   ArrowUpDown,
   Filter,
@@ -11,6 +10,7 @@ import {
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { LuxurySelect } from '@/components/ui/LuxurySelect'
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { formatCurrency, formatDate, formatPhoneNumber, formatPhoneDisplay, generateWhatsAppUrl } from '@/utils/formatters'
 
 interface LeadTableViewProps {
@@ -119,7 +119,7 @@ export const LeadTableView: React.FC<LeadTableViewProps> = ({
                               className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors"
                               title="WhatsApp"
                             >
-                              <MessageCircle className="w-3.5 h-3.5" />
+                              <WhatsAppIcon className="w-3.5 h-3.5" />
                             </a>
                             <a
                               href={`tel:${lead.phone}`}

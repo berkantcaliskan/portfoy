@@ -14,6 +14,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
 import { GlassModal } from '@/components/ui/GlassModal'
+import { OverflowTabs } from '@/components/ui/OverflowTabs'
 import {
   approvalStore,
   ApprovalRequest,
@@ -98,23 +99,18 @@ export const ApprovalsView: React.FC = () => {
       )}
 
       {/* Filter Bar */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto">
-          <span className="text-xs text-[#8c857f] mr-1">Filtre:</span>
-          {['ALL', 'BEKLEMEDE', 'ONAYLANDI', 'REDDEDILDI'].map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                filterStatus === s
-                  ? 'bg-[#b99881] text-[#282522] font-bold shadow-sm'
-                  : 'bg-[#34302d] text-[#a69f99] hover:text-white border border-[#4a443f]'
-              }`}
-            >
-              {s === 'ALL' ? 'Tümü' : s === 'BEKLEMEDE' ? `Bekleyenler (${pendingCount})` : s === 'ONAYLANDI' ? 'Onaylananlar' : 'Reddedilenler'}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-between gap-4 min-w-0">
+        <OverflowTabs
+          prefixLabel="Filtre:"
+          activeId={filterStatus}
+          onSelect={(id) => setFilterStatus(id)}
+          tabs={[
+            { id: 'ALL', label: 'Tümü' },
+            { id: 'BEKLEMEDE', label: `Bekleyenler (${pendingCount})` },
+            { id: 'ONAYLANDI', label: 'Onaylananlar' },
+            { id: 'REDDEDILDI', label: 'Reddedilenler' },
+          ]}
+        />
       </div>
 
       {/* Talep Listesi */}
@@ -135,7 +131,7 @@ export const ApprovalsView: React.FC = () => {
             return (
               <div
                 key={req.id}
-                className={`p-5 rounded-[20px] border transition-all flex flex-col justify-between space-y-3 ${
+                className={`responsive-card p-5 rounded-[20px] border transition-all flex flex-col justify-between space-y-3 ${
                   isPending
                     ? 'bg-[#282522] border-[#4a443f] hover:border-[#b99881]'
                     : isApproved
@@ -143,9 +139,9 @@ export const ApprovalsView: React.FC = () => {
                     : 'bg-[#24211f] border-rose-500/20 opacity-70'
                 }`}
               >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-sm font-bold text-white">{req.title}</span>
+                <div className="min-w-0">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <span className="text-sm font-bold text-white truncate">{req.title}</span>
                     <GlassBadge
                       size="sm"
                       variant={isPending ? 'warning' : isApproved ? 'success' : 'danger'}
@@ -154,51 +150,55 @@ export const ApprovalsView: React.FC = () => {
                     </GlassBadge>
                   </div>
 
-                  <div className="space-y-1.5 text-xs text-[#a69f99] mt-3">
-                    <div className="flex items-center gap-1.5 text-white">
-                      <User className="w-3.5 h-3.5 text-[#b99881]" />
-                      <span>{req.customerName} ({req.projectName} - {req.unitNumber || 'Genel'})</span>
+                  <div className="space-y-1.5 text-xs text-[#a69f99] mt-3 min-w-0">
+                    <div className="flex items-center gap-1.5 text-white min-w-0">
+                      <User className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
+                      <span className="truncate">{req.customerName} ({req.projectName} - {req.unitNumber || 'Genel'})</span>
                     </div>
 
                     {req.amount && (
-                      <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                        <TurkishLira className="w-3.5 h-3.5" />
-                        <span>Talep Edilen Tutar: {formatCurrency(req.amount)}</span>
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-semibold min-w-0">
+                        <TurkishLira className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">Talep Edilen Tutar: {formatCurrency(req.amount)}</span>
                       </div>
                     )}
 
-                    <div className="text-[11px] text-[#8c857f]">
+                    <div className="text-[11px] text-[#8c857f] truncate">
                       Talep Eden: {req.requestedByUserName} ({req.requestedDepartment}) • {new Date(req.createdAt).toLocaleDateString('tr-TR')}
                     </div>
 
-                    <p className="text-[11px] text-[#d6beae] mt-2">
+                    <p className="text-[11px] text-[#d6beae] mt-2 line-clamp-2">
                       Gerekçe: {req.reason}
                     </p>
 
                     {req.reviewNotes && (
-                      <p className="text-[11px] text-white mt-1 font-medium">
+                      <p className="text-[11px] text-white mt-1 font-medium line-clamp-2">
                         Yönetici Notu: {req.reviewNotes} ({req.reviewedByUserName})
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center justify-between text-xs">
-                  <span className="text-[10px] text-[#8c857f]">{req.type}</span>
+                <div className="pt-2 flex items-center justify-between gap-2 text-xs min-w-0">
+                  <span className="text-[10px] text-[#8c857f] truncate">{req.type}</span>
 
                   {isPending && canApprove && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => handleOpenDecision(req, 'ONAYLANDI')}
-                        className="px-3.5 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-semibold cursor-pointer"
+                        title="Onayla"
+                        className="card-action-btn px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-semibold cursor-pointer"
                       >
-                        Onayla
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span className="btn-label">Onayla</span>
                       </button>
                       <button
                         onClick={() => handleOpenDecision(req, 'REDDEDILDI')}
-                        className="px-3.5 py-1 rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold cursor-pointer"
+                        title="Reddet"
+                        className="card-action-btn px-3 py-1 rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold cursor-pointer"
                       >
-                        Reddet
+                        <XCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span className="btn-label">Reddet</span>
                       </button>
                     </div>
                   )}
