@@ -16,6 +16,7 @@ import { SettingsModal, applyAccentColorChoice } from '@/components/settings/Set
 import { MailWorkspaceModal } from '@/components/mail/MailWorkspaceModal'
 import { AuthScreen } from '@/components/auth/AuthScreen'
 import { OpeningAnimation } from '@/components/common/OpeningAnimation'
+import { AmbientSceneOverlay } from '@/components/common/AmbientSceneOverlay'
 import { mailService } from '@/services/mailService'
 import { formatPhoneNumber } from '@/utils/formatters'
 
@@ -530,6 +531,9 @@ export function App() {
         onClose={() => setIsSettingsModalOpen(false)}
         currentUser={currentUser}
       />
+
+      {/* Ambient Animated Background & Bottom Edge Scene */}
+      <AmbientSceneOverlay sidebarCollapsed={isSidebarCollapsed} />
 
       {/* Bottom Dock with Start Menu */}
       <AppDock

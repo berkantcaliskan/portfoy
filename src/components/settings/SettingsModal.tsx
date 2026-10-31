@@ -46,6 +46,12 @@ import { CANONICAL_DEPARTMENTS } from '@/types/department'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { PermissionsMatrixPanel } from './PermissionsMatrixPanel'
 import { permissionService } from '@/services/permissionService'
+import {
+  AMBIENT_SCENE_OPTIONS,
+  AmbientSceneId,
+  getSavedAmbientScene,
+  setSavedAmbientScene,
+} from '@/components/common/AmbientSceneOverlay'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -233,6 +239,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }
 
   // Font Size state ('small' | 'standard' | 'large')
+  const [ambientScene, setAmbientScene] = useState<AmbientSceneId>(() => getSavedAmbientScene())
+
+  const handleSelectAmbientScene = (sceneId: AmbientSceneId) => {
+    setAmbientScene(sceneId)
+    setSavedAmbientScene(sceneId)
+  }
+
   const [fontSize, setFontSize] = useState<'small' | 'standard' | 'large'>(() => {
     try {
       const saved = localStorage.getItem('demirturk_font_size')
@@ -1032,6 +1045,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               {opt.name}
                             </div>
                           </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* HAREKETLİ ARKA PLAN SAHNESİ SEÇİCİ */}
+                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-[#b99881]" />
+                      <span>Arka Plan Sahnesi</span>
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {AMBIENT_SCENE_OPTIONS.map((sc) => {
+                      const isSelected = ambientScene === sc.id
+                      return (
+                        <button
+                          key={sc.id}
+                          type="button"
+                          onClick={() => handleSelectAmbientScene(sc.id)}
+                          className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-full border text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-[#b99881] bg-[#b99881]/15 shadow-sm'
+                              : 'border-[#4a443f]/60 hover:border-[#b99881]/40 bg-[#1e1c1a]/50'
+                          }`}
+                        >
+                          <span className="text-[11px] font-bold text-white truncate">
+                            {sc.name}
+                          </span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#b99881] shrink-0" />}
                         </button>
                       )
                     })}

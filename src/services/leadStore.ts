@@ -89,7 +89,9 @@ class LeadStore {
   private loadSeqStore(): Record<string, number> {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_COMPANY_LEAD_SEQ)
-      return saved ? JSON.parse(saved) : {}
+      if (!saved) return {}
+      const parsed = JSON.parse(saved)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
     } catch {
       return {}
     }
@@ -104,7 +106,9 @@ class LeadStore {
   private loadLeadNumberMap(): Record<string, Record<string, number>> {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_COMPANY_LEAD_MAP)
-      return saved ? JSON.parse(saved) : {}
+      if (!saved) return {}
+      const parsed = JSON.parse(saved)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
     } catch {
       return {}
     }
