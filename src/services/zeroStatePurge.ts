@@ -430,7 +430,7 @@ try {
       diskStore['demirturk_activities_v2'] = '{}'
       diskStore['demirturk_customer_requests_v2'] = '[]'
       diskStore['demirturk_meta_capi_logs_v1'] = '[]'
-      diskStore['demirturk_company_lead_seq_v1'] = '0'
+      diskStore['demirturk_company_lead_seq_v1'] = '{}'
       diskStore['demirturk_company_lead_map_v1'] = '{}'
       diskStore[CLEAN_LEADS_V8_KEY] = 'true'
       try {
@@ -438,9 +438,18 @@ try {
         rawSetItem('demirturk_activities_v2', '{}')
         rawSetItem('demirturk_customer_requests_v2', '[]')
         rawSetItem('demirturk_meta_capi_logs_v1', '[]')
-        rawSetItem('demirturk_company_lead_seq_v1', '0')
+        rawSetItem('demirturk_company_lead_seq_v1', '{}')
         rawSetItem('demirturk_company_lead_map_v1', '{}')
         rawSetItem(CLEAN_LEADS_V8_KEY, 'true')
+      } catch {}
+      seedMerged = true
+    }
+
+    // Repair any corrupted '0' in demirturk_company_lead_seq_v1
+    if (diskStore['demirturk_company_lead_seq_v1'] === '0' || rawGetItem('demirturk_company_lead_seq_v1') === '0') {
+      diskStore['demirturk_company_lead_seq_v1'] = '{}'
+      try {
+        rawSetItem('demirturk_company_lead_seq_v1', '{}')
       } catch {}
       seedMerged = true
     }

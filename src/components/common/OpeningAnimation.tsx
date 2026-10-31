@@ -18,6 +18,8 @@ const SMOOTH_SLIDE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
 export const OpeningAnimation: React.FC<OpeningAnimationProps> = ({ onComplete }) => {
   const [stage, setStage] = useState<'closed' | 'opening' | 'sliding'>('closed')
   const textMeasureRef = useRef<HTMLDivElement>(null)
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
   const [centerOffset, setCenterOffset] = useState<number>(88)
 
   // "Portföy" metninin genişliğini ölçerek kitabın başlangıçta ekranın tam ortasında durmasını sağla
@@ -41,24 +43,24 @@ export const OpeningAnimation: React.FC<OpeningAnimationProps> = ({ onComplete }
     // 1. Aşama: Kısa bir belirmeden sonra kitap açılmaya başlar
     const openTimer = setTimeout(() => {
       setStage('opening')
-    }, 220)
+    }, 150)
 
     // 2. Aşama: Kitap açıldıktan sonra sola kayar ve "Portföy" yazısı kayarak gelir
     const slideTimer = setTimeout(() => {
       setStage('sliding')
-    }, 960)
+    }, 650)
 
     // 3. Aşama: Animasyon tamamlanır ve ana ekrana pürüzsüz geçiş yapılır
     const doneTimer = setTimeout(() => {
-      onComplete()
-    }, 2250)
+      onCompleteRef.current()
+    }, 1500)
 
     return () => {
       clearTimeout(openTimer)
       clearTimeout(slideTimer)
       clearTimeout(doneTimer)
     }
-  }, [onComplete])
+  }, [])
 
   const isBookOpen = stage === 'opening' || stage === 'sliding'
   const isSliding = stage === 'sliding'

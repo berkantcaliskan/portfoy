@@ -61,7 +61,7 @@ import {
 import { notificationStore } from '@/services/notificationStore'
 
 export function App() {
-  const [showOpening, setShowOpening] = useState(true)
+  const [showOpening, setShowOpening] = useState(false)
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
   const [activeTab, setActiveTabState] = useState<NavTab>(() => {
     const raw = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : 'dashboard'
