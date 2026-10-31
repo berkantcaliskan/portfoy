@@ -522,6 +522,202 @@ try {
       seedMerged = true
     }
 
+    
+    // 3.7 Ensure website leads are never lost by code and previously deleted website leads are in Trash Bin (v10)
+    const V10_WEB_TRASH_KEY = 'demirturk_web_and_trash_restored_v10'
+    if (diskStore[V10_WEB_TRASH_KEY] !== 'true' || rawGetItem(V10_WEB_TRASH_KEY) !== 'true') {
+      const ridcanWebLead = {
+        id: 'lead-web-1793361591019-744',
+        leadNumber: 1,
+        companyName: 'Demirtürk İnşaat',
+        fullName: 'Rıdcan gümet',
+        phone: '05079539553',
+        whatsappPhone: '05079539553',
+        source: 'WEBSITE',
+        formName: 'Ücretsiz Tanıtım Turu',
+        channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
+        stage: 'NEW',
+        callStatus: 'WAITING',
+        owner: 'Atanmamış',
+        tags: ['Web Sitesi', 'Tanıtım Turu', 'İstanbul', 'Kendi Aracı'],
+        preferredHousingType: 'Tanıtım Turu',
+        notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Kendi Aracımla Geleceğim',
+        inquiries: [
+          {
+            id: 'inq-web-1793361591700-625',
+            formName: 'Ücretsiz Tanıtım Turu',
+            campaignName: 'Web Sitesi — Ücretsiz Tanıtım Turu',
+            source: 'WEBSITE',
+            channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
+            preferredHousingType: 'Tanıtım Turu',
+            notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Kendi Aracımla Geleceğim',
+            createdAt: '2026-10-30T11:59:51.699Z',
+          },
+        ],
+        assignmentHistory: [],
+        stageHistory: [
+          {
+            id: 'sh-web-1793361592114',
+            toStage: 'NEW',
+            changedByUserId: 'website',
+            changedByUserName: 'Web Sitesi (demirturkinsaat.com)',
+            changedAt: '2026-10-30T11:59:51.699Z',
+            note: 'Ücretsiz Tanıtım Turu başvurusu alındı.',
+          },
+        ],
+        createdAt: '2026-10-30T11:59:51.699Z',
+        updatedAt: '2026-10-30T11:59:51.699Z',
+      }
+
+      const deletedWebItemsForTrash = [
+        {
+          id: 'lead-web-1793435463626-778',
+          companyName: 'Demirtürk İnşaat',
+          fullName: 'Web Ziyaretçisi',
+          phone: '8999699699.9',
+          whatsappPhone: '8999699699.9',
+          source: 'WEBSITE',
+          formName: 'Proje Bilgi Talebi - Almina 1',
+          channel: 'Web Sitesi / Almina Evleri',
+          stage: 'NEW',
+          callStatus: 'WAITING',
+          owner: 'Atanmamış',
+          tags: ['Web Sitesi', 'Proje Bilgi Talebi', 'Almina Evleri'],
+          preferredHousingType: 'Almina Evleri',
+          notes: 'Almina 1 projesi hakkında detaylı bilgi, güncel fiyatlar ve tanıtım turu talebi.',
+          inquiries: [
+            {
+              id: 'inq-web-1793435464546-970',
+              formName: 'Proje Bilgi Talebi - Almina 1',
+              campaignName: 'Web Sitesi — Proje Bilgi Talebi - Almina 1',
+              source: 'WEBSITE',
+              channel: 'Web Sitesi / Almina Evleri',
+              preferredHousingType: 'Almina Evleri',
+              notes: 'Almina 1 projesi hakkında detaylı bilgi, güncel fiyatlar ve tanıtım turu talebi.',
+              createdAt: '2026-10-31T08:31:04.543Z',
+            },
+          ],
+          assignmentHistory: [],
+          stageHistory: [],
+          createdAt: '2026-10-31T08:31:04.543Z',
+          updatedAt: '2026-10-31T08:31:04.543Z',
+        },
+        {
+          id: 'lead-web-1793205148675-464',
+          leadNumber: 9,
+          companyName: 'Demirtürk İnşaat',
+          fullName: 'berkant',
+          phone: '05448491125',
+          whatsappPhone: '05448491125',
+          email: '',
+          stage: 'NEW',
+          callStatus: 'WAITING',
+          owner: 'Atanmamış',
+          source: 'WEBSITE',
+          formName: 'Ücretsiz Tanıtım Turu',
+          channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
+          preferredHousingType: 'Tanıtım Turu (İstanbul)',
+          budget: 0,
+          notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Pazar Günü (VIP Servis)',
+          tags: ['Web Sitesi', 'Tanıtım Turu', 'İstanbul'],
+          inquiries: [
+            {
+              id: 'inq-1793205148675',
+              createdAt: '2026-10-28T16:32:28.073Z',
+              source: 'WEBSITE',
+              formName: 'Ücretsiz Tanıtım Turu',
+              channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
+              preferredHousingType: 'Tanıtım Turu (İstanbul)',
+              budget: 0,
+              notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Pazar Günü (VIP Servis)',
+            },
+          ],
+          assignmentHistory: [],
+          stageHistory: [],
+          createdAt: '2026-10-28T16:32:28.073Z',
+          updatedAt: '2026-10-28T16:32:28.073Z',
+        },
+        {
+          id: 'lead-web-1793205113366-350',
+          leadNumber: 8,
+          companyName: 'Demirtürk İnşaat',
+          fullName: 'Test Web Live',
+          phone: '05309998877',
+          whatsappPhone: '05309998877',
+          email: '',
+          stage: 'NEW',
+          callStatus: 'WAITING',
+          owner: 'Atanmamış',
+          source: 'WEBSITE',
+          formName: 'Test Canli Form',
+          channel: 'Web Sitesi / Test Canli Form',
+          preferredHousingType: '2+1 Daire',
+          budget: 0,
+          notes: 'Canli test',
+          tags: ['Web Sitesi', '2+1 Daire'],
+          inquiries: [
+            {
+              id: 'inq-1793205113366',
+              createdAt: '2026-10-28T16:31:53.363Z',
+              source: 'WEBSITE',
+              formName: 'Test Canli Form',
+              channel: 'Web Sitesi / Test Canli Form',
+              preferredHousingType: '2+1 Daire',
+              budget: 0,
+              notes: 'Canli test',
+            },
+          ],
+          assignmentHistory: [],
+          stageHistory: [],
+          createdAt: '2026-10-28T16:31:53.363Z',
+          updatedAt: '2026-10-28T16:31:53.363Z',
+        },
+      ]
+
+      try {
+        const delSet = parseDeletedSet(diskStore[DELETED_IDS_KEY])
+        delSet.delete(ridcanWebLead.id)
+        delSet.delete('phone:05079539553')
+        delSet.delete('inq-web-1793361591700-625')
+        diskStore[DELETED_IDS_KEY] = JSON.stringify(Array.from(delSet))
+
+        const curLeads = JSON.parse(diskStore['demirturk_leads_v2'] || '[]')
+        const leadsArr = Array.isArray(curLeads) ? curLeads : []
+        if (!leadsArr.some((l: any) => l?.id === ridcanWebLead.id)) {
+          leadsArr.unshift(ridcanWebLead)
+        }
+        diskStore['demirturk_leads_v2'] = JSON.stringify(leadsArr)
+
+        const curTrash = JSON.parse(diskStore[TRASH_STORAGE_KEY] || '[]')
+        const trashArr: TrashItem[] = Array.isArray(curTrash) ? curTrash : []
+        const nowMs = Date.now()
+        deletedWebItemsForTrash.forEach((item, idx) => {
+          if (
+            !trashArr.some((t) => t?.itemId === item.id) &&
+            !leadsArr.some((l: any) => l?.id === item.id)
+          ) {
+            trashArr.push({
+              trashId: `trash-demirturk_leads_v2-${item.id}-${nowMs - idx * 1000}`,
+              storeKey: 'demirturk_leads_v2',
+              itemId: item.id,
+              itemKey: item.id,
+              department: 'Müşteri İlişkileri / Satış',
+              pageName: 'Müşteriler & Talepler',
+              title: item.fullName,
+              subtitle: [item.phone, item.formName, 'Web Sitesi'].filter(Boolean).join(' • '),
+              deletedAt: new Date(nowMs - idx * 60000).toISOString(),
+              expiresAt: new Date(nowMs + TRASH_RETENTION_MS).toISOString(),
+              payload: item,
+            })
+          }
+        })
+        diskStore[TRASH_STORAGE_KEY] = JSON.stringify(trashArr)
+        diskStore[V10_WEB_TRASH_KEY] = 'true'
+        rawSetItem(V10_WEB_TRASH_KEY, 'true')
+        seedMerged = true
+      } catch {}
+    }
+
     // Repair any corrupted '0' in demirturk_company_lead_seq_v1
     if (diskStore['demirturk_company_lead_seq_v1'] === '0' || rawGetItem('demirturk_company_lead_seq_v1') === '0') {
       diskStore['demirturk_company_lead_seq_v1'] = '{}'

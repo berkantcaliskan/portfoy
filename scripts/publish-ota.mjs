@@ -360,7 +360,7 @@ async function main() {
         // Nothing new to commit
       }
       try {
-        execSync('git pull --rebase -X ours origin main', { cwd: rootDir, stdio: 'inherit' })
+        execSync('git pull --rebase -X theirs origin main', { cwd: rootDir, stdio: 'inherit' })
       } catch {}
       execSync('git push origin main', { cwd: rootDir, stdio: 'inherit' })
       console.log('[OTA] Successfully pushed to GitHub (origin/main)!')
