@@ -694,18 +694,12 @@ html:not([data-theme-accent]) {
   --accent-hover: #64748b;
 }
 
-[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="text-[#b99881]"],
 [data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .text-\[\#b99881\] {
   color: var(--accent-color) !important;
 }
 [data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .bg-\[\#b99881\] {
   background-color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="border-[#b99881]"],
-[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .border-\[\#b99881\] {
-  border-color: var(--accent-color) !important;
-}
-[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="text-[#d6beae]"],
 [data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .text-\[\#d6beae\] {
   color: var(--accent-light) !important;
 }
@@ -718,12 +712,6 @@ html:not([data-theme-accent]) {
 [data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="hover:bg-[#b99881]"]:hover {
   background-color: var(--accent-color) !important;
 }
-[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="hover:border-[#b99881]"]:hover {
-  border-color: var(--accent-color) !important;
-}
-[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) [class*="focus:border-[#b99881]"]:focus {
-  border-color: var(--accent-color) !important;
-}
 [data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .text-brand-gold,
 [data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .text-brand-goldLight {
   color: var(--accent-color) !important;
@@ -731,10 +719,6 @@ html:not([data-theme-accent]) {
 [data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .bg-brand-gold,
 [data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .bg-brand-goldLight {
   background-color: var(--accent-color) !important;
-}
-[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .border-brand-gold,
-[data-theme-accent]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .border-brand-goldLight {
-  border-color: var(--accent-color) !important;
 }
 
 /* ==========================================================================
@@ -787,7 +771,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-[#383830]/90"] {
   background: rgba(227, 229, 225, 0.96) !important;
   background-color: rgba(227, 229, 225, 0.96) !important;
-  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 30%, transparent) !important;
+  border-color: rgba(41, 45, 43, 0.20) !important;
 }
 
 /* Ana Metin, Başlıklar ve Sayısal Metrikler -> #292d2b */
@@ -986,7 +970,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main [class*="hover:bg-[#282522]"]:hover {
   background: #ffffff !important;
   background-color: #ffffff !important;
-  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 35%, transparent) !important;
+  border-color: rgba(41, 45, 43, 0.30) !important;
 }
 
 /* Açılır Menüler (Dropdowns), Başlat Menüsü, Modallar ve Popover'lar: Kart Yüzeyi #ffffff & İkincil Yüzey #ebece9 */
@@ -1262,24 +1246,24 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-button-subtle:hover {
   background: #dfe1dd !important;
-  border: 1px solid color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
+  border: 1px solid rgba(41, 45, 43, 0.32) !important;
   color: #292d2b !important;
 }
 
 /* Kenarlıklar (Borders) */
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#4a443f]"]:not(:hover),
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .border-\[\#4a443f\]:not(:hover),
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#b99881]"]:not(:hover) {
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#4a443f]"],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .border-\[\#4a443f\],
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="border-[#b99881]"] {
   border-color: rgba(41, 45, 43, 0.20) !important;
 }
 
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button[class*="hover:border-[#b99881]"]:hover,
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .calendar-day-cell:hover {
-  border-color: var(--accent-color, #5c6ac4) !important;
+  border-color: rgba(41, 45, 43, 0.34) !important;
 }
 
 .calendar-day-cell:hover {
-  border-color: var(--accent-color, #b99881) !important;
+  border-color: rgba(244, 241, 234, 0.32) !important;
 }
 
 /* Dock dikey ayırıcı çizgisi: yuvarlak butonların dış katman çizgisi gibi gri/hafif koyu gri */
@@ -1536,8 +1520,14 @@ main button.meta-stage-trigger-pill,
 main .glass-card button.meta-stage-trigger-pill,
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill,
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill {
-  border: 1.5px solid var(--accent-color, #b99881) !important;
-  border-color: var(--accent-color, #b99881) !important;
+  border: 1px solid rgba(41, 45, 43, 0.24) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme-accent="night"] button.meta-stage-trigger-pill,
+html[data-theme-accent="night"] main button.meta-stage-trigger-pill,
+html[data-theme-accent="night"] main .glass-card button.meta-stage-trigger-pill {
+  border: 1px solid rgba(244, 241, 234, 0.22) !important;
   box-shadow: none !important;
 }
 
@@ -1551,15 +1541,27 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.meta-stage-trigger-pill[data-dropdown-open="true"],
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill:hover,
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill[data-dropdown-open="true"] {
-  border: 1.5px solid var(--accent-color, #b99881) !important;
-  border-color: var(--accent-color, #b99881) !important;
+  border: 1px solid rgba(41, 45, 43, 0.36) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme-accent="night"] button.meta-stage-trigger-pill:hover,
+html[data-theme-accent="night"] button.meta-stage-trigger-pill[data-dropdown-open="true"],
+html[data-theme-accent="night"] main button.meta-stage-trigger-pill:hover,
+html[data-theme-accent="night"] main button.meta-stage-trigger-pill[data-dropdown-open="true"],
+html[data-theme-accent="night"] main .glass-card button.meta-stage-trigger-pill:hover,
+html[data-theme-accent="night"] main .glass-card button.meta-stage-trigger-pill[data-dropdown-open="true"] {
+  border: 1px solid rgba(244, 241, 234, 0.34) !important;
   box-shadow: none !important;
 }
 
 div.dropdown-panel.meta-stage-dropdown-panel,
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) div.dropdown-panel.meta-stage-dropdown-panel {
-  border: 1.5px solid var(--accent-color, #b99881) !important;
-  border-color: var(--accent-color, #b99881) !important;
+  border: 1px solid rgba(41, 45, 43, 0.24) !important;
+}
+
+html[data-theme-accent="night"] div.dropdown-panel.meta-stage-dropdown-panel {
+  border: 1px solid rgba(244, 241, 234, 0.22) !important;
 }
 
 /* ==========================================================================
@@ -1635,8 +1637,8 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 
 /* ==========================================================================
    SEKME & FİLTRE HAPLARI (TAB PILL BUTTONS)
-   Sekme butonları tamamen vurgu renginde dolmaz; gölge yoktur, hafif belirgin
-   kontür ve aktif sekmede vurgu renginde kontür çizgisi yer alır.
+   Sekme butonları tamamen vurgu renginde dolmaz; gölge yoktur, nötr hafif
+   belirgin kontür kullanılır (vurgu rengi kontür kullanılmaz).
    ========================================================================== */
 button.tab-pill-btn,
 main button.tab-pill-btn {
@@ -1649,17 +1651,17 @@ main button.tab-pill-btn {
 
 button.tab-pill-btn:hover,
 main button.tab-pill-btn:hover {
-  border-color: color-mix(in srgb, var(--accent-color, #b99881) 65%, transparent) !important;
+  border-color: rgba(255, 255, 255, 0.34) !important;
   color: #ffffff !important;
   box-shadow: none !important;
 }
 
 button.tab-pill-btn.is-active-tab-pill,
 main button.tab-pill-btn.is-active-tab-pill {
-  background: #282522 !important;
-  background-color: #282522 !important;
+  background: #34302d !important;
+  background-color: #34302d !important;
   color: #ffffff !important;
-  border: 1.5px solid var(--accent-color, #b99881) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.42) !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
@@ -1683,16 +1685,16 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
   background: #ffffff !important;
   background-color: #ffffff !important;
   color: #292d2b !important;
-  border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
+  border-color: rgba(41, 45, 43, 0.34) !important;
   box-shadow: none !important;
 }
 
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn.is-active-tab-pill,
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn.is-active-tab-pill {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: #ebece9 !important;
+  background-color: #ebece9 !important;
   color: #292d2b !important;
-  border: 1.5px solid var(--accent-color, #5c6ac4) !important;
+  border: 1.5px solid rgba(41, 45, 43, 0.42) !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
@@ -1762,7 +1764,7 @@ html[data-theme-accent="night"] [class*="bg-[#383834]/90"],
 html[data-theme-accent="night"] [class*="bg-[#383830]/90"] {
   background: rgba(19, 20, 19, 0.96) !important;
   background-color: rgba(19, 20, 19, 0.96) !important;
-  border-color: color-mix(in srgb, var(--accent-color, #657a72) 35%, transparent) !important;
+  border-color: rgba(244, 241, 234, 0.19) !important;
 }
 
 /* Ana Yazı Rengi: Beyaza Yakın Ekru (#f4f1ea) */
@@ -1853,7 +1855,7 @@ html[data-theme-accent="night"] main .glass-panel:hover,
 html[data-theme-accent="night"] main [class*="hover:bg-[#282522]"]:hover {
   background: #232623 !important;
   background-color: #232623 !important;
-  border-color: color-mix(in srgb, var(--accent-color, #657a72) 40%, transparent) !important;
+  border-color: rgba(244, 241, 234, 0.30) !important;
 }
 
 /* Butonlar, Sekmeler, Üst Bar Kapsülleri ve Kart İçi İkincil Yüzeyler: Biraz Daha Açık Koyu (#282b28) */
@@ -1895,7 +1897,7 @@ html[data-theme-accent="night"] [class*="bg-[#1f1c19]"] {
   color: #f4f1ea !important;
 }
 
-/* Sekme ve Filtre Butonları (.tab-pill-btn): Biraz daha açık koyu (#282b28) + hafif belirgin kontür, gölge yok */
+/* Sekme ve Filtre Butonları (.tab-pill-btn): Biraz daha açık koyu (#282b28) + nötr hafif belirgin kontür, gölge yok */
 html[data-theme-accent="night"] button.tab-pill-btn,
 html[data-theme-accent="night"] main button.tab-pill-btn {
   background: #282b28 !important;
@@ -1910,16 +1912,16 @@ html[data-theme-accent="night"] main button.tab-pill-btn:hover {
   background: #303430 !important;
   background-color: #303430 !important;
   color: #f4f1ea !important;
-  border-color: color-mix(in srgb, var(--accent-color, #657a72) 65%, transparent) !important;
+  border-color: rgba(244, 241, 234, 0.34) !important;
   box-shadow: none !important;
 }
 
 html[data-theme-accent="night"] button.tab-pill-btn.is-active-tab-pill,
 html[data-theme-accent="night"] main button.tab-pill-btn.is-active-tab-pill {
-  background: #2c302c !important;
-  background-color: #2c302c !important;
+  background: #343834 !important;
+  background-color: #343834 !important;
   color: #f4f1ea !important;
-  border: 1.5px solid var(--accent-color, #657a72) !important;
+  border: 1.5px solid rgba(244, 241, 234, 0.40) !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
@@ -1941,7 +1943,7 @@ html[data-theme-accent="night"] .glass-button-subtle {
 html[data-theme-accent="night"] .glass-button-subtle:hover {
   background: #313531 !important;
   background-color: #313531 !important;
-  border-color: color-mix(in srgb, var(--accent-color, #657a72) 55%, transparent) !important;
+  border-color: rgba(244, 241, 234, 0.34) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
 }
@@ -1954,7 +1956,7 @@ html[data-theme-accent="night"] .bg-\[\#b99881\] {
   background: var(--accent-color, #657a72) !important;
   background-color: var(--accent-color, #657a72) !important;
   color: #f4f1ea !important;
-  border: 1px solid color-mix(in srgb, var(--accent-color, #657a72) 70%, rgba(244, 241, 234, 0.30)) !important;
+  border: 1px solid rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
 }
 
@@ -1971,7 +1973,7 @@ html[data-theme-accent="night"] button.bg-\[\#b99881\]:hover,
 html[data-theme-accent="night"] .bg-\[\#b99881\]:hover {
   background: var(--accent-hover, #556860) !important;
   background-color: var(--accent-hover, #556860) !important;
-  border-color: var(--accent-color, #657a72) !important;
+  border-color: rgba(244, 241, 234, 0.32) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
 }
@@ -2011,7 +2013,7 @@ html[data-theme-accent="night"] textarea:not(.bg-transparent):not([class*="bg-tr
 html[data-theme-accent="night"] .glass-input:focus {
   background: #2e322e !important;
   background-color: #2e322e !important;
-  border-color: var(--accent-color, #657a72) !important;
+  border-color: rgba(244, 241, 234, 0.36) !important;
 }
 
 html[data-theme-accent="night"] input::placeholder,
@@ -2027,8 +2029,9 @@ html[data-theme-accent="night"] optgroup {
 }
 
 /* Kenarlıklar (Borders) */
-html[data-theme-accent="night"] [class*="border-[#4a443f]"]:not(:hover),
-html[data-theme-accent="night"] .border-\[\#4a443f\]:not(:hover) {
+html[data-theme-accent="night"] [class*="border-[#4a443f]"],
+html[data-theme-accent="night"] .border-\[\#4a443f\],
+html[data-theme-accent="night"] [class*="border-[#b99881]"] {
   border-color: rgba(244, 241, 234, 0.19) !important;
 }
 

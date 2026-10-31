@@ -130,14 +130,14 @@ export interface AccentColorOption {
 export const ACCENT_COLOR_OPTIONS: AccentColorOption[] = [
   { id: 'indigo', name: 'İndigo', color: '#5c6ac4', hover: '#4c59b0' },
   { id: 'sage', name: 'Pastel yeşil', color: '#657a72', hover: '#556860' },
-  { id: 'pastel-mint', name: 'Su yeşili', color: '#68a691', hover: '#56927e' },
+  { id: 'beige', name: 'Kum beji', color: '#b99881', hover: '#a6856e' },
+  { id: 'burgundy', name: 'Burgonya', color: '#8b3a4a', hover: '#752e3c' },
   { id: 'pastel-sky', name: 'Buz mavisi', color: '#6b9ac4', hover: '#5987b0' },
   { id: 'lavender', name: 'Lavanta', color: '#9381ff', hover: '#7f6ce6' },
+  { id: 'pastel-mint', name: 'Su yeşili', color: '#68a691', hover: '#56927e' },
   { id: 'pastel-purple', name: 'Leylak', color: '#8b6bb1', hover: '#78599d' },
-  { id: 'burgundy', name: 'Burgonya', color: '#8b3a4a', hover: '#752e3c' },
   { id: 'pastel-rose', name: 'Gül kurusu', color: '#c97a8b', hover: '#b56677' },
   { id: 'pastel-yellow', name: 'Kehribar', color: '#d4a359', hover: '#bf8f47' },
-  { id: 'beige', name: 'Kum beji', color: '#b99881', hover: '#a6856e' },
 ]
 
 export function applyAccentColorChoice(accentId: string) {
@@ -975,20 +975,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           key={t.id}
                           type="button"
                           onClick={() => handleSetAccent(t.id)}
-                          className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                          className={`tab-pill-btn flex items-center gap-3 p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#b99881] bg-[#b99881]/15 shadow-sm'
-                              : 'border-[#4a443f]/60 hover:border-[#b99881]/40 bg-[#24211f]/40 hover:bg-[#24211f]'
+                              ? 'is-active-tab-pill'
+                              : 'border-[#4a443f] bg-[#24211f]/40 hover:bg-[#24211f]'
                           }`}
                         >
                           {/* DUAL CIRCLE: Big Primary + Small Badge Secondary */}
                           <div className="relative w-9 h-9 shrink-0">
                             <div
-                              className="w-8 h-8 rounded-full border border-white/20 shadow-sm"
+                              className="w-8 h-8 rounded-full border border-white/20"
                               style={{ backgroundColor: t.primary }}
                             />
                             <div
-                              className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#2b2724] shadow-sm"
+                              className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#2b2724]"
                               style={{ backgroundColor: t.secondary }}
                             />
                           </div>
@@ -1025,19 +1025,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           key={opt.id}
                           type="button"
                           onClick={() => handleSelectAccentColor(opt.id)}
-                          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-full border text-left transition-all cursor-pointer ${
+                          className={`tab-pill-btn flex items-center gap-2.5 px-3 py-2.5 rounded-full border text-left transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#b99881] bg-[#b99881]/15 shadow-sm'
-                              : 'border-[#4a443f]/60 hover:border-[#b99881]/40 bg-[#1e1c1a]/50'
+                              ? 'is-active-tab-pill'
+                              : 'border-[#4a443f] bg-[#1e1c1a]/50'
                           }`}
                           title={opt.name}
                         >
                           <span
-                            className="w-4 h-4 rounded-full shrink-0 border border-black/15 shadow-sm flex items-center justify-center"
+                            className="w-4 h-4 rounded-full shrink-0 border border-black/15 flex items-center justify-center"
                             style={{ backgroundColor: opt.color }}
                           >
                             {isSelected && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+                              <span className="w-1.5 h-1.5 rounded-full bg-white" />
                             )}
                           </span>
                           <div className="min-w-0 flex-1">
@@ -1068,10 +1068,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           key={sc.id}
                           type="button"
                           onClick={() => handleSelectAmbientScene(sc.id)}
-                          className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-full border text-left transition-all cursor-pointer ${
+                          className={`tab-pill-btn flex items-center justify-between gap-2 px-3 py-2.5 rounded-full border text-left transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#b99881] bg-[#b99881]/15 shadow-sm'
-                              : 'border-[#4a443f]/60 hover:border-[#b99881]/40 bg-[#1e1c1a]/50'
+                              ? 'is-active-tab-pill'
+                              : 'border-[#4a443f] bg-[#1e1c1a]/50'
                           }`}
                         >
                           <span className="text-[11px] font-bold text-white truncate">
@@ -1106,10 +1106,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           key={item.id}
                           type="button"
                           onClick={() => handleSetFontSize(item.id as any)}
-                          className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                          className={`tab-pill-btn p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#b99881] bg-[#b99881]/15 text-white'
-                              : 'border-[#4a443f]/60 hover:border-[#b99881]/30 bg-[#1e1c1a]/50 text-[#c4bcb5]'
+                              ? 'is-active-tab-pill text-white'
+                              : 'border-[#4a443f] bg-[#1e1c1a]/50 text-[#c4bcb5]'
                           }`}
                         >
                           <div className="text-xs font-bold">{item.label}</div>
