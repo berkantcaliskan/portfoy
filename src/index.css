@@ -938,12 +938,12 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
   color: #292d2b !important;
 }
 
-/* İkincil Yüzey (#ebece9): Kart içi alt elemanlarda kenarlık kalabalığı (katman içinde çerçeve) olmasın */
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#34302d]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static [class*="bg-[#34302d]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#282522]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#24211f]"],
-html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel [class*="bg-[#34302d]"] {
+/* İkincil Yüzey (#ebece9): Kart içi alt elemanlarda kenarlık kalabalığı (katman içinde çerçeve) olmasın (buton ve sekmeler hariç) */
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card-static [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#282522]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card [class*="bg-[#24211f]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn),
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-panel [class*="bg-[#34302d]"]:not(button):not(a):not([role="tab"]):not(.tab-pill-btn):not(.card-action-btn) {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
   border-color: transparent !important;
@@ -1001,7 +1001,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .glass-modal {
   background: #ffffff !important;
   background-color: #ffffff !important;
-  border-color: rgba(41, 45, 43, 0.14) !important;
+  border-color: rgba(41, 45, 43, 0.20) !important;
   color: #292d2b !important;
   box-shadow: 0 12px 32px -4px rgba(41, 45, 43, 0.12), 0 4px 12px -2px rgba(41, 45, 43, 0.06) !important;
 }
@@ -1024,7 +1024,8 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) [class*="bg-navy-900"] {
   background: #ebece9 !important;
   background-color: #ebece9 !important;
-  border-color: rgba(41, 45, 43, 0.12) !important;
+  border-color: rgba(41, 45, 43, 0.20) !important;
+  box-shadow: none !important;
   color: #292d2b !important;
 }
 
@@ -1537,7 +1538,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill {
   border: 1.5px solid var(--accent-color, #b99881) !important;
   border-color: var(--accent-color, #b99881) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color, #b99881) 22%, transparent), 0 2px 6px -1px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: none !important;
 }
 
 button.meta-stage-trigger-pill:hover,
@@ -1552,7 +1553,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .glass-card button.meta-stage-trigger-pill[data-dropdown-open="true"] {
   border: 1.5px solid var(--accent-color, #b99881) !important;
   border-color: var(--accent-color, #b99881) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #b99881) 35%, transparent), 0 4px 10px -2px rgba(0, 0, 0, 0.12) !important;
+  box-shadow: none !important;
 }
 
 div.dropdown-panel.meta-stage-dropdown-panel,
@@ -1576,7 +1577,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
   background-color: var(--accent-color, #b99881) !important;
   opacity: 0.65 !important;
   border: none !important;
-  box-shadow: 0 0 6px color-mix(in srgb, var(--accent-color, #b99881) 30%, transparent) !important;
+  box-shadow: none !important;
 }
 
 div.crm-segment-divider-line.is-milestone-line,
@@ -1586,7 +1587,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
   max-width: 65% !important;
   height: 2.5px !important;
   opacity: 0.92 !important;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-color, #b99881) 45%, transparent) !important;
+  box-shadow: none !important;
 }
 
 /* ==========================================================================
@@ -1634,15 +1635,15 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 
 /* ==========================================================================
    SEKME & FİLTRE HAPLARI (TAB PILL BUTTONS)
-   Sekme butonları tamamen vurgu renginde dolmaz; aktif sekmede yalnızca
-   vurgu renginde hafif kalın kontür çizgisi (2px) yer alır.
+   Sekme butonları tamamen vurgu renginde dolmaz; gölge yoktur, hafif belirgin
+   kontür ve aktif sekmede vurgu renginde kontür çizgisi yer alır.
    ========================================================================== */
 button.tab-pill-btn,
 main button.tab-pill-btn {
   background: #282522 !important;
   background-color: #282522 !important;
   color: #a69f99 !important;
-  border: 1.5px solid #4a443f !important;
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
   box-shadow: none !important;
 }
 
@@ -1650,6 +1651,7 @@ button.tab-pill-btn:hover,
 main button.tab-pill-btn:hover {
   border-color: color-mix(in srgb, var(--accent-color, #b99881) 65%, transparent) !important;
   color: #ffffff !important;
+  box-shadow: none !important;
 }
 
 button.tab-pill-btn.is-active-tab-pill,
@@ -1657,7 +1659,7 @@ main button.tab-pill-btn.is-active-tab-pill {
   background: #282522 !important;
   background-color: #282522 !important;
   color: #ffffff !important;
-  border: 2px solid var(--accent-color, #b99881) !important;
+  border: 1.5px solid var(--accent-color, #b99881) !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
@@ -1671,8 +1673,8 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main button.tab-pill-btn {
   background: #ffffff !important;
   background-color: #ffffff !important;
-  color: rgba(41, 45, 43, 0.72) !important;
-  border: 1.5px solid rgba(41, 45, 43, 0.12) !important;
+  color: rgba(41, 45, 43, 0.76) !important;
+  border: 1px solid rgba(41, 45, 43, 0.20) !important;
   box-shadow: none !important;
 }
 
@@ -1682,6 +1684,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
   background-color: #ffffff !important;
   color: #292d2b !important;
   border-color: color-mix(in srgb, var(--accent-color, #5c6ac4) 55%, transparent) !important;
+  box-shadow: none !important;
 }
 
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) button.tab-pill-btn.is-active-tab-pill,
@@ -1689,7 +1692,7 @@ html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data
   background: #ffffff !important;
   background-color: #ffffff !important;
   color: #292d2b !important;
-  border: 2px solid var(--accent-color, #5c6ac4) !important;
+  border: 1.5px solid var(--accent-color, #5c6ac4) !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
@@ -1861,7 +1864,7 @@ html[data-theme-accent="night"] header [class*="bg-[#24211f]"],
 html[data-theme-accent="night"] header [class*="bg-[#282522]"] {
   background: #282b28 !important;
   background-color: #282b28 !important;
-  border-color: rgba(244, 241, 234, 0.12) !important;
+  border-color: rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
   color: #f4f1ea !important;
 }
@@ -1887,17 +1890,18 @@ html[data-theme-accent="night"] [class*="bg-[#181614]"],
 html[data-theme-accent="night"] [class*="bg-[#1f1c19]"] {
   background: #282b28 !important;
   background-color: #282b28 !important;
-  border-color: rgba(244, 241, 234, 0.11) !important;
+  border-color: rgba(244, 241, 234, 0.19) !important;
+  box-shadow: none !important;
   color: #f4f1ea !important;
 }
 
-/* Sekme ve Filtre Butonları (.tab-pill-btn): Biraz daha açık koyu (#282b28) + aktifte vurgu kontürü */
+/* Sekme ve Filtre Butonları (.tab-pill-btn): Biraz daha açık koyu (#282b28) + hafif belirgin kontür, gölge yok */
 html[data-theme-accent="night"] button.tab-pill-btn,
 html[data-theme-accent="night"] main button.tab-pill-btn {
   background: #282b28 !important;
   background-color: #282b28 !important;
   color: rgba(244, 241, 234, 0.78) !important;
-  border: 1.5px solid rgba(244, 241, 234, 0.13) !important;
+  border: 1px solid rgba(244, 241, 234, 0.19) !important;
   box-shadow: none !important;
 }
 
@@ -1907,6 +1911,7 @@ html[data-theme-accent="night"] main button.tab-pill-btn:hover {
   background-color: #303430 !important;
   color: #f4f1ea !important;
   border-color: color-mix(in srgb, var(--accent-color, #657a72) 65%, transparent) !important;
+  box-shadow: none !important;
 }
 
 html[data-theme-accent="night"] button.tab-pill-btn.is-active-tab-pill,
@@ -1914,7 +1919,7 @@ html[data-theme-accent="night"] main button.tab-pill-btn.is-active-tab-pill {
   background: #2c302c !important;
   background-color: #2c302c !important;
   color: #f4f1ea !important;
-  border: 2px solid var(--accent-color, #657a72) !important;
+  border: 1.5px solid var(--accent-color, #657a72) !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
@@ -1928,7 +1933,8 @@ html[data-theme-accent="night"] main button.tab-pill-btn.is-active-tab-pill * {
 html[data-theme-accent="night"] .glass-button-subtle {
   background: #282b28 !important;
   background-color: #282b28 !important;
-  border: 1px solid rgba(244, 241, 234, 0.14) !important;
+  border: 1px solid rgba(244, 241, 234, 0.19) !important;
+  box-shadow: none !important;
   color: #f4f1ea !important;
 }
 
@@ -1936,6 +1942,7 @@ html[data-theme-accent="night"] .glass-button-subtle:hover {
   background: #313531 !important;
   background-color: #313531 !important;
   border-color: color-mix(in srgb, var(--accent-color, #657a72) 55%, transparent) !important;
+  box-shadow: none !important;
   color: #f4f1ea !important;
 }
 
@@ -1947,7 +1954,8 @@ html[data-theme-accent="night"] .bg-\[\#b99881\] {
   background: var(--accent-color, #657a72) !important;
   background-color: var(--accent-color, #657a72) !important;
   color: #f4f1ea !important;
-  border: 1px solid color-mix(in srgb, var(--accent-color, #657a72) 70%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-color, #657a72) 70%, rgba(244, 241, 234, 0.30)) !important;
+  box-shadow: none !important;
 }
 
 html[data-theme-accent="night"] .btn-primary *,
@@ -1964,6 +1972,7 @@ html[data-theme-accent="night"] .bg-\[\#b99881\]:hover {
   background: var(--accent-hover, #556860) !important;
   background-color: var(--accent-hover, #556860) !important;
   border-color: var(--accent-color, #657a72) !important;
+  box-shadow: none !important;
   color: #f4f1ea !important;
 }
 
@@ -1979,7 +1988,7 @@ html[data-theme-accent="night"] div.dropdown-panel,
 html[data-theme-accent="night"] .glass-modal {
   background: #1e201e !important;
   background-color: #1e201e !important;
-  border-color: rgba(244, 241, 234, 0.13) !important;
+  border-color: rgba(244, 241, 234, 0.19) !important;
   color: #f4f1ea !important;
   box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.55) !important;
 }
@@ -1993,7 +2002,7 @@ html[data-theme-accent="night"] .glass-input {
   background: #282b28 !important;
   background-color: #282b28 !important;
   color: #f4f1ea !important;
-  border-color: rgba(244, 241, 234, 0.14) !important;
+  border-color: rgba(244, 241, 234, 0.19) !important;
 }
 
 html[data-theme-accent="night"] input:not(.bg-transparent):not([class*="bg-transparent"]):focus,
@@ -2023,13 +2032,34 @@ html[data-theme-accent="night"] .border-\[\#4a443f\]:not(:hover) {
   border-color: rgba(244, 241, 234, 0.19) !important;
 }
 
-/* Tüm sayfa içi kartların gölge efektini tamamen kaldır */
+/* Tüm kart, sekme ve butonların gölge ve ring efektini tamamen kaldır */
 main .glass-card,
 main .glass-card-static,
 main .glass-panel,
 main .glass-panel-elevated,
-main [class*="shadow-"] {
+main [class*="shadow-"],
+button,
+button:hover,
+button:focus,
+button:active,
+[role="tab"],
+.tab-pill-btn,
+.btn-primary,
+.glass-button-gold,
+.glass-button-subtle,
+.card-action-btn,
+.card-badge-pill,
+.top-utility-pill,
+.sidebar-pill-item,
+.meta-stage-trigger-pill,
+.dock-breathing-line,
+header button,
+aside button,
+.glass-modal button {
   box-shadow: none !important;
+  text-shadow: none !important;
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
 }
 
 /* ==========================================================================

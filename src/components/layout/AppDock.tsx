@@ -991,7 +991,7 @@ export const AppDock: React.FC<AppDockProps> = ({
         )}
       </AnimatePresence>
 
-        <div className="flex items-center gap-2 p-2 rounded-full bg-[#413f3d]/90 border border-[#b99881]/25 backdrop-blur-xl shadow-2xl relative">
+        <div className="flex items-center gap-2 p-2 rounded-full bg-[#413f3d]/90 border border-[#b99881]/25 backdrop-blur-xl relative">
           
           {/* 
             EN SOLDA HER ZAMAN SABİT BAŞLAT BUTONU (YUVARLAK İÇİNDE UYGULAMA LOGOSU)
@@ -1020,14 +1020,14 @@ export const AppDock: React.FC<AppDockProps> = ({
               }}
               className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer border ${
                 isStartMenuOpen
-                  ? 'bg-[#b99881] text-[#1c1a18] border-[#b99881] shadow-lg scale-105'
+                  ? 'bg-[#b99881] text-[#1c1a18] border-[#b99881] scale-105'
                   : 'bg-[#34302d] hover:bg-[#3d3733] border-[#b99881]/50 text-[#b99881] hover:scale-105'
               }`}
             >
               <BookLogo className="w-5 h-5 transition-transform hover:scale-110" />
             </button>
             <span
-              className={`absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#1c1a18]/95 text-xs font-semibold text-white whitespace-nowrap pointer-events-none border border-[#4a443f] shadow-lg transition-all duration-100 ${
+              className={`absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#1c1a18]/95 text-xs font-semibold text-white whitespace-nowrap pointer-events-none border border-[#4a443f] transition-all duration-100 ${
                 !isStartMenuOpen && hoveredTooltipId === 'start'
                   ? 'opacity-100 scale-100'
                   : 'opacity-0 scale-95 pointer-events-none'
@@ -1094,7 +1094,7 @@ export const AppDock: React.FC<AppDockProps> = ({
                     onClick={() => handleItemClick(item)}
                     className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer border relative ${
                       isActive
-                        ? 'bg-[#423c38] text-white border-[#b99881] ring-2 ring-[#b99881]/40 shadow-md scale-105'
+                        ? 'bg-[#423c38] text-white border-[#b99881] scale-105'
                         : isAction
                         ? 'bg-[#34302d] text-[#d6beae] border-[#4a443f] hover:border-[#b99881] hover:text-white hover:bg-[#3d3733] hover:scale-105'
                         : 'bg-[#34302d] text-[#a69f99] border-[#4a443f] hover:border-[#b99881]/60 hover:text-white hover:bg-[#3d3733] hover:scale-105'
@@ -1109,7 +1109,7 @@ export const AppDock: React.FC<AppDockProps> = ({
 
                   {/* Tooltip */}
                   <span
-                    className={`absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#1c1a18]/95 text-xs font-semibold text-white whitespace-nowrap pointer-events-none border border-[#4a443f] shadow-lg transition-all duration-100 ${
+                    className={`absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#1c1a18]/95 text-xs font-semibold text-white whitespace-nowrap pointer-events-none border border-[#4a443f] transition-all duration-100 ${
                       !isStartMenuOpen && hoveredTooltipId === item.id
                         ? 'opacity-100 scale-100'
                         : 'opacity-0 scale-95 pointer-events-none'
