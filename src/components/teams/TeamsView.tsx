@@ -308,7 +308,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
             </h2>
           </div>
           <p className="text-xs text-[#a69f99] mt-1">
-            Canlı ekip konumu ("Kim Nerede?"), şirket aracı & portföy anahtarı zimmetleri ve izin/saatlik çıkış yönetimi.
+            Ekip için operasyonlar ve durum bildirimleri.
           </p>
         </div>
 
@@ -392,44 +392,44 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
 
       {/* Sub-Navigation Tabs + Context Action Button */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => setActiveSubTab('presence')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`tab-pill-btn px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === 'presence'
-                ? 'bg-[#b99881] text-[#1c1a18] shadow-md'
+                ? 'is-active-tab-pill bg-[#4a443f] text-white'
                 : 'bg-[#282522] text-[#c4bcb5] hover:text-white border border-[#4a443f]/60'
             }`}
           >
-            <MapPin className="w-4 h-4" />
-            <span>Kim Nerede? ({trackedUsers.length})</span>
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Arkadaşımı bul ({trackedUsers.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubTab('assets')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`tab-pill-btn px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === 'assets'
-                ? 'bg-[#b99881] text-[#1c1a18] shadow-md'
+                ? 'is-active-tab-pill bg-[#4a443f] text-white'
                 : 'bg-[#282522] text-[#c4bcb5] hover:text-white border border-[#4a443f]/60'
             }`}
           >
-            <Key className="w-4 h-4" />
-            <span>Araç & Anahtar Zimmeti ({assets.length})</span>
+            <Key className="w-3.5 h-3.5" />
+            <span>Araçlar ve anahtarlar ({assets.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubTab('leaves')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`tab-pill-btn px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === 'leaves'
-                ? 'bg-[#b99881] text-[#1c1a18] shadow-md'
+                ? 'is-active-tab-pill bg-[#4a443f] text-white'
                 : 'bg-[#282522] text-[#c4bcb5] hover:text-white border border-[#4a443f]/60'
             }`}
           >
-            <Calendar className="w-4 h-4" />
-            <span>İzin & Saatlik Çıkış ({leaves.length})</span>
+            <Calendar className="w-3.5 h-3.5" />
+            <span>İzinler ({leaves.length})</span>
             {pendingLeavesCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-rose-500 text-white">
                 {pendingLeavesCount}
@@ -1291,7 +1291,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                 onChange={(e) => setCheckoutUpdateMyStatus(e.target.checked)}
                 className="rounded accent-[#b99881]"
               />
-              <span>Aynı zamanda "Kim Nerede?" durumumu da otomatik güncelle</span>
+              <span>Aynı zamanda "Arkadaşımı bul" durumumu da otomatik güncelle</span>
             </label>
 
             {checkoutUpdateMyStatus && (

@@ -1210,16 +1210,16 @@ function buildPageCandidates(
 
     add(
       'teams-presence-board',
-      'Canlı Durum Panosu ("Kim Nerede?")',
+      'Arkadaşımı bul — Canlı Durum Panosu',
       `Ofiste, Gösterimde, Tapuda, Şantiyede, Toplantıda veya İzinli olan ${allUsers.length} ekip üyesi`,
-      'ekipler canlı durum panosu kim nerede ofiste gösterimde sahada tapuda şantiyede toplantıda molada izinli',
+      'ekipler arkadaşımı bul canlı durum panosu kim nerede ofiste dışarıda gösterimde sahada tapuda şantiyede molada izinli',
       'Durum Panosu',
       false,
       { subTab: 'presence' }
     )
     add(
       'teams-assets-board',
-      'Araç, Portföy Anahtarı & Ekipman Zimmet Takibi',
+      'Araçlar ve anahtarlar — Zimmet Takibi',
       `Şirket araçları, örnek daire anahtarları ve saha ekipmanları (${assets.length} envanter)`,
       'şirket aracı portföy daire anahtarı ofis saha ekipmanı zimmet plaka teslim al',
       `${assets.length} Zimmet`,
@@ -1228,7 +1228,7 @@ function buildPageCandidates(
     )
     add(
       'teams-leaves-board',
-      'İzin & Saatlik Dış Görev Takibi',
+      'İzinler — İzin & Saatlik Çıkış Takibi',
       `Saatlik çıkış, yıllık izin, mazeret izni ve sağlık raporu kayıtları (${leaves.length} kayıt)`,
       'izin talebi saatlik çıkış dış görev yıllık izin mazeret izni sağlık raporu',
       `${leaves.length} Kayıt`,
