@@ -1112,7 +1112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }
           >
             {/* Sol: Yuvarlak Avatar + Durum Noktası */}
-            <div className="relative w-7 h-7 rounded-full bg-[#282522] border border-[#b99881]/50 flex items-center justify-center shrink-0">
+            <div className="relative w-7 h-7 rounded-full bg-[#282522] border border-[#4a443f]/40 flex items-center justify-center shrink-0">
               <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
                 {currentUser?.avatarUrl ? (
                   <img

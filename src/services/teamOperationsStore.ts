@@ -35,8 +35,8 @@ export const PRESENCE_STATUS_OPTIONS: PresenceStatusMeta[] = [
   },
   {
     id: 'GOSTERIMDE',
-    label: 'Gösterimde / Sahada',
-    shortLabel: 'Gösterimde',
+    label: 'Dışarıda / Gösterimde',
+    shortLabel: 'Dışarıda',
     colorClass: 'text-[#dfb76c]',
     dotClass: 'bg-[#dfb76c]',
     bgClass: 'bg-[#dfb76c]/12',
@@ -62,16 +62,6 @@ export const PRESENCE_STATUS_OPTIONS: PresenceStatusMeta[] = [
     bgClass: 'bg-orange-500/12',
     borderClass: 'border-orange-500/30',
     description: 'Proje şantiye sahasında kontrol veya ziyarette',
-  },
-  {
-    id: 'TOPLANTIDA',
-    label: 'Toplantıda',
-    shortLabel: 'Toplantıda',
-    colorClass: 'text-purple-400',
-    dotClass: 'bg-purple-400',
-    bgClass: 'bg-purple-500/12',
-    borderClass: 'border-purple-500/30',
-    description: 'Müşteri sunumu veya ekip toplantısında',
   },
   {
     id: 'MOLADA',

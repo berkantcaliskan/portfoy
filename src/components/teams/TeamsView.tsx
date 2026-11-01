@@ -351,7 +351,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <GlassCard className="p-4 flex items-center justify-between">
           <div>
-            <span className="text-xs text-[#a69f99] block">Ofiste & Toplantıda</span>
+            <span className="text-xs text-[#a69f99] block">Ofiste</span>
             <span className="text-2xl font-bold text-emerald-400 mt-1 block">
               {totalInOffice} <span className="text-xs font-normal text-[#8c857f]">/ {trackedUsers.length} Kişi</span>
             </span>
@@ -361,7 +361,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
 
         <GlassCard className="p-4 flex items-center justify-between">
           <div>
-            <span className="text-xs text-[#a69f99] block">Sahada / Tapuda / Gösterimde</span>
+            <span className="text-xs text-[#a69f99] block">Dışarıda</span>
             <span className="text-2xl font-bold text-[#dfb76c] mt-1 block">
               {totalInField} <span className="text-xs font-normal text-[#8c857f]">Kişi</span>
             </span>
@@ -371,7 +371,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
 
         <GlassCard className="p-4 flex items-center justify-between">
           <div>
-            <span className="text-xs text-[#a69f99] block">Zimmetteki Araç & Anahtar</span>
+            <span className="text-xs text-[#a69f99] block">Zimmette</span>
             <span className="text-2xl font-bold text-sky-400 mt-1 block">
               {activeAssetsCount} <span className="text-xs font-normal text-[#8c857f]">/ {assets.length} Kayıt</span>
             </span>
@@ -381,7 +381,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
 
         <GlassCard className="p-4 flex items-center justify-between">
           <div>
-            <span className="text-xs text-[#a69f99] block">Bekleyen İzin / Çıkış Talebi</span>
+            <span className="text-xs text-[#a69f99] block">Bekleyen İzin</span>
             <span className="text-2xl font-bold text-rose-400 mt-1 block">
               {pendingLeavesCount} <span className="text-xs font-normal text-[#8c857f]">Talep</span>
             </span>
@@ -602,14 +602,14 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                 return (
                   <GlassCard
                     key={member.id}
-                    className="p-5 flex flex-col justify-between gap-4 hover:border-[#b99881]/35 transition-all"
+                    className="team-user-card p-5 flex flex-col justify-between gap-4 transition-all"
                   >
                     <div className="space-y-3.5">
                       {/* Top Row: User Info + Status Pill */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="relative shrink-0">
-                            <div className="w-12 h-12 rounded-full bg-[#24211f] border border-[#b99881]/40 flex items-center justify-center text-sm font-bold text-[#b99881] overflow-hidden">
+                            <div className="w-12 h-12 rounded-full bg-[#24211f] border border-[#4a443f]/40 flex items-center justify-center text-sm font-bold text-[#b99881] overflow-hidden">
                               {member.avatarUrl ? (
                                 <img
                                   src={member.avatarUrl}
