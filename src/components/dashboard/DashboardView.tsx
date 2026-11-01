@@ -28,6 +28,8 @@ import {
   MessageSquare,
   Send,
   Calendar,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { Lead, STAGE_CONFIGS } from '@/types/lead'
 import { PortfolioItem } from '@/types/portfolio'
@@ -94,6 +96,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Focal chart & filter states
   const [chartRange, setChartRange] = useState<'7d' | '30d' | 'month'>('7d')
   const [leadFilter, setLeadFilter] = useState<'ALL' | 'NEW' | 'QUALIFIED'>('ALL')
+  const [listOffsets, setListOffsets] = useState<Record<string, number>>({})
+  const getOffset = (key: string, total: number) => {
+    const raw = listOffsets[key] || 0
+    return raw >= total ? 0 : Math.max(0, raw)
+  }
+  const renderChevronPager = (key: string, total: number) => {
+    if (total <= 3) return null
+    const off = getOffset(key, total)
+    const hasMore = off + 3 < total
+    return (
+      <div className="pt-1.5 flex items-center justify-between">
+        <span className="text-[10.5px] font-mono text-[#8c857f]">
+          {off + 1}–{Math.min(off + 3, total)} / {total}
+        </span>
+        <div className="flex items-center gap-1 ml-auto">
+          {off > 0 && (
+            <button
+              type="button"
+              onClick={() => setListOffsets((p) => ({ ...p, [key]: Math.max(0, off - 3) }))}
+              className="no-layer-btn p-1 text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+              title="Önceki 3 Kayıt"
+            >
+              <ChevronUp className="w-4 h-4" strokeWidth={2.4} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setListOffsets((p) => ({ ...p, [key]: hasMore ? off + 3 : 0 }))}
+            className="no-layer-btn p-1 text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+            title={hasMore ? 'Devamını Gör (Sonraki 3)' : 'Başa Dön'}
+          >
+            <ChevronDown className="w-4 h-4" strokeWidth={2.4} />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // Live computer time and interactive seconds state
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date())
@@ -483,11 +522,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const qualifiedCount = leads.filter((l) => l.stage === 'QUALIFIED' || l.stage === 'WON').length
     const qualifiedRate = leads.length > 0 ? Math.round((qualifiedCount / leads.length) * 100) : 0
 
-    const filteredLeads = leads.filter((l) => {
-      if (leadFilter === 'NEW') return l.stage === 'NEW'
-      if (leadFilter === 'QUALIFIED') return l.stage === 'QUALIFIED' || l.stage === 'WON'
-      return true
-    })
+    const filteredLeads = [...leads]
+      .filter((l) => {
+        if (leadFilter === 'NEW') return l.stage === 'NEW'
+        if (leadFilter === 'QUALIFIED') return l.stage === 'QUALIFIED' || l.stage === 'WON'
+        return true
+      })
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
 
     return (
       <div className="space-y-5">
@@ -632,7 +673,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2.5 mt-3">
-                  {filteredLeads.slice(0, 5).map((l) => (
+                  {filteredLeads.slice(getOffset("mktLeads", filteredLeads.length), getOffset("mktLeads", filteredLeads.length) + 3).map((l) => (
                     <div
                       key={l.id}
                       onClick={() => onSelectLead(l)}
@@ -652,6 +693,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     </div>
                   ))}
+                  {renderChevronPager("mktLeads", filteredLeads.length)}
                 </div>
               )}
             </GlassCard>
@@ -698,7 +740,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {metaForms.map((f) => (
+                  {metaForms.slice(getOffset("metaForms", metaForms.length), getOffset("metaForms", metaForms.length) + 3).map((f) => (
                     <div key={f.id} className="p-3 rounded-2xl bg-[#34302d]">
                       <div className="flex items-center justify-between">
                         <span className="text-[13px] font-medium text-white truncate max-w-[210px]">
@@ -716,6 +758,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     </div>
                   ))}
+                  {renderChevronPager("metaForms", metaForms.length)}
                 </div>
               )}
             </GlassCard>
@@ -839,7 +882,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {appointments.slice(0, 4).map((a) => (
+                  {appointments.slice(getOffset("salesAppts", appointments.length), getOffset("salesAppts", appointments.length) + 3).map((a) => (
                     <div
                       key={a.id}
                       className="p-3 rounded-2xl bg-[#34302d] flex items-center justify-between"
@@ -855,6 +898,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </GlassBadge>
                     </div>
                   ))}
+                  {renderChevronPager("salesAppts", appointments.length)}
                 </div>
               )}
             </GlassCard>
@@ -1046,7 +1090,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             ) : (
               <div className="space-y-2.5">
-                {collections.slice(0, 4).map((c) => (
+                {collections.slice(getOffset("accCol", collections.length), getOffset("accCol", collections.length) + 3).map((c) => (
                   <div
                     key={c.id}
                     className="p-3 rounded-2xl bg-[#34302d] flex items-center justify-between"
@@ -1066,6 +1110,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                   </div>
                 ))}
+                {renderChevronPager("accCol", collections.length)}
               </div>
             )}
           </GlassCard>
@@ -1085,7 +1130,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             ) : (
               <div className="space-y-2.5">
-                {payments.slice(0, 4).map((p) => (
+                {payments.slice(getOffset("accPay", payments.length), getOffset("accPay", payments.length) + 3).map((p) => (
                   <div
                     key={p.id}
                     className="p-3 rounded-2xl bg-[#34302d] flex items-center justify-between"
@@ -1103,6 +1148,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                   </div>
                 ))}
+                {renderChevronPager("accPay", payments.length)}
               </div>
             )}
           </GlassCard>
@@ -1336,7 +1382,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
 
               <div className="space-y-2.5">
-                {upcomingSpecialDays.slice(0, 5).map((item) => {
+                {upcomingSpecialDays.slice(getOffset("specialDays", upcomingSpecialDays.length), getOffset("specialDays", upcomingSpecialDays.length) + 3).map((item) => {
                   const dateObj = new Date(item.date + 'T12:00:00')
                   const dayNum = dateObj.getDate()
                   const monthShort = dateObj.toLocaleDateString('tr-TR', { month: 'short' })
@@ -1424,6 +1470,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                   )
                 })}
+                {renderChevronPager("specialDays", upcomingSpecialDays.length)}
               </div>
             </GlassCard>
 
@@ -1571,8 +1618,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </form>
 
               {/* Yorum Akışı */}
-              <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
-                {creativeComments.slice(0, 6).map((cm) => (
+              <div className="space-y-2.5">
+                {creativeComments.slice(getOffset("creativeComments", creativeComments.length), getOffset("creativeComments", creativeComments.length) + 3).map((cm) => (
                   <div
                     key={cm.id}
                     className={`p-3 rounded-2xl bg-[#34302d] border transition-all ${
@@ -1632,6 +1679,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <p className="text-[12px] text-slate-200 leading-relaxed">{cm.content}</p>
                   </div>
                 ))}
+                {renderChevronPager("creativeComments", creativeComments.length)}
               </div>
             </GlassCard>
           </div>

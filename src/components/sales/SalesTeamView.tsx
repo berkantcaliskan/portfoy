@@ -1,30 +1,21 @@
 import React, { useState } from 'react'
 import {
-  Briefcase,
   Calculator,
-  Calendar,
-  CheckCircle2,
+  ChevronDown,
   ChevronRight,
-  DollarSign,
-  FileText,
-  Filter,
+  ChevronUp,
   Kanban,
-  Phone,
   Plus,
-  Sparkles,
   Table as TableIcon,
   Trophy,
-  User,
   Users,
-  ArrowUpRight,
 } from 'lucide-react'
 import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
 import { GlassButton } from '@/components/ui/GlassButton'
-import { GlassBadge } from '@/components/ui/GlassBadge'
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { LuxurySelect } from '@/components/ui/LuxurySelect'
 import { CommissionCalculatorModal } from './CommissionCalculatorModal'
-import { formatCurrency, formatPhoneNumber, generateWhatsAppUrl } from '@/utils/formatters'
+import { formatCurrency, generateWhatsAppUrl } from '@/utils/formatters'
 
 import { getAllUsers, AppUser } from '@/services/userStore'
 import { getLeadChannelLabel } from '@/components/crm/CustomersView'
@@ -35,6 +26,21 @@ interface SalesTeamViewProps {
   onStageChange: (leadId: string, newStage: LeadStage) => void
   onOpenNewLead: () => void
   currentUser?: AppUser | null
+}
+
+const MAX_VISIBLE_ITEMS = 3
+
+function getLeadTimestamp(lead: Lead): number {
+  const raw = lead.createdAt || lead.updatedAt || ''
+  const parsed = Date.parse(raw)
+  if (!Number.isNaN(parsed)) return parsed
+  return lead.leadNumber || 0
+}
+
+function normalizeKanbanStage(stage: LeadStage): LeadStage {
+  if (stage === 'UNDECIDED') return 'CONTACTED'
+  if (stage === 'APPOINTMENT' || stage === 'PRESENTATION') return 'OFFER'
+  return stage
 }
 
 export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
@@ -49,6 +55,11 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
   const [calcAmount, setCalcAmount] = useState<number>(0)
 
+  // Per-column pagination offsets (max 3 items shown at a time, newest to oldest)
+  const [stageOffsets, setStageOffsets] = useState<Record<string, number>>({})
+  const [tableOffset, setTableOffset] = useState<number>(0)
+  const [leaderboardOffset, setLeaderboardOffset] = useState<number>(0)
+
   // Real users from store
   const allUsers: AppUser[] = getAllUsers()
   const salesReps = [
@@ -61,17 +72,23 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
       })),
   ]
 
-  // Filter leads based on sales rep
-  const filteredLeads = leads.filter((lead) => {
-    if (selectedRep === 'ALL') return true
-    return lead.owner === selectedRep
-  })
+  // Filter leads based on sales rep and sort newest to oldest ("en yeniden en eskiye")
+  const filteredLeads = [...leads]
+    .filter((lead) => {
+      if (selectedRep === 'ALL') return true
+      return lead.owner === selectedRep
+    })
+    .sort((a, b) => {
+      const diff = getLeadTimestamp(b) - getLeadTimestamp(a)
+      if (diff !== 0) return diff
+      return (b.leadNumber || 0) - (a.leadNumber || 0)
+    })
 
-  // Sales deal stages (Focused on sales rep workflow)
+  // Canonical 5 sales deal stages (no duplicate "Teklif" columns)
   const salesDealStages: LeadStage[] = [
+    'NEW',
     'CONTACTED',
-    'APPOINTMENT',
-    'PRESENTATION',
+    'QUALIFIED',
     'OFFER',
     'WON',
   ]
@@ -84,13 +101,23 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
   const closedLeads = filteredLeads.filter((l) => l.stage === 'WON')
   const totalClosedRevenue = closedLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
   const totalEarnedCommission = Math.round(totalClosedRevenue * 0.02) // 2% standard rep commission
-  const activeOfferCount = filteredLeads.filter((l) => l.stage === 'OFFER' || l.stage === 'PRESENTATION').length
+  const activeOfferCount = filteredLeads.filter(
+    (l) => l.stage === 'OFFER' || l.stage === 'PRESENTATION' || l.stage === 'APPOINTMENT'
+  ).length
   const monthlyQuota = 0
-  const quotaAchievement = monthlyQuota > 0 ? Math.min(100, Math.round((totalClosedRevenue / monthlyQuota) * 100)) : 0
+  const quotaAchievement =
+    monthlyQuota > 0 ? Math.min(100, Math.round((totalClosedRevenue / monthlyQuota) * 100)) : 0
 
   // Rep leaderboard data dynamically calculated
   const leaderboardData = allUsers
-    .filter((u: AppUser) => (u.id !== 'usr-berkant' || leads.length > 0) && (u.department === 'Satış' || u.department === 'Yönetim' || u.isManager || u.role === 'ADMIN'))
+    .filter(
+      (u: AppUser) =>
+        (u.id !== 'usr-berkant' || leads.length > 0) &&
+        (u.department === 'Satış' ||
+          u.department === 'Yönetim' ||
+          u.isManager ||
+          u.role === 'ADMIN')
+    )
     .map((rep: AppUser) => {
       const repLeads = leads.filter((l) => l.owner === rep.fullName && l.stage === 'WON')
       const closedVolume = repLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
@@ -135,7 +162,11 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
             icon={<Users className="w-3.5 h-3.5 text-[#b99881]" />}
             title="Yetkili Satış Danışmanı Seç"
             value={selectedRep}
-            onChange={setSelectedRep}
+            onChange={(val) => {
+              setSelectedRep(val)
+              setStageOffsets({})
+              setTableOffset(0)
+            }}
             options={salesReps.map((rep) => ({
               value: rep.id,
               label: rep.name,
@@ -278,17 +309,28 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
         </div>
       </div>
 
-      {/* View 1: Deal Pipeline Kanban (İç İçe Geçmeli & Sağa Dönük 3D Perspektif Kartlar) */}
+      {/* View 1: Deal Pipeline Kanban (İç İçe Geçmeli & Sağa Dönük 3D Perspektif Kartlar — En Fazla 3 Öğe Gösterilir) */}
       {viewMode === 'kanban' && (
         <div
           className="flex items-stretch overflow-x-auto lg:overflow-visible pt-4 pb-6 px-3 no-scrollbar select-none"
           style={{ perspective: '1300px' }}
         >
           {salesDealStages.map((stageKey, idx) => {
-            const stageLeads = filteredLeads.filter((l) => l.stage === stageKey)
+            const stageLeads = filteredLeads.filter(
+              (l) => normalizeKanbanStage(l.stage) === stageKey
+            )
             const stageConfig = STAGE_CONFIGS[stageKey]
             const stageTotalBudget = stageLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
             const isFocused = focusedStage === stageKey
+
+            const rawOffset = stageOffsets[stageKey] || 0
+            const safeOffset =
+              rawOffset >= stageLeads.length
+                ? 0
+                : Math.max(0, rawOffset)
+            const visibleStageLeads = stageLeads.slice(safeOffset, safeOffset + MAX_VISIBLE_ITEMS)
+            const hasMoreBelow = safeOffset + MAX_VISIBLE_ITEMS < stageLeads.length
+            const hasMoreAbove = safeOffset > 0
 
             let cardTransform = 'rotateY(14deg) rotateZ(-0.5deg) scale(0.94)'
             if (isFocused) {
@@ -320,129 +362,177 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                 }}
                 className={`perspective-deck-card ${
                   isFocused ? 'is-focused' : ''
-                } relative flex-1 min-w-[185px] sm:min-w-[200px] max-w-[240px] flex flex-col rounded-[24px] bg-[#282522] border border-[#4a443f] p-3 space-y-2.5 cursor-pointer ${
+                } relative flex-1 min-w-[185px] sm:min-w-[200px] max-w-[240px] flex flex-col justify-between rounded-[24px] bg-[#282522] border border-[#4a443f] p-3 space-y-2.5 cursor-pointer ${
                   idx > 0 ? '-ml-5 sm:-ml-6 lg:-ml-7' : ''
                 }`}
               >
-                {/* Column Header */}
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: stageConfig.accentColor }}
-                    />
-                    <span className="text-[11.5px] font-bold text-white truncate">
-                      {stageConfig.label}
+                <div className="space-y-2.5">
+                  {/* Column Header */}
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: stageConfig.accentColor }}
+                      />
+                      <span className="text-[11.5px] font-bold text-white truncate">
+                        {stageConfig.label}
+                      </span>
+                    </div>
+                    <span className="text-[10.5px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/5 text-[#d6beae] shrink-0">
+                      {stageLeads.length}
                     </span>
                   </div>
-                  <span className="text-[10.5px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/5 text-[#d6beae] shrink-0">
-                    {stageLeads.length}
-                  </span>
+
+                  {/* Stage Volume Sub-indicator */}
+                  {stageTotalBudget > 0 && (
+                    <div className="text-[10px] text-[#8c857f] px-1 truncate">
+                      Hacim: {formatCurrency(stageTotalBudget)}
+                    </div>
+                  )}
+
+                  {/* Cards List (Max 3 items, newest to oldest) */}
+                  <div className="space-y-2 min-h-[210px]">
+                    {stageLeads.length === 0 ? (
+                      <div className="h-32 flex items-center justify-center text-[11px] text-[#8c857f]">
+                        Fırsat yok
+                      </div>
+                    ) : (
+                      visibleStageLeads.map((lead) => {
+                        const estimatedCommission = lead.budget
+                          ? Math.round(lead.budget * 0.02)
+                          : 100000
+
+                        return (
+                          <div
+                            key={lead.id}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onSelectLead(lead)
+                            }}
+                            className="group p-2.5 rounded-[18px] bg-[#34302d] hover:bg-[#3b3633] border border-[#4a443f] transition-all cursor-pointer space-y-1.5"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-bold text-white group-hover:text-[#b99881] transition-colors select-text truncate">
+                                  {lead.fullName}
+                                </h4>
+                                <p className="text-[10px] text-[#8c857f] mt-0.5 truncate">
+                                  {getLeadChannelLabel(lead)}
+                                </p>
+                              </div>
+                              <span className="text-[10.5px] font-bold text-[#b99881] shrink-0">
+                                {lead.budget ? formatCurrency(lead.budget) : 'Belirsiz'}
+                              </span>
+                            </div>
+
+                            {/* Commission Tag */}
+                            <div className="flex items-center justify-between text-[10px] pt-0.5">
+                              <span className="text-[#a69f99]">Tahmini Prim:</span>
+                              <span className="font-bold text-emerald-400">
+                                {formatCurrency(estimatedCommission)}
+                              </span>
+                            </div>
+
+                            {/* Quick Action Buttons */}
+                            <div className="flex items-center justify-between gap-1 pt-0.5">
+                              <div className="flex items-center gap-1">
+                                <a
+                                  href={generateWhatsAppUrl(
+                                    lead.phone,
+                                    `Merhaba ${lead.fullName}, Demirtürk Portföy satış ofisinden teklif detaylarınızla ilgili yazıyorum.`
+                                  )}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-1.5 rounded-full bg-[#24211f] hover:bg-emerald-500/20 text-[#a69f99] hover:text-emerald-400 transition-colors"
+                                  title="WhatsApp'tan Yaz"
+                                >
+                                  <WhatsAppIcon className="w-3 h-3" />
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenCalcForLead(lead, e)}
+                                  className="p-1.5 rounded-full bg-[#24211f] hover:bg-white/10 text-[#a69f99] hover:text-white transition-colors"
+                                  title="Komisyon Hesapla"
+                                >
+                                  <Calculator className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              {/* Stage Advance Button */}
+                              {stageKey !== 'WON' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const nextIndex = salesDealStages.indexOf(stageKey) + 1
+                                    if (nextIndex < salesDealStages.length) {
+                                      onStageChange(lead.id, salesDealStages[nextIndex])
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#423c38] hover:bg-[#b99881] hover:text-white text-[10px] font-bold text-[#d6beae] transition-colors"
+                                >
+                                  <span>İlerlet</span>
+                                  <ChevronRight className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
                 </div>
 
-                {/* Stage Volume Sub-indicator */}
-                {stageTotalBudget > 0 && (
-                  <div className="text-[10px] text-[#8c857f] px-1 truncate">
-                    Hacim: {formatCurrency(stageTotalBudget)}
-                  </div>
-                )}
-
-                {/* Cards List */}
-                <div className="space-y-2 flex-1 min-h-[220px]">
-                  {stageLeads.length === 0 ? (
-                    <div className="h-32 flex items-center justify-center text-[11px] text-[#8c857f]">
-                      Fırsat yok
-                    </div>
-                  ) : (
-                    stageLeads.map((lead) => {
-                      const estimatedCommission = lead.budget ? Math.round(lead.budget * 0.02) : 100000
-
-                      return (
-                        <div
-                          key={lead.id}
+                {/* Sağ Alt Çubuksuz Ok (Devamını Görmek İçin — En Fazla 3 Gösterim) */}
+                {stageLeads.length > MAX_VISIBLE_ITEMS && (
+                  <div className="pt-1 px-1 flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-[#8c857f]">
+                      {safeOffset + 1}–{Math.min(safeOffset + MAX_VISIBLE_ITEMS, stageLeads.length)} / {stageLeads.length}
+                    </span>
+                    <div className="flex items-center gap-1 ml-auto">
+                      {hasMoreAbove && (
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation()
-                            onSelectLead(lead)
+                            setStageOffsets((prev) => ({
+                              ...prev,
+                              [stageKey]: Math.max(0, safeOffset - MAX_VISIBLE_ITEMS),
+                            }))
                           }}
-                          className="group p-3 rounded-[18px] bg-[#34302d] hover:bg-[#3b3633] border border-[#4a443f] hover:border-[#b99881]/50 transition-all cursor-pointer shadow-sm space-y-2"
+                          className="no-layer-btn p-1 text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                          title="Önceki 3 Kayıt"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <h4 className="text-xs font-bold text-white group-hover:text-[#b99881] transition-colors select-text truncate">
-                                {lead.fullName}
-                              </h4>
-                              <p className="text-[10px] text-[#8c857f] mt-0.5 truncate">
-                                {getLeadChannelLabel(lead)}
-                              </p>
-                            </div>
-                            <span className="text-[10.5px] font-bold text-[#b99881] shrink-0">
-                              {lead.budget ? formatCurrency(lead.budget) : 'Belirsiz'}
-                            </span>
-                          </div>
-
-                          {/* Commission Tag */}
-                          <div className="flex items-center justify-between text-[10px] pt-0.5">
-                            <span className="text-[#a69f99]">Tahmini Prim:</span>
-                            <span className="font-bold text-emerald-400">
-                              {formatCurrency(estimatedCommission)}
-                            </span>
-                          </div>
-
-                          {/* Quick Action Buttons */}
-                          <div className="flex items-center justify-between gap-1 pt-0.5">
-                            <div className="flex items-center gap-1">
-                              <a
-                                href={generateWhatsAppUrl(lead.phone, `Merhaba ${lead.fullName}, Demirtürk Portföy satış ofisinden teklif detaylarınızla ilgili yazıyorum.`)}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-1.5 rounded-full bg-[#24211f] hover:bg-emerald-500/20 text-[#a69f99] hover:text-emerald-400 transition-colors"
-                                title="WhatsApp'tan Yaz"
-                              >
-                                <WhatsAppIcon className="w-3 h-3" />
-                              </a>
-                              <button
-                                type="button"
-                                onClick={(e) => handleOpenCalcForLead(lead, e)}
-                                className="p-1.5 rounded-full bg-[#24211f] hover:bg-white/10 text-[#a69f99] hover:text-white transition-colors"
-                                title="Komisyon Hesapla"
-                              >
-                                <Calculator className="w-3 h-3" />
-                              </button>
-                            </div>
-
-                            {/* Stage Advance Button */}
-                            {stageKey !== 'WON' && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  const nextIndex = salesDealStages.indexOf(stageKey) + 1
-                                  if (nextIndex < salesDealStages.length) {
-                                    onStageChange(lead.id, salesDealStages[nextIndex])
-                                  }
-                                }}
-                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#423c38] hover:bg-[#b99881] hover:text-white text-[10px] font-bold text-[#d6beae] transition-colors"
-                              >
-                                <span>İlerlet</span>
-                                <ChevronRight className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
+                          <ChevronUp className="w-4 h-4" strokeWidth={2.4} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setStageOffsets((prev) => ({
+                            ...prev,
+                            [stageKey]: hasMoreBelow ? safeOffset + MAX_VISIBLE_ITEMS : 0,
+                          }))
+                        }}
+                        className="no-layer-btn p-1 text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                        title={hasMoreBelow ? 'Devamını Gör (Sonraki 3)' : 'Başa Dön'}
+                      >
+                        <ChevronDown className="w-4 h-4" strokeWidth={2.4} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
       )}
 
-      {/* View 2: Deals Table View */}
-      {viewMode === 'table' && (
-        filteredLeads.length === 0 ? (
+      {/* View 2: Deals Table View (En Fazla 3 Satır Gösterilir + Sağ Alt Çubuksuz Ok) */}
+      {viewMode === 'table' &&
+        (filteredLeads.length === 0 ? (
           <div className="py-20 text-center flex flex-col items-center justify-center">
             <p className="text-sm font-semibold text-[#f3efe9]">
               Kayıtlı satış fırsatı bulunmuyor
@@ -466,67 +556,107 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#4a443f]/60">
-                  {filteredLeads.map((lead) => (
-                    <tr
-                      key={lead.id}
-                      onClick={() => onSelectLead(lead)}
-                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                    >
-                      <td className="py-3 px-5 font-bold text-white select-text">
-                        {lead.fullName}
-                        <span className="block text-[11px] font-normal text-[#8c857f] select-all">
-                          {lead.phone}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-mono font-bold text-[#b99881]">
-                        {formatCurrency(lead.budget || 0)}
-                      </td>
-                      <td className="py-3 px-4 text-[#d6beae]">
-                        {lead.owner || 'Atanmamış'}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border"
-                          style={{
-                            borderColor: `${STAGE_CONFIGS[lead.stage]?.accentColor}40`,
-                            backgroundColor: `${STAGE_CONFIGS[lead.stage]?.accentColor}15`,
-                            color: STAGE_CONFIGS[lead.stage]?.accentColor,
-                          }}
-                        >
-                          {STAGE_CONFIGS[lead.stage]?.label || lead.stage}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-bold text-emerald-400">
-                        {formatCurrency(Math.round((lead.budget || 0) * 0.02))}
-                      </td>
-                      <td className="py-3 px-5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          <a
-                            href={generateWhatsAppUrl(lead.phone, `Sayın ${lead.fullName}, satış teklifinizle ilgili detayları iletmek üzere yazıyorum.`)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 rounded-full bg-[#34302d] hover:bg-emerald-500/20 text-[#a69f99] hover:text-emerald-400 transition-colors"
+                  {filteredLeads
+                    .slice(tableOffset, tableOffset + MAX_VISIBLE_ITEMS)
+                    .map((lead) => (
+                      <tr
+                        key={lead.id}
+                        onClick={() => onSelectLead(lead)}
+                        className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      >
+                        <td className="py-3 px-5 font-bold text-white select-text">
+                          {lead.fullName}
+                          <span className="block text-[11px] font-normal text-[#8c857f] select-all">
+                            {lead.phone}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-[#b99881]">
+                          {formatCurrency(lead.budget || 0)}
+                        </td>
+                        <td className="py-3 px-4 text-[#d6beae]">
+                          {lead.owner || 'Atanmamış'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border"
+                            style={{
+                              borderColor: `${STAGE_CONFIGS[lead.stage]?.accentColor}40`,
+                              backgroundColor: `${STAGE_CONFIGS[lead.stage]?.accentColor}15`,
+                              color: STAGE_CONFIGS[lead.stage]?.accentColor,
+                            }}
                           >
-                            <WhatsAppIcon className="w-3.5 h-3.5" />
-                          </a>
-                          <button
-                            onClick={(e) => handleOpenCalcForLead(lead, e)}
-                            className="px-3 py-1 rounded-full bg-[#423c38] hover:bg-[#b99881] hover:text-[#1c1a18] text-xs font-semibold text-[#d6beae] transition-colors"
-                          >
-                            Hesapla
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {STAGE_CONFIGS[lead.stage]?.label || lead.stage}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-bold text-emerald-400">
+                          {formatCurrency(Math.round((lead.budget || 0) * 0.02))}
+                        </td>
+                        <td className="py-3 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
+                            <a
+                              href={generateWhatsAppUrl(
+                                lead.phone,
+                                `Sayın ${lead.fullName}, satış teklifinizle ilgili detayları iletmek üzere yazıyorum.`
+                              )}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 rounded-full bg-[#34302d] hover:bg-emerald-500/20 text-[#a69f99] hover:text-emerald-400 transition-colors"
+                            >
+                              <WhatsAppIcon className="w-3.5 h-3.5" />
+                            </a>
+                            <button
+                              onClick={(e) => handleOpenCalcForLead(lead, e)}
+                              className="px-3 py-1 rounded-full bg-[#423c38] hover:bg-[#b99881] hover:text-[#1c1a18] text-xs font-semibold text-[#d6beae] transition-colors"
+                            >
+                              Hesapla
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )
-      )}
 
-      {/* Sales Leaderboard (Satışçı Başarı Sıralaması) */}
+            {filteredLeads.length > MAX_VISIBLE_ITEMS && (
+              <div className="px-5 py-2.5 flex items-center justify-between">
+                <span className="text-[11px] font-mono text-[#8c857f]">
+                  {tableOffset + 1}–{Math.min(tableOffset + MAX_VISIBLE_ITEMS, filteredLeads.length)} / {filteredLeads.length}
+                </span>
+                <div className="flex items-center gap-1 ml-auto">
+                  {tableOffset > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTableOffset((prev) => Math.max(0, prev - MAX_VISIBLE_ITEMS))
+                      }
+                      className="no-layer-btn p-1 text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                      title="Önceki 3 Kayıt"
+                    >
+                      <ChevronUp className="w-4 h-4" strokeWidth={2.4} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTableOffset((prev) =>
+                        prev + MAX_VISIBLE_ITEMS < filteredLeads.length
+                          ? prev + MAX_VISIBLE_ITEMS
+                          : 0
+                      )
+                    }
+                    className="no-layer-btn p-1 text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                    title="Devamını Gör (Sonraki 3)"
+                  >
+                    <ChevronDown className="w-4 h-4" strokeWidth={2.4} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+      {/* Sales Leaderboard (Satışçı Başarı Sıralaması — En Fazla 3 Gösterim) */}
       <div className="p-6 rounded-[32px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -543,34 +673,69 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
             Henüz satış ekibi danışmanı bulunmuyor. Ayarlar &gt; Ekip Yönetimi üzerinden yeni ekip üyeleri ekleyebilirsiniz.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {leaderboardData.map((rep, idx) => (
-              <div
-                key={rep.name}
-                className="p-4 rounded-[24px] bg-[#34302d] border border-[#4a443f] flex items-center justify-between gap-3"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#24211f] border border-[#b99881]/40 flex items-center justify-center font-bold text-sm text-[#b99881]">
-                    #{idx + 1}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white">{rep.name}</h4>
-                    <p className="text-[10px] text-[#8c857f]">{rep.role}</p>
-                    <p className="text-[11px] font-bold text-[#b99881] mt-0.5">
-                      {formatCurrency(rep.closedVolume)} ({rep.closedCount} Satış)
-                    </p>
-                  </div>
-                </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {leaderboardData
+                .slice(leaderboardOffset, leaderboardOffset + MAX_VISIBLE_ITEMS)
+                .map((rep, idx) => (
+                  <div
+                    key={rep.name}
+                    className="p-4 rounded-[24px] bg-[#34302d] border border-[#4a443f] flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#24211f] border border-[#4a443f]/40 flex items-center justify-center font-bold text-sm text-[#b99881]">
+                        #{leaderboardOffset + idx + 1}
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-white">{rep.name}</h4>
+                        <p className="text-[10px] text-[#8c857f]">{rep.role}</p>
+                        <p className="text-[11px] font-bold text-[#b99881] mt-0.5">
+                          {formatCurrency(rep.closedVolume)} ({rep.closedCount} Satış)
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="text-right">
-                  <span className="text-[10px] text-[#8c857f] block">Hak Edilen Prim</span>
-                  <span className="text-xs font-bold text-emerald-400">
-                    {formatCurrency(rep.earnedCommission)}
-                  </span>
-                </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-[#8c857f] block">Hak Edilen Prim</span>
+                      <span className="text-xs font-bold text-emerald-400">
+                        {formatCurrency(rep.earnedCommission)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {leaderboardData.length > MAX_VISIBLE_ITEMS && (
+              <div className="flex items-center justify-end pt-1">
+                {leaderboardOffset > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLeaderboardOffset((prev) => Math.max(0, prev - MAX_VISIBLE_ITEMS))
+                    }
+                    className="no-layer-btn p-1 text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                    title="Önceki 3 Kayıt"
+                  >
+                    <ChevronUp className="w-4 h-4" strokeWidth={2.4} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLeaderboardOffset((prev) =>
+                      prev + MAX_VISIBLE_ITEMS < leaderboardData.length
+                        ? prev + MAX_VISIBLE_ITEMS
+                        : 0
+                    )
+                  }
+                  className="no-layer-btn p-1 text-[#a69f99] hover:text-white transition-colors cursor-pointer"
+                  title="Devamını Gör"
+                >
+                  <ChevronDown className="w-4 h-4" strokeWidth={2.4} />
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
