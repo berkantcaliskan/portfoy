@@ -1481,7 +1481,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Alt Alan: Departman Seçici + E-Posta, Mesajlar & Ayarlar */}
           <div
-            className="space-y-2.5"
+            className="sidebar-bottom-controls space-y-2.5"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             {/* Çalışma Alanı / Departman Seçicisi (Alttaki ikonların hemen üstünde, 40x40px sabit ikon yuvalı) */}

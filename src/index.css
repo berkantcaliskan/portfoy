@@ -2205,6 +2205,10 @@ html[data-theme-accent="night"] .dropdown-panel button:hover:not(.is-active-drop
 
 /* Gece modunda sol menü alt ikonlar ve dock ikonları beyaz (#f4f1ea) */
 html[data-theme-accent="night"] header .sidebar-pill-item svg,
+html[data-theme-accent="night"] header .sidebar-pill-item [class*="text-[#b99881]"],
+html[data-theme-accent="night"] header .sidebar-dept-pill svg,
+html[data-theme-accent="night"] header .sidebar-dept-pill [class*="text-[#b99881]"],
+html[data-theme-accent="night"] .mobile-floating-dock button svg,
 html[data-theme-accent="night"] header .sidebar-bottom-controls svg,
 html[data-theme-accent="night"] header .sidebar-bottom-controls [class*="text-[#b99881]"],
 html[data-theme-accent="night"] .app-dock-bar button svg,
