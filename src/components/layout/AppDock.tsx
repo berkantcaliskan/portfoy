@@ -991,7 +991,7 @@ export const AppDock: React.FC<AppDockProps> = ({
         )}
       </AnimatePresence>
 
-        <div className="flex items-center gap-2 p-2 rounded-full bg-[#413f3d]/90 border border-[#b99881]/25 backdrop-blur-xl relative">
+        <div className="app-dock-bar flex items-center gap-2 p-2 rounded-full bg-[#413f3d]/90 border border-[#b99881]/25 backdrop-blur-xl relative">
           
           {/* 
             EN SOLDA HER ZAMAN SABİT BAŞLAT BUTONU (YUVARLAK İÇİNDE UYGULAMA LOGOSU)

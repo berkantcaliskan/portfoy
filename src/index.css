@@ -2203,6 +2203,16 @@ html[data-theme-accent="night"] .dropdown-panel button:hover:not(.is-active-drop
 }
 
 
+/* Gece modunda sol menü alt ikonlar ve dock ikonları beyaz (#f4f1ea) */
+html[data-theme-accent="night"] header .sidebar-pill-item svg,
+html[data-theme-accent="night"] header .sidebar-bottom-controls svg,
+html[data-theme-accent="night"] header .sidebar-bottom-controls [class*="text-[#b99881]"],
+html[data-theme-accent="night"] .app-dock-bar button svg,
+html[data-theme-accent="night"] .app-dock-bar button [class*="text-[#b99881]"],
+html[data-theme-accent="night"] .app-dock-bar button {
+  color: #f4f1ea !important;
+}
+
 /* Kullanıcı Kartları & Kullanıcı İsim Alanları: Bir kademe daha yumuşak zarif kontür */
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) main .team-user-card {
   border-color: rgba(41, 45, 43, 0.11) !important;
