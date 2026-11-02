@@ -17,8 +17,9 @@ import {
   Award,
   Edit3,
   Phone,
+  UserPlus,
 } from 'lucide-react'
-import { Lead, LeadStage } from '@/types/lead'
+import { Lead, LeadStage, isLeadHandedOverToSales } from '@/types/lead'
 import { MetaCapiEventName } from '@/types/meta'
 import { StageDropdown } from './StageDropdown'
 import { CallStatusDropdown } from './CallStatusDropdown'
@@ -296,6 +297,38 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 {liveLead.assignedToUserName || (liveLead.owner && liveLead.owner !== 'Atanmamış' ? liveLead.owner : 'Atanmadı')}
               </span>
             </div>
+
+            {permissionService.canHandOverToSales(currentUser) && (
+              isLeadHandedOverToSales(liveLead) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentUser) {
+                      leadStore.revokeSalesHandover(liveLead.id, currentUser)
+                    }
+                  }}
+                  className="px-3 py-1 rounded-full text-xs font-semibold border bg-emerald-500/15 hover:bg-rose-500/20 text-emerald-400 hover:text-rose-400 border-emerald-500/35 hover:border-rose-500/40 transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Satışa iletildi — Satış devrini geri çekmek için tıklayın"
+                >
+                  <Check className="w-3 h-3" />
+                  <span>Satışa İletildi (Geri Çek)</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentUser) {
+                      leadStore.assignToSales(liveLead.id, null, currentUser)
+                    }
+                  }}
+                  className="px-3 py-1 rounded-full text-xs font-semibold border bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border-[#4a443f] transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Bu müşteri kaydını manuel olarak Satış departmanına ilet"
+                >
+                  <UserPlus className="w-3 h-3 text-amber-400" />
+                  <span>Satışa İlet</span>
+                </button>
+              )
+            )}
 
             <button
               type="button"

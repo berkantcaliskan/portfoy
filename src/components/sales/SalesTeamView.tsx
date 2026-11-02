@@ -10,7 +10,7 @@ import {
   Trophy,
   Users,
 } from 'lucide-react'
-import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
+import { Lead, LeadStage, STAGE_CONFIGS, isLeadHandedOverToSales } from '@/types/lead'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { LuxurySelect } from '@/components/ui/LuxurySelect'
@@ -72,11 +72,14 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
       })),
   ]
 
+  // Yalnızca Müşteri İlişkileri, Pazarlama veya Yönetim tarafından manuel olarak "Satışa İlet" denmiş kayıtlar Satışta yer alır
+  const salesHandedOverLeads = leads.filter((lead) => isLeadHandedOverToSales(lead))
+
   // Filter leads based on sales rep and sort newest to oldest ("en yeniden en eskiye")
-  const filteredLeads = [...leads]
+  const filteredLeads = [...salesHandedOverLeads]
     .filter((lead) => {
       if (selectedRep === 'ALL') return true
-      return lead.owner === selectedRep
+      return lead.owner === selectedRep || lead.salesRepUserName === selectedRep
     })
     .sort((a, b) => {
       const diff = getLeadTimestamp(b) - getLeadTimestamp(a)
@@ -119,7 +122,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
           u.role === 'ADMIN')
     )
     .map((rep: AppUser) => {
-      const repLeads = leads.filter((l) => l.owner === rep.fullName && l.stage === 'WON')
+      const repLeads = salesHandedOverLeads.filter((l) => (l.owner === rep.fullName || l.salesRepUserName === rep.fullName) && l.stage === 'WON')
       const closedVolume = repLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
       const earnedCommission = Math.round(closedVolume * 0.02)
       return {

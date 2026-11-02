@@ -85,6 +85,15 @@ function resolveLeadFullName(r: any): string {
 }
 
 export function rowToLead(r: any): Lead {
+  const assignmentHistory = Array.isArray(r.assignment_history) ? r.assignment_history : []
+  const latestSalesHandover = assignmentHistory.find(
+    (h: any) => h && typeof h.isSalesHandover === 'boolean'
+  )
+  const isHandedOver =
+    typeof r.handed_over_to_sales === 'boolean'
+      ? r.handed_over_to_sales
+      : Boolean(latestSalesHandover?.isSalesHandover === true)
+
   return {
     id: r.id,
     fullName: resolveLeadFullName(r),
@@ -117,6 +126,13 @@ export function rowToLead(r: any): Lead {
         : (Array.isArray(r.inquiries) && r.inquiries[0]?.formAnswers)
           ? r.inquiries[0].formAnswers
           : undefined,
+    handedOverToSales: isHandedOver,
+    handedOverToSalesAt: isHandedOver ? latestSalesHandover?.assignedAt : undefined,
+    handedOverToSalesByUserId: isHandedOver ? latestSalesHandover?.assignedByUserId : undefined,
+    handedOverToSalesByUserName: isHandedOver ? latestSalesHandover?.assignedByUserName : undefined,
+    handedOverToSalesByDepartment: isHandedOver ? latestSalesHandover?.assignedByDepartment : undefined,
+    salesRepUserId: isHandedOver && latestSalesHandover?.assignedToUserId !== 'ALL_SALES' ? latestSalesHandover?.assignedToUserId : undefined,
+    salesRepUserName: isHandedOver && latestSalesHandover?.assignedToUserId !== 'ALL_SALES' ? latestSalesHandover?.assignedToUserName : undefined,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }

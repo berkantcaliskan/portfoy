@@ -1,5 +1,5 @@
 import { AppUser } from './userStore'
-import { Lead } from '@/types/lead'
+import { Lead, isLeadHandedOverToSales } from '@/types/lead'
 import { Department } from '@/types/department'
 
 export interface SharedFilePermissionTarget {
@@ -27,6 +27,21 @@ export class PermissionService {
     // Scope: ALL
     if (user.scope === 'ALL') return true
 
+    // Satış departmanı kuralı: Müşteri İlişkileri, Pazarlama veya Yönetim "Satışa İlet" demeden hiçbir veri Satışta görünmez
+    if (user.department === 'Satış') {
+      if (!isLeadHandedOverToSales(lead)) return false
+      if (user.scope === 'ASSIGNED_ONLY') {
+        return (
+          !lead.salesRepUserId ||
+          lead.salesRepUserId === user.id ||
+          lead.assignedToUserId === user.id ||
+          lead.owner === user.fullName ||
+          lead.owner === user.username
+        )
+      }
+      return true
+    }
+
     // Scope: ASSIGNED_ONLY -> user must be explicitly assigned (or unassigned manual leads in Müşteri İlişkileri)
     if (user.scope === 'ASSIGNED_ONLY') {
       if (user.department === 'Müşteri İlişkileri' && !lead.assignedToUserId) {
@@ -41,23 +56,13 @@ export class PermissionService {
 
     // Scope: DEPARTMENT
     if (user.scope === 'DEPARTMENT') {
-      // Pazarlama sees all new/marketing leads
+      // Pazarlama sees all marketing/web/google/meta leads
       if (user.department === 'Pazarlama') {
-        return lead.source === 'META_ADS' || lead.source === 'WEBSITE' || lead.channel.includes('Facebook') || lead.channel.includes('Instagram') || lead.channel.includes('Web') || lead.stage === 'NEW'
+        return true
       }
       // Müşteri İlişkileri manages all customer records, inquiries, and sales handover tracking
       if (user.department === 'Müşteri İlişkileri') {
         return true
-      }
-      // Satış sees leads assigned to sales or in sales stages, plus all website leads
-      if (user.department === 'Satış') {
-        return (
-          lead.source === 'WEBSITE' ||
-          lead.channel?.toLowerCase().includes('web') ||
-          lead.tags?.some((t) => t.toLowerCase().includes('web')) ||
-          lead.assignedToUserId === user.id ||
-          ['QUALIFIED', 'APPOINTMENT', 'PRESENTATION', 'OFFER', 'WON', 'LOST'].includes(lead.stage)
-        )
       }
       // Muhasebe sees converted/won leads with transactions or deposit
       if (user.department === 'Muhasebe') {
@@ -178,6 +183,20 @@ export class PermissionService {
     if (!user) return false
     if (user.role === 'ADMIN' || user.department === 'Yönetim') return true
     return Boolean(user.permissions?.canDeleteCustomer)
+  }
+
+  /**
+   * Yalnızca Müşteri İlişkileri, Pazarlama veya Yönetim departmanları bir kaydı manuel olarak Satışa iletebilir.
+   */
+  public canHandOverToSales(user: AppUser | null): boolean {
+    if (!user) return false
+    if (user.role === 'ADMIN') return true
+    const allowedDepts: Department[] = ['Müşteri İlişkileri', 'Pazarlama', 'Yönetim']
+    if (allowedDepts.includes(user.department)) return true
+    if (Array.isArray(user.departments) && user.departments.some((d) => allowedDepts.includes(d))) {
+      return true
+    }
+    return false
   }
 
   public canAssignConsultant(user: AppUser | null): boolean {

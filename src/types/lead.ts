@@ -150,8 +150,10 @@ export interface AssignmentHistoryEntry {
   assignedToUserName: string
   assignedByUserId: string
   assignedByUserName: string
+  assignedByDepartment?: string
   assignedAt: string
   note?: string
+  isSalesHandover?: boolean
 }
 
 export interface StageHistoryEntry {
@@ -226,6 +228,30 @@ export interface Lead {
   qualifiedAt?: string
   metaAnswers?: MetaAnswer[]
 
+  // Manual Sales Handover (Only Müşteri İlişkileri, Pazarlama, or Yönetim can set this)
+  handedOverToSales?: boolean
+  handedOverToSalesAt?: string
+  handedOverToSalesByUserId?: string
+  handedOverToSalesByUserName?: string
+  handedOverToSalesByDepartment?: string
+  salesRepUserId?: string
+  salesRepUserName?: string
+
   createdAt: string
   updatedAt: string
+}
+
+/**
+ * Hiçbir veri (Potansiyel müşteri, Web sitesi, Google, Meta vb.) Müşteri İlişkileri,
+ * Pazarlama veya Yönetim tarafından manuel olarak "Satışa İlet" denmedikçe Satışa devredilemez.
+ */
+export function isLeadHandedOverToSales(lead?: Lead | null): boolean {
+  if (!lead) return false
+  if (typeof lead.handedOverToSales === 'boolean') {
+    return lead.handedOverToSales
+  }
+  const latestHandover = lead.assignmentHistory?.find(
+    (h) => h && typeof h.isSalesHandover === 'boolean'
+  )
+  return Boolean(latestHandover?.isSalesHandover === true)
 }

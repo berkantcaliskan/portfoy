@@ -31,7 +31,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import { Lead, STAGE_CONFIGS } from '@/types/lead'
+import { Lead, STAGE_CONFIGS, isLeadHandedOverToSales } from '@/types/lead'
 import { PortfolioItem } from '@/types/portfolio'
 import { AppUser } from '@/services/userStore'
 import { Department } from '@/types/department'
@@ -56,13 +56,18 @@ interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
-  leads,
+  leads: rawLeads,
   properties: _properties,
   onSelectLead,
   onNavigateToTab,
   currentUser,
 }) => {
   const department: Department = currentUser?.department || 'Pazarlama'
+  // Satış departmanında yalnızca manuel olarak "Satışa İlet" denmiş veriler gösterilir
+  const leads = useMemo(
+    () => (department === 'Satış' ? rawLeads.filter((l) => isLeadHandedOverToSales(l)) : rawLeads),
+    [rawLeads, department]
+  )
 
   // Sub-store states for department-specific widgets
   const appointments = appointmentStore.getAll(currentUser)

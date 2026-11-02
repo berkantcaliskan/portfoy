@@ -3,7 +3,7 @@ import {
   DEPARTMENT_MENU_CONFIG,
   NavPageId,
 } from '@/types/department'
-import { STAGE_CONFIGS, CALL_STATUS_OPTIONS } from '@/types/lead'
+import { STAGE_CONFIGS, CALL_STATUS_OPTIONS, isLeadHandedOverToSales } from '@/types/lead'
 import { AppUser, userStore } from '@/services/userStore'
 import { leadStore } from '@/services/leadStore'
 import { projectStore } from '@/services/projectStore'
@@ -504,12 +504,13 @@ function buildPageCandidates(
   // 2. MÜŞTERİLER / SATIŞ (portfolio, customers, crm)
   // ---------------------------------------------------------------------------
   if (pageId === 'portfolio' || pageId === 'customers' || pageId === 'crm') {
+    const pageLeads = pageId === 'crm' ? leads.filter((l) => isLeadHandedOverToSales(l)) : leads
     add(
       'sec-all-customers',
       `${pageLabel} — Müşteri Portföyü & Aday Yönetimi`,
-      `Toplam ${leads.length} müşteri kaydı, aşama filtreleri, arama ve hızlı WhatsApp/çağrı aksiyonları`,
+      `Toplam ${pageLeads.length} müşteri kaydı, aşama filtreleri, arama ve hızlı WhatsApp/çağrı aksiyonları`,
       'müşteriler adaylar satış kanban tablo liste yeni müşteri ekle filtre',
-      `${leads.length} Kayıt`
+      `${pageLeads.length} Kayıt`
     )
     add(
       'sec-stage-new',
@@ -557,7 +558,7 @@ function buildPageCandidates(
       { stageFilter: 'WON' }
     )
 
-    for (const lead of leads) {
+    for (const lead of pageLeads) {
       const stageLabel = STAGE_CONFIGS[lead.stage]?.label || lead.stage
       const callOpt = CALL_STATUS_OPTIONS.find((c) => c.id === lead.callStatus)
       const callLabel = callOpt ? callOpt.label : lead.callStatus || ''

@@ -1266,35 +1266,60 @@ class LeadStore {
   }
 
   /**
-   * Assign lead to Sales Representative (keeps assignment history)
+   * Müşteri İlişkileri, Pazarlama veya Yönetim tarafından kaydın manuel olarak Satışa iletilmesi ("Satışa İlet").
+   * Bu işlem yapılmadan hiçbir veri (Potansiyel müşteri, Web sitesi, Google, Meta vb.) Satışa devredilmez.
    */
   public assignToSales(
     id: string,
-    salesUser: AppUser,
+    salesUser: AppUser | null | undefined,
     assignedByUser: AppUser,
     note?: string
   ): Lead | undefined {
+    if (!permissionService.canHandOverToSales(assignedByUser)) {
+      return undefined
+    }
     const lead = this.getById(id)
     if (!lead) return undefined
 
+    const nowIso = new Date().toISOString()
+    const targetId = salesUser ? salesUser.id : 'ALL_SALES'
+    const targetName = salesUser ? salesUser.fullName : 'Satış Ekibi (Genel Havuz)'
+
     const assignmentEntry: AssignmentHistoryEntry = {
       id: 'ah-' + Date.now(),
-      assignedToUserId: salesUser.id,
-      assignedToUserName: salesUser.fullName,
+      assignedToUserId: targetId,
+      assignedToUserName: targetName,
       assignedByUserId: assignedByUser.id,
       assignedByUserName: assignedByUser.fullName,
-      assignedAt: new Date().toISOString(),
+      assignedByDepartment: assignedByUser.department,
+      assignedAt: nowIso,
       note,
+      isSalesHandover: true,
     }
 
     const updated = this.update(
       id,
       {
-        assignedToUserId: salesUser.id,
-        assignedToUserName: salesUser.fullName,
-        owner: salesUser.fullName,
+        handedOverToSales: true,
+        handedOverToSalesAt: nowIso,
+        handedOverToSalesByUserId: assignedByUser.id,
+        handedOverToSalesByUserName: assignedByUser.fullName,
+        handedOverToSalesByDepartment: assignedByUser.department,
+        salesRepUserId: salesUser ? salesUser.id : undefined,
+        salesRepUserName: salesUser ? salesUser.fullName : undefined,
+        ...(salesUser
+          ? {
+              assignedToUserId: salesUser.id,
+              assignedToUserName: salesUser.fullName,
+              owner: salesUser.fullName,
+            }
+          : {}),
         assignmentHistory: [assignmentEntry, ...(lead.assignmentHistory || [])],
-        stage: lead.stage === 'NEW' ? 'CONTACTED' : lead.stage,
+        ...(note
+          ? {
+              notes: lead.notes ? `${lead.notes}\n[Satış Devir Notu]: ${note}` : `[Satış Devir Notu]: ${note}`,
+            }
+          : {}),
       },
       assignedByUser
     )
@@ -1302,8 +1327,56 @@ class LeadStore {
     this.addActivity(
       id,
       'ASSIGNMENT',
-      `Müşteri Satış Danışmanı ${salesUser.fullName} adlı kullanıcıya atandı.`,
+      salesUser
+        ? `Müşteri ${assignedByUser.department} (${assignedByUser.fullName}) tarafından manuel olarak Satışa iletildi (Danışman: ${salesUser.fullName}).`
+        : `Müşteri ${assignedByUser.department} (${assignedByUser.fullName}) tarafından manuel olarak Satış departmanına iletildi.`,
       assignedByUser.fullName
+    )
+    return updated
+  }
+
+  /**
+   * Satışa iletilmiş bir kaydın satış devrini geri çeker (Müşteri İlişkileri, Pazarlama veya Yönetim).
+   */
+  public revokeSalesHandover(id: string, revokedByUser: AppUser): Lead | undefined {
+    if (!permissionService.canHandOverToSales(revokedByUser)) {
+      return undefined
+    }
+    const lead = this.getById(id)
+    if (!lead) return undefined
+
+    const nowIso = new Date().toISOString()
+    const revokeEntry: AssignmentHistoryEntry = {
+      id: 'ah-rev-' + Date.now(),
+      assignedToUserId: '',
+      assignedToUserName: 'Satış Devri Geri Çekildi',
+      assignedByUserId: revokedByUser.id,
+      assignedByUserName: revokedByUser.fullName,
+      assignedByDepartment: revokedByUser.department,
+      assignedAt: nowIso,
+      isSalesHandover: false,
+    }
+
+    const updated = this.update(
+      id,
+      {
+        handedOverToSales: false,
+        handedOverToSalesAt: undefined,
+        handedOverToSalesByUserId: undefined,
+        handedOverToSalesByUserName: undefined,
+        handedOverToSalesByDepartment: undefined,
+        salesRepUserId: undefined,
+        salesRepUserName: undefined,
+        assignmentHistory: [revokeEntry, ...(lead.assignmentHistory || [])],
+      },
+      revokedByUser
+    )
+
+    this.addActivity(
+      id,
+      'ASSIGNMENT',
+      `Satışa iletim ${revokedByUser.department} (${revokedByUser.fullName}) tarafından manuel olarak geri çekildi.`,
+      revokedByUser.fullName
     )
     return updated
   }

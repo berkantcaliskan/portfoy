@@ -28,7 +28,7 @@ import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassSelect } from '@/components/ui/GlassSelect'
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { OverflowTabs } from '@/components/ui/OverflowTabs'
-import { Lead, LeadStage, STAGE_CONFIGS } from '@/types/lead'
+import { Lead, LeadStage, STAGE_CONFIGS, isLeadHandedOverToSales } from '@/types/lead'
 import { StageDropdown } from './StageDropdown'
 import { CallStatusDropdown } from './CallStatusDropdown'
 import { CallCenterStatus } from '@/types/lead'
@@ -689,10 +689,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     leadStore.toggleLeadQualified(lead.id, checked, currentUser)
   }
 
-  // Execute assign to sales
+  // Execute manual handover to sales ("Satışa İlet")
   const handleOpenAssign = (lead: Lead) => {
     setSelectedLeadForAssign(lead)
-    setSelectedSalesUserId(salesUsers[0]?.id || '')
+    setSelectedSalesUserId(lead.salesRepUserId || 'ALL_SALES')
     setAssignNote('')
   }
 
@@ -700,11 +700,21 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     e.preventDefault()
     if (!selectedLeadForAssign || !currentUser) return
 
-    const targetUser = allUsers.find((u) => u.id === selectedSalesUserId)
-    if (!targetUser) return
+    const targetUser =
+      selectedSalesUserId && selectedSalesUserId !== 'ALL_SALES'
+        ? allUsers.find((u) => u.id === selectedSalesUserId) || null
+        : null
 
     leadStore.assignToSales(selectedLeadForAssign.id, targetUser, currentUser, assignNote)
     setSelectedLeadForAssign(null)
+  }
+
+  const handleRevokeSalesHandover = (lead: Lead) => {
+    if (!currentUser) return
+    leadStore.revokeSalesHandover(lead.id, currentUser)
+    if (selectedLeadForAssign?.id === lead.id) {
+      setSelectedLeadForAssign(null)
+    }
   }
 
   // Re-assign consultant
@@ -1230,14 +1240,27 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                                 >
                                   <Layers className="w-3.5 h-3.5 text-sky-400" />
                                 </button>
-                                <button
-                                  onClick={() => handleOpenAssign(lead)}
-                                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold cursor-pointer transition-colors shadow-sm whitespace-nowrap shrink-0"
-                                  title="Satış Ekibine Devret"
-                                >
-                                  <UserPlus className="w-3 h-3 text-amber-400 shrink-0" />
-                                  <span>Satışa Devret</span>
-                                </button>
+                                {permissionService.canHandOverToSales(currentUser ?? null) && (
+                                  isLeadHandedOverToSales(lead) ? (
+                                    <button
+                                      onClick={() => handleOpenAssign(lead)}
+                                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/35 text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0"
+                                      title={`Satışa İletildi${lead.salesRepUserName ? ` (${lead.salesRepUserName})` : ''} — Değiştirmek veya geri çekmek için tıklayın`}
+                                    >
+                                      <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                                      <span>Satışa İletildi</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleOpenAssign(lead)}
+                                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0"
+                                      title="Manuel olarak Satış departmanına ilet"
+                                    >
+                                      <UserPlus className="w-3 h-3 text-amber-400 shrink-0" />
+                                      <span>Satışa İlet</span>
+                                    </button>
+                                  )
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -1309,6 +1332,35 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <div className="px-2.5 py-1 text-[10px] font-semibold text-[#8c857f] truncate border-b border-[#4a443f]/40 mb-1">
               {rowContextMenu.lead.fullName}
             </div>
+            {permissionService.canHandOverToSales(currentUser ?? null) && (
+              isLeadHandedOverToSales(rowContextMenu.lead) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRevokeSalesHandover(rowContextMenu.lead)
+                    setRowContextMenu(null)
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-rose-400 hover:bg-[#34302d] cursor-pointer transition-colors text-left"
+                >
+                  <X className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span>Satıştan Geri Çek</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentUser) {
+                      leadStore.assignToSales(rowContextMenu.lead.id, null, currentUser)
+                    }
+                    setRowContextMenu(null)
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-emerald-400 hover:bg-[#34302d] cursor-pointer transition-colors text-left"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Satışa İlet</span>
+                </button>
+              )
+            )}
             <button
               type="button"
               onClick={() => handleToggleMilestone(rowContextMenu.lead.id)}
@@ -1568,29 +1620,36 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </form>
       </GlassModal>
 
-      {/* SATIŞA DEVRET MODALI */}
+      {/* SATIŞA İLET MODALI */}
       <GlassModal
         isOpen={selectedLeadForAssign !== null}
         onClose={() => setSelectedLeadForAssign(null)}
-        title={`Satış Danışmanına Ata - ${selectedLeadForAssign?.fullName}`}
+        title={`Satışa İlet — ${selectedLeadForAssign?.fullName}`}
       >
         <form onSubmit={handleExecuteAssign} className="space-y-4">
+          <p className="text-xs text-[#a69f99]">
+            Müşteri İlişkileri, Pazarlama veya Yönetim onayınızla bu kayıt manuel olarak Satış departmanına iletilir.
+          </p>
+
           <div>
             <GlassSelect
-              label="Satış Temsilcisi Seçin *"
+              label="İletilecek Satış Birimi / Temsilcisi"
               value={selectedSalesUserId}
               onChange={setSelectedSalesUserId}
-              placeholder="Satış temsilcisi seçin..."
-              options={salesUsers.map((u) => ({
-                value: u.id,
-                label: `${u.fullName} (${u.role})`,
-              }))}
+              placeholder="Satış birimi veya temsilcisi seçin..."
+              options={[
+                { value: 'ALL_SALES', label: 'Tüm Satış Ekibi (Genel Satış Havuzu)' },
+                ...salesUsers.map((u) => ({
+                  value: u.id,
+                  label: `${u.fullName} (${u.department} - ${u.role})`,
+                })),
+              ]}
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-              Devir Notu (Müşteri İlişkileri Özeti)
+              İletim Notu (İsteğe Bağlı)
             </label>
             <textarea
               rows={3}
@@ -1601,17 +1660,32 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             />
           </div>
 
-          <div className="pt-2 pb-1 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedLeadForAssign(null)}
-              className="px-4 py-2 rounded-full text-xs glass-button-subtle border border-[#4a443f] hover:border-[#b99881] text-[#a69f99] hover:text-white cursor-pointer transition-colors"
-            >
-              Vazgeç
-            </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
-              Satış Ekibine Devret
-            </GlassButton>
+          <div className="pt-2 pb-1 flex items-center justify-between gap-2">
+            {selectedLeadForAssign && isLeadHandedOverToSales(selectedLeadForAssign) ? (
+              <button
+                type="button"
+                onClick={() => handleRevokeSalesHandover(selectedLeadForAssign)}
+                className="px-4 py-2 rounded-full text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-400 cursor-pointer transition-colors"
+              >
+                Satıştan Geri Çek
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedLeadForAssign(null)}
+                className="px-4 py-2 rounded-full text-xs glass-button-subtle border border-[#4a443f] hover:border-[#b99881] text-[#a69f99] hover:text-white cursor-pointer transition-colors"
+              >
+                Vazgeç
+              </button>
+              <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
+                {selectedLeadForAssign && isLeadHandedOverToSales(selectedLeadForAssign)
+                  ? 'Satış İletimini Güncelle'
+                  : 'Satışa İlet'}
+              </GlassButton>
+            </div>
           </div>
         </form>
       </GlassModal>

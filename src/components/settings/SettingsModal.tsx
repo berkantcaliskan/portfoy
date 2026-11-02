@@ -419,7 +419,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [metaDailyBudget, setMetaDailyBudget] = useState('50000')
   const [targetCpl, setTargetCpl] = useState('120')
   const [autoQualifyThreshold, setAutoQualifyThreshold] = useState('65')
-  const [autoHandoverEnabled, setAutoHandoverEnabled] = useState(true)
+  const [autoHandoverEnabled, setAutoHandoverEnabled] = useState(false)
   const [afterHoursMsgEnabled, setAfterHoursMsgEnabled] = useState(true)
   const [dailyKpiReportEnabled, setDailyKpiReportEnabled] = useState(true)
   const [deptSavedMessage, setDeptSavedMessage] = useState<string | null>(null)
@@ -1797,24 +1797,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
                     <div>
-                      <div className="text-xs font-medium text-white">Satış Ekibine Otomatik Devir</div>
+                      <div className="text-xs font-medium text-white">Manuel Satışa İletim Kuralı (Zorunlu)</div>
                       <div className="text-[11px] text-[#8c857f]">
-                        Nitelikli olarak işaretlenen müşteri adayı anında Satış Departmanı havuzuna aktarılsın
+                        Müşteri İlişkileri, Pazarlama veya Yönetim manuel olarak "Satışa İlet" demeden hiçbir veri (Potansiyel müşteri, Web sitesi, Google, Meta vb.) Satış departmanına devredilemez
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setAutoHandoverEnabled(!autoHandoverEnabled)}
-                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                        autoHandoverEnabled ? 'bg-[#b99881]' : 'bg-[#4a443f]'
-                      }`}
-                    >
-                      <div
-                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
-                          autoHandoverEnabled ? 'left-6' : 'left-1'
-                        }`}
-                      />
-                    </button>
+                    <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                      Manuel Onay Aktif
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between pt-2">
