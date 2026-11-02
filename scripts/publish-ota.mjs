@@ -352,6 +352,9 @@ async function main() {
       console.log('[OTA] Pushing update & cloud DB to GitHub (berkantcaliskan/portfoy)...')
       execSync('git add -A', { cwd: rootDir, stdio: 'inherit' })
       try {
+        execSync('git rm --cached --ignore-unmatch .env', { cwd: rootDir, stdio: 'ignore' })
+      } catch {}
+      try {
         execSync(`git commit -m "chore(ota): auto-update release ${versionId} with synced users & db"`, {
           cwd: rootDir,
           stdio: 'inherit',

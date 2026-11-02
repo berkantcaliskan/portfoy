@@ -15,6 +15,9 @@ dist/*
 dist-ssr
 dist-electron
 *.local
+.env
+.env.*
+!.env.example
 
 # Temporary screenshots & testing
 screenshot_*.png
