@@ -4,7 +4,7 @@ export interface MetaFormSummary {
   campaignName: string
   leadCount: number
   conversionRate: number
-  status: 'ACTIVE' | 'PAUSED'
+  status: 'ACTIVE' | 'PAUSED' | 'UNKNOWN'
   lastLeadAt: string
 }
 

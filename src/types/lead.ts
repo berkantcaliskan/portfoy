@@ -131,6 +131,16 @@ export interface MetaAnswer {
 }
 
 export interface CustomerInquiry {
+  metaWarnings?: string[]
+  metaFormId?: string
+  metaPageId?: string
+  metaAdId?: string
+  metaAdName?: string
+  metaAdsetId?: string
+  metaAdsetName?: string
+  metaCampaignId?: string
+  metaPlatform?: string
+  metaIsOrganic?: boolean
   id: string
   formName: string
   campaignName?: string
@@ -186,6 +196,8 @@ export interface LeadActivity {
 }
 
 export interface LeadMetaCapiStatus {
+  metaLeadgenId?: string
+  revision?: number
   lastEventName: string
   label: string
   sentAt: string
@@ -195,6 +207,7 @@ export interface LeadMetaCapiStatus {
 }
 
 export interface Lead {
+  metaRevision?: number
   id: string
   leadNumber?: number
   companyName?: string

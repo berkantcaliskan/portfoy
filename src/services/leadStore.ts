@@ -17,6 +17,7 @@ import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { syncService } from './syncService'
 import { rowToLead, rowToActivity } from './dbMapper'
 import { metaStore } from './metaStore'
+import { normalizePhone } from '../../supabase/functions/_shared/meta-core'
 
 import { playNewLeadChime } from '@/utils/audioAlert'
 import { formatSentenceNote } from '@/utils/formatters'
@@ -37,6 +38,21 @@ function cleanPhoneNumber(phone?: string | null): string {
 }
 
 class LeadStore {
+  public ackMetaStage(id: string, revision: number, updatedAt: string, stage: LeadStage) {
+    this.leads = this.leads.map(l => l.id === id ? { ...l, metaRevision: revision,
+      ...(l.stage === stage ? { updatedAt } : {}) } : l)
+    this.saveToStorage()
+  }
+  public acceptMetaServerLead(incoming: Lead) {
+    const current = this.leads.find(l => l.id === incoming.id)
+    // Yerel daha yeni değişiklikleri körlemesine ezmeyin; çakışma kullanıcıya yansıtılır.
+    if (current && Date.parse(current.updatedAt) > Date.parse(incoming.updatedAt)) {
+      throw new Error('Yerel müşteri değişikliği sunucu kaydından yeni. Eşitleme çakışması çözülmeden veri üzerine yazılmadı.')
+    }
+    metaStore.resetStageWrite(incoming.id)
+    this.leads = [...this.leads.filter(l => l.id !== incoming.id), incoming]
+    this.saveToStorage()
+  }
   private leads: Lead[] = []
   private activities: Record<string, LeadActivity[]> = {}
   private listeners: Set<Listener> = new Set()
@@ -642,7 +658,7 @@ class LeadStore {
         updatedCount: Math.max(updatedCount, metaResult.mergedCount),
         latestTime: new Date().toISOString(),
         needsPageToken: metaResult.needsPageToken,
-        error: newCount === 0 && updatedCount === 0 && !metaResult.needsPageToken ? metaResult.error : undefined,
+        error: metaResult.error,
       }
     }
 
@@ -738,6 +754,7 @@ class LeadStore {
         newCount,
         updatedCount,
         latestTime: nowIso,
+        error: metaResult.error,
       }
     } catch (err: any) {
       console.error('[LeadStore] pullLatestLeads exception:', err)
@@ -812,10 +829,11 @@ class LeadStore {
     },
     options?: { skipSave?: boolean }
   ): { lead: Lead; isNewCustomer: boolean } {
-    const cleanPhone = cleanPhoneNumber(data.phone)
-    const existingIndex = this.leads.findIndex(
-      (l) => cleanPhoneNumber(l.phone) === cleanPhone || (cleanPhone.length > 7 && cleanPhoneNumber(l.phone).endsWith(cleanPhone.slice(-7)))
-    )
+    const duplicate = data.metaLeadgenId ? this.leads.find(l => l.metaLeadId === data.metaLeadgenId || l.inquiries?.some(i => i.metaLeadgenId === data.metaLeadgenId)) : undefined
+    if (duplicate) return { lead: duplicate, isNewCustomer: false }
+    const cleanPhone = normalizePhone(data.phone)
+    const matches = cleanPhone ? this.leads.filter(l => normalizePhone(l.phone) === cleanPhone) : []
+    const existingIndex = matches.length === 1 ? this.leads.findIndex(l => l.id === matches[0].id) : -1
 
     const inquiry: CustomerInquiry = {
       id: 'inq-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
@@ -828,7 +846,7 @@ class LeadStore {
       preferredHousingType: data.preferredHousingType,
       notes: data.notes,
       metaAnswers: data.metaAnswers,
-      createdAt: new Date().toISOString(),
+      createdAt: data.createdAt || new Date().toISOString(),
     }
 
     if (existingIndex !== -1) {
@@ -966,10 +984,7 @@ class LeadStore {
       this.saveToStorage()
     }
     syncService.saveLead(newLead)
-    if (metaStore.getConfig().autoSyncStages) {
-      const effStage = newLead.stage === 'NEW' && newLead.isQualified ? 'QUALIFIED' : newLead.stage
-      void metaStore.sendCapiLeadEvent(newLead, effStage)
-    }
+
     return { lead: newLead, isNewCustomer: true }
   }
 
@@ -1072,10 +1087,7 @@ class LeadStore {
 
     this.saveToStorage()
     syncService.saveLead(newLead)
-    if (metaStore.getConfig().autoSyncStages) {
-      const effStage = newLead.stage === 'NEW' && newLead.isQualified ? 'QUALIFIED' : newLead.stage
-      void metaStore.sendCapiLeadEvent(newLead, effStage)
-    }
+
     return newLead
   }
 
@@ -1087,6 +1099,7 @@ class LeadStore {
     const updatedLead: Lead = {
       ...oldLead,
       ...updates,
+      ...(updates.stage === 'QUALIFIED' ? { isQualified: true } : updates.stage && ['LOST','NO_INTENT'].includes(updates.stage) ? { isQualified: false } : {}),
       updatedAt: new Date().toISOString(),
     }
 
@@ -1118,11 +1131,9 @@ class LeadStore {
     this.saveToStorage()
     syncService.saveLead(updatedLead)
 
-    if ((stageChanged || qualifiedChanged) && metaStore.getConfig().autoSyncStages) {
-      const effStage =
-        updatedLead.stage === 'NEW' && updatedLead.isQualified ? 'QUALIFIED' : updatedLead.stage
-      void metaStore.sendCapiLeadEvent(updatedLead, effStage)
-    }
+    if (stageChanged || qualifiedChanged) metaStore.persistStageChange(updatedLead)
+
+
 
     return updatedLead
   }
@@ -1136,11 +1147,9 @@ class LeadStore {
     const updatedLead: Lead = {
       ...this.leads[index],
       metaCapiStatus: status,
-      updatedAt: new Date().toISOString(),
     }
     this.leads[index] = updatedLead
     this.saveToStorage()
-    syncService.saveLead(updatedLead)
   }
 
   /**
@@ -1149,38 +1158,19 @@ class LeadStore {
   public async sendLeadSignalToMeta(
     leadId: string,
     signal: MetaCapiEventName,
-    changedByUser?: AppUser | null
+    changedByUser?: AppUser | null,
+    metaLeadgenId?: string
   ) {
     const lead = this.getById(leadId)
     if (!lead) return null
 
-    // If user clicks Olumlu (QualifiedLead) or Olumsuz (DisqualifiedLead), also sync qualification state
-    if (signal === 'QualifiedLead' && !lead.isQualified) {
-      this.leads = this.leads.map((l) =>
-        l.id === leadId
-          ? {
-              ...l,
-              isQualified: true,
-              stage: l.stage === 'NEW' || l.stage === 'CONTACTED' ? 'QUALIFIED' : l.stage,
-              qualifiedByUserName: changedByUser?.fullName || 'Danışman',
-              qualifiedAt: new Date().toISOString(),
-            }
-          : l
-      )
-    } else if (signal === 'DisqualifiedLead' && lead.stage !== 'LOST' && lead.stage !== 'NO_INTENT') {
-      this.leads = this.leads.map((l) =>
-        l.id === leadId
-          ? {
-              ...l,
-              isQualified: false,
-              stage: 'LOST',
-            }
-          : l
-      )
-    }
+    const actor = changedByUser || userStore.getCurrentUser()
+    if (!permissionService.canChangeStage(actor)) throw new Error('Aşama değiştirme yetkisi gerekli.')
+    if (signal === 'QualifiedLead') this.update(leadId, { isQualified: true, stage: 'QUALIFIED', qualifiedByUserName: actor?.fullName, qualifiedAt: new Date().toISOString() }, actor)
+    if (signal === 'DisqualifiedLead') this.update(leadId, { isQualified: false, stage: 'LOST' }, actor)
 
     const freshLead = this.getById(leadId) || lead
-    const log = await metaStore.sendCapiLeadEvent(freshLead, signal)
+    const log = await metaStore.sendCapiLeadEvent(freshLead, signal, { metaLeadgenId })
 
     const statusBadge =
       log.status === 'SENT'
@@ -1192,7 +1182,7 @@ class LeadStore {
     this.addActivity(
       leadId,
       'META_CAPI',
-      `Meta'ya sinyal gönderildi: ${log.signalLabel} (${log.eventName}) • ${statusBadge}`,
+      `Meta sinyal sonucu: ${log.signalLabel} (${log.eventName}) • ${statusBadge}`,
       changedByUser?.fullName || 'Danışman'
     )
 

@@ -8,12 +8,15 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/publish-ota.mjs --push",
-    "ota:publish": "node scripts/publish-ota.mjs --push",
+    "build": "tsc -b && vite build",
+    "ota:publish": "node scripts/publish-ota.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "electron:dev": "electron .",
-    "electron:build": "npm run build && electron-builder --win dir"
+    "electron:build": "npm run build && electron-builder --win dir",
+    "typecheck": "tsc -b",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "security:check": "node scripts/security-check.mjs"
   },
   "build": {
     "appId": "com.demirturk.portfoy",

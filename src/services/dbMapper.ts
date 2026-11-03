@@ -95,6 +95,8 @@ export function rowToLead(r: any): Lead {
       : Boolean(latestSalesHandover?.isSalesHandover === true)
 
   return {
+    metaRevision: typeof r.meta_revision === 'number' ? r.meta_revision : undefined,
+    metaLeadId: r.meta_lead_id || undefined,
     id: r.id,
     fullName: resolveLeadFullName(r),
     phone: r.phone,

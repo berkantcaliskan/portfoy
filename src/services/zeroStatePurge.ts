@@ -77,8 +77,9 @@ const OBJECT_MAP_MERGE_KEYS = new Set([
 
 // Only genuine shared business data keys trigger a cloud push to GitHub
 function isCloudSyncedBusinessKey(key: string): boolean {
+  if (key === 'demirturk_meta_api_config' || key === 'demirturk_meta_capi_logs_v1') return false
   if (ARRAY_MERGE_KEYS.has(key) || OBJECT_MAP_MERGE_KEYS.has(key)) return true
-  if (key === 'demirturk_meta_api_config' || key === 'demirturk_google_ads_config') return true
+  if (key === 'demirturk_google_ads_config') return true
   if (key === CLEAN_LEADS_V8_KEY) return true
   if (key.startsWith('demirturk_avatar_')) return true
   if (key.startsWith('demirturk_calendar_')) return true
@@ -86,6 +87,8 @@ function isCloudSyncedBusinessKey(key: string): boolean {
 }
 
 const LOCAL_MACHINE_ONLY_KEYS = new Set([
+  'demirturk_meta_api_config',
+  'demirturk_meta_capi_logs_v1',
   'demirturk_active_user_v2',
   'demirturk_logged_out',
   'demirturk_tabs_last_viewed_v1',
@@ -374,12 +377,7 @@ function mergeStoresNonDestructively(
 }
 
 function getGitHubTokenRuntime(): string {
-  const codes = [
-    103, 104, 111, 95, 81, 106, 50, 89, 66, 49, 72, 106, 114, 53, 105, 54,
-    122, 76, 73, 65, 101, 74, 115, 70, 67, 122, 66, 54, 68, 88, 97, 84,
-    111, 80, 51, 76, 110, 52, 72, 74,
-  ]
-  return String.fromCharCode(...codes)
+  return '' // GitHub artık müşteri veritabanı veya tarayıcı sır deposu değildir.
 }
 
 try {
@@ -431,301 +429,9 @@ try {
       } catch {}
     }
 
-    const isLocalV7Ready = rawGetItem(CLEAN_SLATE_VERSION_KEY) === 'true'
-    const isDiskV7Ready = diskStore[CLEAN_SLATE_VERSION_KEY] === 'true'
-
-    // 2. If this browser/WebView has not been cleaned for v7 yet, clean its local raw storage once
-    if (!isLocalV7Ready) {
-      const keysToRemove: string[] = []
-      for (let i = 0; i < window.localStorage.length; i++) {
-        const key = window.localStorage.key(i)
-        if (key && !preserveKeys.has(key)) {
-          keysToRemove.push(key)
-        }
-      }
-      keysToRemove.forEach((k) => rawRemoveItem(k))
-      rawSetItem(CLEAN_SLATE_VERSION_KEY, 'true')
-    }
-
-    // 3. If the shared disk store has not been initialized for v7 yet, initialize it once
-    if (diskAvailable && !isDiskV7Ready) {
-      const cleanDiskStore: Record<string, string> = {
-        [CLEAN_SLATE_VERSION_KEY]: 'true',
-      }
-      for (const pk of preserveKeys) {
-        const existingVal = rawGetItem(pk)
-        if (existingVal !== null) {
-          cleanDiskStore[pk] = existingVal
-        }
-      }
-      if (isLocalV7Ready) {
-        for (let i = 0; i < window.localStorage.length; i++) {
-          const k = window.localStorage.key(i)
-          if (k) {
-            const val = rawGetItem(k)
-            if (val !== null) {
-              cleanDiskStore[k] = val
-            }
-          }
-        }
-      }
-      diskStore = cleanDiskStore
-    }
-
-    // 3.5 ALWAYS merge SEED_COMPANY_DB into diskStore synchronously so all company users
-    // (@berkant, @tugce, @nazli, @melisa, etc.) and shared data are immediately available on EVERY PC!
-    let seedMerged = mergeStoresNonDestructively(diskStore, SEED_COMPANY_DB)
-
-    // 3.6 One-time v8 customer data reset ("mevcuttaki tüm müşteri verisini kaldır", website datası hariç!)
-    const isLocalLeadsV8Clean = rawGetItem(CLEAN_LEADS_V8_KEY) === 'true'
-    const isDiskLeadsV8Clean = diskStore[CLEAN_LEADS_V8_KEY] === 'true'
-    if (!isLocalLeadsV8Clean || (diskAvailable && !isDiskLeadsV8Clean)) {
-      let webLeadsJson = '[]'
-      try {
-        const curLeads = JSON.parse(
-          diskStore['demirturk_leads_v2'] || rawGetItem('demirturk_leads_v2') || '[]'
-        )
-        if (Array.isArray(curLeads)) {
-          webLeadsJson = JSON.stringify(curLeads.filter((l: any) => isWebsiteRecord(l)))
-        }
-      } catch {}
-      let webReqsJson = '[]'
-      try {
-        const curReqs = JSON.parse(
-          diskStore['demirturk_requests_v2'] ||
-            diskStore['demirturk_customer_requests_v2'] ||
-            rawGetItem('demirturk_requests_v2') ||
-            '[]'
-        )
-        if (Array.isArray(curReqs)) {
-          webReqsJson = JSON.stringify(curReqs.filter((r: any) => isWebsiteRecord(r)))
-        }
-      } catch {}
-      diskStore['demirturk_leads_v2'] = webLeadsJson
-      diskStore['demirturk_activities_v2'] = '{}'
-      diskStore['demirturk_requests_v2'] = webReqsJson
-      diskStore['demirturk_customer_requests_v2'] = webReqsJson
-      diskStore['demirturk_meta_capi_logs_v1'] = '[]'
-      diskStore['demirturk_company_lead_seq_v1'] = '{}'
-      diskStore['demirturk_company_lead_map_v1'] = '{}'
-      diskStore[CLEAN_LEADS_V8_KEY] = 'true'
-      try {
-        rawSetItem('demirturk_leads_v2', webLeadsJson)
-        rawSetItem('demirturk_activities_v2', '{}')
-        rawSetItem('demirturk_requests_v2', webReqsJson)
-        rawSetItem('demirturk_customer_requests_v2', webReqsJson)
-        rawSetItem('demirturk_meta_capi_logs_v1', '[]')
-        rawSetItem('demirturk_company_lead_seq_v1', '{}')
-        rawSetItem('demirturk_company_lead_map_v1', '{}')
-        rawSetItem(CLEAN_LEADS_V8_KEY, 'true')
-      } catch {}
-      seedMerged = true
-    }
-
-    
-    // 3.7 Ensure website leads are never lost by code and previously deleted website leads are in Trash Bin (v10)
-    const V10_WEB_TRASH_KEY = 'demirturk_web_and_trash_restored_v10'
-    if (diskStore[V10_WEB_TRASH_KEY] !== 'true' || rawGetItem(V10_WEB_TRASH_KEY) !== 'true') {
-      const ridcanWebLead = {
-        id: 'lead-web-1793361591019-744',
-        leadNumber: 1,
-        companyName: 'Demirtürk İnşaat',
-        fullName: 'Rıdcan gümet',
-        phone: '05079539553',
-        whatsappPhone: '05079539553',
-        source: 'WEBSITE',
-        formName: 'Ücretsiz Tanıtım Turu',
-        channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
-        stage: 'NEW',
-        callStatus: 'WAITING',
-        owner: 'Atanmamış',
-        tags: ['Web Sitesi', 'Tanıtım Turu', 'İstanbul', 'Kendi Aracı'],
-        preferredHousingType: 'Tanıtım Turu',
-        notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Kendi Aracımla Geleceğim',
-        inquiries: [
-          {
-            id: 'inq-web-1793361591700-625',
-            formName: 'Ücretsiz Tanıtım Turu',
-            campaignName: 'Web Sitesi — Ücretsiz Tanıtım Turu',
-            source: 'WEBSITE',
-            channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
-            preferredHousingType: 'Tanıtım Turu',
-            notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Kendi Aracımla Geleceğim',
-            createdAt: '2026-10-30T11:59:51.699Z',
-          },
-        ],
-        assignmentHistory: [],
-        stageHistory: [
-          {
-            id: 'sh-web-1793361592114',
-            toStage: 'NEW',
-            changedByUserId: 'website',
-            changedByUserName: 'Web Sitesi (demirturkinsaat.com)',
-            changedAt: '2026-10-30T11:59:51.699Z',
-            note: 'Ücretsiz Tanıtım Turu başvurusu alındı.',
-          },
-        ],
-        createdAt: '2026-10-30T11:59:51.699Z',
-        updatedAt: '2026-10-30T11:59:51.699Z',
-      }
-
-      const deletedWebItemsForTrash = [
-        {
-          id: 'lead-web-1793435463626-778',
-          companyName: 'Demirtürk İnşaat',
-          fullName: 'Web Ziyaretçisi',
-          phone: '8999699699.9',
-          whatsappPhone: '8999699699.9',
-          source: 'WEBSITE',
-          formName: 'Proje Bilgi Talebi - Almina 1',
-          channel: 'Web Sitesi / Almina Evleri',
-          stage: 'NEW',
-          callStatus: 'WAITING',
-          owner: 'Atanmamış',
-          tags: ['Web Sitesi', 'Proje Bilgi Talebi', 'Almina Evleri'],
-          preferredHousingType: 'Almina Evleri',
-          notes: 'Almina 1 projesi hakkında detaylı bilgi, güncel fiyatlar ve tanıtım turu talebi.',
-          inquiries: [
-            {
-              id: 'inq-web-1793435464546-970',
-              formName: 'Proje Bilgi Talebi - Almina 1',
-              campaignName: 'Web Sitesi — Proje Bilgi Talebi - Almina 1',
-              source: 'WEBSITE',
-              channel: 'Web Sitesi / Almina Evleri',
-              preferredHousingType: 'Almina Evleri',
-              notes: 'Almina 1 projesi hakkında detaylı bilgi, güncel fiyatlar ve tanıtım turu talebi.',
-              createdAt: '2026-10-31T08:31:04.543Z',
-            },
-          ],
-          assignmentHistory: [],
-          stageHistory: [],
-          createdAt: '2026-10-31T08:31:04.543Z',
-          updatedAt: '2026-10-31T08:31:04.543Z',
-        },
-        {
-          id: 'lead-web-1793205148675-464',
-          leadNumber: 9,
-          companyName: 'Demirtürk İnşaat',
-          fullName: 'berkant',
-          phone: '05448491125',
-          whatsappPhone: '05448491125',
-          email: '',
-          stage: 'NEW',
-          callStatus: 'WAITING',
-          owner: 'Atanmamış',
-          source: 'WEBSITE',
-          formName: 'Ücretsiz Tanıtım Turu',
-          channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
-          preferredHousingType: 'Tanıtım Turu (İstanbul)',
-          budget: 0,
-          notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Pazar Günü (VIP Servis)',
-          tags: ['Web Sitesi', 'Tanıtım Turu', 'İstanbul'],
-          inquiries: [
-            {
-              id: 'inq-1793205148675',
-              createdAt: '2026-10-28T16:32:28.073Z',
-              source: 'WEBSITE',
-              formName: 'Ücretsiz Tanıtım Turu',
-              channel: 'Web Sitesi / Ücretsiz Tanıtım Turu Modalı',
-              preferredHousingType: 'Tanıtım Turu (İstanbul)',
-              budget: 0,
-              notes: 'Kalkış Şehri: İstanbul | Katılım Şekli: Pazar Günü (VIP Servis)',
-            },
-          ],
-          assignmentHistory: [],
-          stageHistory: [],
-          createdAt: '2026-10-28T16:32:28.073Z',
-          updatedAt: '2026-10-28T16:32:28.073Z',
-        },
-        {
-          id: 'lead-web-1793205113366-350',
-          leadNumber: 8,
-          companyName: 'Demirtürk İnşaat',
-          fullName: 'Test Web Live',
-          phone: '05309998877',
-          whatsappPhone: '05309998877',
-          email: '',
-          stage: 'NEW',
-          callStatus: 'WAITING',
-          owner: 'Atanmamış',
-          source: 'WEBSITE',
-          formName: 'Test Canli Form',
-          channel: 'Web Sitesi / Test Canli Form',
-          preferredHousingType: '2+1 Daire',
-          budget: 0,
-          notes: 'Canli test',
-          tags: ['Web Sitesi', '2+1 Daire'],
-          inquiries: [
-            {
-              id: 'inq-1793205113366',
-              createdAt: '2026-10-28T16:31:53.363Z',
-              source: 'WEBSITE',
-              formName: 'Test Canli Form',
-              channel: 'Web Sitesi / Test Canli Form',
-              preferredHousingType: '2+1 Daire',
-              budget: 0,
-              notes: 'Canli test',
-            },
-          ],
-          assignmentHistory: [],
-          stageHistory: [],
-          createdAt: '2026-10-28T16:31:53.363Z',
-          updatedAt: '2026-10-28T16:31:53.363Z',
-        },
-      ]
-
-      try {
-        const delSet = parseDeletedSet(diskStore[DELETED_IDS_KEY])
-        delSet.delete(ridcanWebLead.id)
-        delSet.delete('phone:05079539553')
-        delSet.delete('inq-web-1793361591700-625')
-        diskStore[DELETED_IDS_KEY] = JSON.stringify(Array.from(delSet))
-
-        const curLeads = JSON.parse(diskStore['demirturk_leads_v2'] || '[]')
-        const leadsArr = Array.isArray(curLeads) ? curLeads : []
-        if (!leadsArr.some((l: any) => l?.id === ridcanWebLead.id)) {
-          leadsArr.unshift(ridcanWebLead)
-        }
-        diskStore['demirturk_leads_v2'] = JSON.stringify(leadsArr)
-
-        const curTrash = JSON.parse(diskStore[TRASH_STORAGE_KEY] || '[]')
-        const trashArr: TrashItem[] = Array.isArray(curTrash) ? curTrash : []
-        const nowMs = Date.now()
-        deletedWebItemsForTrash.forEach((item, idx) => {
-          if (
-            !trashArr.some((t) => t?.itemId === item.id) &&
-            !leadsArr.some((l: any) => l?.id === item.id)
-          ) {
-            trashArr.push({
-              trashId: `trash-demirturk_leads_v2-${item.id}-${nowMs - idx * 1000}`,
-              storeKey: 'demirturk_leads_v2',
-              itemId: item.id,
-              itemKey: item.id,
-              department: 'Müşteri İlişkileri / Satış',
-              pageName: 'Müşteriler & Talepler',
-              title: item.fullName,
-              subtitle: [item.phone, item.formName, 'Web Sitesi'].filter(Boolean).join(' • '),
-              deletedAt: new Date(nowMs - idx * 60000).toISOString(),
-              expiresAt: new Date(nowMs + TRASH_RETENTION_MS).toISOString(),
-              payload: item,
-            })
-          }
-        })
-        diskStore[TRASH_STORAGE_KEY] = JSON.stringify(trashArr)
-        diskStore[V10_WEB_TRASH_KEY] = 'true'
-        rawSetItem(V10_WEB_TRASH_KEY, 'true')
-        seedMerged = true
-      } catch {}
-    }
-
-    // Repair any corrupted '0' in demirturk_company_lead_seq_v1
-    if (diskStore['demirturk_company_lead_seq_v1'] === '0' || rawGetItem('demirturk_company_lead_seq_v1') === '0') {
-      diskStore['demirturk_company_lead_seq_v1'] = '{}'
-      try {
-        rawSetItem('demirturk_company_lead_seq_v1', '{}')
-      } catch {}
-      seedMerged = true
-    }
+    // Başlangıçta müşteri/aktivite verisi sıfırlanmaz veya seed verisiyle değiştirilmez.
+    const isLocalV7Ready = true
+    const seedMerged = false
 
     // 4. Hydrate memoryMirror & localStorage from diskStore (shared source of truth)
     for (const [k, v] of Object.entries(diskStore)) {
@@ -943,6 +649,7 @@ try {
       pendingCloudPush = false
 
       const token = getGitHubTokenRuntime()
+      if (!token) { isCloudSyncing = false; return false }
 
       // Up to 4 retries in case two PCs push simultaneously (409 Conflict)
       for (let attempt = 0; attempt < 4; attempt++) {
@@ -1040,6 +747,7 @@ try {
       isCloudSyncing = true
       try {
         const token = getGitHubTokenRuntime()
+        if (!token) return false
         const headers: Record<string, string> = {
           Accept: 'application/vnd.github.v3+json',
           Authorization: `Bearer ${token}`,
