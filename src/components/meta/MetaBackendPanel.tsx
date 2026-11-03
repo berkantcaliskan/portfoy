@@ -8,6 +8,7 @@ import { userStore } from '@/services/userStore'
 import { leadStore } from '@/services/leadStore'
 import { STAGE_CONFIGS } from '@/types/lead'
 import { stageEvent } from '../../../supabase/functions/_shared/meta-core'
+import { getMetaSourceChoices } from '@/services/metaSources'
 
 export function MetaBackendPanel() {
   const [status, setStatus] = useState<Record<string, any> | null>(null)
@@ -15,10 +16,13 @@ export function MetaBackendPanel() {
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [leadId, setLeadId] = useState('')
+  const [sourceId, setSourceId] = useState('')
   const [busy, setBusy] = useState(false)
   const canManage = permissionService.canManageMetaConfig(userStore.getCurrentUser())
   const testLeads = leadStore.getAllRaw().filter(l => l.metaRevision !== undefined && stageEvent[l.stage] &&
     (l.metaLeadId || l.inquiries?.some(i => i.metaLeadgenId)))
+  const testSources = getMetaSourceChoices(testLeads.find(l=>l.id===leadId))
+  const selectedSourceId = testSources.some(s=>s.id===sourceId) ? sourceId : testSources.length===1 ? testSources[0].id : ''
   const run = async (fn: () => Promise<void>) => {
     setBusy(true)
     try { await fn() } catch (error) { setMessage((error as Error).message) } finally { setBusy(false) }
@@ -75,8 +79,12 @@ export function MetaBackendPanel() {
         <option value="">Test için müşteri seçin</option>
         {testLeads.map(l => <option key={l.id} value={l.id}>{l.fullName} • {STAGE_CONFIGS[l.stage].label}</option>)}
       </select>
-      <GlassButton disabled={busy || !leadId} onClick={()=>run(async()=>{
-        const result = await metaStore.sendTestCapiEvent(undefined, leadId); setMessage(result.message); if (result.success) await refresh()
+      <select aria-label="Test sonucunun ait olduğu başvuru" className={classes} value={selectedSourceId} onChange={e=>setSourceId(e.target.value)}>
+        <option value="">Test için form / başvuru seçin</option>
+        {testSources.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+      </select>
+      <GlassButton disabled={busy || !leadId || !selectedSourceId} onClick={()=>run(async()=>{
+        const result = await metaStore.sendTestCapiEvent(undefined, leadId, selectedSourceId); setMessage(result.message); if (result.success) await refresh()
       })}>Yalnızca Test Events'e gönder</GlassButton>
     </div>}
   </GlassCard>

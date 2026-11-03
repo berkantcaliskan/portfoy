@@ -148,13 +148,6 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
 
   const handleExecuteCustomRangePull = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (quickPageToken.trim() || quickPageId.trim()) {
-      metaStore.saveConfig({
-        pageAccessToken: quickPageToken.trim() || metaStore.getConfig().pageAccessToken,
-        pageId: quickPageId.trim() || metaStore.getConfig().pageId,
-        isConnected: true,
-      })
-    }
     const start = pullStartDate ? new Date(pullStartDate + 'T00:00:00') : new Date(Date.now() - 48 * 60 * 60 * 1000)
     const end = pullEndDate ? new Date(pullEndDate + 'T23:59:59') : new Date()
     setIsPullDateModalOpen(false)
@@ -796,7 +789,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               <input
                 type="text"
                 placeholder="Örn: 104829384756 (Sayfa Hakkında kısmındaki Sayfa Kimliği)"
-                value={quickPageId}
+                value="Sunucuda yönetilir" readOnly disabled
                 onChange={(e) => setQuickPageId(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs font-mono text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
               />

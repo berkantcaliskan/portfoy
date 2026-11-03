@@ -38,6 +38,7 @@ import {
   GoogleAdsConfig,
 } from '@/services/googleAdsStore'
 import { leadStore } from '@/services/leadStore'
+import { getMetaSourceChoices } from '@/services/metaSources'
 import { MetaFormSummary, MetaCapiEventLog } from '@/types/meta'
 import { Lead } from '@/types/lead'
 import { BookLogo } from '@/components/common/BookLogo'
@@ -76,6 +77,7 @@ export const MarketingCampaignsView: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [isSendingToMeta, setIsSendingToMeta] = useState(false)
   const [sendingSingleLeadId, setSendingSingleLeadId] = useState<string | null>(null)
+  const [metaSourceSelections, setMetaSourceSelections] = useState<Record<string,string>>({})
   const [sendBtnContextMenu, setSendBtnContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export const MarketingCampaignsView: React.FC = () => {
       setIsSendingToMeta(true)
     }
     try {
-      const res = await metaStore.syncLeadsToMetaManual(leadIds)
+      const res = await metaStore.syncLeadsToMetaManual(leadIds, metaSourceSelections)
       setCapiLogs(metaStore.getCapiLogs())
       setAllLeads(leadStore.getAllRaw())
       if (res.totalCount === 0) {
@@ -678,7 +680,7 @@ export const MarketingCampaignsView: React.FC = () => {
                         size="sm"
                         variant={form.status === 'ACTIVE' ? 'success' : 'default'}
                       >
-                        {form.status === 'ACTIVE' ? 'Aktif' : 'Durduruldu'}
+                        {form.status === 'UNKNOWN' ? 'Durumu doğrulanmadı' : form.status === 'ACTIVE' ? 'Aktif' : 'Durduruldu'}
                       </GlassBadge>
                     </div>
                     <div>
@@ -763,14 +765,14 @@ export const MarketingCampaignsView: React.FC = () => {
               <div className="text-xs text-[#a69f99]">Toplam Meta Kampanya Lead'i</div>
               <div className="text-2xl font-bold text-white mt-1">{totalMetaLeads}</div>
               <div className="text-[11px] text-[#8c857f] mt-1">
-                {forms.length} Aktif Meta Reklam Formu
+                {forms.length} CRM'de görülen Meta formu
               </div>
             </GlassCard>
 
             <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-              <div className="text-xs text-emerald-400">Ortalama Dönüşüm</div>
+              <div className="text-xs text-emerald-400">CRM nitelik oranı</div>
               <div className="text-2xl font-bold text-emerald-400 mt-1">%{avgMetaConversion}</div>
-              <div className="text-[11px] text-[#8c857f] mt-1">Formdan randevuya dönüşüm</div>
+              <div className="text-[11px] text-[#8c857f] mt-1">CRM nitelik durumu; Meta atıf sonucu değildir</div>
             </GlassCard>
 
             <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
@@ -863,6 +865,8 @@ export const MarketingCampaignsView: React.FC = () => {
                   {pendingMetaLeads.slice(0, 25).map((lead) => {
                     const target = getLeadTargetMetaEvent(lead)
                     const isRowSending = sendingSingleLeadId === lead.id
+                    const sources = getMetaSourceChoices(lead)
+                    const sourceId = metaSourceSelections[lead.id] || (sources.length === 1 ? sources[0].id : '')
                     return (
                       <div
                         key={lead.id}
@@ -878,13 +882,19 @@ export const MarketingCampaignsView: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          disabled={isSendingToMeta || isRowSending}
+                          disabled={isSendingToMeta || isRowSending || !sourceId}
                           onClick={() => void handleManualSendToMeta([lead.id])}
                           className="px-3 py-1 rounded-full bg-[#b99881]/15 hover:bg-[#b99881] text-[#d6beae] hover:text-white border border-[#b99881]/40 text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                         >
                           <Send className="w-3 h-3" />
                           <span>{isRowSending ? 'Gönderiliyor...' : 'Veriyi Gönder'}</span>
                         </button>
+                        <select aria-label={`${lead.fullName} için Meta başvurusu`} value={sourceId}
+                          onChange={e=>setMetaSourceSelections(old=>({...old,[lead.id]:e.target.value}))}
+                          className="w-full px-3 py-1.5 rounded-xl bg-[#1e1c1a] border border-[#4a443f] text-xs text-white">
+                          <option value="">Sonucun ait olduğu form / başvuruyu seçin</option>
+                          {sources.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                        </select>
                       </div>
                     )
                   })}
@@ -975,7 +985,7 @@ export const MarketingCampaignsView: React.FC = () => {
                       size="sm"
                       variant={form.status === 'ACTIVE' ? 'success' : 'default'}
                     >
-                      {form.status === 'ACTIVE' ? 'Aktif' : 'Durduruldu'}
+                      {form.status === 'UNKNOWN' ? 'Durumu doğrulanmadı' : form.status === 'ACTIVE' ? 'Aktif' : 'Durduruldu'}
                     </GlassBadge>
                   </div>
 

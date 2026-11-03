@@ -9,13 +9,13 @@ CREATE TABLE auth.users(id uuid PRIMARY KEY);
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;`)
 const schema=read('docs/supabase_schema.sql')
 await db.exec(schema.slice(0,schema.indexOf('-- 4. PROJELER')))
-await db.exec(read('supabase/migrations/202610310001_meta_pipeline.sql'))
+await db.exec(read('supabase/migrations/202610310001_meta_pipeline.sql')); await db.exec(read('supabase/migrations/202611030001_meta_source_context.sql'))
 console.log('Migration izole PostgreSQL motorunda uygulandı.')
 const intake={leadgenId:'456',fullName:'İzole Test',phone:'05321234567',createdAt:'2026-10-31T00:00:00Z',formName:'Test Form',fields:[],answers:[]}
 const ingest=async p=>(await db.query('SELECT meta_ingest_lead($1::jsonb) AS id',[JSON.stringify(p)])).rows[0].id
 let passed=0
 async function test(name,fn){await fn();passed++;console.log('GEÇTİ: '+name)}
-await test('Migration tekrar uygulanabilir',()=>db.exec(read('supabase/migrations/202610310001_meta_pipeline.sql')))
+await test('Migration tekrar uygulanabilir',async()=>{await db.exec(read('supabase/migrations/202610310001_meta_pipeline.sql'));await db.exec(read('supabase/migrations/202611030001_meta_source_context.sql'))})
 await test('Yeni müşteri oluşturulur',async()=>{assert.equal(await ingest(intake),'lead-meta-456');assert.equal((await db.query('select count(*)::int AS n from leads')).rows[0].n,1)})
 await test('Tekrarlanan webhook müşteri/başvuru/aktiviteyi çoğaltmaz',async()=>{await ingest(intake);assert.equal((await db.query('select jsonb_array_length(inquiries) AS n from leads')).rows[0].n,1);assert.equal((await db.query('select count(*)::int AS n from lead_activities')).rows[0].n,1)})
 await test('Aynı normalize telefon yeni başvuru geçmişine eklenir',async()=>{await ingest({...intake,leadgenId:'457',phone:'+905321234567'});assert.equal((await db.query('select count(*)::int AS n from leads')).rows[0].n,1);assert.equal((await db.query('select jsonb_array_length(inquiries) AS n from leads')).rows[0].n,2)})
@@ -25,7 +25,7 @@ await test('İşlem ortasında DB hatası tüm yazımları geri alır',async()=>
 const admin='00000000-0000-0000-0000-000000000001'
 await db.query('insert into auth.users values($1)',[admin])
 await db.query('insert into meta_members(auth_user_id,is_admin) values($1,true)',[admin])
-const enqueue=async(testMode=false)=>(await db.query('select meta_enqueue($1,$2,$3) AS id',[admin,'lead-meta-456',testMode])).rows[0].id
+const enqueue=async(testMode=false)=>(await db.query('select meta_enqueue($1,$2,$3,$4) AS id',[admin,'lead-meta-456',testMode,'456'])).rows[0].id
 await test('Devre dışı entegrasyon göndermez',async()=>assert.rejects(enqueue()))
 await db.exec("UPDATE meta_settings SET enabled=true,security_ready=true,enabled_at=now()-interval '1 second'")
 await test('Geçmiş müşteri toplu gönderimi engellenir',async()=>assert.rejects(enqueue()))
@@ -87,7 +87,7 @@ await test('Sahte eski inquiry ID gerçek webhook müşterisini başka kişiye b
 await test('Üretim kapalı test-only claim canlı pending olayı almaz',async()=>{
   await db.exec('UPDATE meta_settings SET enabled=false')
   const rev=(await db.query("select meta_revision from leads where id='lead-meta-456'")).rows[0].meta_revision
-  const testId=(await db.query('select meta_enqueue_checked($1,$2,true,$3,$4) AS id',[admin,'lead-meta-456',rev,'Contact'])).rows[0].id
+  const testId=(await db.query('select meta_enqueue_checked($1,$2,true,$3,$4,$5) AS id',[admin,'lead-meta-456',rev,'Contact','456'])).rows[0].id
   const result=await db.query('select * from meta_claim($1,true)',[testId])
   assert.equal(result.rows.length,1);assert.equal(result.rows[0].test_mode,true)
   const live=await db.query('select * from meta_claim($1,true)',[eid]);assert.equal(live.rows.length,0)

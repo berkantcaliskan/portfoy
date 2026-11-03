@@ -80,3 +80,20 @@ test('Test olayı üretim kapalıyken yalnızca server test koduyla iletilir',as
   const payload=JSON.parse(s.calls.find(c=>c.fetch).fetch[1].body)
   assert.equal(payload.test_event_code,'ISOLATED');assert.equal(payload.data[0].event_id,'event-id')
 })
+test('Yüzüncü form sonrası form sayfalaması devam eder',async()=>{
+  const urls:string[]=[]
+  const s=setup({env:{META_PAGE_ID:'900',META_PAGE_ACCESS_TOKEN:'isolated-page'},fetcher:async(url:any)=>{
+    urls.push(String(url));return Response.json({data:[{id:'101',name:'İzole son form'}]})
+  }})
+  const r=await s.handler(s.req({action:'pull',from:'2026-11-01',to:'2026-11-03',cursor:'second-form-page'},'valid-user'))
+  assert.equal(r.status,200);assert.ok(urls[0].includes('after=second-form-page'))
+  assert.equal((await r.json()).forms[0].id,'101')
+})
+test('Sonraki sayfadaki formun sahipliği doğrudan doğrulanır',async()=>{
+  const urls:string[]=[]
+  const s=setup({env:{META_PAGE_ID:'900',META_PAGE_ACCESS_TOKEN:'isolated-page'},fetcher:async(url:any)=>{
+    urls.push(String(url));return String(url).includes('/101?')?Response.json({id:'101',name:'İzole form',page_id:'900'}):Response.json({data:[]})
+  }})
+  const r=await s.handler(s.req({action:'pull',from:'2026-11-01',to:'2026-11-03',formId:'101'},'valid-user'))
+  assert.equal(r.status,200);assert.equal(urls.length,2);assert.equal(urls.some(x=>x.includes('leadgen_forms')),false)
+})

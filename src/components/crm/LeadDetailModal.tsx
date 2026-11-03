@@ -33,6 +33,7 @@ import { portfolioStore } from '@/services/portfolioStore'
 import { leadStore } from '@/services/leadStore'
 import { userStore } from '@/services/userStore'
 import { permissionService } from '@/services/permissionService'
+import { getMetaSourceChoices } from '@/services/metaSources'
 import {
   formatCurrency,
   formatDate,
@@ -74,6 +75,9 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
   }, [])
 
   const liveLead = leadStore.getById(lead.id) || lead
+  const [metaSourceId, setMetaSourceId] = useState('')
+  const metaSources = getMetaSourceChoices(liveLead)
+  const selectedMetaSourceId = metaSources.some(s => s.id === metaSourceId) ? metaSourceId : metaSources.length === 1 ? metaSources[0].id : ''
   const allUsers = userStore.getAllUsers()
   const customerRelationsUsers = allUsers.filter(
     (u) =>
@@ -132,10 +136,11 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
   const canDeleteLead = permissionService.canDeleteCustomer(currentUser)
 
   const handleSendCapiSignal = async (signal: MetaCapiEventName) => {
+    if (!selectedMetaSourceId) { setCapiToast({ status: 'FAILED', text: 'Sonucu göndereceğiniz Meta form/başvurusunu seçin.' }); return }
     setSendingCapi(signal)
     setCapiToast(null)
     try {
-      const log = await leadStore.sendLeadSignalToMeta(liveLead.id, signal, currentUser)
+      const log = await leadStore.sendLeadSignalToMeta(liveLead.id, signal, currentUser, selectedMetaSourceId)
       if (log) {
         if (log.status === 'SENT') {
           setCapiToast({
@@ -171,7 +176,8 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
     setTimeout(() => setCopiedText(null), 2000)
   }
 
-  const formAnswers = (liveLead.metaAnswers && liveLead.metaAnswers.length > 0)
+  const selectedInquiry = liveLead.inquiries?.find(i=>i.metaLeadgenId===selectedMetaSourceId)
+  const formAnswers = selectedInquiry ? (selectedInquiry.metaAnswers || []) : (liveLead.metaAnswers && liveLead.metaAnswers.length > 0)
     ? liveLead.metaAnswers
     : (liveLead.inquiries && liveLead.inquiries[0]?.metaAnswers && liveLead.inquiries[0].metaAnswers.length > 0)
       ? liveLead.inquiries[0].metaAnswers
@@ -505,10 +511,22 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
             )}
           </div>
 
+          <label className="block text-xs text-slate-300 mb-2">Sonucun ait olduğu Meta başvurusu
+            <select value={selectedMetaSourceId} onChange={e => setMetaSourceId(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl bg-[#1e1c1a] border border-[#4a443f] text-xs text-white">
+              <option value="">Form / başvuru seçin</option>
+              {metaSources.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </label>
+          {liveLead.inquiries?.find(i=>i.metaLeadgenId===selectedMetaSourceId)?.metaWarnings?.length ? <p className="text-xs text-amber-300 mb-2">
+            Bu başvurunun bazı telefon veya reklam/form ayrıntıları doğrulanamadı. Asıl yanıtlar korunur; eksik alanlar için Meta yetkilerini ve form verisini kontrol edin.
+          </p> : null}
+          {liveLead.metaCapiStatus?.metaLeadgenId && selectedMetaSourceId && liveLead.metaCapiStatus.metaLeadgenId !== selectedMetaSourceId ? <p className="text-xs text-slate-400 mb-2">
+            Karttaki son teslim sonucu farklı bir Meta başvurusuna aittir.
+          </p> : null}
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
-              disabled={sendingCapi !== null}
+              disabled={sendingCapi !== null || !selectedMetaSourceId}
               onClick={() => handleSendCapiSignal('QualifiedLead')}
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-teal-500/12 hover:bg-teal-500/25 text-teal-300 border border-teal-500/35 transition-colors cursor-pointer flex items-center gap-1"
               title="Meta'ya Nitelikli (QualifiedLead) sinyali gönder"
@@ -519,7 +537,7 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
 
             <button
               type="button"
-              disabled={sendingCapi !== null || liveLead.stage !== 'APPOINTMENT'}
+              disabled={sendingCapi !== null || !selectedMetaSourceId || liveLead.stage !== 'APPOINTMENT'}
               onClick={() => handleSendCapiSignal('Schedule')}
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-indigo-500/12 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/35 transition-colors cursor-pointer flex items-center gap-1"
               title="Yalnızca randevu aşamasındaki kaydı Meta'ya elle gönder"
@@ -540,7 +558,7 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
 
             <button
               type="button"
-              disabled={sendingCapi !== null}
+              disabled={sendingCapi !== null || !selectedMetaSourceId}
               onClick={() => handleSendCapiSignal('DisqualifiedLead')}
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-rose-500/12 hover:bg-rose-500/25 text-rose-300 border border-rose-500/35 transition-colors cursor-pointer flex items-center gap-1"
               title="Meta'ya Potansiyel Değil (DisqualifiedLead) sinyali gönder"

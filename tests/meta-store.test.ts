@@ -14,7 +14,7 @@ function setup(options:any={}) {
   let leads:any[]=options.leads||[]
   const leadStore:any={getAllRaw:()=>leads,getById:(id:string)=>leads.find(l=>l.id===id),
     updateMetaCapiStatus:(id:string,status:any)=>{leads=leads.map(l=>l.id===id?{...l,metaCapiStatus:status}:l)},
-    ackMetaStage:()=>{},acceptMetaServerLead:()=>{}}
+    ackMetaStage:()=>{},acceptMetaServerLead:(lead:any)=>{leads=[...leads.filter(l=>l.id!==lead.id),lead]}}
   const supabase={auth:{getSession:async()=>({data:{session:{}}})},functions:{invoke:async(_name:string,{body}:any)=>{
     calls.push(body)
     if(options.invoke) return options.invoke(body)
@@ -68,4 +68,36 @@ test('Test Events başarısı canlı lead teslim durumunu değiştirmez',async()
 test('Workerın güncel canlı sonucu yerel teslim görünümüne yansır',async()=>{
   const s=setup({leads:[lead],events:[{id:'live-event',lead_id:lead.id,event_name:'QualifiedLead',revision:4,state:'retry',test_mode:false}]})
   await s.store.refreshStatus();assert.equal(s.getLead().metaCapiStatus.status,'QUEUED');assert.equal(s.getLead().metaCapiStatus.revision,4)
+})
+test('Aynı müşterinin aynı sayfada gelen ikinci formu UI geçmişinden düşmez',async()=>{
+  const base={id:'same-customer',stage:'NEW',source:'META_ADS',formName:'Form A',isQualified:false}
+  const a={...base,inquiries:[{formName:'Form A',source:'META_ADS',metaLeadgenId:'111'}]}
+  const b={...base,inquiries:[...a.inquiries,{formName:'Form B',source:'META_ADS',metaLeadgenId:'222'}]}
+  const s=setup({invoke:async(body:any)=>({data:body.formId?{leads:[a,b],cursor:null}:{forms:[{id:'1'}]},error:null})})
+  const result=await s.store.fetchLeadsFromMeta(new Date('2026-11-01'),new Date('2026-11-03'))
+  assert.equal(result.newCount,1);assert.equal(s.getLead().inquiries.length,2)
+  assert.deepEqual(Array.from(s.store.getForms(),(f:any)=>f.name).sort(),['Form A','Form B'])
+})
+test('Formların ve PM listesinin tüm cursor sayfaları okunur',async()=>{
+  const row=(id:string)=>({id,stage:'NEW',source:'META_ADS',formName:'Form',inquiries:[]})
+  const s=setup({invoke:async(body:any)=>({data:!body.formId
+    ? body.cursor?{forms:[{id:'2'}],cursor:null}:{forms:[{id:'1'}],cursor:'form-page-2'}
+    : body.formId==='1'?body.cursor?{leads:[row('b')],cursor:null}:{leads:[row('a')],cursor:'lead-page-2'}
+    : {leads:[row('c')],cursor:null},error:null})})
+  const result=await s.store.fetchLeadsFromMeta(new Date('2026-11-01'),new Date('2026-11-03'))
+  assert.equal(result.newCount,3);assert.equal(result.error,undefined);assert.equal(s.calls.length,5)
+})
+test('Meta cursor döngüsü sessizce sonsuz sürmez',async()=>{
+  const s=setup({invoke:async(body:any)=>({data:body.formId?{leads:[],cursor:'same'}:{forms:[{id:'1'}]},error:null})})
+  const result=await s.store.fetchLeadsFromMeta(new Date('2026-11-01'),new Date('2026-11-03'))
+  assert.ok(result.error.includes('döngü'));assert.equal(s.calls.length,3)
+})
+test('Kısmi alımdan sonraki API hatası başarı sayılarının arkasında gizlenmez',async()=>{
+  const s=setup({invoke:async(body:any)=>{
+    if(!body.formId)return {data:{forms:[{id:'1'}]},error:null}
+    if(body.cursor)return {data:{error:'İzole ikinci sayfa hatası'},error:null}
+    return {data:{leads:[{id:'first',stage:'NEW',source:'META_ADS',inquiries:[]}],cursor:'next'},error:null}
+  }})
+  const result=await s.store.fetchLeadsFromMeta(new Date('2026-11-01'),new Date('2026-11-03'))
+  assert.equal(result.newCount,1);assert.ok(result.error.includes('ikinci sayfa'));assert.equal(s.getLead().id,'first')
 })

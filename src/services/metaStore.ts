@@ -159,7 +159,7 @@ class MetaStore {
       const log = this.toLog(e)
       const mapped = mapStageOrSignalToMetaEvent(e.event_name)
       leadStore.updateMetaCapiStatus(e.lead_id, { lastEventName: log.eventName, label: mapped.signalLabel,
-        revision: e.revision, sentAt: log.sentAt, status: log.status, fbtraceId: log.fbtraceId, errorMessage: log.errorMessage })
+        revision: e.revision, metaLeadgenId: e.meta_leadgen_id, sentAt: log.sentAt, status: log.status, fbtraceId: log.fbtraceId, errorMessage: log.errorMessage })
     }
     this.notify()
     return data
@@ -175,12 +175,13 @@ class MetaStore {
   }
   private toLog(e: Record<string, any>): MetaCapiEventLog {
     return { id: e.id, leadId: e.lead_id, leadName: '', phone: '', eventName: e.event_name,
+      metaLeadId: e.meta_leadgen_id,
       signalLabel: e.event_name, stage: '', sentAt: e.sent_at || e.last_attempt_at || '',
       status: e.state === 'sent' ? 'SENT' : e.state === 'rejected' ? 'FAILED' : 'QUEUED',
       eventsReceived: e.events_received, fbtraceId: e.fbtrace_id, errorMessage: e.error_code,
       payloadPreview: { state: e.state, attempt: e.attempt, testMode: e.test_mode, revision: e.revision } }
   }
-  public async sendCapiLeadEvent(lead: Lead, stageOrSignal: LeadStage | MetaCapiEventName, _options?: { note?: string; value?: number }): Promise<MetaCapiEventLog> {
+  public async sendCapiLeadEvent(lead: Lead, stageOrSignal: LeadStage | MetaCapiEventName, options?: { note?: string; value?: number; metaLeadgenId?: string }): Promise<MetaCapiEventLog> {
     const mapped = mapStageOrSignalToMetaEvent(stageOrSignal)
     let log: MetaCapiEventLog
     try {
@@ -188,7 +189,8 @@ class MetaStore {
       if (!stageEvent[lead.stage] || mapped.eventName !== stageEvent[lead.stage]) throw new Error('Bu CRM aşaması doğrulanmış bir Meta dönüşümü değildir; teklif ve satış bedeli uydurulmaz.')
       const current = leadStore.getById(lead.id)
       if (!current || current.stage !== lead.stage || current.metaRevision === undefined) throw new Error('Sunucu aşaması yeniden okunmalı; eski veya doğrulanmamış kayıt gönderilmedi.')
-      const data = await invokeMeta({ action: 'enqueue', leadId: lead.id, revision: current.metaRevision, eventName: mapped.eventName, retry: !!lead.metaCapiStatus })
+      const data = await invokeMeta({ action: 'enqueue', leadId: lead.id, revision: current.metaRevision, eventName: mapped.eventName,
+        leadgenId: options?.metaLeadgenId, retry: !!lead.metaCapiStatus })
       log = this.toLog(data.event)
     } catch (error) {
       // Yerel hata sunucuda kuyruğa alınmış gibi gösterilmez.
@@ -199,6 +201,7 @@ class MetaStore {
     this.capiLogs = [log, ...this.capiLogs.filter(x => x.id !== log.id)].slice(0,100)
     leadStore.updateMetaCapiStatus(lead.id, { lastEventName: log.eventName, label: mapped.signalLabel,
       revision: typeof log.payloadPreview.revision === 'number' ? log.payloadPreview.revision : undefined,
+      metaLeadgenId: log.metaLeadId,
       sentAt: log.sentAt, status: log.status, fbtraceId: log.fbtraceId, errorMessage: log.errorMessage })
     this.notify()
     return log
@@ -209,38 +212,43 @@ class MetaStore {
     await this.refreshStatus()
     return { sentCount: 0, failedCount: 0 }
   }
-  public async syncLeadsToMetaManual(leadIds?: string[]) {
+  public async syncLeadsToMetaManual(leadIds?: string[], sourceSelections: Record<string,string> = {}) {
     if (!leadIds?.length) throw new Error('Geçmiş toplu aktarım kapalıdır. Önce gönderilecek müşterileri açıkça seçin.')
     if (leadIds.length > 30) throw new Error('Tek işlemde en fazla 30 müşteri seçilebilir.')
     const ids = new Set(leadIds)
     const targets = this.getPendingMetaSyncLeads().filter(l => ids.has(l.id))
     const result = { sentCount: 0, failedCount: 0, queuedCount: 0, totalCount: targets.length }
     for (const lead of targets) {
-      const log = await this.sendCapiLeadEvent(lead, lead.stage)
+      const log = await this.sendCapiLeadEvent(lead, lead.stage, { metaLeadgenId: sourceSelections[lead.id] })
       if (log.status === 'SENT') result.sentCount++
       else if (log.status === 'QUEUED') result.queuedCount++
       else result.failedCount++
     }
     return result
   }
-  public async sendTestCapiEvent(_config?: { datasetId?: string; capiAccessToken?: string; testEventCode?: string }, leadId?: string) {
+  public async sendTestCapiEvent(_config?: { datasetId?: string; capiAccessToken?: string; testEventCode?: string }, leadId?: string, metaLeadgenId?: string) {
     if (!leadId) return { success: false, message: 'Test için gerçek Meta kimlikli ve uygun aşamadaki müşteri açıkça seçilmelidir. Test olay kodu yalnızca sunucuda ayarlanır.' }
     try {
       await this.stageWrites.wait(leadId)
       const lead = leadStore.getById(leadId)
       if (!lead || lead.metaRevision === undefined || !stageEvent[lead.stage]) throw new Error('Test için güncel sunucu aşaması gerekli.')
-      const data = await invokeMeta({ action: 'test', leadId, revision: lead.metaRevision, eventName: stageEvent[lead.stage], retry: true })
+      const data = await invokeMeta({ action: 'test', leadId, revision: lead.metaRevision, eventName: stageEvent[lead.stage], leadgenId: metaLeadgenId, retry: true })
       return { success: data.event.state === 'sent', message: data.event.state === 'sent' ? 'Meta API test olayını kabul etti; eşleşme ve atıf ayrıca doğrulanmalıdır.' : 'Test olayı kabul edilmedi; olay geçmişini inceleyin.' }
     } catch (error) { return { success: false, message: (error as Error).message } }
   }
   public getForms(): MetaFormSummary[] {
     const groups = new Map<string, Lead[]>()
-    for (const lead of leadStore.getAllRaw().filter(l => l.source === 'META_ADS')) {
-      groups.set(lead.formName, [...(groups.get(lead.formName) || []), lead])
+    for (const lead of leadStore.getAllRaw()) {
+      const names = new Set((lead.inquiries || []).filter(i => i.source === 'META_ADS').map(i => i.formName))
+      if (!names.size && lead.source === 'META_ADS') names.add(lead.formName)
+      for (const name of names) groups.set(name, [...(groups.get(name) || []), lead])
     }
-    return [...groups].map(([name, leads]) => ({ id: name, name, campaignName: 'Kampanya atfı doğrulanmamış',
-      leadCount: leads.length, conversionRate: Math.round(leads.filter(l => l.isQualified).length / leads.length * 100),
-      status: 'ACTIVE' as const, lastLeadAt: leads.map(l => l.createdAt).sort().at(-1) || '' }))
+    return [...groups].map(([name, leads]) => {
+      const campaigns = [...new Set(leads.flatMap(l=>(l.inquiries||[]).filter(i=>i.formName===name).map(i=>i.campaignName)).filter(Boolean))]
+      return { id: name, name, campaignName: campaigns.length===1 ? campaigns[0]! : campaigns.length>1 ? 'Birden fazla kampanya' : 'Kampanya atfı bilinmiyor',
+        leadCount: leads.length, conversionRate: Math.round(leads.filter(l => l.isQualified).length / leads.length * 100),
+        status: 'UNKNOWN' as const, lastLeadAt: leads.map(l => l.createdAt).sort().at(-1) || '' }
+    })
   }
   public getWebhookLogs(): MetaWebhookEvent[] { return [] }
   public simulateIncomingLead(_data: { fullName: string; phone: string; email?: string; formName: string; campaignName?: string; budget?: number; preferredHousingType?: string; investmentPurpose?: string; moveInTiming?: string; metaAnswers?: { question: string; answer: string }[] }) {
@@ -249,28 +257,35 @@ class MetaStore {
   }
   public async fetchLeadsFromMeta(startDate: Date, endDate: Date): Promise<{ newCount: number; mergedCount: number; needsPageToken?: boolean; error?: string }> {
     let newCount = 0, mergedCount = 0
+    const seen = new Set<string>()
     try {
       const range = { from: startDate.toISOString(), to: endDate.toISOString() }
-      const data = await invokeMeta({ action: 'pull', ...range })
-      for (const form of data.forms || []) {
-        let cursor: string | null = null
-        const seen = new Set<string>()
-        do {
-          const page = await invokeMeta({ action: 'pull', ...range, formId: form.id, cursor })
-          for (const row of page.leads || []) {
-            if (seen.has(row.id)) continue
-            seen.add(row.id)
-            const lead = rowToLead(row)
-            const existing = leadStore.getById(lead.id)
-            if (existing) mergedCount++; else newCount++
-            // Sunucu satırı yerel duruma alınır; kaynak otoritesi DB'dir. Toplu geçmiş dönüşüm gönderimi yapılmaz.
-            leadStore.acceptMetaServerLead(lead)
-          }
-          const next = page.cursor || null
-          if (next && next === cursor) throw new Error('Meta sayfalama ilerlemedi; kısmi aktarım tamamlandı sayılmadı.')
-          cursor = next
-        } while (cursor)
-      }
+      let formCursor: string | null = null
+      const formCursors = new Set<string>()
+      do {
+        const data = await invokeMeta({ action: 'pull', ...range, cursor: formCursor })
+        for (const form of data.forms || []) {
+          let cursor: string | null = null
+          const leadCursors = new Set<string>()
+          do {
+            const page = await invokeMeta({ action: 'pull', ...range, formId: form.id, cursor })
+            for (const row of page.leads || []) {
+              const lead = rowToLead(row)
+              const existing = leadStore.getById(lead.id)
+              if (!seen.has(row.id)) { if (existing) mergedCount++; else newCount++; seen.add(row.id) }
+              leadStore.acceptMetaServerLead(lead)
+            }
+            const next = page.cursor || null
+            if (next && leadCursors.has(next)) throw new Error('Meta müşteri sayfalaması döngüye girdi; aktarım kısmi olabilir.')
+            if (next) leadCursors.add(next)
+            cursor = next
+          } while (cursor)
+        }
+        const nextForm = data.cursor || null
+        if (nextForm && formCursors.has(nextForm)) throw new Error('Meta form sayfalaması döngüye girdi; aktarım kısmi olabilir.')
+        if (nextForm) formCursors.add(nextForm)
+        formCursor = nextForm
+      } while (formCursor)
       return { newCount, mergedCount }
     } catch (error) { return { newCount, mergedCount, error: (error as Error).message } }
   }

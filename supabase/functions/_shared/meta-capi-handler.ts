@@ -1,5 +1,5 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2'
-import { buildCapiEvent, deliveryResult, graphGet, graphVersion, MetaError, normalizeLead, readBody, deliveryMode } from './meta-core.ts'
+import { buildCapiEvent, deliveryResult, graphGet, graphLeadGet, graphVersion, MetaError, normalizeLead, readBody, deliveryMode } from './meta-core.ts'
 
 const json = (body: unknown, status = 200, origin = '') => Response.json(body, {
   status, headers: { 'Access-Control-Allow-Origin': origin, Vary: 'Origin', 'Cache-Control': 'no-store',
@@ -48,7 +48,7 @@ return async (req: Request): Promise<Response> => {
     const { data: settings, error: settingsError } = await db.from('meta_settings').select('*').eq('id', true).single()
     if (settingsError) throw new MetaError(503, 'Meta migration veya ayarları eksik.')
     if (input.action === 'status' || input.action === 'history') {
-      let query = db.from('meta_outbox').select('id,lead_id,revision,event_name,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').order('occurred_at', { ascending: false }).limit(100)
+      let query = db.from('meta_outbox').select('id,lead_id,meta_leadgen_id,revision,event_name,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').order('occurred_at', { ascending: false }).limit(100)
       if (!member?.is_admin) query = query.eq('requested_by', userId)
       const { data: events, error } = await query
       if (error) throw new MetaError(503, 'Olay geçmişi okunamadı.')
@@ -63,6 +63,12 @@ return async (req: Request): Promise<Response> => {
         p_revision: input.revision, p_stage: input.stage, p_qualified: input.qualified })
       if (error) throw new MetaError(409, 'Aşama sunucuya kaydedilemedi; yetki veya sürüm çakışmasını kontrol edip kaydı yeniden okuyun.')
       return json({ revision: lead.meta_revision, updatedAt: lead.updated_at }, 200, origin)
+    }
+    if (input.action === 'sources') {
+      if (typeof input.leadId !== 'string' || input.leadId.length > 200) throw new MetaError(400, 'Müşteri kimliği geçersiz.')
+      const { data, error } = await db.rpc('meta_list_sources', { p_user: userId, p_lead: input.leadId })
+      if (error) throw new MetaError(403, 'Bu müşterinin Meta başvuruları okunamadı.')
+      return json({ sources: (data || []).map((e: any) => ({ leadgenId: e.leadgen_id, submittedAt: e.submitted_at, ...e.context })) }, 200, origin)
     }
     const dataset = env('META_DATASET_ID'), accessToken = env('META_CAPI_ACCESS_TOKEN')
     if (input.action === 'configure') {
@@ -90,21 +96,20 @@ return async (req: Request): Promise<Response> => {
       if (cursor.length > 2048) throw new MetaError(400, 'Geçersiz sayfalama imleci.')
       const formId = input.formId ? String(input.formId) : ''
       if (!formId) {
-        const forms = await graphGet(`${pageId}/leadgen_forms?fields=id,name&limit=100`, pageToken, version, fetcher)
-        if (forms.paging?.next) throw new MetaError(409, '100 üzeri form için ayrı kapsamlı sunucu aktarımı gerekir; eksik veri başarılı sayılmadı.')
-        return json({ forms: forms.data || [] }, 200, origin)
+        const forms = await graphGet(`${pageId}/leadgen_forms?fields=id,name&limit=100${cursor ? `&after=${encodeURIComponent(cursor)}` : ''}`, pageToken, version, fetcher)
+        if (forms.paging?.next && !forms.paging?.cursors?.after) throw new MetaError(502, 'Meta form sayfalama imleci eksik.')
+        return json({ forms: forms.data || [], cursor: forms.paging?.next ? forms.paging.cursors.after : null }, 200, origin)
       }
       if (!/^\d+$/.test(formId)) throw new MetaError(400, 'Form kimliği geçersiz.')
       // Sayfanın formu olduğu sunucuda doğrulanır; istemcinin form adına güvenilmez.
-      const forms = await graphGet(`${pageId}/leadgen_forms?fields=id,name&limit=100`, pageToken, version, fetcher)
-      const form = forms.data?.find((f: any) => f.id === formId)
-      if (!form) throw new MetaError(403, 'Form sayfaya ait değil.')
-      const leads = await graphGet(`${formId}/leads?fields=id,created_time,form_id,ad_id,campaign_id,campaign_name,field_data&limit=25&since=${Math.floor(from/1000)}&until=${Math.floor(to/1000)}${cursor ? `&after=${encodeURIComponent(cursor)}` : ''}`, pageToken, version, fetcher)
+      const form = await graphGet(`${formId}?fields=id,name,page_id`, pageToken, version, fetcher)
+      if (String(form.id) !== formId || String(form.page_id) !== pageId) throw new MetaError(403, 'Formun yapılandırılmış sayfaya ait olduğu doğrulanamadı.')
+      const leads = await graphLeadGet(`${formId}/leads?limit=25&since=${Math.floor(from/1000)}&until=${Math.floor(to/1000)}${cursor ? `&after=${encodeURIComponent(cursor)}` : ''}`, pageToken, version, fetcher)
       let processed = 0
       const savedLeads: any[] = []
       for (const details of leads.data || []) {
         if (!/^\d{1,32}$/.test(String(details.id)) || Date.parse(details.created_time) < from || Date.parse(details.created_time) > to) continue
-        const { data: savedId, error } = await db.rpc('meta_ingest_lead', { p: normalizeLead(details, { leadgen_id: details.id, form_id: form.id }, form.name) })
+        const { data: savedId, error } = await db.rpc('meta_ingest_lead', { p: normalizeLead(details, { leadgen_id: details.id, form_id: form.id, page_id: pageId }, form.name) })
         if (error) throw new MetaError(503, 'Aktarım kısmen kaydedilmiş olabilir; güvenli tekrar için aynı kapsamı yeniden çalıştırın.')
         const { data: saved, error: readError } = await db.from('leads').select('*').eq('id', savedId).single()
         if (readError) throw new MetaError(503, 'Başvuru kaydedildi; CRM görünümü okunamadı. Aynı kapsam güvenle tekrar alınabilir.')
@@ -120,10 +125,13 @@ return async (req: Request): Promise<Response> => {
     if (input.action === 'enqueue' || input.action === 'test') {
       if (typeof input.leadId !== 'string' || input.leadId.length > 200) throw new MetaError(400, 'Müşteri kimliği geçersiz.')
       if (!Number.isSafeInteger(input.revision) || input.revision < 0 || !['Contact','QualifiedLead','DisqualifiedLead','Schedule'].includes(input.eventName)) throw new MetaError(400, 'Güncel aşama sürümü ve olay türü gerekli.')
+      if (input.leadgenId !== undefined && input.leadgenId !== null && (typeof input.leadgenId !== 'string' || !/^\d{1,32}$/.test(input.leadgenId))) throw new MetaError(400, 'Meta başvuru kimliği geçersiz.')
       if (input.action === 'test' && (!member?.is_admin || !env('META_TEST_EVENT_CODE'))) throw new MetaError(409, 'Yönetici ve sunucuda test olay kodu gerekli.')
       const { data, error } = await db.rpc('meta_enqueue_checked', { p_user: userId, p_lead: input.leadId,
-        p_test: input.action === 'test', p_revision: input.revision, p_event: input.eventName })
-      if (error) throw new MetaError(409, 'Kayıt gönderime uygun değil: yetki, aşama, geçmiş aktarım veya hız sınırını kontrol edin.')
+        p_test: input.action === 'test', p_revision: input.revision, p_event: input.eventName, p_leadgen_id: input.leadgenId || null })
+      if (error) throw new MetaError(409, error.message?.includes('meta_source_selection_required')
+        ? 'Birden fazla Meta başvurusu var. Sonucu göndereceğiniz form/başvuruyu seçin.'
+        : 'Kayıt gönderime uygun değil: seçili başvuru, yetki, aşama veya geçmiş aktarımını kontrol edin.')
       eventId = data
       if (input.retry === true) {
         const { error: retryError } = await db.rpc('meta_request_retry', { p_user: userId, p_event: eventId })
@@ -163,7 +171,7 @@ return async (req: Request): Promise<Response> => {
       if (error) throw new MetaError(503, 'Teslim sonucu kaydedilemedi; aynı olay kimliğiyle kurtarılacak.')
     }
     if (!eventId) return json({ processed: jobs?.length || 0 }, 200, origin)
-    const { data: event, error } = await db.from('meta_outbox').select('id,lead_id,revision,event_name,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').eq('id', eventId).single()
+    const { data: event, error } = await db.from('meta_outbox').select('id,lead_id,meta_leadgen_id,revision,event_name,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').eq('id', eventId).single()
     if (error) throw new MetaError(503, 'Teslim sonucu okunamadı.')
     return json({ event }, 200, origin)
   } catch (error) {

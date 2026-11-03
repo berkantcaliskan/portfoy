@@ -383,9 +383,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
   const handleExecuteCustomRangePull = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (quickPageToken.trim() && quickPageToken.trim() !== metaStore.getConfig().pageAccessToken) {
-      metaStore.saveConfig({ pageAccessToken: quickPageToken.trim(), isConnected: true })
-    }
     const start = pullStartDate ? new Date(pullStartDate + 'T00:00:00') : new Date(Date.now() - 48 * 60 * 60 * 1000)
     const end = pullEndDate ? new Date(pullEndDate + 'T23:59:59') : new Date()
     setIsPullDateModalOpen(false)

@@ -658,7 +658,7 @@ class LeadStore {
         updatedCount: Math.max(updatedCount, metaResult.mergedCount),
         latestTime: new Date().toISOString(),
         needsPageToken: metaResult.needsPageToken,
-        error: newCount === 0 && updatedCount === 0 && !metaResult.needsPageToken ? metaResult.error : undefined,
+        error: metaResult.error,
       }
     }
 
@@ -754,6 +754,7 @@ class LeadStore {
         newCount,
         updatedCount,
         latestTime: nowIso,
+        error: metaResult.error,
       }
     } catch (err: any) {
       console.error('[LeadStore] pullLatestLeads exception:', err)
@@ -1157,7 +1158,8 @@ class LeadStore {
   public async sendLeadSignalToMeta(
     leadId: string,
     signal: MetaCapiEventName,
-    changedByUser?: AppUser | null
+    changedByUser?: AppUser | null,
+    metaLeadgenId?: string
   ) {
     const lead = this.getById(leadId)
     if (!lead) return null
@@ -1168,7 +1170,7 @@ class LeadStore {
     if (signal === 'DisqualifiedLead') this.update(leadId, { isQualified: false, stage: 'LOST' }, actor)
 
     const freshLead = this.getById(leadId) || lead
-    const log = await metaStore.sendCapiLeadEvent(freshLead, signal)
+    const log = await metaStore.sendCapiLeadEvent(freshLead, signal, { metaLeadgenId })
 
     const statusBadge =
       log.status === 'SENT'
