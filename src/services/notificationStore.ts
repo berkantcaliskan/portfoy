@@ -1,7 +1,7 @@
 import { leadStore } from './leadStore'
 import { requestStore } from './requestStore'
 import { userStore } from './userStore'
-import { Lead } from '@/types/lead'
+import { Lead, isLeadHandedOverToSales } from '@/types/lead'
 import { NavPageId } from '@/types/department'
 import { playNewLeadChime } from '@/utils/audioAlert'
 
@@ -153,6 +153,10 @@ class NotificationStore {
     ]
     this.knownNotifIds.add(id)
     this.notify()
+    const currentUser = userStore.getCurrentUser()
+    if (currentUser?.department === 'Satış' && notif.type === 'WEBSITE') {
+      return notif
+    }
     this.emitIncoming(notif)
     return notif
   }
@@ -160,6 +164,7 @@ class NotificationStore {
   private initSubscriptions() {
     leadStore.subscribe(() => this.notify())
     requestStore.subscribe(() => this.notify())
+    userStore.subscribe(() => this.notify())
 
     if (typeof window !== 'undefined') {
       window.addEventListener('demirturk:new-lead', () => {
@@ -173,6 +178,9 @@ class NotificationStore {
     const currentUser = userStore.getCurrentUser()
     const all = leadStore.getAll(currentUser)
     return all.filter((l) => {
+      if (currentUser?.department === 'Satış' && !isLeadHandedOverToSales(l)) {
+        return false
+      }
       if (
         l.stage === 'QUALIFIED' ||
         l.stage === 'OFFER' ||
@@ -226,12 +234,15 @@ class NotificationStore {
       } catch {}
     }
 
+    const currentUser = userStore.getCurrentUser()
+    const targetTab: NavPageId = currentUser?.department === 'Satış' ? 'crm' : 'customers'
+
     return this.pushNotification({
       id: `notif-call-again-${force ? now : hourKey}`,
       type: 'LEAD',
       title: `Tekrar Arama Hatırlatması (${callAgainLeads.length} Müşteri)`,
       subtitle,
-      targetTab: 'customers',
+      targetTab,
       referenceId: 'CALL_AGAIN',
     })
   }
@@ -377,8 +388,15 @@ class NotificationStore {
    * "... yeni potansiyel müşteri eklendi" notification.
    */
   public getAllNotifications(): AppNotification[] {
+    const currentUser = userStore.getCurrentUser()
+    const isSalesDept = currentUser?.department === 'Satış'
+
     const list: AppNotification[] = this.customNotifications
-      .filter((c) => !this.deletedNotifIds.has(c.id))
+      .filter((c) => {
+        if (this.deletedNotifIds.has(c.id)) return false
+        if (isSalesDept && c.type === 'WEBSITE') return false
+        return true
+      })
       .map((c) => ({
         ...c,
         isRead: this.readNotifIds.has(c.id),
@@ -391,12 +409,20 @@ class NotificationStore {
 
     // 1. Separate Website submissions and New potential leads
     for (const lead of allLeads) {
+      // Satış departmanında "Satışa İlet" denmemiş hiçbir müşteri veya web verisi bildirim olarak dahi görünemez!
+      if (isSalesDept && !isLeadHandedOverToSales(lead)) {
+        continue
+      }
+
       const isWeb =
         lead.source === 'WEBSITE' ||
         lead.channel?.toLowerCase().includes('web') ||
         lead.tags?.some((t) => t.toLowerCase().includes('web'))
 
       if (isWeb) {
+        // Satış ekibi web sitesi başvurularını göremez
+        if (isSalesDept) continue
+
         const notifId = `notif-web-${lead.id}`
         if (this.deletedNotifIds.has(notifId)) continue
         list.push({
@@ -411,7 +437,7 @@ class NotificationStore {
           isRead: this.readNotifIds.has(notifId),
           createdAt: lead.createdAt,
         })
-      } else if (lead.stage === 'NEW') {
+      } else if (lead.stage === 'NEW' || (isSalesDept && isLeadHandedOverToSales(lead))) {
         const singleId = `notif-lead-${lead.id}`
         if (this.deletedNotifIds.has(singleId)) continue
         newPotentialLeads.push({
@@ -440,6 +466,8 @@ class NotificationStore {
       }
     }
 
+    const defaultLeadTargetTab: NavPageId = isSalesDept ? 'crm' : 'customers'
+
     for (const batch of batches) {
       if (batch.length === 1) {
         const { lead, addedMs } = batch[0]
@@ -448,9 +476,9 @@ class NotificationStore {
         list.push({
           id: notifId,
           type: 'LEAD',
-          title: `Yeni Müşteri: ${lead.fullName}`,
-          subtitle: `${lead.formName || 'Meta Ads Formu'} • ${lead.phone || ''}`,
-          targetTab: 'customers',
+          title: isSalesDept ? `Satışa Devredilen Müşteri: ${lead.fullName}` : `Yeni Müşteri: ${lead.fullName}`,
+          subtitle: `${lead.formName || 'Müşteri Kaydı'} • ${lead.phone || ''}`,
+          targetTab: defaultLeadTargetTab,
           referenceId: lead.id,
           isRead: this.readNotifIds.has(notifId),
           createdAt: addedMs > 0 ? new Date(addedMs).toISOString() : lead.createdAt,
@@ -482,7 +510,7 @@ class NotificationStore {
           type: 'LEAD',
           title: `${batch.length} yeni potansiyel müşteri eklendi`,
           subtitle: `${formText} • Toplu müşteri aktarımı`,
-          targetTab: 'customers',
+          targetTab: defaultLeadTargetTab,
           isRead,
           createdAt:
             latestAddedMs > 0
@@ -497,6 +525,9 @@ class NotificationStore {
       const isWeb =
         req.id.startsWith('req-web-') ||
         req.subject.toLowerCase().includes('web')
+      // Satış departmanı web sitesi başvurularını göremez!
+      if (isSalesDept && isWeb) continue
+
       const notifId = `notif-req-${req.id}`
       if (this.deletedNotifIds.has(notifId)) continue
 

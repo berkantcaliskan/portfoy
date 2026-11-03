@@ -202,10 +202,24 @@ function buildPageCandidates(
   currentUser: AppUser | null
 ): Omit<SearchResultItem, 'score'>[] {
   const results: Omit<SearchResultItem, 'score'>[] = []
-  const leads = leadStore.getAll(currentUser)
+  const rawLeads = leadStore.getAll(currentUser)
+  const leads =
+    activeDept === 'Satış' ? rawLeads.filter((l) => isLeadHandedOverToSales(l)) : rawLeads
   const projects = projectStore.getAll()
   const appointments = appointmentStore.getAll(currentUser)
-  const requests = requestStore.getAll()
+  const rawRequests = requestStore.getAll()
+  const requests =
+    activeDept === 'Satış'
+      ? rawRequests.filter(
+          (r) =>
+            !(
+              r.id.startsWith('req-web-') ||
+              r.subject.toLowerCase().includes('web sitesi') ||
+              r.subject.toLowerCase().includes('web başvurusu') ||
+              r.assignedToUserName?.toLowerCase().includes('web')
+            )
+        )
+      : rawRequests
   const collections = accountingStore.getCollections()
   const payments = accountingStore.getPayments()
   const approvals = approvalStore.getAll()

@@ -50,7 +50,7 @@ import { approvalStore } from '@/services/approvalStore'
 import { sharedFileStore } from '@/services/sharedFileStore'
 import { syncService } from '@/services/syncService'
 import { messageStore } from '@/services/messageStore'
-import { Lead, LeadStage } from '@/types/lead'
+import { Lead, LeadStage, isLeadHandedOverToSales } from '@/types/lead'
 import { PortfolioItem } from '@/types/portfolio'
 import {
   DEPARTMENT_MENU_CONFIG,
@@ -296,8 +296,11 @@ export function App() {
     }
   }, [currentUser?.department, activeTab])
 
-  // Filter leads based on search query
+  // Filter leads based on search query (and enforce Satış handover rule)
   const filteredLeads = leads.filter((l) => {
+    if (currentUser?.department === 'Satış' && !isLeadHandedOverToSales(l)) {
+      return false
+    }
     if (!searchQuery) return true
     const q = searchQuery.toLowerCase()
     return (
@@ -309,6 +312,9 @@ export function App() {
   })
 
   const handleSelectLead = (lead: Lead) => {
+    if (currentUser?.department === 'Satış' && !isLeadHandedOverToSales(lead)) {
+      return
+    }
     setSelectedLead(lead)
     setIsLeadDetailOpen(true)
   }
@@ -326,10 +332,11 @@ export function App() {
 
       const payload = item.payload || { pageId: item.pageId }
       if (payload.leadId) {
+        const u = userStore.getCurrentUser()
         const found =
-          leadStore.getById(payload.leadId, userStore.getCurrentUser()) ||
+          leadStore.getById(payload.leadId, u) ||
           leadStore.getAllRaw().find((l) => l.id === payload.leadId)
-        if (found) {
+        if (found && (u?.department !== 'Satış' || isLeadHandedOverToSales(found))) {
           setSelectedLead(found)
           setIsLeadDetailOpen(true)
         }

@@ -20,6 +20,7 @@ import {
   Layers,
   ClipboardList,
   Trash2,
+  Send,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -34,7 +35,8 @@ import {
 } from '@/services/requestStore'
 import { leadStore } from '@/services/leadStore'
 import { userStore, AppUser } from '@/services/userStore'
-import { Lead } from '@/types/lead'
+import { permissionService } from '@/services/permissionService'
+import { Lead, isLeadHandedOverToSales } from '@/types/lead'
 import { formatPhoneDisplay } from '@/utils/formatters'
 
 interface RequestsViewProps {
@@ -102,7 +104,6 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
     propUser || userStore.getCurrentUser()
   )
   const [requests, setRequests] = useState<CustomerRequest[]>(() => requestStore.getAll())
-  // Always use raw unfiltered leads from leadStore so department scopes never hide website submissions
   const [allLeads, setAllLeads] = useState<Lead[]>(() => leadStore.getAllRaw())
 
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
@@ -118,10 +119,20 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
   const [priority, setPriority] = useState<RequestPriority>('Orta')
   const [notes, setNotes] = useState('')
 
+  const isSalesDept = currentUser?.department === 'Satış'
+  const canHandOverToSales = permissionService.canHandOverToSales(currentUser)
+
   // Sync prop updates
   useEffect(() => {
     if (propUser) setCurrentUser(propUser)
   }, [propUser])
+
+  // Reset WEBSITE filter if user switches to Satış department
+  useEffect(() => {
+    if (isSalesDept && filterStatus === 'WEBSITE') {
+      setFilterStatus('ALL')
+    }
+  }, [isSalesDept, filterStatus])
 
   // Subscriptions to stores
   useEffect(() => {
@@ -162,7 +173,8 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
     handleRefresh()
   }, [])
 
-  // Build unified list of requests (combining ONLY website submissions + manually entered employee requests)
+  // Build unified list of requests
+  // Satış departmanında web sitesinden gelen hiçbir müşteri verisi (Müşteri İlişkileri / Pazarlama / Yönetim "Satışa İlet" demedikçe) KESİNLİKLE gösterilmez!
   const unifiedItems: UnifiedRequestItem[] = useMemo(() => {
     const items: UnifiedRequestItem[] = []
     const seenItemIds = new Set<string>()
@@ -177,8 +189,6 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
         req.subject === 'Müşteri Kaydı' ||
         req.subject.toLowerCase().includes('meta lead')
       if (isAccidentalMetaForm) continue
-
-      seenItemIds.add(req.id)
 
       const cleanPhone = cleanPhoneForLink(req.customerPhone)
       const isWeb =
@@ -196,6 +206,16 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
           (lClean === cleanPhone || (cleanPhone.length > 7 && lClean.endsWith(cleanPhone.slice(-7))))
         )
       })
+
+      // Satış departmanı kuralı: Web sitesinden gelen müşteri verisini Satış ekibi göremez!
+      if (isSalesDept && isWeb) {
+        continue
+      }
+      if (isSalesDept && matchedLead && !isLeadHandedOverToSales(matchedLead)) {
+        continue
+      }
+
+      seenItemIds.add(req.id)
 
       if (matchedLead) {
         seenItemIds.add(`lead-${matchedLead.id}`)
@@ -227,39 +247,86 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       })
     }
 
-    // 2. Process ONLY website submissions from leads (NEVER include Meta Ads / form leads)
-    for (const lead of allLeads) {
-      const isMetaFormLead =
-        lead.source === 'META_ADS' ||
-        Boolean(lead.metaLeadId) ||
-        lead.channel?.toLowerCase().includes('meta') ||
-        lead.channel?.toLowerCase().includes('facebook') ||
-        lead.channel?.toLowerCase().includes('instagram')
+    // 2. Process website submissions from leads (NEVER include in Satış department!)
+    if (!isSalesDept) {
+      for (const lead of allLeads) {
+        const isMetaFormLead =
+          lead.source === 'META_ADS' ||
+          Boolean(lead.metaLeadId) ||
+          lead.channel?.toLowerCase().includes('meta') ||
+          lead.channel?.toLowerCase().includes('facebook') ||
+          lead.channel?.toLowerCase().includes('instagram')
 
-      const isLeadWebsite =
-        !isMetaFormLead &&
-        (lead.source === 'WEBSITE' ||
-          lead.id.startsWith('lead-web-') ||
-          lead.channel?.toLowerCase().includes('web') ||
-          lead.tags?.some((t) => t.toLowerCase().includes('web')))
+        const isLeadWebsite =
+          !isMetaFormLead &&
+          (lead.source === 'WEBSITE' ||
+            lead.id.startsWith('lead-web-') ||
+            lead.channel?.toLowerCase().includes('web') ||
+            lead.tags?.some((t) => t.toLowerCase().includes('web')))
 
-      // Check inquiries inside this lead that specifically came from the website
-      const webInquiries = (lead.inquiries || []).filter(
-        (inq) =>
-          inq.source === 'WEBSITE' ||
-          inq.channel?.toLowerCase().includes('web') ||
-          inq.campaignName?.toLowerCase().includes('web')
-      )
+        // Check inquiries inside this lead that specifically came from the website
+        const webInquiries = (lead.inquiries || []).filter(
+          (inq) =>
+            inq.source === 'WEBSITE' ||
+            inq.channel?.toLowerCase().includes('web') ||
+            inq.campaignName?.toLowerCase().includes('web')
+        )
 
-      if (webInquiries.length > 0) {
-        for (const inq of webInquiries) {
-          const inqId = inq.id || `inq-${lead.id}-${inq.createdAt}`
-          if (seenItemIds.has(inqId)) continue
-          seenItemIds.add(inqId)
+        if (webInquiries.length > 0) {
+          for (const inq of webInquiries) {
+            const inqId = inq.id || `inq-${lead.id}-${inq.createdAt}`
+            if (seenItemIds.has(inqId)) continue
+            seenItemIds.add(inqId)
+
+            const isTour =
+              inq.formName?.toLowerCase().includes('tur') ||
+              inq.formName?.toLowerCase().includes('tanıtım')
+
+            let mappedStatus: RequestStatus = 'Açık'
+            if (lead.stage === 'WON' || lead.stage === 'LOST') {
+              mappedStatus = 'Çözüldü'
+            } else if (
+              ['CONTACTED', 'QUALIFIED', 'APPOINTMENT', 'PRESENTATION', 'OFFER'].includes(lead.stage)
+            ) {
+              mappedStatus = 'İşlemde'
+            }
+
+            items.push({
+              id: inqId,
+              customerName: lead.fullName,
+              customerPhone: lead.phone,
+              customerEmail: lead.email,
+              subject: inq.formName
+                ? `Web Sitesi: ${inq.formName}`
+                : `Web Sitesi Başvurusu: ${lead.formName || 'İletişim'}`,
+              category: isTour ? 'Satış Öncesi Bilgi' : 'Genel Talep',
+              priority: isTour ? 'Yüksek' : 'Orta',
+              status: mappedStatus,
+              assignedToUserName: lead.assignedToUserName || lead.owner || 'Web Sitesi',
+              notes: inq.notes || lead.notes || '',
+              sourceType: 'WEBSITE',
+              formName: inq.formName || lead.formName || 'Web Başvurusu',
+              preferredHousingType: inq.preferredHousingType || lead.preferredHousingType,
+              budget: inq.budget || lead.budget,
+              createdAt: inq.createdAt || lead.createdAt,
+              updatedAt: inq.createdAt || lead.updatedAt,
+              leadId: lead.id,
+              lead,
+              isFromRequestStore: false,
+            })
+          }
+        }
+
+        // Only add lead itself if it is a website submission without inquiries
+        if (webInquiries.length > 0 || !isLeadWebsite) continue
+
+        const leadKey = `lead-${lead.id}`
+        if (!seenItemIds.has(leadKey)) {
+          seenItemIds.add(leadKey)
 
           const isTour =
-            inq.formName?.toLowerCase().includes('tur') ||
-            inq.formName?.toLowerCase().includes('tanıtım')
+            lead.formName?.toLowerCase().includes('tur') ||
+            lead.formName?.toLowerCase().includes('tanıtım')
 
           let mappedStatus: RequestStatus = 'Açık'
           if (lead.stage === 'WON' || lead.stage === 'LOST') {
@@ -271,72 +338,27 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
           }
 
           items.push({
-            id: inqId,
+            id: leadKey,
             customerName: lead.fullName,
             customerPhone: lead.phone,
             customerEmail: lead.email,
-            subject: inq.formName
-              ? `Web Sitesi: ${inq.formName}`
-              : `Web Sitesi Başvurusu: ${lead.formName || 'İletişim'}`,
+            subject: lead.formName ? `Web Sitesi: ${lead.formName}` : 'Web Sitesi İletişim / Başvuru',
             category: isTour ? 'Satış Öncesi Bilgi' : 'Genel Talep',
             priority: isTour ? 'Yüksek' : 'Orta',
             status: mappedStatus,
             assignedToUserName: lead.assignedToUserName || lead.owner || 'Web Sitesi',
-            notes: inq.notes || lead.notes || '',
+            notes: lead.notes || '',
             sourceType: 'WEBSITE',
-            formName: inq.formName || lead.formName || 'Web Başvurusu',
-            preferredHousingType: inq.preferredHousingType || lead.preferredHousingType,
-            budget: inq.budget || lead.budget,
-            createdAt: inq.createdAt || lead.createdAt,
-            updatedAt: inq.createdAt || lead.updatedAt,
+            formName: lead.formName || 'Web Başvurusu',
+            preferredHousingType: lead.preferredHousingType,
+            budget: lead.budget,
+            createdAt: lead.createdAt,
+            updatedAt: lead.updatedAt,
             leadId: lead.id,
             lead,
             isFromRequestStore: false,
           })
         }
-      }
-
-      // Only add lead itself if it is a website submission without inquiries
-      if (webInquiries.length > 0 || !isLeadWebsite) continue
-
-      const leadKey = `lead-${lead.id}`
-      if (!seenItemIds.has(leadKey)) {
-        seenItemIds.add(leadKey)
-
-        const isTour =
-          lead.formName?.toLowerCase().includes('tur') ||
-          lead.formName?.toLowerCase().includes('tanıtım')
-
-        let mappedStatus: RequestStatus = 'Açık'
-        if (lead.stage === 'WON' || lead.stage === 'LOST') {
-          mappedStatus = 'Çözüldü'
-        } else if (
-          ['CONTACTED', 'QUALIFIED', 'APPOINTMENT', 'PRESENTATION', 'OFFER'].includes(lead.stage)
-        ) {
-          mappedStatus = 'İşlemde'
-        }
-
-        items.push({
-          id: leadKey,
-          customerName: lead.fullName,
-          customerPhone: lead.phone,
-          customerEmail: lead.email,
-          subject: lead.formName ? `Web Sitesi: ${lead.formName}` : 'Web Sitesi İletişim / Başvuru',
-          category: isTour ? 'Satış Öncesi Bilgi' : 'Genel Talep',
-          priority: isTour ? 'Yüksek' : 'Orta',
-          status: mappedStatus,
-          assignedToUserName: lead.assignedToUserName || lead.owner || 'Web Sitesi',
-          notes: lead.notes || '',
-          sourceType: 'WEBSITE',
-          formName: lead.formName || 'Web Başvurusu',
-          preferredHousingType: lead.preferredHousingType,
-          budget: lead.budget,
-          createdAt: lead.createdAt,
-          updatedAt: lead.updatedAt,
-          leadId: lead.id,
-          lead,
-          isFromRequestStore: false,
-        })
       }
     }
 
@@ -346,7 +368,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       const timeB = new Date(b.createdAt).getTime() || 0
       return timeB - timeA
     })
-  }, [requests, allLeads])
+  }, [requests, allLeads, isSalesDept])
 
   // Top KPI Counts
   const webItems = useMemo(() => unifiedItems.filter((i) => i.sourceType === 'WEBSITE'), [unifiedItems])
@@ -439,6 +461,36 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
     }
   }
 
+  // Handle Manual Handover to Sales (Müşteri İlişkileri, Pazarlama veya Yönetim)
+  const handleToggleSalesHandover = (item: UnifiedRequestItem) => {
+    if (!canHandOverToSales || !currentUser) return
+    if (item.lead) {
+      if (isLeadHandedOverToSales(item.lead)) {
+        leadStore.revokeSalesHandover(item.lead.id, currentUser)
+      } else {
+        leadStore.assignToSales(item.lead.id, null, currentUser)
+      }
+    } else {
+      const created = leadStore.add({
+        fullName: item.customerName,
+        phone: item.customerPhone || '',
+        email: item.customerEmail,
+        source: item.sourceType === 'WEBSITE' ? 'WEBSITE' : 'DIRECT',
+        channel: item.sourceType === 'WEBSITE' ? 'Web Sitesi' : 'Manuel Talep',
+        formName: item.formName || item.subject,
+        stage: 'NEW',
+        isQualified: false,
+        owner: currentUser.fullName,
+        tags: item.sourceType === 'WEBSITE' ? ['Web Sitesi'] : ['Manuel Talep'],
+        preferredHousingType: item.preferredHousingType,
+        budget: item.budget,
+        notes: item.notes,
+      })
+      leadStore.assignToSales(created.id, null, currentUser)
+    }
+    setAllLeads(leadStore.getAllRaw())
+  }
+
   // Handle Delete Request / Web Submission
   const handleDeleteItem = (item: UnifiedRequestItem) => {
     if (item.isFromRequestStore) {
@@ -450,6 +502,20 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
     setRequests(requestStore.getAll())
     setAllLeads(leadStore.getAllRaw())
   }
+
+  const filterTabs = useMemo(() => {
+    const base = [{ id: 'ALL', label: `Tümü (${totalCount})` }]
+    if (!isSalesDept) {
+      base.push({ id: 'WEBSITE', label: `🌐 İnternet Sitesi Başvuruları (${webCount})` })
+    }
+    base.push(
+      { id: 'MANUAL', label: `✍️ Manuel Müşteri İstekleri (${manualCount})` },
+      { id: 'Açık', label: `Açık (${openCount})` },
+      { id: 'İşlemde', label: `İşlemde (${inProgressCount})` },
+      { id: 'Çözüldü', label: `Çözüldü (${resolvedCount})` }
+    )
+    return base
+  }, [isSalesDept, totalCount, webCount, manualCount, openCount, inProgressCount, resolvedCount])
 
   return (
     <div className="space-y-6">
@@ -465,7 +531,9 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
             </div>
           </div>
           <p className="text-xs text-[#a69f99] mt-1">
-            İnternet sitesi başvuruları ve çalışanlar tarafından manuel girilen müşteri istekleri.
+            {isSalesDept
+              ? 'Müşteri destek talepleri ve çalışanlar tarafından manuel girilen müşteri istekleri.'
+              : 'İnternet sitesi başvuruları ve çalışanlar tarafından manuel girilen müşteri istekleri.'}
           </p>
         </div>
 
@@ -493,19 +561,25 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       </div>
 
       {/* KPI Stats Row - Rule: Second word is strictly lowercase */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="responsive-kpi-card p-4 rounded-[18px] bg-[#282522] border border-[#b99881]/40 flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="kpi-title text-[11px] text-[#dfb76c] font-medium uppercase tracking-wider" title="Web Başvuruları">
-              Web Başvuruları
+      <div
+        className={`grid grid-cols-2 sm:grid-cols-4 ${
+          !isSalesDept ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
+        } gap-3`}
+      >
+        {!isSalesDept && (
+          <div className="responsive-kpi-card p-4 rounded-[18px] bg-[#282522] border border-[#b99881]/40 flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="kpi-title text-[11px] text-[#dfb76c] font-medium uppercase tracking-wider" title="Web Başvuruları">
+                Web Başvuruları
+              </div>
+              <div className="mt-1 flex items-baseline gap-1.5 min-w-0">
+                <span className="text-2xl font-bold text-[#dfb76c] shrink-0">{webCount}</span>
+                <span className="kpi-sub-label text-xs text-[#a69f99] font-medium">web başvurusu</span>
+              </div>
             </div>
-            <div className="mt-1 flex items-baseline gap-1.5 min-w-0">
-              <span className="text-2xl font-bold text-[#dfb76c] shrink-0">{webCount}</span>
-              <span className="kpi-sub-label text-xs text-[#a69f99] font-medium">web başvurusu</span>
-            </div>
+            <Globe className="w-5 h-5 text-[#dfb76c] opacity-80 shrink-0" />
           </div>
-          <Globe className="w-5 h-5 text-[#dfb76c] opacity-80 shrink-0" />
-        </div>
+        )}
 
         <div className="responsive-kpi-card p-4 rounded-[18px] bg-[#282522] border border-rose-500/20 flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1 overflow-hidden">
@@ -567,14 +641,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
           prefixLabel="Filtre:"
           activeId={filterStatus}
           onSelect={(id) => setFilterStatus(id)}
-          tabs={[
-            { id: 'ALL', label: `Tümü (${totalCount})` },
-            { id: 'WEBSITE', label: `🌐 İnternet Sitesi Başvuruları (${webCount})` },
-            { id: 'MANUAL', label: `✍️ Manuel Müşteri İstekleri (${manualCount})` },
-            { id: 'Açık', label: `Açık (${openCount})` },
-            { id: 'İşlemde', label: `İşlemde (${inProgressCount})` },
-            { id: 'Çözüldü', label: `Çözüldü (${resolvedCount})` },
-          ]}
+          tabs={filterTabs}
         />
 
         {/* Search Input */}
@@ -604,7 +671,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
           <AlertCircle className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
           <h3 className="text-sm font-semibold text-white">Talep kaydı bulunamadı</h3>
           <p className="text-xs text-[#8c857f] mt-1 max-w-sm mx-auto">
-            Seçili filtreye veya arama kriterine uygun müşteri ya da web talebi bulunmamaktadır.
+            Seçili filtreye veya arama kriterine uygun müşteri talebi bulunmamaktadır.
           </p>
         </div>
       ) : (
@@ -615,6 +682,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
               `Merhaba ${item.customerName} Bey/Hanım, Demirtürk İnşaat web sitemizden ilettiğiniz form talebiniz üzerine iletişime geçiyorum. Nasıl yardımcı olabilirim?`
             )
             const waUrl = cleanDigits ? `https://wa.me/${cleanDigits}?text=${waText}` : ''
+            const isHandedOver = Boolean(item.lead && isLeadHandedOverToSales(item.lead))
 
             return (
               <div
@@ -770,8 +838,27 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                       )}
                     </div>
 
-                    {/* Status Toggles */}
+                    {/* Status Toggles & Handover */}
                     <div className="flex items-center gap-1.5 min-w-0">
+                      {canHandOverToSales && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSalesHandover(item)}
+                          title={
+                            isHandedOver
+                              ? 'Satıştan Geri Çek'
+                              : 'Müşteri verisini Satış ekibine manuel devret'
+                          }
+                          className={`card-action-btn px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer transition-all flex items-center gap-1 ${
+                            isHandedOver
+                              ? 'bg-emerald-500/20 hover:bg-rose-500/20 border border-emerald-500/40 text-emerald-300 hover:text-rose-300'
+                              : 'bg-[#b99881]/20 hover:bg-[#b99881]/35 border border-[#b99881]/50 text-[#dfb76c]'
+                          }`}
+                        >
+                          <Send className="w-3 h-3 shrink-0" />
+                          <span className="btn-label">{isHandedOver ? 'Satışta ✓' : 'Satışa İlet'}</span>
+                        </button>
+                      )}
                       {item.status !== 'İşlemde' && item.status !== 'Çözüldü' && (
                         <button
                           onClick={() => handleStatusChange(item, 'İşlemde')}

@@ -9,6 +9,7 @@ import {
   StageHistoryEntry,
   AiEvaluation,
   LeadMetaCapiStatus,
+  isLeadHandedOverToSales,
 } from '@/types/lead'
 import { MetaCapiEventName } from '@/types/meta'
 import { AppUser, userStore } from './userStore'
@@ -372,6 +373,7 @@ class LeadStore {
 
   private triggerBulkLeadAlert(leads: Lead[]) {
     if (!leads || leads.length === 0) return
+    if (userStore.getCurrentUser()?.department === 'Satış') return
     playNewLeadChime()
     if (typeof window !== "undefined") {
       if ("Notification" in window && Notification.permission === "granted") {
@@ -390,6 +392,9 @@ class LeadStore {
   }
 
   private triggerNewLeadAlert(lead: Lead) {
+    if (userStore.getCurrentUser()?.department === 'Satış' && !isLeadHandedOverToSales(lead)) {
+      return
+    }
     // 1. Play subtle luxury chime sound
     playNewLeadChime()
 

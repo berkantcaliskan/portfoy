@@ -21,15 +21,10 @@ export class PermissionService {
   public canAccessLead(user: AppUser | null, lead: Lead): boolean {
     if (!user) return true // Anonymous or initial setup view
 
-    // Admin has unrestricted access
-    if (user.role === 'ADMIN') return true
-
-    // Scope: ALL
-    if (user.scope === 'ALL') return true
-
-    // Satış departmanı kuralı: Müşteri İlişkileri, Pazarlama veya Yönetim "Satışa İlet" demeden hiçbir veri Satışta görünmez
+    // Satış departmanı kuralı: Müşteri İlişkileri, Pazarlama veya Yönetim "Satışa İlet" demeden hiçbir veri (Websitesi, Google, Meta vb.) Satışta görünmez (Admin / Scope ALL dahil)
     if (user.department === 'Satış') {
       if (!isLeadHandedOverToSales(lead)) return false
+      if (user.role === 'ADMIN' || user.scope === 'ALL') return true
       if (user.scope === 'ASSIGNED_ONLY') {
         return (
           !lead.salesRepUserId ||
@@ -41,6 +36,12 @@ export class PermissionService {
       }
       return true
     }
+
+    // Admin has unrestricted access in other departments
+    if (user.role === 'ADMIN') return true
+
+    // Scope: ALL in other departments
+    if (user.scope === 'ALL') return true
 
     // Scope: ASSIGNED_ONLY -> user must be explicitly assigned (or unassigned manual leads in Müşteri İlişkileri)
     if (user.scope === 'ASSIGNED_ONLY') {
@@ -80,7 +81,6 @@ export class PermissionService {
    */
   public filterLeads(user: AppUser | null, leads: Lead[]): Lead[] {
     if (!user) return leads
-    if (user.role === 'ADMIN' || user.scope === 'ALL') return leads
     return leads.filter((lead) => this.canAccessLead(user, lead))
   }
 
@@ -150,12 +150,20 @@ export class PermissionService {
 
   public canApproveDiscounts(user: AppUser | null): boolean {
     if (!user) return false
-    return Boolean(user.role === 'ADMIN' || user.permissions.canApproveDiscounts || (user.isManager && user.department === 'Yönetim'))
+    return Boolean(
+      user.role === 'ADMIN' ||
+        user.permissions.canApproveDiscounts ||
+        (user.isManager && user.department === 'Yönetim')
+    )
   }
 
   public canRefundDeposit(user: AppUser | null): boolean {
     if (!user) return false
-    return Boolean(user.role === 'ADMIN' || user.permissions.canRefundDeposit || user.department === 'Muhasebe')
+    return Boolean(
+      user.role === 'ADMIN' ||
+        user.permissions.canRefundDeposit ||
+        user.department === 'Muhasebe'
+    )
   }
 
   /**
@@ -190,9 +198,10 @@ export class PermissionService {
    */
   public canHandOverToSales(user: AppUser | null): boolean {
     if (!user) return false
-    if (user.role === 'ADMIN') return true
+    if (user.department === 'Satış') return false
     const allowedDepts: Department[] = ['Müşteri İlişkileri', 'Pazarlama', 'Yönetim']
     if (allowedDepts.includes(user.department)) return true
+    if (user.role === 'ADMIN') return true
     if (Array.isArray(user.departments) && user.departments.some((d) => allowedDepts.includes(d))) {
       return true
     }
@@ -229,7 +238,11 @@ export class PermissionService {
 
   public canManageTeam(user: AppUser | null): boolean {
     if (!user) return false
-    return Boolean(user.role === 'ADMIN' || user.permissions.canManageTeam || (user.isManager && user.department === 'Yönetim'))
+    return Boolean(
+      user.role === 'ADMIN' ||
+        user.permissions.canManageTeam ||
+        (user.isManager && user.department === 'Yönetim')
+    )
   }
 }
 
