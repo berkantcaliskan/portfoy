@@ -1,6 +1,7 @@
 import { MetaFormSummary, MetaWebhookEvent, MetaCapiEventLog, MetaCapiEventName } from '@/types/meta'
 import { Lead, LeadStage } from '@/types/lead'
 import { leadStore } from './leadStore'
+import { readMetaLeadResponse } from './metaGraphResponse'
 
 const INITIAL_FORMS: MetaFormSummary[] = []
 
@@ -1043,7 +1044,7 @@ class MetaStore {
           error:
             directFormsError?.message && pageToken
               ? `Meta API Hatası: ${directFormsError.message}`
-              : 'Mevcut anahtar yalnızca CAPI (Olay Gönderimi) yetkisine sahip. Meta reklam formlarını çekmek için "leads_retrieval" yetkili Sayfa Erişim Anahtarı (Page Access Token) girin veya CSV yükleyin.',
+              : 'Meta form listesi alınamadı. Token türü veya yetkisi doğrulanamadı; sayfa seçimi, lead erişimi ve token izinleri kontrol edilmeli. Supabase Secrets ayarları bu eski istemci tarafından kullanılmıyor.',
         }
       }
 
@@ -1066,7 +1067,7 @@ class MetaStore {
       for (const form of formsToFetch) {
         const leadsUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(form.id)}/leads?fields=id,created_time,campaign_name,ad_name,form_id,field_data&limit=250&access_token=${encodeURIComponent(form.accessToken)}`
         const leadsRes = await fetch(leadsUrl)
-        const leadsJson = await leadsRes.json().catch(() => ({}))
+        const leadsJson = await readMetaLeadResponse(leadsRes)
         const items = Array.isArray(leadsJson?.data) ? leadsJson.data : []
 
         for (const item of items) {

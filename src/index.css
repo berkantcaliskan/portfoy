@@ -2204,10 +2204,16 @@ html[data-theme-accent="night"] .dropdown-panel button:hover:not(.is-active-drop
 
 
 /* Gece modunda sol menü alt ikonlar ve dock ikonları beyaz (#f4f1ea) */
-html[data-theme-accent="night"] header .sidebar-pill-item svg,
-html[data-theme-accent="night"] header .sidebar-pill-item [class*="text-[#b99881]"],
-html[data-theme-accent="night"] header .sidebar-dept-pill svg,
-html[data-theme-accent="night"] header .sidebar-dept-pill [class*="text-[#b99881]"],
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) header svg:not(.book-logo-svg),
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) header .sidebar-nav-icon,
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) header .sidebar-pill-item svg,
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) header .sidebar-pill-item [class*="text-[#b99881]"],
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) header .sidebar-dept-pill svg,
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) header .sidebar-dept-pill [class*="text-[#b99881]"],
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) header .sidebar-bottom-controls svg,
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) header .sidebar-bottom-controls [class*="text-[#b99881]"],
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .app-dock-bar button svg:not(.book-logo-svg),
+html[data-theme-accent="night"]:not([data-theme-accent="gold"]):not([data-theme-accent="light"]) .app-dock-bar button [class*="text-[#b99881]"]:not(.book-logo-svg),
 html[data-theme-accent="night"] .mobile-floating-dock button svg,
 html[data-theme-accent="night"] header .sidebar-bottom-controls svg,
 html[data-theme-accent="night"] header .sidebar-bottom-controls [class*="text-[#b99881]"],

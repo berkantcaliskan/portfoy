@@ -1437,8 +1437,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {/* Sabit 40x40px İkon Yuvası: Daraltıldığında 40x40px mavi dairenin tam merkezinde kalır */}
                     <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
                       <Icon
-                        className={`w-4 h-4 transition-colors shrink-0 ${
-                          isActive ? 'text-white' : 'text-[#a69f99] group-hover:text-white'
+                        className={`sidebar-nav-icon w-4 h-4 transition-colors shrink-0 ${
+                          isActive ? 'text-white' : 'text-[#f4f1ea] group-hover:text-white'
                         }`}
                         strokeWidth={isActive ? 2.2 : 1.9}
                       />
@@ -1499,7 +1499,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
                     {(() => {
                       const ActiveDeptIcon = getDepartmentIcon(activeDept)
-                      return <ActiveDeptIcon className="w-4 h-4 text-[#b99881] shrink-0" />
+                      return <ActiveDeptIcon className="sidebar-nav-icon w-4 h-4 text-[#f4f1ea] shrink-0" />
                     })()}
                   </div>
 
@@ -1573,7 +1573,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
                   {(() => {
                     const ActiveDeptIcon = getDepartmentIcon(activeDept)
-                    return <ActiveDeptIcon className="w-4 h-4 text-[#b99881] shrink-0" />
+                    return <ActiveDeptIcon className="sidebar-nav-icon w-4 h-4 text-[#f4f1ea] shrink-0" />
                   })()}
                 </div>
                 <motion.span
@@ -1610,7 +1610,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onOpenSettings}
                 className="sidebar-pill-item relative w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
               >
-                <Settings className="w-[18px] h-[18px] text-[#b99881] shrink-0" strokeWidth={1.9} />
+                <Settings className="sidebar-nav-icon w-[18px] h-[18px] text-[#f4f1ea] shrink-0" strokeWidth={1.9} />
               </motion.button>
 
               {/* 2. Mail */}
@@ -1622,7 +1622,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onOpenMail}
                 className="sidebar-pill-item relative w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
               >
-                <Mail className="w-[18px] h-[18px] text-[#b99881] shrink-0" strokeWidth={1.9} />
+                <Mail className="sidebar-nav-icon w-[18px] h-[18px] text-[#f4f1ea] shrink-0" strokeWidth={1.9} />
                 {unreadMailCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#b99881] text-white text-[9px] font-bold flex items-center justify-center">
                     {unreadMailCount > 99 ? '99+' : unreadMailCount}
@@ -1646,7 +1646,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }}
                   className="sidebar-pill-item relative w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
                 >
-                  <IosChatBubbleIcon className="w-[18px] h-[18px] shrink-0" />
+                  <IosChatBubbleIcon className="sidebar-nav-icon w-[18px] h-[18px] text-[#f4f1ea] shrink-0" />
                   {currentUser && messageStore.getTotalUnreadCount(currentUser.id) > 0 && (
                     <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#34302c]" />
                   )}
