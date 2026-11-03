@@ -409,7 +409,7 @@ class NotificationStore {
 
     // 1. Separate Website submissions and New potential leads
     for (const lead of allLeads) {
-      // Satış departmanında "Satışa İlet" denmemiş hiçbir müşteri veya web verisi bildirim olarak dahi görünemez!
+      // Satış departmanında "Satışa İlet" denmemiş hiçbir müşteri (Websitesi, Meta, Google vb.) görünemez; devredilirse görünür!
       if (isSalesDept && !isLeadHandedOverToSales(lead)) {
         continue
       }
@@ -419,10 +419,7 @@ class NotificationStore {
         lead.channel?.toLowerCase().includes('web') ||
         lead.tags?.some((t) => t.toLowerCase().includes('web'))
 
-      if (isWeb) {
-        // Satış ekibi web sitesi başvurularını göremez
-        if (isSalesDept) continue
-
+      if (isWeb && !isSalesDept) {
         const notifId = `notif-web-${lead.id}`
         if (this.deletedNotifIds.has(notifId)) continue
         list.push({
@@ -525,8 +522,18 @@ class NotificationStore {
       const isWeb =
         req.id.startsWith('req-web-') ||
         req.subject.toLowerCase().includes('web')
-      // Satış departmanı web sitesi başvurularını göremez!
-      if (isSalesDept && isWeb) continue
+
+      if (isSalesDept) {
+        const cleanReqPhone = String(req.customerPhone || '').replace(/\D/g, '').slice(-7)
+        const matchedLead = allLeads.find((l) => {
+          const cleanL = String(l.phone || '').replace(/\D/g, '')
+          return Boolean(cleanReqPhone && cleanL && cleanL.endsWith(cleanReqPhone))
+        })
+        // Satış departmanında yalnızca Müşteri İlişkileri / Pazarlama / Yönetim tarafından "Satışa İlet" ile devredilmiş olanlar görünür
+        if (!matchedLead || !isLeadHandedOverToSales(matchedLead)) {
+          continue
+        }
+      }
 
       const notifId = `notif-req-${req.id}`
       if (this.deletedNotifIds.has(notifId)) continue

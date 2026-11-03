@@ -210,15 +210,13 @@ function buildPageCandidates(
   const rawRequests = requestStore.getAll()
   const requests =
     activeDept === 'Satış'
-      ? rawRequests.filter(
-          (r) =>
-            !(
-              r.id.startsWith('req-web-') ||
-              r.subject.toLowerCase().includes('web sitesi') ||
-              r.subject.toLowerCase().includes('web başvurusu') ||
-              r.assignedToUserName?.toLowerCase().includes('web')
-            )
-        )
+      ? rawRequests.filter((r) => {
+          const cleanReqPhone = String(r.customerPhone || '').replace(/\D/g, '').slice(-7)
+          return Boolean(
+            cleanReqPhone &&
+              leads.some((l) => String(l.phone || '').replace(/\D/g, '').endsWith(cleanReqPhone))
+          )
+        })
       : rawRequests
   const collections = accountingStore.getCollections()
   const payments = accountingStore.getPayments()

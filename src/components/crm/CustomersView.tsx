@@ -705,7 +705,28 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         ? allUsers.find((u) => u.id === selectedSalesUserId) || null
         : null
 
-    leadStore.assignToSales(selectedLeadForAssign.id, targetUser, currentUser, assignNote)
+    let targetLeadId = selectedLeadForAssign.id
+    if (!leadStore.getById(targetLeadId)) {
+      const created = leadStore.add({
+        fullName: selectedLeadForAssign.fullName,
+        phone: selectedLeadForAssign.phone,
+        whatsappPhone: selectedLeadForAssign.whatsappPhone || selectedLeadForAssign.phone,
+        email: selectedLeadForAssign.email,
+        source: selectedLeadForAssign.source || 'WEBSITE',
+        formName: selectedLeadForAssign.formName || 'Web Sitesi Başvurusu',
+        channel: selectedLeadForAssign.channel || 'Web Sitesi',
+        stage: selectedLeadForAssign.stage || 'NEW',
+        isQualified: Boolean(selectedLeadForAssign.isQualified),
+        owner: selectedLeadForAssign.owner || currentUser.fullName,
+        tags: selectedLeadForAssign.tags || ['Web Sitesi'],
+        budget: selectedLeadForAssign.budget,
+        preferredHousingType: selectedLeadForAssign.preferredHousingType,
+        notes: selectedLeadForAssign.notes,
+      })
+      targetLeadId = created.id
+    }
+
+    leadStore.assignToSales(targetLeadId, targetUser, currentUser, assignNote)
     setSelectedLeadForAssign(null)
   }
 
