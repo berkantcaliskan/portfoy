@@ -1,3 +1,4 @@
+-- GÜVENLİK: Eski yerel parola istemcileri için canlıya doğrudan uygulamayın. Önce META_GUVENLI_GECIS.md okuyun.
 -- ==============================================================================
 -- DEMİRTÜRK PORTFÖY CRM - SUPABASE VERİTABANI ŞEMASI (TAM KOD)
 -- ==============================================================================
@@ -243,37 +244,37 @@ ALTER TABLE public.approvals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shared_files ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.app_users;
-CREATE POLICY "Allow public all access" ON public.app_users FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.leads;
-CREATE POLICY "Allow public all access" ON public.leads FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.lead_activities;
-CREATE POLICY "Allow public all access" ON public.lead_activities FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.projects;
-CREATE POLICY "Allow public all access" ON public.projects FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.units;
-CREATE POLICY "Allow public all access" ON public.units FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.appointments;
-CREATE POLICY "Allow public all access" ON public.appointments FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.customer_requests;
-CREATE POLICY "Allow public all access" ON public.customer_requests FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.collections;
-CREATE POLICY "Allow public all access" ON public.collections FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.payments;
-CREATE POLICY "Allow public all access" ON public.payments FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.approvals;
-CREATE POLICY "Allow public all access" ON public.approvals FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 DROP POLICY IF EXISTS "Allow public all access" ON public.shared_files;
-CREATE POLICY "Allow public all access" ON public.shared_files FOR ALL USING (true) WITH CHECK (true);
+-- Genel erişim politikası kaldırıldı. Açık yetki yoksa RLS erişimi reddeder.
 
 -- ==============================================================================
 -- REALTIME (ANLIK SENKRONİZASYON) YAYINI

@@ -1,0 +1,6 @@
+[functions.meta-webhook]
+verify_jwt = false
+
+# Kullanıcı JWT'si handler içinde getUser ile doğrulanır. Worker ayrı sunucu sırrı ister.
+[functions.meta-capi]
+verify_jwt = false

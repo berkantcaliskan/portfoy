@@ -92,7 +92,7 @@ function demirturkPersistentDiskPlugin() {
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [react(), demirturkPersistentDiskPlugin()],
+  plugins: [react(), ...(process.env.DEMIRTURK_ENABLE_LOCAL_DISK_DB === 'true' ? [demirturkPersistentDiskPlugin()] : [])],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -101,7 +101,7 @@ export default defineConfig({
   server: {
     port: 9001,
     strictPort: true,
-    host: true,
+    host: '127.0.0.1',
     watch: {
       ignored: ['**/dist-electron/**', '**/release/**']
     }

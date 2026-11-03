@@ -1469,7 +1469,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               <input
                 type="password"
                 placeholder="Meta for Developers > Sayfa Tokenı (leads_retrieval yetkili)"
-                value={quickPageToken}
+                value="Sunucuda yönetilir" readOnly disabled
                 onChange={(e) => setQuickPageToken(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs font-mono text-white placeholder-[#8c857f] focus:outline-none focus:border-[#b99881]"
               />

@@ -1,3 +1,4 @@
+import { MetaBackendPanel } from '@/components/meta/MetaBackendPanel'
 import React, { useState, useEffect, useRef } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
@@ -95,18 +96,6 @@ export const MarketingCampaignsView: React.FC = () => {
     return () => window.removeEventListener('click', close)
   }, [sendBtnContextMenu])
 
-  const handleToggleAutoSend = () => {
-    const nextVal = !metaConfig.autoSyncStages
-    metaStore.setAutoSyncStages(nextVal)
-    setMetaConfig(metaStore.getConfig())
-    setSendBtnContextMenu(null)
-    showToast(
-      nextVal
-        ? "Meta'ya otomatik veri gönderimi açıldı. Müşteri aşama ve durum güncellemeleri otomatik iletilecek."
-        : "Meta'ya otomatik veri gönderimi kapatıldı. Yalnızca Veriyi Gönder butonuyla gönderilecek."
-    )
-  }
-
   const pendingMetaLeads = allLeads.filter((l) => isLeadPendingMetaSync(l))
 
   const handleManualSendToMeta = async (leadIds?: string[]) => {
@@ -124,18 +113,18 @@ export const MarketingCampaignsView: React.FC = () => {
         showToast('Gönderilecek müşteri kaydı bulunamadı.')
       } else if (res.sentCount > 0) {
         showToast(
-          `${res.sentCount} müşterinin güncel durumu ve aşama bilgisi Meta'ya başarıyla gönderildi.`
+          `Meta API ${res.sentCount} olayı kabul etti; ${res.failedCount} başarısız, ${res.queuedCount} bekliyor. Eşleşme ve atıf ayrıca doğrulanmalıdır.`
         )
       } else if (res.queuedCount > 0) {
         showToast(
-          `${res.queuedCount} müşteri verisi Meta gönderim kuyruğuna alındı (Dataset / CAPI anahtarını kontrol edin).`
+          `${res.queuedCount} kayıt bekliyor. Otomatik gönderim yok; aynı kaydı uygun zamanda elle yeniden deneyin.`
         )
       } else {
         showToast(
           `Meta'ya veri gönderilirken hata oluştu (${res.failedCount} başarısız). Dataset ID ve CAPI anahtarını kontrol edin.`
         )
       }
-    } finally {
+    } catch (error) { showToast((error as Error).message) } finally {
       setIsSendingToMeta(false)
       setSendingSingleLeadId(null)
     }
@@ -241,7 +230,7 @@ export const MarketingCampaignsView: React.FC = () => {
     setNewLeadName('')
     setNewLeadPhone('')
     showToast(
-      'Canlı Meta Webhook başarıyla simüle edildi ve müşteri form cevaplarıyla CRM havuzuna işlendi.'
+      'Simülasyon gerçek webhook testi değildir. CRM kaydı veya Meta dönüşümü oluşturulmadı.'
     )
   }
 
@@ -412,9 +401,9 @@ export const MarketingCampaignsView: React.FC = () => {
                     )
                   }
                   disabled={isSendingToMeta || allLeads.length === 0}
-                  onClick={() => void handleManualSendToMeta()}
+                  onClick={() => { setActivePlatform('meta'); showToast('Toplu geçmiş aktarımı kapalı. Listeden bir müşteriyi seçerek gönderin.') }}
                   className="rounded-full px-3.5 text-xs font-semibold whitespace-nowrap shrink-0"
-                  title="Müşteri verilerini Meta'ya gönder (Otomatik göndermeyi açmak/kapatmak için sağ tıklayın)"
+                  title="Göndereceğiniz müşteriyi listeden seçin; otomatik geri bildirim kapalıdır"
                 >
                   {isSendingToMeta
                     ? "Meta'ya Gönderiliyor..."
@@ -424,38 +413,7 @@ export const MarketingCampaignsView: React.FC = () => {
                 </GlassButton>
               </div>
 
-              {sendBtnContextMenu && (
-                <div
-                  style={{
-                    position: 'fixed',
-                    top: sendBtnContextMenu.y + 6,
-                    left: Math.min(sendBtnContextMenu.x, window.innerWidth - 260),
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="context-menu dropdown-panel z-[200] min-w-[235px] p-2 rounded-[22px] bg-[#282522] border border-[#4a443f] shadow-xl space-y-1"
-                >
-                  <button
-                    type="button"
-                    onClick={handleToggleAutoSend}
-                    className="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-full text-xs font-semibold text-white hover:bg-[#34302d] transition-colors cursor-pointer text-left"
-                  >
-                    <span>
-                      {metaConfig.autoSyncStages
-                        ? 'Otomatik Göndermeyi Kapat'
-                        : 'Otomatik Göndermeyi Aç'}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        metaConfig.autoSyncStages
-                          ? 'bg-emerald-500/15 text-emerald-400'
-                          : 'bg-[#34302d] text-[#a69f99]'
-                      }`}
-                    >
-                      {metaConfig.autoSyncStages ? 'Açık' : 'Kapalı'}
-                    </span>
-                  </button>
-                </div>
-              )}
+              <span className="text-[11px] text-amber-300">Meta geri bildirimi: yalnızca elle gönderim</span>
               <GlassButton
                 variant="subtle"
                 size="sm"
@@ -676,7 +634,7 @@ export const MarketingCampaignsView: React.FC = () => {
                   )
                 }
                 disabled={isSendingToMeta || allLeads.length === 0}
-                onClick={() => void handleManualSendToMeta()}
+                onClick={() => { setActivePlatform('meta'); showToast('Toplu geçmiş aktarımı kapalı. Listeden bir müşteriyi seçerek gönderin.') }}
                 className="rounded-full px-4 text-xs font-semibold"
               >
                 {isSendingToMeta
@@ -799,6 +757,7 @@ export const MarketingCampaignsView: React.FC = () => {
          ===================================================================== */}
       {activePlatform === 'meta' && (
         <div className="space-y-6">
+          <MetaBackendPanel />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
               <div className="text-xs text-[#a69f99]">Toplam Meta Kampanya Lead'i</div>
@@ -819,15 +778,15 @@ export const MarketingCampaignsView: React.FC = () => {
               <div className="text-sm font-semibold text-white mt-2 flex items-center gap-2">
                 <span
                   className={`w-2.5 h-2.5 rounded-full ${
-                    metaConfig.datasetId ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                    'bg-amber-400'
                   }`}
                 />
                 {metaConfig.datasetId
-                  ? `Dataset: ${metaConfig.datasetId}`
+                  ? `Yapılandırılmış Dataset: ${metaConfig.datasetId} (teslim doğrulanmadı)`
                   : 'Dataset ID Bekleniyor (Ayarlar > Meta)'}
               </div>
               <div className="text-[11px] text-[#8c857f] mt-1">
-                {capiLogs.length} CAPI Sinyali • SHA-256 Şifreli CRM Aktarımı
+                {capiLogs.length} CAPI Sinyali • Sunucuda SHA-256 ile eşleştirme
               </div>
             </GlassCard>
           </div>
@@ -852,10 +811,10 @@ export const MarketingCampaignsView: React.FC = () => {
                   <GlassButton
                     variant="subtle"
                     size="sm"
-                    onClick={() => void metaStore.flushQueuedCapiEvents()}
+                    onClick={async () => { try { await metaStore.flushQueuedCapiEvents() } catch (error) { showToast((error as Error).message) } }}
                     className="rounded-full px-3.5 text-xs font-semibold"
                   >
-                    Kuyruktaki Sinyalleri Gönder
+                    Teslim durumunu yenile
                   </GlassButton>
                 )}
                 <GlassButton
@@ -869,14 +828,14 @@ export const MarketingCampaignsView: React.FC = () => {
                     )
                   }
                   disabled={isSendingToMeta || allLeads.length === 0}
-                  onClick={() => void handleManualSendToMeta()}
+                  onClick={() => { setActivePlatform('meta'); showToast('Toplu geçmiş aktarımı kapalı. Listeden bir müşteriyi seçerek gönderin.') }}
                   className="rounded-full px-4 text-xs font-semibold"
                 >
                   {isSendingToMeta
                     ? "Meta'ya Gönderiliyor..."
                     : pendingMetaLeads.length > 0
                     ? `Veriyi Gönder (${pendingMetaLeads.length} Müşteri)`
-                    : 'Veriyi Gönder (Tümünü Güncelle)'}
+                    : 'Geçmiş toplu aktarımı kapalı'}
                 </GlassButton>
               </div>
             </div>
@@ -896,7 +855,7 @@ export const MarketingCampaignsView: React.FC = () => {
                 <div className="py-3 text-xs text-emerald-400 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>
-                    Tüm müşterilerin mevcut durum ve aşama bilgileri Meta ile senkronize. Yine de yukarıdaki <strong>Veriyi Gönder</strong> butonuyla tümünü tekrar iletebilirsiniz.
+                    Bu görünümde gönderime uygun bekleyen müşteri yok. Sunucu geçmişini yenileyerek API teslim sonuçlarını kontrol edin.
                   </span>
                 </div>
               ) : (

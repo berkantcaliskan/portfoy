@@ -9,9 +9,6 @@ lerna-debug.log*
 
 node_modules
 dist/*
-!dist/ota-version.json
-!dist/ota-bundle.json
-!dist/shared-db.json
 dist-ssr
 dist-electron
 *.local
@@ -33,3 +30,14 @@ test.png
 *.njsproj
 *.sln
 *.sw?
+
+# Ortam sırları ve müşteri/veritabanı dışa aktarımları
+.env
+.env.*
+!.env.example
+data/
+**/shared-db.json
+**/*persistent_db*.json
+**/ota-bundle.json
+*.dump
+*.backup

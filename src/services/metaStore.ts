@@ -1,164 +1,40 @@
 import { MetaFormSummary, MetaWebhookEvent, MetaCapiEventLog, MetaCapiEventName } from '@/types/meta'
 import { Lead, LeadStage } from '@/types/lead'
 import { leadStore } from './leadStore'
+import { supabase, SUPABASE_URL } from './supabaseClient'
+import { rowToLead } from './dbMapper'
+import { MetaStageQueue } from './metaStageQueue'
+import { stageEvent } from '../../supabase/functions/_shared/meta-core'
+export { normalizePhone as normalizePhoneForMeta, hash as sha256Hex } from '../../supabase/functions/_shared/meta-core'
 
-const INITIAL_FORMS: MetaFormSummary[] = []
-
+// Eski ekranlarla tip uyumluluğu; ayrıcalıklı alanlar her zaman boş ve salt okunurdur.
 export interface MetaApiConfig {
-  pageAccessToken: string
-  verifyToken: string
-  webhookUrl: string
-  pageId: string
-  pageName: string
-  isConnected: boolean
-  lastCheckedAt?: string
-  // Meta Conversions API (CAPI for CRM) + Dataset Quality API
-  datasetId: string
-  capiAccessToken: string
-  testEventCode: string
-  autoSyncStages: boolean
-  crmName: string
+  pageAccessToken: string; capiAccessToken: string; verifyToken: string
+  webhookUrl: string; pageId: string; pageName: string; isConnected: boolean
+  datasetId: string; testEventCode: string; autoSyncStages: boolean; crmName: string; lastCheckedAt?: string
 }
-
-const STORAGE_KEY_META_CONFIG = 'demirturk_meta_api_config'
-const STORAGE_KEY_META_CAPI_LOGS = 'demirturk_meta_capi_logs_v1'
-
-const DEFAULT_CAPI_TOKEN =
-  'EAAzMb2xyFHMBS5395SsmZB0y9fgPGhVRMIdhYlaYQdyoLVnFeYZClzkNJwfz5EV6yEg0ZAfBHGSdDyTMiOwoRTSiSiMPmISkcPX8UgyDbw0vv97kNWPZAM3vzjkrhgncYcAsZAPjHFZC2gS5TPymeMV7oLgquOpyq9z2EfYlTIkxRyCxiiaXqYFT2lz4kZChQZDZD'
-
 const DEFAULT_META_CONFIG: MetaApiConfig = {
-  pageAccessToken: '',
-  verifyToken: 'demirturk_meta_verify_2026',
-  webhookUrl: 'https://www.demirturkinsaat.com/api/meta-webhook',
-  pageId: '',
-  pageName: 'Portföy Piksel (707603355337943)',
-  isConnected: true,
-  datasetId: '707603355337943',
-  capiAccessToken: DEFAULT_CAPI_TOKEN,
-  testEventCode: '',
-  autoSyncStages: false,
-  crmName: 'Demirtürk Portföy CRM',
+  pageAccessToken: '', capiAccessToken: '', verifyToken: '',
+  webhookUrl: import.meta.env.VITE_SUPABASE_URL ? SUPABASE_URL + '/functions/v1/meta-webhook' : '',
+  pageId: '', pageName: 'Sunucuda doğrulama gerekli', isConnected: false,
+  datasetId: '', testEventCode: '', autoSyncStages: false, crmName: 'Demirtürk Portföy CRM',
 }
-
-type Listener = () => void
-
-/**
- * Pure JS SHA-256 fallback in case Web Crypto API is unavailable in non-secure context
- */
-function sha256PureJs(ascii: string): string {
-  function rightRotate(value: number, amount: number) {
-    return (value >>> amount) | (value << (32 - amount))
-  }
-  const mathPow = Math.pow
-  const maxWord = mathPow(2, 32)
-  const lengthProperty = 'length'
-  let i: number, j: number
-  let result = ''
-  const words: number[] = []
-  const asciiBitLength = ascii[lengthProperty] * 8
-  let hash: number[] = []
-  const k: number[] = []
-  let primeCounter = 0
-  const isComposite: Record<number, number> = {}
-  for (let candidate = 2; primeCounter < 64; candidate++) {
-    if (!isComposite[candidate]) {
-      for (i = 0; i < 313; i += candidate) {
-        isComposite[i] = candidate
-      }
-      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0
-      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0
+export async function invokeMeta(body: Record<string, unknown>) {
+  if (!import.meta.env.VITE_SUPABASE_URL) throw new Error('VITE_SUPABASE_URL yapılandırılmamış.')
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session) throw new Error('Meta işlemleri için Supabase Auth oturumu gerekli; yerel CRM girişi yeterli değildir.')
+  const { data, error } = await supabase.functions.invoke('meta-capi', { body })
+  if (error) {
+    let message = 'Meta sunucu işlemi başarısız; oturum, yetki ve sunucu ayarlarını kontrol edin.'
+    if (error.context instanceof Response) {
+      const detail = await error.context.clone().json().catch(() => null)
+      if (typeof detail?.error === 'string') message = detail.error
     }
+    throw new Error(message)
   }
-  ascii += '\x80'
-  while ((ascii[lengthProperty] % 64) - 56) ascii += '\x00'
-  for (i = 0; i < ascii[lengthProperty]; i++) {
-    j = ascii.charCodeAt(i)
-    if (j >> 8) return ''
-    words[i >> 2] |= j << (((3 - i) % 4) * 8)
-  }
-  words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0
-  words[words[lengthProperty]] = asciiBitLength
-  for (j = 0; j < words[lengthProperty]; ) {
-    const w = words.slice(j, (j += 16))
-    const oldHash = hash
-    hash = hash.slice(0, 8)
-    for (i = 0; i < 64; i++) {
-      const i2 = i + j
-      const w15 = w[i - 15],
-        w2 = w[i - 2]
-      const a = hash[0],
-        e = hash[4]
-      const temp1 =
-        hash[7] +
-        (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
-        ((e & hash[5]) ^ (~e & hash[6])) +
-        k[i] +
-        (w[i] =
-          i < 16
-            ? w[i]
-            : (w[i - 16] +
-                (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
-                w[i - 7] +
-                (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) |
-              0)
-      const temp2 =
-        (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
-        ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]))
-      hash = [(temp1 + temp2) | 0].concat(hash)
-      hash[4] = (hash[4] + temp1) | 0
-    }
-    for (i = 0; i < 8; i++) {
-      hash[i] = (hash[i] + oldHash[i]) | 0
-    }
-  }
-  for (i = 0; i < 8; i++) {
-    for (j = 3; j + 1; j--) {
-      const b = (hash[i] >> (j * 8)) & 255
-      result += (b < 16 ? 0 : '') + b.toString(16)
-    }
-  }
-  return result
+  if (!data || data.error) throw new Error(data?.error || 'Sunucudan geçerli Meta işlem sonucu alınamadı.')
+  return data
 }
-
-export async function sha256Hex(raw: string): Promise<string> {
-  const normalized = raw.trim().toLowerCase()
-  if (!normalized) return ''
-  try {
-    if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-      const msgBuffer = new TextEncoder().encode(normalized)
-      const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer)
-      const hashArray = Array.from(new Uint8Array(hashBuffer))
-      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-    }
-  } catch {}
-  try {
-    const utf8 = unescape(encodeURIComponent(normalized))
-    return sha256PureJs(utf8)
-  } catch {
-    return ''
-  }
-}
-
-/**
- * Normalize phone number for Meta CAPI (digits only with country code, e.g. 905321234567)
- */
-export function normalizePhoneForMeta(phone?: string): string {
-  if (!phone) return ''
-  let digits = phone.replace(/\D/g, '')
-  if (!digits) return ''
-  if (digits.startsWith('00')) {
-    digits = digits.slice(2)
-  } else if (digits.startsWith('0') && digits.length === 11) {
-    digits = '90' + digits.slice(1)
-  } else if (digits.length === 10 && digits.startsWith('5')) {
-    digits = '90' + digits
-  }
-  return digits
-}
-
-/**
- * Maps CRM stage or manual signal to Meta Conversions API standard CRM event
- */
 export function mapStageOrSignalToMetaEvent(stageOrSignal: LeadStage | MetaCapiEventName): {
   eventName: MetaCapiEventName
   signalLabel: string
@@ -231,7 +107,10 @@ export function getLeadTargetMetaEvent(lead: Lead): {
 
 export function isLeadPendingMetaSync(lead: Lead): boolean {
   const target = getLeadTargetMetaEvent(lead)
+  if (!stageEvent[lead.stage]) return false
+  if (lead.metaRevision === undefined || !(lead.metaLeadId || lead.inquiries?.some(i => i.metaLeadgenId))) return false
   if (!lead.metaCapiStatus) return true
+  if (lead.metaCapiStatus.revision !== lead.metaRevision) return true
   if (lead.metaCapiStatus.status !== 'SENT') return true
   if (lead.metaCapiStatus.lastEventName !== target.eventName) return true
   if (lead.metaCapiStatus.label !== target.signalLabel) return true
@@ -239,937 +118,163 @@ export function isLeadPendingMetaSync(lead: Lead): boolean {
 }
 
 class MetaStore {
-  private forms: MetaFormSummary[] = INITIAL_FORMS
-  private config: MetaApiConfig = this.loadConfig()
-  private webhookLogs: MetaWebhookEvent[] = []
-  private capiLogs: MetaCapiEventLog[] = this.loadCapiLogs()
-  private listeners: Set<Listener> = new Set()
-
+  private stageWrites = new MetaStageQueue()
+  public resetStageWrite(id: string) { this.stageWrites.reconcile(id) }
+  public persistStageChange(lead: Lead) {
+    // Eski yerel kayıtlar otoriter sunucu sürümü olmadan buluta yazılmaz.
+    if (lead.metaRevision === undefined) return
+    const write = this.stageWrites.enqueue(lead.id, async () => {
+      const current = leadStore.getById(lead.id)
+      const result = await invokeMeta({ action: 'stage', leadId: lead.id, revision: current?.metaRevision ?? lead.metaRevision,
+        stage: lead.stage, qualified: lead.stage === 'QUALIFIED' ? true : ['LOST','NO_INTENT'].includes(lead.stage) ? false : !!lead.isQualified })
+      leadStore.ackMetaStage(lead.id, result.revision, result.updatedAt, lead.stage)
+    })
+    void write.catch(error => {
+      leadStore.updateMetaCapiStatus(lead.id, { lastEventName: 'StagePersistence', label: 'Sunucu aşaması kaydedilemedi',
+        status: 'FAILED', sentAt: new Date().toISOString(), errorMessage: (error as Error).message })
+    })
+  }
+  private config = { ...DEFAULT_META_CONFIG }
+  private capiLogs: MetaCapiEventLog[] = []
+  private listeners = new Set<() => void>()
   constructor() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('demirturk:cloud-db-synced', () => {
-        this.config = this.loadConfig()
-        this.capiLogs = this.loadCapiLogs()
-        this.notify()
-      })
+    // Eski tarayıcı sırlarını tekrar kullanmayın / buluta geri kopyalamayın.
+    try { localStorage.removeItem('demirturk_meta_api_config'); localStorage.removeItem('demirturk_meta_capi_logs_v1') } catch { /* storage unavailable */ }
+  }
+  private notify() { this.listeners.forEach(fn => fn()) }
+  public subscribe(fn: () => void) { this.listeners.add(fn); return () => { this.listeners.delete(fn) } }
+  public getConfig() { return { ...this.config } }
+  public getCapiLogs() { return [...this.capiLogs] }
+  public clearCapiLogs() { this.capiLogs = []; this.notify() } // Sunucu denetim geçmişini silmez.
+  public saveConfig(_config: Partial<MetaApiConfig>) { throw new Error('Meta ayarları ve sırları yalnızca sunucuda yönetilir; tarayıcıya kaydedilmedi.') }
+  public async refreshStatus() {
+    const data = await invokeMeta({ action: 'status' })
+    this.config = { ...DEFAULT_META_CONFIG, datasetId: data.datasetId || '', autoSyncStages: !!data.autoSyncStages,
+      isConnected: false, lastCheckedAt: new Date().toISOString() }
+    this.capiLogs = (data.events || []).map((e: Record<string, any>) => this.toLog(e))
+    const seen = new Set<string>()
+    for (const e of data.events || []) {
+      if (e.test_mode || seen.has(e.lead_id)) continue
+      seen.add(e.lead_id)
+      const log = this.toLog(e)
+      const mapped = mapStageOrSignalToMetaEvent(e.event_name)
+      leadStore.updateMetaCapiStatus(e.lead_id, { lastEventName: log.eventName, label: mapped.signalLabel,
+        revision: e.revision, sentAt: log.sentAt, status: log.status, fbtraceId: log.fbtraceId, errorMessage: log.errorMessage })
     }
-  }
-
-  private loadConfig(): MetaApiConfig {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_META_CONFIG)
-      if (!saved) return DEFAULT_META_CONFIG
-      const parsed = JSON.parse(saved)
-      const savedToken = (parsed?.capiAccessToken || '').trim()
-      // Upgrade older initial token to the Dataset Quality API token
-      const effectiveToken =
-        !savedToken || savedToken.startsWith('EAAzMb2xyFHMBS1ZCYk')
-          ? DEFAULT_CAPI_TOKEN
-          : savedToken
-      return {
-        ...DEFAULT_META_CONFIG,
-        ...parsed,
-        autoSyncStages: Boolean(parsed?.autoSyncStages),
-        datasetId: (parsed?.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId,
-        capiAccessToken: effectiveToken,
-        crmName: (parsed?.crmName || '').trim() || DEFAULT_META_CONFIG.crmName,
-        webhookUrl:
-          !parsed?.webhookUrl || parsed.webhookUrl.includes('supabase.co')
-            ? DEFAULT_META_CONFIG.webhookUrl
-            : parsed.webhookUrl,
-      }
-    } catch {
-      return DEFAULT_META_CONFIG
-    }
-  }
-
-  private loadCapiLogs(): MetaCapiEventLog[] {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_META_CAPI_LOGS)
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
-  }
-
-  private saveCapiLogs() {
-    try {
-      localStorage.setItem(STORAGE_KEY_META_CAPI_LOGS, JSON.stringify(this.capiLogs.slice(0, 200)))
-    } catch {}
-  }
-
-  public getConfig(): MetaApiConfig {
-    return { ...this.config }
-  }
-
-  public getCapiLogs(): MetaCapiEventLog[] {
-    return [...this.capiLogs]
-  }
-
-  public clearCapiLogs() {
-    this.capiLogs = []
-    this.saveCapiLogs()
     this.notify()
+    return data
   }
-
-  public saveConfig(newConfig: Partial<MetaApiConfig>) {
-    const merged = { ...this.config, ...newConfig }
-    merged.datasetId = (merged.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId
-    merged.capiAccessToken = (merged.capiAccessToken || '').trim() || DEFAULT_CAPI_TOKEN
-    this.config = merged
+  public async setAutoSyncStages(enabled: boolean) {
+    if (enabled) throw new Error('Demo sürümünde otomatik Meta geri bildirimi kilitli. Müşteriyi seçerek elle gönderin.')
+    await invokeMeta({ action: 'configure', autoSyncStages: enabled })
+    await this.refreshStatus()
+  }
+  public async testConnection(_token?: string) {
+    try { const data = await invokeMeta({ action: 'connection' }); return { success: true, pageName: data.message } }
+    catch (error) { return { success: false, error: (error as Error).message } }
+  }
+  private toLog(e: Record<string, any>): MetaCapiEventLog {
+    return { id: e.id, leadId: e.lead_id, leadName: '', phone: '', eventName: e.event_name,
+      signalLabel: e.event_name, stage: '', sentAt: e.sent_at || e.last_attempt_at || '',
+      status: e.state === 'sent' ? 'SENT' : e.state === 'rejected' ? 'FAILED' : 'QUEUED',
+      eventsReceived: e.events_received, fbtraceId: e.fbtrace_id, errorMessage: e.error_code,
+      payloadPreview: { state: e.state, attempt: e.attempt, testMode: e.test_mode, revision: e.revision } }
+  }
+  public async sendCapiLeadEvent(lead: Lead, stageOrSignal: LeadStage | MetaCapiEventName, _options?: { note?: string; value?: number }): Promise<MetaCapiEventLog> {
+    const mapped = mapStageOrSignalToMetaEvent(stageOrSignal)
+    let log: MetaCapiEventLog
     try {
-      localStorage.setItem(STORAGE_KEY_META_CONFIG, JSON.stringify(this.config))
-    } catch {}
+      await this.stageWrites.wait(lead.id)
+      if (!stageEvent[lead.stage] || mapped.eventName !== stageEvent[lead.stage]) throw new Error('Bu CRM aşaması doğrulanmış bir Meta dönüşümü değildir; teklif ve satış bedeli uydurulmaz.')
+      const current = leadStore.getById(lead.id)
+      if (!current || current.stage !== lead.stage || current.metaRevision === undefined) throw new Error('Sunucu aşaması yeniden okunmalı; eski veya doğrulanmamış kayıt gönderilmedi.')
+      const data = await invokeMeta({ action: 'enqueue', leadId: lead.id, revision: current.metaRevision, eventName: mapped.eventName, retry: !!lead.metaCapiStatus })
+      log = this.toLog(data.event)
+    } catch (error) {
+      // Yerel hata sunucuda kuyruğa alınmış gibi gösterilmez.
+      log = { id: crypto.randomUUID(), leadId: lead.id, leadName: '', phone: '', eventName: mapped.eventName,
+        signalLabel: mapped.signalLabel, stage: lead.stage, sentAt: new Date().toISOString(), status: 'FAILED',
+        errorMessage: (error as Error).message, payloadPreview: { persisted: false } }
+    }
+    this.capiLogs = [log, ...this.capiLogs.filter(x => x.id !== log.id)].slice(0,100)
+    leadStore.updateMetaCapiStatus(lead.id, { lastEventName: log.eventName, label: mapped.signalLabel,
+      revision: typeof log.payloadPreview.revision === 'number' ? log.payloadPreview.revision : undefined,
+      sentAt: log.sentAt, status: log.status, fbtraceId: log.fbtraceId, errorMessage: log.errorMessage })
     this.notify()
-
-    // If datasetId and token are now configured, flush any queued CAPI events
-    const activeToken = (this.config.capiAccessToken || this.config.pageAccessToken || '').trim()
-    if (this.config.datasetId.trim() && activeToken) {
-      this.flushQueuedCapiEvents()
-    }
+    return log
   }
-
-  public setAutoSyncStages(enabled: boolean) {
-    this.saveConfig({ autoSyncStages: enabled })
-    if (enabled) {
-      void this.syncLeadsToMetaManual()
-    }
+  public getPendingMetaSyncLeads() { return leadStore.getAllRaw().filter(isLeadPendingMetaSync) }
+  public async flushQueuedCapiEvents() {
+    // Eski yerel payload'lar yeniden oynatılmaz. Yetkili worker kalıcı kuyruğu işler.
+    await this.refreshStatus()
+    return { sentCount: 0, failedCount: 0 }
   }
-
-  public async testConnection(token: string): Promise<{ success: boolean; pageName?: string; error?: string }> {
-    if (!token || token.trim().length < 10) {
-      return { success: false, error: 'Lütfen geçerli bir Meta Page Access Token girin.' }
+  public async syncLeadsToMetaManual(leadIds?: string[]) {
+    if (!leadIds?.length) throw new Error('Geçmiş toplu aktarım kapalıdır. Önce gönderilecek müşterileri açıkça seçin.')
+    if (leadIds.length > 30) throw new Error('Tek işlemde en fazla 30 müşteri seçilebilir.')
+    const ids = new Set(leadIds)
+    const targets = this.getPendingMetaSyncLeads().filter(l => ids.has(l.id))
+    const result = { sentCount: 0, failedCount: 0, queuedCount: 0, totalCount: targets.length }
+    for (const lead of targets) {
+      const log = await this.sendCapiLeadEvent(lead, lead.stage)
+      if (log.status === 'SENT') result.sentCount++
+      else if (log.status === 'QUEUED') result.queuedCount++
+      else result.failedCount++
     }
+    return result
+  }
+  public async sendTestCapiEvent(_config?: { datasetId?: string; capiAccessToken?: string; testEventCode?: string }, leadId?: string) {
+    if (!leadId) return { success: false, message: 'Test için gerçek Meta kimlikli ve uygun aşamadaki müşteri açıkça seçilmelidir. Test olay kodu yalnızca sunucuda ayarlanır.' }
     try {
-      const res = await fetch(`https://graph.facebook.com/v19.0/me?access_token=${token.trim()}`)
-      if (res.ok) {
-        const data = await res.json()
-        const pageName = data.name || 'Demirtürk Sayfası'
-        this.saveConfig({ pageAccessToken: token.trim(), isConnected: true, pageName, lastCheckedAt: new Date().toISOString() })
-        return { success: true, pageName }
-      } else {
-        const errData = await res.json().catch(() => ({}))
-        const errorMsg = errData?.error?.message || 'Meta API doğrulanamadı. Token süresi dolmuş veya yetkileri eksik olabilir.'
-        return { success: false, error: errorMsg }
-      }
-    } catch {
-      this.saveConfig({ pageAccessToken: token.trim(), isConnected: true, lastCheckedAt: new Date().toISOString() })
-      return { success: true, pageName: this.config.pageName }
-    }
+      await this.stageWrites.wait(leadId)
+      const lead = leadStore.getById(leadId)
+      if (!lead || lead.metaRevision === undefined || !stageEvent[lead.stage]) throw new Error('Test için güncel sunucu aşaması gerekli.')
+      const data = await invokeMeta({ action: 'test', leadId, revision: lead.metaRevision, eventName: stageEvent[lead.stage], retry: true })
+      return { success: data.event.state === 'sent', message: data.event.state === 'sent' ? 'Meta API test olayını kabul etti; eşleşme ve atıf ayrıca doğrulanmalıdır.' : 'Test olayı kabul edilmedi; olay geçmişini inceleyin.' }
+    } catch (error) { return { success: false, message: (error as Error).message } }
   }
-
-  /**
-   * Extract numeric 15-17 digit Meta leadgen_id if present on the lead or its inquiries,
-   * or generate a deterministic 15-digit numeric CRM lead_id so Meta CAPI system_generated
-   * events never fail validation.
-   */
-  private extractMetaLeadgenId(lead: Lead): string {
-    const candidates: (string | undefined)[] = [
-      lead.metaLeadId,
-      ...(lead.inquiries || []).map((i) => i.metaLeadgenId),
-    ]
-    for (const c of candidates) {
-      if (!c) continue
-      const cleaned = c.replace(/^(leadgen_|l:)/i, '').trim()
-      if (/^\d{12,17}$/.test(cleaned)) {
-        return cleaned
-      }
+  public getForms(): MetaFormSummary[] {
+    const groups = new Map<string, Lead[]>()
+    for (const lead of leadStore.getAllRaw().filter(l => l.source === 'META_ADS')) {
+      groups.set(lead.formName, [...(groups.get(lead.formName) || []), lead])
     }
-    const seedStr = `${lead.id || ''}_${lead.phone || ''}`
-    let h1 = 1779033703
-    let h2 = 3144134277
-    for (let i = 0; i < seedStr.length; i++) {
-      const ch = seedStr.charCodeAt(i)
-      h1 = Math.imul(h1 ^ ch, 2654435761)
-      h2 = Math.imul(h2 ^ ch, 1597334677)
-    }
-    const numStr =
-      '10' +
-      String(Math.abs(h1)).padStart(7, '0').slice(0, 7) +
-      String(Math.abs(h2)).padStart(6, '0').slice(0, 6)
-    return numStr
+    return [...groups].map(([name, leads]) => ({ id: name, name, campaignName: 'Kampanya atfı doğrulanmamış',
+      leadCount: leads.length, conversionRate: Math.round(leads.filter(l => l.isQualified).length / leads.length * 100),
+      status: 'ACTIVE' as const, lastLeadAt: leads.map(l => l.createdAt).sort().at(-1) || '' }))
   }
-
-  /**
-   * Send CRM Lead Quality / Stage Conversion Event to Meta Conversions API (CAPI)
-   */
-  public async sendCapiLeadEvent(
-    lead: Lead,
-    stageOrSignal: LeadStage | MetaCapiEventName,
-    options?: { note?: string; value?: number }
-  ): Promise<MetaCapiEventLog> {
-    const { eventName, signalLabel, stageLabel } = mapStageOrSignalToMetaEvent(stageOrSignal)
-    const eventTime = Math.floor(Date.now() / 1000) - 10
-    const eventId = `capi_${lead.id}_${eventName}_${eventTime}`
-
-    // Normalize and SHA-256 hash customer data according to Meta CAPI spec
-    const normalizedPhone = normalizePhoneForMeta(lead.phone)
-    const normalizedEmail = (lead.email || '').trim().toLowerCase()
-    const nameParts = (lead.fullName || '').trim().split(/\s+/)
-    const firstName = (nameParts[0] || '').toLowerCase()
-    const lastName = (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '').toLowerCase()
-
-    const [phHash, emHash, fnHash, lnHash] = await Promise.all([
-      normalizedPhone ? sha256Hex(normalizedPhone) : Promise.resolve(''),
-      normalizedEmail ? sha256Hex(normalizedEmail) : Promise.resolve(''),
-      firstName ? sha256Hex(firstName) : Promise.resolve(''),
-      lastName ? sha256Hex(lastName) : Promise.resolve(''),
-    ])
-
-    const metaLeadId = this.extractMetaLeadgenId(lead)
-
-    const userData: Record<string, any> = {}
-    if (metaLeadId) {
-      userData.lead_id = Number(metaLeadId) || metaLeadId
-    }
-    if (phHash) userData.ph = [phHash]
-    if (emHash) userData.em = [emHash]
-    if (fnHash) userData.fn = [fnHash]
-    if (lnHash) userData.ln = [lnHash]
-    userData.external_id = [await sha256Hex(lead.id)]
-
-    const customData: Record<string, any> = {
-      event_source: 'crm',
-      lead_event_source: this.config.crmName || 'Demirtürk Portföy CRM',
-      crm_stage: stageLabel,
-      lead_status: signalLabel,
-    }
-
-    if (lead.formName) {
-      customData.form_name = lead.formName
-    }
-    if (lead.preferredHousingType) {
-      customData.content_category = lead.preferredHousingType
-    }
-
-    // Dönüşüm (Purchase) aşaması için kullanıcıdan para/TRY girişi istenmez;
-    // sadece Meta sunucu doğrulamasının hata vermemesi için teknik olarak sembolik 1 TRY gönderilir.
-    if (eventName === 'Purchase') {
-      customData.value = 1
-      customData.currency = 'TRY'
-    }
-
-    const eventPayload: Record<string, any> = {
-      data: [
-        {
-          event_name: eventName,
-          event_time: eventTime,
-          event_id: eventId,
-          action_source: 'system_generated',
-          user_data: userData,
-          custom_data: customData,
-        },
-      ],
-    }
-
-    if (this.config.testEventCode && this.config.testEventCode.trim()) {
-      eventPayload.test_event_code = this.config.testEventCode.trim()
-    }
-
-    const datasetId = (this.config.datasetId || '').trim() || DEFAULT_META_CONFIG.datasetId
-    const accessToken =
-      (this.config.capiAccessToken || this.config.pageAccessToken || '').trim() || DEFAULT_CAPI_TOKEN
-
-    let status: 'SENT' | 'QUEUED' | 'FAILED' = 'QUEUED'
-    let eventsReceived: number | undefined
-    let fbtraceId: string | undefined
-    let errorMessage: string | undefined
-
-    if (!datasetId || !accessToken) {
-      status = 'QUEUED'
-      errorMessage = 'Dataset (Pixel) ID veya CAPI Erişim Anahtarı henüz girilmediği için kuyruğa alındı.'
-    } else {
-      try {
-        const url = `https://graph.facebook.com/v21.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(eventPayload),
-        })
-        const json = await res.json().catch(() => ({}))
-        if (res.ok) {
-          status = 'SENT'
-          eventsReceived = json?.events_received ?? 1
-          fbtraceId = json?.fbtrace_id
-        } else {
-          status = 'FAILED'
-          errorMessage = json?.error?.message || `HTTP ${res.status}: Meta CAPI hatası`
-          fbtraceId = json?.error?.fbtrace_id
-        }
-      } catch (err: any) {
-        status = 'FAILED'
-        errorMessage = err?.message || 'Ağ hatası: Meta Graph API sunucusuna ulaşılamadı.'
-      }
-    }
-
-    const logEntry: MetaCapiEventLog = {
-      id: 'capi-log-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      leadId: lead.id,
-      leadName: lead.fullName,
-      phone: lead.phone,
-      metaLeadId,
-      eventName,
-      signalLabel,
-      stage: stageLabel,
-      sentAt: new Date().toISOString(),
-      status,
-      eventsReceived,
-      fbtraceId,
-      errorMessage,
-      payloadPreview: eventPayload,
-    }
-
-    this.capiLogs = [logEntry, ...this.capiLogs.filter((l) => l.id !== logEntry.id)].slice(0, 200)
-    this.saveCapiLogs()
-
-    // Update lead's metaCapiStatus in leadStore without re-triggering stage CAPI
-    leadStore.updateMetaCapiStatus(lead.id, {
-      lastEventName: eventName,
-      label: signalLabel,
-      sentAt: logEntry.sentAt,
-      status,
-      fbtraceId,
-      errorMessage,
-    })
-
-    this.notify()
-    return logEntry
+  public getWebhookLogs(): MetaWebhookEvent[] { return [] }
+  public simulateIncomingLead(_data: { fullName: string; phone: string; email?: string; formName: string; campaignName?: string; budget?: number; preferredHousingType?: string; investmentPurpose?: string; moveInTiming?: string; metaAnswers?: { question: string; answer: string }[] }) {
+    // Simülasyon gerçek müşteri / leadgen kimliği veya canlı dönüşüm oluşturmaz.
+    return undefined
   }
-
-  /**
-   * Retry / flush all QUEUED CAPI events when credentials are configured
-   */
-  public async flushQueuedCapiEvents(): Promise<{ sentCount: number; failedCount: number }> {
-    const datasetId = (this.config.datasetId || '').trim()
-    const accessToken = (this.config.capiAccessToken || this.config.pageAccessToken || '').trim()
-    if (!datasetId || !accessToken) return { sentCount: 0, failedCount: 0 }
-
-    const queued = this.capiLogs.filter((l) => l.status === 'QUEUED')
-    if (queued.length === 0) return { sentCount: 0, failedCount: 0 }
-
-    let sentCount = 0
-    let failedCount = 0
-
-    for (const item of queued) {
-      try {
-        const url = `https://graph.facebook.com/v26.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(item.payloadPreview),
-        })
-        const json = await res.json().catch(() => ({}))
-        if (res.ok) {
-          item.status = 'SENT'
-          item.eventsReceived = json?.events_received ?? 1
-          item.fbtraceId = json?.fbtrace_id
-          item.errorMessage = undefined
-          sentCount++
-        } else {
-          item.status = 'FAILED'
-          item.errorMessage = json?.error?.message || `HTTP ${res.status}`
-          failedCount++
-        }
-      } catch (err: any) {
-        item.status = 'FAILED'
-        item.errorMessage = err?.message || 'Ağ hatası'
-        failedCount++
-      }
-
-      leadStore.updateMetaCapiStatus(item.leadId, {
-        lastEventName: item.eventName,
-        label: item.signalLabel,
-        sentAt: new Date().toISOString(),
-        status: item.status,
-        fbtraceId: item.fbtraceId,
-        errorMessage: item.errorMessage,
-      })
-    }
-
-    this.saveCapiLogs()
-    this.notify()
-    return { sentCount, failedCount }
-  }
-
-  /**
-   * Returns leads whose current stage / status has not yet been sent to Meta CAPI
-   */
-  public getPendingMetaSyncLeads(): Lead[] {
-    const allLeads = leadStore.getAllRaw()
-    return allLeads.filter((l) => isLeadPendingMetaSync(l))
-  }
-
-  /**
-   * Manually send customer status & stage data (PM, İletişim, Nitelikli, Teklif, Dönüşüm, Potansiyel Değil) to Meta CAPI.
-   * Only runs when explicitly triggered by the user clicking "Veriyi Gönder" in Marketing.
-   */
-  public async syncLeadsToMetaManual(leadIds?: string[]): Promise<{
-    sentCount: number
-    failedCount: number
-    queuedCount: number
-    totalCount: number
-  }> {
-    const allLeads = leadStore.getAllRaw()
-    let targetLeads: Lead[] = []
-
-    if (leadIds && leadIds.length > 0) {
-      const idSet = new Set(leadIds)
-      targetLeads = allLeads.filter((l) => idSet.has(l.id))
-    } else {
-      const pending = allLeads.filter((l) => isLeadPendingMetaSync(l))
-      targetLeads = pending.length > 0 ? pending : allLeads
-    }
-
-    if (targetLeads.length === 0) {
-      return { sentCount: 0, failedCount: 0, queuedCount: 0, totalCount: 0 }
-    }
-
-    let sentCount = 0
-    let failedCount = 0
-    let queuedCount = 0
-
-    for (const lead of targetLeads) {
-      const target = getLeadTargetMetaEvent(lead)
-      const log = await this.sendCapiLeadEvent(lead, target.effectiveStage)
-      if (log.status === 'SENT') sentCount++
-      else if (log.status === 'QUEUED') queuedCount++
-      else failedCount++
-    }
-
-    this.notify()
-    return {
-      sentCount,
-      failedCount,
-      queuedCount,
-      totalCount: targetLeads.length,
-    }
-  }
-
-  /**
-   * Send a test CAPI event to verify Dataset ID and CAPI Access Token in Meta Events Manager
-   */
-  public async sendTestCapiEvent(customConfig?: {
-    datasetId?: string
-    capiAccessToken?: string
-    testEventCode?: string
-  }): Promise<{ success: boolean; message: string; fbtraceId?: string }> {
-    const datasetId = (customConfig?.datasetId ?? this.config.datasetId ?? '').trim()
-    const accessToken = (
-      customConfig?.capiAccessToken ??
-      this.config.capiAccessToken ??
-      this.config.pageAccessToken ??
-      ''
-    ).trim()
-    const testEventCode = (customConfig?.testEventCode ?? this.config.testEventCode ?? '').trim()
-
-    if (!datasetId) {
-      return {
-        success: false,
-        message: 'Lütfen önce Meta Veri Seti Kimliği (Dataset / Pixel ID) girin.',
-      }
-    }
-    if (!accessToken || accessToken.length < 10) {
-      return {
-        success: false,
-        message: 'Lütfen geçerli bir Dönüşümler API (CAPI) Erişim Anahtarı girin.',
-      }
-    }
-
-    this.saveConfig({
-      datasetId,
-      capiAccessToken: accessToken,
-      testEventCode,
-    })
-
-    const phHash = await sha256Hex('905320000000')
-    const emHash = await sha256Hex('test.musteri@demirturk.com')
-    const fnHash = await sha256Hex('test')
-    const lnHash = await sha256Hex('musteri')
-
-    const nowSec = Math.floor(Date.now() / 1000)
-    const payload: Record<string, any> = {
-      data: [
-        {
-          action_source: 'system_generated',
-          custom_data: {
-            event_source: 'crm',
-            lead_event_source: this.config.crmName || 'Demirtürk Portföy CRM',
-          },
-          event_name: 'Lead',
-          event_time: nowSec,
-          event_id: `test_capi_lead_${Date.now()}`,
-          user_data: {
-            em: [emHash],
-            lead_id: 1234567890123456,
-            ph: [phHash],
-            fn: [fnHash],
-            ln: [lnHash],
-          },
-        },
-        {
-          action_source: 'system_generated',
-          custom_data: {
-            event_source: 'crm',
-            lead_event_source: this.config.crmName || 'Demirtürk Portföy CRM',
-            crm_stage: 'Nitelikli (Olumlu)',
-            lead_status: 'Olumlu / Nitelikli Müşteri',
-          },
-          event_name: 'QualifiedLead',
-          event_time: nowSec,
-          event_id: `test_capi_qualified_${Date.now()}`,
-          user_data: {
-            em: [emHash],
-            lead_id: 1234567890123456,
-            ph: [phHash],
-            fn: [fnHash],
-            ln: [lnHash],
-          },
-        },
-      ],
-    }
-
-    if (testEventCode) {
-      payload.test_event_code = testEventCode
-    }
-
+  public async fetchLeadsFromMeta(startDate: Date, endDate: Date): Promise<{ newCount: number; mergedCount: number; needsPageToken?: boolean; error?: string }> {
+    let newCount = 0, mergedCount = 0
     try {
-      const url = `https://graph.facebook.com/v26.0/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(accessToken)}`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (res.ok) {
-        const logEntry: MetaCapiEventLog = {
-          id: 'capi-test-' + Date.now(),
-          leadId: 'test-lead',
-          leadName: 'Test Müşteri (CAPI Doğrulama)',
-          phone: '+90 532 000 00 00',
-          eventName: 'QualifiedLead',
-          signalLabel: 'Test: Olumlu / Nitelikli Müşteri',
-          stage: 'Nitelikli (Test)',
-          sentAt: new Date().toISOString(),
-          status: 'SENT',
-          eventsReceived: json?.events_received ?? 1,
-          fbtraceId: json?.fbtrace_id,
-          payloadPreview: payload,
-        }
-        this.capiLogs = [logEntry, ...this.capiLogs].slice(0, 200)
-        this.saveCapiLogs()
-        this.notify()
-        return {
-          success: true,
-          message: `Meta CAPI bağlantısı doğrulandı! (${json?.events_received ?? 1} olay iletildi • Trace ID: ${json?.fbtrace_id || 'OK'})`,
-          fbtraceId: json?.fbtrace_id,
-        }
-      } else {
-        const errMsg =
-          json?.error?.message || `HTTP ${res.status}: Dataset ID veya Token doğrulanamadı.`
-        return {
-          success: false,
-          message: `Meta API Hatası: ${errMsg}`,
-        }
-      }
-    } catch (err: any) {
-      return {
-        success: false,
-        message: `Bağlantı hatası: ${err?.message || 'Meta Graph API sunucusuna erişilemedi.'}`,
-      }
-    }
-  }
-
-  private notify() {
-    this.listeners.forEach((cb) => cb())
-  }
-
-  public subscribe(listener: Listener): () => void {
-    this.listeners.add(listener)
-    return () => {
-      this.listeners.delete(listener)
-    }
-  }
-
-    public getForms(): MetaFormSummary[] {
-    const map = new Map<string, MetaFormSummary>()
-    for (const f of this.forms) {
-      map.set(f.name, { ...f })
-    }
-    try {
-      const allLeads = leadStore.getAllRaw()
-      const metaLeads = allLeads.filter((l) => l.source === 'META_ADS')
-      const grouped = new Map<string, { total: number; qualified: number; lastAt: string }>()
-      for (const l of metaLeads) {
-        const fname = (l.formName || 'Meta Ads Formu').trim()
-        const cur = grouped.get(fname) || { total: 0, qualified: 0, lastAt: l.createdAt || new Date().toISOString() }
-        cur.total += 1
-        if (l.isQualified || ['QUALIFIED', 'APPOINTMENT', 'PRESENTATION', 'OFFER', 'WON'].includes(l.stage)) {
-          cur.qualified += 1
-        }
-        if (l.createdAt && l.createdAt > cur.lastAt) {
-          cur.lastAt = l.createdAt
-        }
-        grouped.set(fname, cur)
-      }
-      for (const [fname, stats] of grouped.entries()) {
-        const convRate = stats.total > 0 ? Math.round((stats.qualified / stats.total) * 100) : 0
-        const existing = map.get(fname)
-        map.set(fname, {
-          id: existing?.id || 'form-' + fname.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-          name: fname,
-          campaignName: existing?.campaignName || fname,
-          status: 'ACTIVE',
-          leadCount: stats.total,
-          conversionRate: convRate,
-          lastLeadAt: stats.lastAt,
-        })
-      }
-    } catch {}
-    return Array.from(map.values()).sort((a, b) => b.leadCount - a.leadCount)
-  }
-
-  public getWebhookLogs(): MetaWebhookEvent[] {
-    return [...this.webhookLogs]
-  }
-
-  /**
-   * Simulate or process incoming Meta Webhook event
-   */
-  public simulateIncomingLead(leadData: {
-    fullName: string
-    phone: string
-    email?: string
-    formName: string
-    campaignName?: string
-    budget?: number
-    preferredHousingType?: string
-    investmentPurpose?: string
-    moveInTiming?: string
-    metaAnswers?: { question: string; answer: string }[]
-  }) {
-    const targetForm = this.forms.find((f) => f.name === leadData.formName)
-    const campaignName =
-      leadData.campaignName || targetForm?.campaignName || 'Demirtürk Rezidans & Villa Lansmanı'
-
-    const answers = leadData.metaAnswers || [
-      { question: 'İlgilendiğiniz Konut Tipi', answer: leadData.preferredHousingType || '2+1 Rezidans' },
-      {
-        question: 'Bütçe Aralığınız',
-        answer: leadData.budget
-          ? leadData.budget.toLocaleString('tr-TR') + ' TL'
-          : '7.500.000 TL - 10.000.000 TL',
-      },
-      { question: 'Alım Amacınız', answer: leadData.investmentPurpose || 'Yatırım & Yüksek Kira Getirisi' },
-      { question: 'Taşınma / Satın Alma Süresi', answer: leadData.moveInTiming || 'Hemen (1-3 Ay İçinde)' },
-      { question: 'Ödeme Tercihiniz', answer: 'Peşin + Lansman Esnek Vadeli Plan' },
-    ]
-
-    const simulatedLeadgenId = String(1000000000000000 + Math.floor(Math.random() * 899999999999999))
-
-    // 1. Add lead to leadStore using unified intake
-    const result = leadStore.addOrMergeInquiry({
-      fullName: leadData.fullName,
-      phone: leadData.phone,
-      whatsappPhone: leadData.phone,
-      email:
-        leadData.email ||
-        `${leadData.fullName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`,
-      source: 'META_ADS',
-      formName: leadData.formName,
-      campaignName,
-      channel: 'Instagram Lead Ad',
-      metaLeadgenId: simulatedLeadgenId,
-      budget: leadData.budget,
-      preferredHousingType: leadData.preferredHousingType,
-      metaAnswers: answers,
-      notes: `Meta Ads Formu (${leadData.formName}) üzerinden canlı webhook ile kaydedildi. Müşteri yanıtları incelenebilir.`,
-    })
-
-    // 2. Add to webhook logs
-    const event: MetaWebhookEvent = {
-      id: 'wh-' + Date.now(),
-      receivedAt: new Date().toISOString(),
-      formName: leadData.formName,
-      leadName: leadData.fullName,
-      phone: leadData.phone,
-      payloadRaw: {
-        leadgen_id: simulatedLeadgenId,
-        campaign_name: campaignName,
-        form_name: leadData.formName,
-        field_data: [
-          { name: 'full_name', values: [leadData.fullName] },
-          { name: 'phone_number', values: [leadData.phone] },
-          { name: 'email', values: [leadData.email || ''] },
-          ...answers.map((a) => ({ name: a.question, values: [a.answer] })),
-        ],
-        created_time: Date.now(),
-      },
-      status: 'PROCESSED',
-    }
-    this.webhookLogs = [event, ...this.webhookLogs]
-
-    // 3. Update form stats
-    if (targetForm) {
-      targetForm.leadCount += 1
-      targetForm.lastLeadAt = new Date().toISOString()
-    }
-
-    this.listeners.forEach((cb) => cb())
-    return result.lead
-  }
-
-  /**
-   * Fetch Lead Ads submissions directly from Meta Graph API for a given date range
-   */
-  public async fetchLeadsFromMeta(
-    startDate: Date,
-    endDate: Date
-  ): Promise<{
-    newCount: number
-    mergedCount: number
-    needsPageToken?: boolean
-    error?: string
-  }> {
-    this.config = this.loadConfig()
-    const pageToken = (this.config.pageAccessToken || '').trim()
-    const fallbackToken = (this.config.capiAccessToken || '').trim()
-    const token = pageToken || fallbackToken
-
-    if (!token) {
-      return {
-        newCount: 0,
-        mergedCount: 0,
-        needsPageToken: true,
-        error: 'Meta Sayfa Erişim Anahtarı (Page Access Token) tanımlı değil.',
-      }
-    }
-
-    const startMs = startDate.getTime() - 60 * 1000
-    const endMs = endDate.getTime() + 60 * 1000
-
-    try {
-      const formsMap = new Map<string, { id: string; name: string; accessToken: string }>()
-      const addFormsFromPages = (pages: any[]) => {
-        if (!Array.isArray(pages)) return
-        for (const page of pages) {
-          const pToken = page?.access_token || token
-          if (page?.id && !this.config.pageId) {
-            this.saveConfig({
-              pageId: String(page.id),
-              pageName: page.name || this.config.pageName,
-              pageAccessToken: page?.access_token || this.config.pageAccessToken,
-              isConnected: true,
-            })
+      const range = { from: startDate.toISOString(), to: endDate.toISOString() }
+      const data = await invokeMeta({ action: 'pull', ...range })
+      for (const form of data.forms || []) {
+        let cursor: string | null = null
+        const seen = new Set<string>()
+        do {
+          const page = await invokeMeta({ action: 'pull', ...range, formId: form.id, cursor })
+          for (const row of page.leads || []) {
+            if (seen.has(row.id)) continue
+            seen.add(row.id)
+            const lead = rowToLead(row)
+            const existing = leadStore.getById(lead.id)
+            if (existing) mergedCount++; else newCount++
+            // Sunucu satırı yerel duruma alınır; kaynak otoritesi DB'dir. Toplu geçmiş dönüşüm gönderimi yapılmaz.
+            leadStore.acceptMetaServerLead(lead)
           }
-          const pageForms = page?.leadgen_forms?.data || []
-          for (const f of pageForms) {
-            if (f?.id) {
-              formsMap.set(String(f.id), {
-                id: String(f.id),
-                name: f.name || page.name || 'Meta Lead Formu',
-                accessToken: pToken,
-              })
-            }
-          }
-        }
+          const next = page.cursor || null
+          if (next && next === cursor) throw new Error('Meta sayfalama ilerlemedi; kısmi aktarım tamamlandı sayılmadı.')
+          cursor = next
+        } while (cursor)
       }
-
-      // 1. Try /me/accounts (User Token or System User Token)
-      const accRes = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,leadgen_forms{id,name,status,leads_count}&limit=50&access_token=${encodeURIComponent(token)}`
-      )
-      const accJson = await accRes.json().catch(() => ({}))
-      if (Array.isArray(accJson?.data)) {
-        addFormsFromPages(accJson.data)
-      }
-
-      // 2. Try /me/assigned_pages (Business System User Token)
-      if (formsMap.size === 0) {
-        const asgRes = await fetch(
-          `https://graph.facebook.com/v21.0/me/assigned_pages?fields=id,name,access_token,leadgen_forms{id,name,status,leads_count}&limit=50&access_token=${encodeURIComponent(token)}`
-        )
-        const asgJson = await asgRes.json().catch(() => ({}))
-        if (Array.isArray(asgJson?.data)) {
-          addFormsFromPages(asgJson.data)
-        }
-      }
-
-      // 3. Try /{pageId}/leadgen_forms if pageId is configured
-      if (formsMap.size === 0 && this.config.pageId) {
-        const pageFormsRes = await fetch(
-          `https://graph.facebook.com/v21.0/${encodeURIComponent(this.config.pageId.trim())}/leadgen_forms?fields=id,name,status,leads_count&limit=100&access_token=${encodeURIComponent(token)}`
-        )
-        const pageFormsJson = await pageFormsRes.json().catch(() => ({}))
-        if (Array.isArray(pageFormsJson?.data)) {
-          for (const f of pageFormsJson.data) {
-            if (f?.id) {
-              formsMap.set(String(f.id), {
-                id: String(f.id),
-                name: f.name || 'Meta Lead Formu',
-                accessToken: token,
-              })
-            }
-          }
-        }
-      }
-
-      // 4. Try /me/leadgen_forms directly (if token is already a Page Access Token)
-      let directFormsError: any = null
-      if (formsMap.size === 0) {
-        const directFormsRes = await fetch(
-          `https://graph.facebook.com/v21.0/me/leadgen_forms?fields=id,name,status,leads_count&limit=100&access_token=${encodeURIComponent(token)}`
-        )
-        const directFormsJson = await directFormsRes.json().catch(() => ({}))
-        if (Array.isArray(directFormsJson?.data) && directFormsJson.data.length > 0) {
-          for (const f of directFormsJson.data) {
-            if (f?.id) {
-              formsMap.set(String(f.id), {
-                id: String(f.id),
-                name: f.name || 'Meta Lead Formu',
-                accessToken: token,
-              })
-            }
-          }
-        } else {
-          directFormsError = directFormsJson?.error
-        }
-      }
-
-      if (formsMap.size === 0) {
-        return {
-          newCount: 0,
-          mergedCount: 0,
-          needsPageToken: true,
-          error:
-            directFormsError?.message && pageToken
-              ? `Meta API Hatası: ${directFormsError.message}`
-              : 'Mevcut anahtar yalnızca CAPI (Olay Gönderimi) yetkisine sahip. Meta reklam formlarını çekmek için "leads_retrieval" yetkili Sayfa Erişim Anahtarı (Page Access Token) girin veya CSV yükleyin.',
-        }
-      }
-
-      const formsToFetch = Array.from(formsMap.values())
-
-      // Update active forms list in store
-      this.forms = formsToFetch.map((f) => ({
-        id: f.id,
-        name: f.name,
-        campaignName: f.name,
-        status: 'ACTIVE',
-        leadCount: 0,
-        conversionRate: 18,
-        lastLeadAt: new Date().toISOString(),
-      }))
-
-      let newCount = 0
-      let mergedCount = 0
-
-      for (const form of formsToFetch) {
-        const leadsUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(form.id)}/leads?fields=id,created_time,campaign_name,ad_name,form_id,field_data&limit=250&access_token=${encodeURIComponent(form.accessToken)}`
-        const leadsRes = await fetch(leadsUrl)
-        const leadsJson = await leadsRes.json().catch(() => ({}))
-        const items = Array.isArray(leadsJson?.data) ? leadsJson.data : []
-
-        for (const item of items) {
-          const createdMs = item.created_time ? new Date(item.created_time).getTime() : Date.now()
-          if (!isNaN(createdMs) && (createdMs < startMs || createdMs > endMs)) {
-            continue
-          }
-
-          const fieldData: { name: string; values: string[] }[] = Array.isArray(item.field_data)
-            ? item.field_data
-            : []
-
-          let fullName = ''
-          let phone = ''
-          let email = ''
-          let preferredHousingType = ''
-          const metaAnswers: { question: string; answer: string }[] = []
-
-          for (const fd of fieldData) {
-            const key = (fd.name || '').toLowerCase()
-            const val = Array.isArray(fd.values) ? fd.values.join(', ').trim() : ''
-            if (!val) continue
-
-            if (
-              key.includes('full_name') ||
-              key.includes('ad_soyad') ||
-              key.includes('adi_soyadi') ||
-              key.includes('isim') ||
-              key === 'name' ||
-              key === 'first_name'
-            ) {
-              fullName = fullName ? `${fullName} ${val}` : val
-            } else if (
-              key.includes('phone') ||
-              key.includes('telefon') ||
-              key.includes('numara') ||
-              key.includes('tel')
-            ) {
-              phone = val.replace(/^p:/i, '').trim()
-            } else if (key.includes('email') || key.includes('e-posta') || key.includes('mail')) {
-              email = val
-            } else {
-              metaAnswers.push({ question: fd.name, answer: val })
-              if (
-                key.includes('konut') ||
-                key.includes('daire') ||
-                key.includes('tip') ||
-                val.includes('1+1') ||
-                val.includes('2+1') ||
-                val.includes('3+1') ||
-                val.toLowerCase().includes('villa')
-              ) {
-                preferredHousingType = val
-              }
-            }
-          }
-
-          if (!fullName && !phone) continue
-
-          const createdIso = item.created_time
-            ? new Date(item.created_time).toISOString()
-            : new Date().toISOString()
-
-          const intake = leadStore.addOrMergeInquiry({
-            fullName: fullName || 'Meta Müşteri Adayı',
-            phone: phone || '',
-            whatsappPhone: phone || '',
-            email: email || undefined,
-            source: 'META_ADS',
-            formName: form.name,
-            campaignName: item.campaign_name || item.ad_name || form.name,
-            channel: 'Meta Lead Ads',
-            metaLeadgenId: String(item.id || ''),
-            preferredHousingType: preferredHousingType || undefined,
-            metaAnswers: metaAnswers.length > 0 ? metaAnswers : undefined,
-            createdAt: createdIso,
-          }, { skipSave: true })
-
-          if (intake.isNewCustomer) {
-            newCount++
-          } else {
-            mergedCount++
-          }
-        }
-      }
-
-      if (newCount > 0 || mergedCount > 0) {
-        leadStore.flushSave()
-      }
-      this.notify()
       return { newCount, mergedCount }
-    } catch (err: any) {
-      return {
-        newCount: 0,
-        mergedCount: 0,
-        error: err?.message || 'Meta Graph API bağlantı hatası.',
-      }
-    }
+    } catch (error) { return { newCount, mergedCount, error: (error as Error).message } }
   }
 
-  /**
-   * Parse and import Meta Lead Ads CSV / TSV file (exported from Meta Ads Manager / Business Suite)
-   */
   public importLeadsFromMetaCsvText(
     rawText: string,
     startDate?: Date,
@@ -1293,7 +398,7 @@ class MetaStore {
         email: email || undefined,
         source: 'META_ADS',
         formName,
-        campaignName: campaignName || formName,
+        campaignName: campaignName || undefined,
         channel: 'Meta Lead Ads',
         metaLeadgenId: leadId || undefined,
         preferredHousingType: preferredHousingType || undefined,
@@ -1314,5 +419,4 @@ class MetaStore {
     return { newCount, mergedCount }
   }
 }
-
 export const metaStore = new MetaStore()

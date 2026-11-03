@@ -186,6 +186,7 @@ export interface LeadActivity {
 }
 
 export interface LeadMetaCapiStatus {
+  revision?: number
   lastEventName: string
   label: string
   sentAt: string
@@ -195,6 +196,7 @@ export interface LeadMetaCapiStatus {
 }
 
 export interface Lead {
+  metaRevision?: number
   id: string
   leadNumber?: number
   companyName?: string

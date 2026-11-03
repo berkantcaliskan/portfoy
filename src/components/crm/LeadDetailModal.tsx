@@ -48,14 +48,17 @@ interface LeadDetailModalProps {
   onStageChange: (leadId: string, stage: LeadStage) => void
 }
 
-export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
+export const LeadDetailModal: React.FC<LeadDetailModalProps> = (props) => {
+  if (!props.lead) return null
+  return <LeadDetailContent key={props.lead.id} {...props} lead={props.lead} />
+}
+
+const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: Lead }> = ({
   lead,
   isOpen,
   onClose,
   onStageChange,
 }) => {
-  if (!lead) return null
-
   const [newNote, setNewNote] = useState('')
   const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('')
   const [copiedText, setCopiedText] = useState<string | null>(null)
@@ -137,12 +140,12 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         if (log.status === 'SENT') {
           setCapiToast({
             status: 'SENT',
-            text: `Meta'ya başarıyla iletildi: ${log.signalLabel} (${log.eventName})`,
+            text: `Meta API kabul etti: ${log.signalLabel}. Eşleşme ve atıf ayrıca doğrulanmalıdır.`,
           })
         } else if (log.status === 'QUEUED') {
           setCapiToast({
             status: 'QUEUED',
-            text: `${log.signalLabel} sinyali kaydedildi ve CAPI kuyruğuna alındı (Ayarlar > Meta & Reklam'dan Dataset ID girildiğinde otomatik iletilir).`,
+            text: `${log.signalLabel} sinyali bekliyor. Otomatik gönderim yok; aynı kaydı uygun zamanda elle yeniden deneyin.`,
           })
         } else {
           setCapiToast({
@@ -152,6 +155,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         }
         setTimeout(() => setCapiToast(null), 5000)
       }
+    } catch (error) {
+      setCapiToast({ status: 'FAILED', text: (error as Error).message })
     } finally {
       setSendingCapi(null)
     }
@@ -514,24 +519,23 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
             <button
               type="button"
-              disabled={sendingCapi !== null}
+              disabled={sendingCapi !== null || liveLead.stage !== 'APPOINTMENT'}
               onClick={() => handleSendCapiSignal('Schedule')}
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-indigo-500/12 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/35 transition-colors cursor-pointer flex items-center gap-1"
-              title="Meta'ya Teklif (Schedule) sinyali gönder"
+              title="Yalnızca randevu aşamasındaki kaydı Meta'ya elle gönder"
             >
               <Calendar className="w-3 h-3" />
-              <span>{sendingCapi === 'Schedule' ? 'Gönderiliyor...' : 'Teklif'}</span>
+              <span>{sendingCapi === 'Schedule' ? 'Gönderiliyor...' : 'Randevu'}</span>
             </button>
 
             <button
               type="button"
-              disabled={sendingCapi !== null}
-              onClick={() => handleSendCapiSignal('Purchase')}
+              disabled
               className="px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-emerald-500/12 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 transition-colors cursor-pointer flex items-center gap-1"
-              title="Meta'ya Dönüşüm (Purchase) sinyali gönder"
+              title="Doğrulanmış satış tutarı olmadan satın alma olayı gönderilmez"
             >
               <Award className="w-3 h-3" />
-              <span>{sendingCapi === 'Purchase' ? 'Gönderiliyor...' : 'Dönüşüm'}</span>
+              <span>Satış aktarımı hazırlıkta</span>
             </button>
 
             <button

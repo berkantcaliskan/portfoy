@@ -521,6 +521,10 @@ class UserStore {
   }
 
   logout() {
+    // Paylaşılan bilgisayarda yerel kullanıcıdan çıkınca Meta yetkili oturumu diğer kullanıcıya kalmaz.
+    void supabase.auth.signOut({ scope: 'local' }).then(({ error }) => {
+      if (error) console.error('[Auth] Sunucu oturumu kapatılamadı; Meta panelinden oturumu kapatın.')
+    }, () => { console.error('[Auth] Sunucu oturumu kapatılamadı; Meta panelinden oturumu kapatın.') })
     this.currentUser = null
     try {
       localStorage.setItem('demirturk_logged_out', 'true')

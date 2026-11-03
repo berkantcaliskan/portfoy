@@ -128,9 +128,8 @@ ipcMain.on('disk-store-replace-all', (_event, newStore) => {
 // Automatically pulls latest build from GitHub (berkantcaliskan/portfoy)
 // and updates all running/launched portföyapp.exe instances without USB sticks.
 // ============================================================================
-const SUPABASE_URL = 'https://qspefqddkddxobfxxmqa.supabase.co'
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzcGVmcWRka2RkeG9iZnh4bXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzI4NjksImV4cCI6MjA5MDU0ODg2OX0.f1A3WG3-efXbjb8-D326227-j-0m27441V5yT2I2tPg'
+const SUPABASE_URL = process.env.SUPABASE_URL || ''
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || ''
 const GITHUB_REPO = 'berkantcaliskan/portfoy'
 const GITHUB_BRANCH = 'main'
 
@@ -190,6 +189,7 @@ function notifyOtaStatus(patch) {
 }
 
 async function fetchSupabaseSetting(key) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}&select=value`,
@@ -209,16 +209,7 @@ async function fetchSupabaseSetting(key) {
 }
 
 async function resolveGitHubToken() {
-  try {
-    // Runtime-decoded GitHub read credential for berkantcaliskan/portfoy OTA updates
-    const codes = [
-      103, 104, 111, 95, 81, 106, 50, 89, 66, 49, 72, 106, 114, 53, 105, 54,
-      122, 76, 73, 65, 101, 74, 115, 70, 67, 122, 66, 54, 68, 88, 97, 84,
-      111, 80, 51, 76, 110, 52, 72, 74,
-    ]
-    return String.fromCharCode(...codes)
-  } catch {}
-  return ''
+  return process.env.DEMIRTURK_OTA_READ_TOKEN || ''
 }
 
 async function fetchFromGitHubRepo(filePath, ghToken) {
