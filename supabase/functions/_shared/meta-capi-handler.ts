@@ -53,7 +53,7 @@ return async (req: Request): Promise<Response> => {
       const { data: events, error } = await query
       if (error) throw new MetaError(503, 'Olay geçmişi okunamadı.')
       return json({ configured: !!(env('META_DATASET_ID') && env('META_CAPI_ACCESS_TOKEN') && env('META_GRAPH_VERSION')),
-        enabled: settings.enabled, autoSyncStages: false, manualOnly: true, backgroundDelivery: false, securityReady: settings.security_ready,
+        enabled: settings.enabled, testOnly: env('META_TEST_ONLY') === 'true', autoSyncStages: false, manualOnly: true, backgroundDelivery: false, securityReady: settings.security_ready,
         datasetId: env('META_DATASET_ID'), events }, 200, origin)
     }
     if (input.action === 'stage') {
@@ -120,6 +120,7 @@ return async (req: Request): Promise<Response> => {
       return json({ processed, leads: savedLeads, cursor: leads.paging?.next ? leads.paging?.cursors?.after : null }, 200, origin)
     }
     const mode = deliveryMode(settings, input.action)
+    if (env('META_TEST_ONLY') === 'true' && input.action === 'enqueue') throw new MetaError(409, 'Bu ortam yalnızca Test Events kabul eder; canlı gönderim kilitli.')
     if (!/^\d+$/.test(dataset) || !accessToken) throw new MetaError(503, 'Sunucu dataset veya CAPI anahtarı eksik.')
     let eventId: string | null = null
     if (input.action === 'enqueue' || input.action === 'test') {
@@ -144,7 +145,7 @@ return async (req: Request): Promise<Response> => {
       let result: any
       let httpStatus = 0, body: any = null
       try {
-        if (!settings.enabled && !row.test_mode) throw new MetaError(409, 'Canlı gönderim kapalı.')
+        if ((!settings.enabled || env('META_TEST_ONLY') === 'true') && !row.test_mode) throw new MetaError(409, 'Canlı gönderim kapalı.')
         const event = row.payload || await buildCapiEvent(row)
         if (!row.payload) {
           const { data, error } = await db.from('meta_outbox').update({ payload: event }).eq('id', row.id).eq('lease_id', row.lease_id).select('id').single()

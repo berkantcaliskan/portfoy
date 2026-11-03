@@ -59,6 +59,24 @@ test('Acil otomatik gönderim kapatma eksik Graph ayarından bağımsızdır',as
 const job={id:'event-id',lead_id:'lead',lease_id:'lease-id',revision:1,event_name:'QualifiedLead',attempt:1,test_mode:false,
   occurred_at:new Date().toISOString(),snapshot:{id:'lead',stage:'QUALIFIED',is_qualified:true,meta_lead_id:'123',full_name:'İzole Test',phone:'05321234567'}}
 const enqueue={action:'enqueue',leadId:'lead',revision:1,eventName:'QualifiedLead'}
+
+test('Staging kilidi ayar açıkken bile canlı enqueue ve retryyi kuyruktan önce reddeder',async()=>{
+  const s=setup({env:{META_TEST_ONLY:'true'},settings:{enabled:true}})
+  const r=await s.handler(s.req({...enqueue,retry:true},'valid-user'))
+  assert.equal(r.status,409);assert.equal(s.calls.some(c=>c.rpc==='meta_enqueue_checked'||c.rpc==='meta_claim'),false);assert.equal(s.fetchCount(),0)
+})
+
+test('Staging kilidinde yalnızca kodlu test olayı gönderilir',async()=>{
+  const s=setup({env:{META_TEST_ONLY:'true'},jobs:[{...job,test_mode:true}],fetcher:async()=>Response.json({events_received:1})})
+  const r=await s.handler(s.req({...enqueue,action:'test'},'valid-user'))
+  assert.equal(r.status,200);assert.equal(JSON.parse(s.calls.find(c=>c.fetch).fetch[1].body).test_event_code,'ISOLATED')
+})
+
+test('Staging kilidi beklenmedik canlı kuyruk satırını da göndermeden reddeder',async()=>{
+  const s=setup({env:{META_TEST_ONLY:'true'},settings:{enabled:true},jobs:[job]})
+  await s.handler(s.req({...enqueue,action:'test'},'valid-user'))
+  assert.equal(s.fetchCount(),0);assert.equal(s.calls.find(c=>c.rpc==='meta_finish').args.p_result.state,'rejected')
+})
 test('Gerçek handler Meta sıfır olay kabul ettiğinde SENT yazamaz',async()=>{
   const s=setup({settings:{enabled:true},jobs:[job],fetcher:async()=>Response.json({events_received:0})})
   const response=await s.handler(s.req(enqueue,'valid-user'));assert.equal(response.status,200)

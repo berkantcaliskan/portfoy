@@ -2,7 +2,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "node --experimental-strip-types check.mjs && node --experimental-strip-types roundtrip.mjs"
+    "test": "node --experimental-strip-types check.mjs && node --experimental-strip-types roundtrip.mjs && node staging-package.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.14"

@@ -65,6 +65,7 @@ export function MetaBackendPanel() {
     {status && <div className="text-xs text-slate-300 space-y-2">
       <p>Yapılandırma: {status.configured ? 'Mevcut' : 'Eksik'} • Gönderim: {status.enabled ? 'Açık' : 'Kapalı'} • Güvenli geçiş: {status.securityReady ? 'Yönetici onaylı' : 'Bekleniyor'}</p>
       <p>Dataset: {status.datasetId || 'Eksik'} • Elle gönderim • Arka plan gönderimi kapalı</p>
+      {status.testOnly && <p className="text-amber-300">Test ortamı kilidi açık: yalnızca Test Events gönderilebilir.</p>}
       <p>API kabulü, Meta eşleşmesi veya reklam optimizasyonu başarısı anlamına gelmez.</p>
       <div className="max-h-60 overflow-auto space-y-2">
         {(status.events || []).map((e: Record<string, any>)=><p key={e.id} className="border-t border-white/10 pt-2">
