@@ -40,13 +40,18 @@ export function MetaBackendPanel() {
       <p className="text-xs text-slate-400">Supabase Auth e-posta kodu ile oturum açın. Kullanıcının Meta yetkisi ayrıca yönetici tarafından atanmalıdır.</p>
       <input aria-label="Supabase Auth e-posta" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} className={classes} placeholder="Yetkili e-posta" />
       <GlassButton disabled={busy || !email} onClick={()=>run(async()=>{
-        const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
-        if (error) throw new Error('E-posta kodu gönderilemedi. Supabase Auth ayarlarını kontrol edin.')
+        const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: false } })
+        if (error) {
+          if (error.code === 'otp_disabled') throw new Error('Kod isteği reddedildi (otp_disabled: Signups not allowed for otp). Test projesindeki Authentication > Users bölümünde kayıtlı e-posta ile giriş yaptığınızı kontrol edin. Bu ekran yeni kullanıcı oluşturmaz.')
+          if (error.code === 'over_email_send_rate_limit' || error.code === 'over_request_rate_limit') throw new Error('Supabase e-posta/istek sınırına ulaşıldı. Tekrar kod istemeden önce bekleyin; Auth gönderim limitlerini kontrol edin.')
+          if (error.code === 'email_address_not_authorized') throw new Error('Supabase bu adrese e-posta göndermeye izin vermiyor. Test projesinin SMTP/gönderici ayarlarını kontrol edin.')
+          throw new Error(`E-posta kodu gönderilemedi (HTTP ${error.status || 'bilinmiyor'}). Test projesinin Auth ayarlarını kontrol edin.`)
+        }
         setMessage('E-posta giriş kodu istendi. Posta şablonunda OTP kodu bulunmalıdır.')
       })}>Giriş kodu iste</GlassButton>
       <input aria-label="E-posta doğrulama kodu" autoComplete="one-time-code" value={otp} onChange={e=>setOtp(e.target.value)} className={classes} placeholder="E-postadaki kod" />
       <GlassButton disabled={busy || !otp} onClick={()=>run(async()=>{
-        const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: 'email' })
+        const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: otp.trim(), type: 'email' })
         if (error) throw new Error('Giriş kodu doğrulanamadı.')
         setOtp(''); await refresh()
       })}>Oturumu doğrula</GlassButton>

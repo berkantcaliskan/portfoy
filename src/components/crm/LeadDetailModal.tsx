@@ -506,7 +506,7 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
               </span>
             ) : (
               <span className="text-[10.5px] text-[#8c857f]">
-                Aşama değiştiğinde otomatik veya sağdaki butonlarla anında Meta'ya bildirilir
+                Aşama değişikliği otomatik gönderilmez. Meta geri bildirimi yalnızca açık elle gönderim işlemiyle yapılır.
               </span>
             )}
           </div>

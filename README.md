@@ -1,4 +1,10 @@
-# React + TypeScript + Vite
+# Demirtürk Portföy CRM
+
+Aktif geliştirme adresi **http://127.0.0.1:9002/**. Başlatma: `npm run dev`.
+
+Çalışma klasörü, test verileri ve üretime geçiş sınırları için [aktif geliştirme notunu](docs/AKTIF_GELISTIRME.md) okuyun.
+
+## Altyapı şablonu notları
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 

@@ -26,7 +26,7 @@ ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lead_activities ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.app_users,public.leads,public.lead_activities FROM anon,authenticated;
 COMMIT;
-`+read('supabase/migrations/202610310001_meta_pipeline.sql')+'\n'+read('supabase/migrations/202611030001_meta_source_context.sql'))
+`+read('supabase/migrations/202610310001_meta_pipeline.sql')+'\n'+read('supabase/migrations/202611030001_meta_source_context.sql')+'\n'+read('supabase/migrations/202611030002_meta_backend_lead_read.sql'))
 fs.writeFileSync(path.join(out,'02_YONETICI_VE_RLS.sql'),`-- Önce Supabase Authentication bölümünde test kullanıcısı oluşturun.
 -- Aşağıdaki UUID yer tutucusunu o hesabın User UID değeriyle değiştirin.
 BEGIN;
@@ -55,7 +55,7 @@ META_GRAPH_VERSION=
 META_DATASET_ID=
 META_CAPI_ACCESS_TOKEN=
 META_TEST_EVENT_CODE=
-META_ALLOWED_ORIGINS=http://localhost:5173
+META_ALLOWED_ORIGINS=http://127.0.0.1:9002
 `)
 fs.writeFileSync(path.join(out,'04_TARAYICI.env.example'),`VITE_SUPABASE_URL=https://YOUR_STAGING_PROJECT.supabase.co
 VITE_SUPABASE_ANON_KEY=YOUR_STAGING_PUBLIC_KEY

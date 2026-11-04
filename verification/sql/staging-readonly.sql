@@ -1,0 +1,26 @@
+-- Yalnızca okur; müşteri verisi ve token çıktısı üretmez.
+SELECT jsonb_build_object(
+ 'has_real_meta_source', EXISTS(SELECT 1 FROM public.meta_lead_events),
+ 'sources_link_existing_customers', NOT EXISTS(SELECT 1 FROM public.meta_lead_events e LEFT JOIN public.leads l ON l.id=e.lead_id WHERE l.id IS NULL),
+ 'original_fields_retained', NOT EXISTS(SELECT 1 FROM public.meta_lead_events WHERE jsonb_typeof(raw_fields)<>'array' OR jsonb_array_length(raw_fields)=0),
+ 'each_source_has_one_inquiry', NOT EXISTS(SELECT 1 FROM public.meta_lead_events e JOIN public.leads l ON l.id=e.lead_id WHERE (SELECT count(*) FROM jsonb_array_elements(l.inquiries) i WHERE i->>'metaLeadgenId'=e.leadgen_id)<>1),
+ 'all_events_are_tests', NOT EXISTS(SELECT 1 FROM public.meta_outbox WHERE NOT test_mode),
+ 'two_test_events_accepted', (SELECT count(*) FROM public.meta_outbox WHERE state='sent' AND test_mode AND events_received=1)=2,
+ 'payload_identity_matches', NOT EXISTS(SELECT 1 FROM public.meta_outbox WHERE payload->>'event_id' IS DISTINCT FROM id::text OR payload->>'event_name' IS DISTINCT FROM event_name),
+ 'lead_source_matches_payload', NOT EXISTS(SELECT 1 FROM public.meta_outbox o WHERE NOT EXISTS(SELECT 1 FROM public.meta_lead_events e WHERE e.lead_id=o.lead_id AND e.leadgen_id=o.meta_leadgen_id AND e.leadgen_id=o.payload->'user_data'->>'lead_id')),
+ 'page_source_matches_payload', NOT EXISTS(SELECT 1 FROM public.meta_outbox o JOIN public.meta_lead_events e ON e.leadgen_id=o.meta_leadgen_id WHERE e.source_context->>'pageId' IS DISTINCT FROM o.payload->'user_data'->>'page_id'),
+ 'event_time_matches_business_change', NOT EXISTS(SELECT 1 FROM public.meta_outbox WHERE (payload->>'event_time')::bigint<>floor(extract(epoch FROM occurred_at))::bigint),
+ 'no_fake_revenue_or_browser_ids', NOT EXISTS(SELECT 1 FROM public.meta_outbox WHERE payload->>'event_name'='Purchase' OR (payload->'custom_data') ?| ARRAY['value','currency'] OR (payload->'user_data') ?| ARRAY['client_ip_address','client_user_agent','fbc','fbp']),
+ 'external_ids_are_sha256', NOT EXISTS(SELECT 1 FROM public.meta_outbox WHERE payload->'user_data'->'external_id'->>0 !~ '^[0-9a-f]{64}$' OR payload->'user_data'->'external_id' IS NULL),
+ 'stage_audit_has_actor', NOT EXISTS(SELECT 1 FROM public.meta_stage_audit WHERE actor IS NULL),
+ 'attempts_match_delivery', NOT EXISTS(SELECT 1 FROM public.meta_outbox o WHERE NOT EXISTS(SELECT 1 FROM public.meta_attempts a WHERE a.event_id=o.id AND a.attempt=o.attempt AND a.state=o.state AND a.events_received=o.events_received)),
+ 'no_duplicate_business_event', NOT EXISTS(SELECT 1 FROM public.meta_outbox GROUP BY lead_id,revision,event_name,test_mode,meta_leadgen_id HAVING count(*)>1),
+ 'backend_can_read', has_table_privilege('service_role','public.leads','SELECT'),
+ 'anon_cannot_read', NOT has_table_privilege('anon','public.leads','SELECT'),
+ 'client_cannot_write_stage', NOT has_column_privilege('authenticated','public.leads','stage','UPDATE'),
+ 'client_cannot_write_source', NOT has_column_privilege('authenticated','public.leads','meta_lead_id','UPDATE'),
+ 'client_cannot_ingest', NOT has_function_privilege('authenticated','public.meta_ingest_lead(jsonb)','EXECUTE'),
+ 'anon_cannot_ingest', NOT has_function_privilege('anon','public.meta_ingest_lead(jsonb)','EXECUTE'),
+ 'rls_enabled', (SELECT count(*)=3 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('leads','lead_activities','app_users') AND c.relrowsecurity),
+ 'production_and_auto_disabled', (SELECT NOT enabled AND NOT auto_sync AND security_ready FROM public.meta_settings WHERE id=true)
+) AS checks;
