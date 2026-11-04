@@ -152,3 +152,19 @@ test('Lead okuma izni hatası dataset başarısıyla gizlenmez',async()=>{
   const s=setup({env:healthEnv,fetcher:async(url:any)=>new URL(String(url)).pathname.endsWith('/leads')?Response.json({error:{code:200}},{status:403}):healthProvider(url)})
   const r=await s.handler(s.req({action:'connection'},'valid-user'));assert.equal(r.status,503);assert.match(await r.text(),/Lead okuma yetkisi/)
 })
+
+test('Dataset metadata 100 hatası gönderim hatası veya başarısı sayılmaz',async()=>{
+  const s=setup({env:healthEnv,fetcher:async(url:any)=>new URL(String(url)).pathname.endsWith('/123')?Response.json({error:{code:100}},{status:400}):healthProvider(url)})
+  const r=await s.handler(s.req({action:'connection'},'valid-user')),body=await r.json()
+  assert.equal(r.status,200);assert.equal(body.leadReadVerified,true);assert.equal(body.datasetVerified,false)
+  assert.equal(body.datasetReadWarning,100);assert.equal(body.eventSubmissionVerified,false)
+  assert.equal(s.calls.some(c=>c.rpc==='meta_enqueue_checked'||c.rpc==='meta_claim'),false)
+})
+test('CAPI tokenının gerçek 190 hatası metadata uyarısı arkasına gizlenmez',async()=>{
+  const s=setup({env:healthEnv,fetcher:async(url:any)=>new URL(String(url)).pathname.endsWith('/123')?Response.json({error:{code:190}},{status:400}):healthProvider(url)})
+  const r=await s.handler(s.req({action:'connection'},'valid-user'));assert.equal(r.status,503);assert.match(await r.text(),/CAPI veri seti başarısız \(Meta 190\)/)
+})
+test('Başka dataset kimliği gelirse bağlantı doğrulanmış sayılmaz',async()=>{
+  const s=setup({env:healthEnv,fetcher:async(url:any)=>new URL(String(url)).pathname.endsWith('/123')?Response.json({id:'999'}):healthProvider(url)})
+  assert.equal((await s.handler(s.req({action:'connection'},'valid-user'))).status,502)
+})

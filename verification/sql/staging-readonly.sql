@@ -5,7 +5,7 @@ SELECT jsonb_build_object(
  'original_fields_retained', NOT EXISTS(SELECT 1 FROM public.meta_lead_events WHERE jsonb_typeof(raw_fields)<>'array' OR jsonb_array_length(raw_fields)=0),
  'each_source_has_one_inquiry', NOT EXISTS(SELECT 1 FROM public.meta_lead_events e JOIN public.leads l ON l.id=e.lead_id WHERE (SELECT count(*) FROM jsonb_array_elements(l.inquiries) i WHERE i->>'metaLeadgenId'=e.leadgen_id)<>1),
  'all_events_are_tests', NOT EXISTS(SELECT 1 FROM public.meta_outbox WHERE NOT test_mode),
- 'two_test_events_accepted', (SELECT count(*) FROM public.meta_outbox WHERE state='sent' AND test_mode AND events_received=1)=2,
+ 'test_events_accepted', (SELECT count(*) FROM public.meta_outbox WHERE state='sent' AND test_mode AND events_received=1)>=2 AND NOT EXISTS(SELECT 1 FROM public.meta_outbox WHERE state<>'sent' OR events_received IS DISTINCT FROM 1),
  'payload_identity_matches', NOT EXISTS(SELECT 1 FROM public.meta_outbox WHERE payload->>'event_id' IS DISTINCT FROM id::text OR payload->>'event_name' IS DISTINCT FROM event_name),
  'lead_source_matches_payload', NOT EXISTS(SELECT 1 FROM public.meta_outbox o WHERE NOT EXISTS(SELECT 1 FROM public.meta_lead_events e WHERE e.lead_id=o.lead_id AND e.leadgen_id=o.meta_leadgen_id AND e.leadgen_id=o.payload->'user_data'->>'lead_id')),
  'page_source_matches_payload', NOT EXISTS(SELECT 1 FROM public.meta_outbox o JOIN public.meta_lead_events e ON e.leadgen_id=o.meta_leadgen_id WHERE e.source_context->>'pageId' IS DISTINCT FROM o.payload->'user_data'->>'page_id'),

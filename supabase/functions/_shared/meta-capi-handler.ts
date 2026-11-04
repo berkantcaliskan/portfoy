@@ -103,11 +103,23 @@ return async (req: Request): Promise<Response> => {
           leadReadVerified = true
         }
         phase = 'CAPI veri seti'
-        const target = await graphGet(`${dataset}?fields=id`, accessToken, version, fetcher)
-        if (String(target.id) !== dataset) throw new MetaError(502, 'CAPI veri seti kimliği eşleşmiyor.')
-        return json({ success: true, pageVerified: true, formReadVerified: true, leadReadVerified, datasetVerified: true,
+        let datasetReadVerified = false
+        let datasetReadWarning: number | null = null
+        try {
+          const target = await graphGet(`${dataset}?fields=id`, accessToken, version, fetcher)
+          if (String(target.id) !== dataset) throw new MetaError(502, 'CAPI veri seti kimliği eşleşmiyor.')
+          datasetReadVerified = true
+        } catch (error) {
+          // Metadata GET ve events POST ayrı işlemlerdir. Okuma reddini ne
+          // gönderim başarısı ne de gönderim başarısızlığı olarak yorumlayın.
+          if (!(error instanceof MetaError) || ![10,100,200].includes(error.graphCode || 0)) throw error
+          datasetReadWarning = error.graphCode || null
+        }
+        return json({ success: true, pageVerified: true, formReadVerified: true, leadReadVerified, datasetVerified: datasetReadVerified,
+          datasetReadWarning, eventSubmissionVerified: false,
           testOnly: testOnly(), automaticDelivery: false,
-          message: leadReadVerified ? 'Sayfa, form, lead okuma ve veri seti erişimi doğrulandı. Bu işlem dönüşüm göndermez; Meta eşleşmesi ve optimizasyonu ayrıca doğrulanmalıdır.'
+          message: !datasetReadVerified ? `Sayfa ve form okuma doğrulandı${leadReadVerified ? '; lead okuma da doğrulandı' : '; form bulunmadığı için lead okuma doğrulanamadı'}. CAPI veri seti ayrıntısı okunamadı (Meta ${datasetReadWarning}); bu, olay gönderim yetkisini doğrulamaz veya reddetmez. Gerçek teslim sonucunu olay geçmişinden kontrol edin.`
+            : leadReadVerified ? 'Sayfa, form, lead okuma ve veri seti erişimi doğrulandı. Bu işlem dönüşüm göndermez; Meta eşleşmesi ve optimizasyonu ayrıca doğrulanmalıdır.'
             : 'Sayfa ve veri seti okunabildi; form bulunmadığı için lead okuma yetkisi doğrulanamadı.' }, 200, origin)
       } catch (error) {
         if (error instanceof MetaError && error.graphCode) throw new MetaError(error.status, `${phase} başarısız (Meta ${error.graphCode}). Sunucu tokenı ve izinlerini kontrol edin.`)

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "meta-manual-v1.1",
+  "release": "meta-manual-v1.2",
   "approvedScope": "Kullanıcının 4 Kasım 2026 Meta alanını tamamlama ve sabitleme talebi",
   "productionApproved": false,
   "protectedDirectories": [
@@ -76,7 +76,7 @@
     },
     {
       "path": "supabase/functions/_shared/meta-capi-handler.ts",
-      "sha256": "43e9f1c71515dfaf825c58ea3c0a865fbc8b17e4c81b379293a10e32a37a5044"
+      "sha256": "f5524fed75f1f878feadf22b41e9fc86dfda5a8226953dfb9789172ad5073be1"
     },
     {
       "path": "supabase/functions/_shared/meta-core.ts",
@@ -108,7 +108,7 @@
     },
     {
       "path": "tests/meta-capi-handler.test.ts",
-      "sha256": "caecc44519a7d5b0c1f3778d34acc474e41924dd28cf7d5e057f8d1864673b00"
+      "sha256": "c98bc937fc7dd07cf9eaf1e9fc88d185289d32cf1ee04d6c5fac5e5be1e1ce56"
     },
     {
       "path": "tests/meta-core.test.ts",
@@ -148,8 +148,8 @@
     },
     {
       "path": "verification/sql/staging-readonly.sql",
-      "sha256": "6a8c94c8bcc1e675d1d856ff9bba6f683ce8d5e91ccb8c41c34817f04678910b"
+      "sha256": "252e96e910925b61c829eeb40eb53d0b55a06f333f391826d77af116c018a6e4"
     }
   ],
-  "finalizationNote": "Aynı açık Meta tamamlama talebi kapsamında, ilk snapshot saklandıktan sonra görünür işlem sonucu ve istek zaman aşımı tamamlandı. Güncel gerçek bağlantı Meta 190 nedeniyle yönetici token kabulü bekliyor."
+  "finalizationNote": "Mevcut açık Meta tamamlama talebi kapsamında ilk ve v1.1 snapshot saklandı. Metadata GET erişim reddi ile events POST teslim sonucu ayrıldı; Meta 190 gerçek token hatası olarak kalır. Yeni üçüncü test QualifiedLead API kabulü doğrulandı."
 }
