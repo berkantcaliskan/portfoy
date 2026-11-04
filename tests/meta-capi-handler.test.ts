@@ -6,7 +6,7 @@ function setup(options:any={}) {
   const calls:any[]=[]
   const settings={enabled:false,security_ready:true,auto_sync:false,...options.settings}
   const envValues:any={SUPABASE_URL:'https://isolated.invalid',SUPABASE_SERVICE_ROLE_KEY:'isolated-server-key',
-    META_WORKER_SECRET:'isolated-worker-key',META_DATASET_ID:'123',META_CAPI_ACCESS_TOKEN:'isolated-capi-key',META_GRAPH_VERSION:'v99.0',META_TEST_EVENT_CODE:'ISOLATED',META_ALLOWED_ORIGINS:'https://crm.invalid',...options.env}
+    META_TEST_ONLY:'false',META_WORKER_SECRET:'isolated-worker-key',META_DATASET_ID:'123',META_CAPI_ACCESS_TOKEN:'isolated-capi-key',META_GRAPH_VERSION:'v99.0',META_TEST_EVENT_CODE:'ISOLATED',META_ALLOWED_ORIGINS:'https://crm.invalid',...options.env}
   let table=''
   let outcome:any={id:'event-id',lead_id:'lead',revision:1,state:'pending',event_name:'QualifiedLead'}
   const query:any={select(){return this},eq(){return this},order(){return this},limit(){return this},update(){return this},
@@ -114,4 +114,41 @@ test('Sonraki sayfadaki formun sahipliği doğrudan doğrulanır',async()=>{
   }})
   const r=await s.handler(s.req({action:'pull',from:'2026-11-01',to:'2026-11-03',formId:'101'},'valid-user'))
   assert.equal(r.status,200);assert.equal(urls.length,2);assert.equal(urls.some(x=>x.includes('leadgen_forms')),false)
+})
+
+for (const value of ['', 'TRUE', 'false ', '0']) test(`Test kilidi hatalı/eksik değerde üretimi açmaz: ${JSON.stringify(value)}`,async()=>{
+  const s=setup({env:{META_TEST_ONLY:value},settings:{enabled:true}})
+  assert.equal((await s.handler(s.req(enqueue,'valid-user'))).status,409)
+  assert.equal(s.fetchCount(),0);assert.equal(s.calls.some(c=>c.rpc==='meta_enqueue_checked'),false)
+})
+
+const healthEnv={META_PAGE_ID:'900',META_PAGE_ACCESS_TOKEN:'isolated-page'}
+const healthProvider=async(url:any)=>{
+  const path=new URL(String(url)).pathname
+  return Response.json(path.endsWith('/me')?{id:'900'}:path.endsWith('/leadgen_forms')?{data:[{id:'101'}]}:path.endsWith('/leads')?{data:[]}:{id:'123'})
+}
+test('Yönetici bağlantı testi sayfa, form, lead ve dataset erişimini olaysız doğrular',async()=>{
+  const s=setup({env:healthEnv,fetcher:healthProvider})
+  const r=await s.handler(s.req({action:'connection'},'valid-user')),body=await r.json()
+  assert.equal(r.status,200);assert.equal(body.leadReadVerified,true);assert.equal(body.datasetVerified,true)
+  assert.equal(s.fetchCount(),4);assert.equal(s.calls.some(c=>c.rpc==='meta_enqueue_checked'||c.rpc==='meta_claim'),false)
+  assert.ok(s.calls.filter(c=>c.fetch).every(c=>!c.fetch[1].method||c.fetch[1].method==='GET'))
+  assert.doesNotMatch(JSON.stringify(body),/isolated-page|isolated-capi-key/)
+})
+test('Bağlantı testi yanlış sayfa tokenını reddeder',async()=>{
+  const s=setup({env:healthEnv,fetcher:async()=>Response.json({id:'901'})})
+  assert.equal((await s.handler(s.req({action:'connection'},'valid-user'))).status,409);assert.equal(s.fetchCount(),1)
+})
+test('Bağlantı testi süresi dolmuş tokenı güvenli kodla açıklar',async()=>{
+  const s=setup({env:healthEnv,fetcher:async()=>Response.json({error:{code:190,message:'private-provider-detail'}},{status:400})})
+  const r=await s.handler(s.req({action:'connection'},'valid-user'));assert.equal(r.status,503)
+  const text=await r.text();assert.match(text,/190/);assert.doesNotMatch(text,/private-provider-detail/)
+})
+test('Form bulunmazsa bağlantı testi lead yetkisi doğrulandı iddiasında bulunmaz',async()=>{
+  const s=setup({env:healthEnv,fetcher:async(url:any)=>String(url).includes('/leadgen_forms')?Response.json({data:[]}):healthProvider(url)})
+  const r=await s.handler(s.req({action:'connection'},'valid-user'));assert.equal(r.status,200);assert.equal((await r.json()).leadReadVerified,false)
+})
+test('Lead okuma izni hatası dataset başarısıyla gizlenmez',async()=>{
+  const s=setup({env:healthEnv,fetcher:async(url:any)=>new URL(String(url)).pathname.endsWith('/leads')?Response.json({error:{code:200}},{status:403}):healthProvider(url)})
+  const r=await s.handler(s.req({action:'connection'},'valid-user'));assert.equal(r.status,503);assert.match(await r.text(),/Lead okuma yetkisi/)
 })

@@ -23,9 +23,10 @@ export async function invokeMeta(body: Record<string, unknown>) {
   if (!import.meta.env.VITE_SUPABASE_URL) throw new Error('VITE_SUPABASE_URL yapılandırılmamış.')
   const { data: session } = await supabase.auth.getSession()
   if (!session.session) throw new Error('Meta işlemleri için Supabase Auth oturumu gerekli; yerel CRM girişi yeterli değildir.')
-  const { data, error } = await supabase.functions.invoke('meta-capi', { body })
+  const { data, error } = await supabase.functions.invoke('meta-capi', { body, timeout: 70000 })
   if (error) {
     let message = 'Meta sunucu işlemi başarısız; oturum, yetki ve sunucu ayarlarını kontrol edin.'
+    if (error.name === 'FunctionsFetchError' || error.name === 'AbortError') message = 'Sunucuya erişilemedi veya işlem süresi doldu. Bazı kayıtlar işlenmiş olabilir; durumu yenileyip aynı kapsamı güvenle tekrar kontrol edin.'
     if (error.context instanceof Response) {
       const detail = await error.context.clone().json().catch(() => null)
       if (typeof detail?.error === 'string') message = detail.error

@@ -25,6 +25,7 @@ export function MetaBackendPanel() {
   const selectedSourceId = testSources.some(s=>s.id===sourceId) ? sourceId : testSources.length===1 ? testSources[0].id : ''
   const run = async (fn: () => Promise<void>) => {
     setBusy(true)
+    setMessage('Sunucu işlemi sürüyor; sonuç bekleniyor…')
     try { await fn() } catch (error) { setMessage((error as Error).message) } finally { setBusy(false) }
   }
   const refresh = async () => { const data = await metaStore.refreshStatus(); setStatus(data); setMessage('Sunucu ayarları okundu. Meta eşleşme, atıf ve optimizasyon sonuçları ayrıca doğrulanmalıdır.') }
@@ -32,7 +33,7 @@ export function MetaBackendPanel() {
   return <GlassCard className="space-y-4 p-5">
     <h3 className="text-sm font-bold text-white">Meta güvenli sunucu bağlantısı</h3>
     <p className="text-xs text-slate-300">CAPI ve sayfa anahtarları Supabase sunucu sırlarında yönetilir. Tarayıcıya girilmez. Yerel CRM girişi Meta gönderim yetkisi sağlamaz.</p>
-    <p className="text-xs text-amber-300" role="status">{message}</p>
+    <p className="text-xs text-amber-300">{message}</p>
     <label className="block text-xs text-slate-300">Webhook adresi
       <input readOnly className={classes} value={metaStore.getConfig().webhookUrl || 'VITE_SUPABASE_URL yapılandırılmalı'} />
     </label>
@@ -65,8 +66,9 @@ export function MetaBackendPanel() {
       <GlassButton disabled={busy} onClick={()=>run(refresh)}>Durumu ve geçmişi yenile</GlassButton>
       {canManage && <GlassButton disabled={busy} onClick={()=>run(async()=>{
         const result = await invokeMeta({ action: 'connection' }); setMessage(result.message)
-      })}>Yönetici bağlantı testi</GlassButton>}
+      })}>{busy ? 'İşlem sürüyor…' : 'Yönetici bağlantı testi'}</GlassButton>}
     </div>
+    <p className="text-xs text-amber-300" role="status" aria-live="polite">{message}</p>
     {status && <div className="text-xs text-slate-300 space-y-2">
       <p>Yapılandırma: {status.configured ? 'Mevcut' : 'Eksik'} • Gönderim: {status.enabled ? 'Açık' : 'Kapalı'} • Güvenli geçiş: {status.securityReady ? 'Yönetici onaylı' : 'Bekleniyor'}</p>
       <p>Dataset: {status.datasetId || 'Eksik'} • Elle gönderim • Arka plan gönderimi kapalı</p>
@@ -75,6 +77,7 @@ export function MetaBackendPanel() {
       <div className="max-h-60 overflow-auto space-y-2">
         {(status.events || []).map((e: Record<string, any>)=><p key={e.id} className="border-t border-white/10 pt-2">
           {e.event_name} • {{pending:'Bekliyor',processing:'İşleniyor',sent:'Meta API kabul etti',retry:'Tekrar planlandı',rejected:'Kalıcı ret'}[e.state as string]} • Deneme: {e.attempt}
+          <br/>Olay (aşama değişikliği) zamanı: {e.occurred_at || 'Bilinmiyor'} • Olay kimliği: {e.id}
           <br/>Son deneme: {e.last_attempt_at || 'Yok'} • Kabul: {e.sent_at || 'Yok'} {e.error_code && `• Hata: ${e.error_code}`}{e.state !== 'sent' && e.next_attempt_at && ` • En erken tekrar: ${e.next_attempt_at}`}
         </p>)}
       </div>

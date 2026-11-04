@@ -13,6 +13,9 @@ export function createCapiHandler(deps: {
 }) {
 const { env, createClient } = deps
 const fetcher = deps.fetcher || fetch
+// Yalnızca açıkça "false" tanımlanan ortam üretim gönderimine aday olabilir.
+// Eksik, boş veya hatalı değer güvenli biçimde yalnızca test modunda kalır.
+const testOnly = () => env('META_TEST_ONLY') !== 'false'
 return async (req: Request): Promise<Response> => {
   const origin = req.headers.get('origin') || ''
   const allowed = env('META_ALLOWED_ORIGINS').split(',').map(s => s.trim()).filter(Boolean)
@@ -48,12 +51,12 @@ return async (req: Request): Promise<Response> => {
     const { data: settings, error: settingsError } = await db.from('meta_settings').select('*').eq('id', true).single()
     if (settingsError) throw new MetaError(503, 'Meta migration veya ayarları eksik.')
     if (input.action === 'status' || input.action === 'history') {
-      let query = db.from('meta_outbox').select('id,lead_id,meta_leadgen_id,revision,event_name,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').order('occurred_at', { ascending: false }).limit(100)
+      let query = db.from('meta_outbox').select('id,lead_id,meta_leadgen_id,revision,event_name,occurred_at,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').order('occurred_at', { ascending: false }).limit(100)
       if (!member?.is_admin) query = query.eq('requested_by', userId)
       const { data: events, error } = await query
       if (error) throw new MetaError(503, 'Olay geçmişi okunamadı.')
       return json({ configured: !!(env('META_DATASET_ID') && env('META_CAPI_ACCESS_TOKEN') && env('META_GRAPH_VERSION')),
-        enabled: settings.enabled, testOnly: env('META_TEST_ONLY') === 'true', autoSyncStages: false, manualOnly: true, backgroundDelivery: false, securityReady: settings.security_ready,
+        enabled: settings.enabled, testOnly: testOnly(), autoSyncStages: false, manualOnly: true, backgroundDelivery: false, securityReady: settings.security_ready,
         datasetId: env('META_DATASET_ID'), events }, 200, origin)
     }
     if (input.action === 'stage') {
@@ -82,8 +85,34 @@ return async (req: Request): Promise<Response> => {
     if (input.action === 'connection') {
       if (!member?.is_admin) throw new MetaError(403, 'Yönetici yetkisi gerekli.')
       if (!/^\d+$/.test(dataset) || !accessToken) throw new MetaError(503, 'Sunucu dataset veya CAPI anahtarı eksik.')
-      await graphGet(`${dataset}?fields=id`, accessToken, version, fetcher)
-      return json({ success: true, message: 'Dataset okunabildi; olay teslimi ve eşleşme henüz doğrulanmadı.' }, 200, origin)
+      const pageId = env('META_PAGE_ID'), pageToken = env('META_PAGE_ACCESS_TOKEN')
+      if (!/^\d+$/.test(pageId) || !pageToken) throw new MetaError(503, 'Sunucuda Meta sayfa ayarları eksik.')
+      let phase = 'Sayfa tokenı'
+      try {
+        const page = await graphGet('me?fields=id', pageToken, version, fetcher)
+        if (String(page.id) !== pageId) throw new MetaError(409, 'Sayfa tokenı yapılandırılmış sayfayla eşleşmiyor.')
+        phase = 'Form okuma'
+        const forms = await graphGet(`${pageId}/leadgen_forms?fields=id&limit=1`, pageToken, version, fetcher)
+        if (!Array.isArray(forms.data)) throw new MetaError(502, 'Meta geçerli form listesi döndürmedi.')
+        const formId = forms.data[0]?.id
+        let leadReadVerified = false
+        if (typeof formId === 'string' && /^\d{1,32}$/.test(formId)) {
+          phase = 'Lead okuma yetkisi'
+          const leads = await graphLeadGet(`${formId}/leads?limit=1`, pageToken, version, fetcher)
+          if (!Array.isArray(leads.data)) throw new MetaError(502, 'Meta geçerli başvuru listesi döndürmedi.')
+          leadReadVerified = true
+        }
+        phase = 'CAPI veri seti'
+        const target = await graphGet(`${dataset}?fields=id`, accessToken, version, fetcher)
+        if (String(target.id) !== dataset) throw new MetaError(502, 'CAPI veri seti kimliği eşleşmiyor.')
+        return json({ success: true, pageVerified: true, formReadVerified: true, leadReadVerified, datasetVerified: true,
+          testOnly: testOnly(), automaticDelivery: false,
+          message: leadReadVerified ? 'Sayfa, form, lead okuma ve veri seti erişimi doğrulandı. Bu işlem dönüşüm göndermez; Meta eşleşmesi ve optimizasyonu ayrıca doğrulanmalıdır.'
+            : 'Sayfa ve veri seti okunabildi; form bulunmadığı için lead okuma yetkisi doğrulanamadı.' }, 200, origin)
+      } catch (error) {
+        if (error instanceof MetaError && error.graphCode) throw new MetaError(error.status, `${phase} başarısız (Meta ${error.graphCode}). Sunucu tokenı ve izinlerini kontrol edin.`)
+        throw error
+      }
     }
     if (input.action === 'pull') {
       if (!member?.is_admin || !settings.security_ready) throw new MetaError(403, 'Güvenli geçiş ve yönetici yetkisi gerekli.')
@@ -120,7 +149,7 @@ return async (req: Request): Promise<Response> => {
       return json({ processed, leads: savedLeads, cursor: leads.paging?.next ? leads.paging?.cursors?.after : null }, 200, origin)
     }
     const mode = deliveryMode(settings, input.action)
-    if (env('META_TEST_ONLY') === 'true' && input.action === 'enqueue') throw new MetaError(409, 'Bu ortam yalnızca Test Events kabul eder; canlı gönderim kilitli.')
+    if (testOnly() && input.action === 'enqueue') throw new MetaError(409, 'Bu ortam yalnızca Test Events kabul eder; canlı gönderim kilitli.')
     if (!/^\d+$/.test(dataset) || !accessToken) throw new MetaError(503, 'Sunucu dataset veya CAPI anahtarı eksik.')
     let eventId: string | null = null
     if (input.action === 'enqueue' || input.action === 'test') {
@@ -145,7 +174,7 @@ return async (req: Request): Promise<Response> => {
       let result: any
       let httpStatus = 0, body: any = null
       try {
-        if ((!settings.enabled || env('META_TEST_ONLY') === 'true') && !row.test_mode) throw new MetaError(409, 'Canlı gönderim kapalı.')
+        if ((!settings.enabled || testOnly()) && !row.test_mode) throw new MetaError(409, 'Canlı gönderim kapalı.')
         const event = row.payload || await buildCapiEvent(row)
         if (!row.payload) {
           const { data, error } = await db.from('meta_outbox').update({ payload: event }).eq('id', row.id).eq('lease_id', row.lease_id).select('id').single()
@@ -172,7 +201,7 @@ return async (req: Request): Promise<Response> => {
       if (error) throw new MetaError(503, 'Teslim sonucu kaydedilemedi; aynı olay kimliğiyle kurtarılacak.')
     }
     if (!eventId) return json({ processed: jobs?.length || 0 }, 200, origin)
-    const { data: event, error } = await db.from('meta_outbox').select('id,lead_id,meta_leadgen_id,revision,event_name,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').eq('id', eventId).single()
+    const { data: event, error } = await db.from('meta_outbox').select('id,lead_id,meta_leadgen_id,revision,event_name,occurred_at,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').eq('id', eventId).single()
     if (error) throw new MetaError(503, 'Teslim sonucu okunamadı.')
     return json({ event }, 200, origin)
   } catch (error) {

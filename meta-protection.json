@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "release": "meta-manual-v1.1",
+  "approvedScope": "Kullanıcının 4 Kasım 2026 Meta alanını tamamlama ve sabitleme talebi",
+  "productionApproved": false,
+  "protectedDirectories": [
+    "supabase/functions/_shared",
+    "supabase/functions/meta-webhook",
+    "supabase/functions/meta-capi",
+    "src/components/meta"
+  ],
+  "files": [
+    {
+      "path": ".github/CODEOWNERS",
+      "sha256": "260cb83a1889d04b88c853c06d1745603a7d0ec8e903b588cbfe2d69174b8227"
+    },
+    {
+      "path": ".github/workflows/meta-protection.yml",
+      "sha256": "78933131db0b40a55253155617671b014cca88684a031ea5666df2cdf934b926"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "16b062372e6e6054ae1bce68ecb3a2843d91d401b7d25583f67c8335b0d44d8a"
+    },
+    {
+      "path": "docs/META_SABIT_SURUM.md",
+      "sha256": "a9778efe707b416657a62fd8f218c742d4c43a207d83b4736abf452dca0150e4"
+    },
+    {
+      "path": "package.json",
+      "sha256": "52fe179ca448c42a298bde34731168e139b8d815aeacfc99efd09a90f1f1c8ab"
+    },
+    {
+      "path": "scripts/verify-meta-lock.mjs",
+      "sha256": "3878adf5f25b790f22b999464296a54084effcf1828ba24de9c2f7b26f616bac"
+    },
+    {
+      "path": "scripts/verify-meta-staging.mjs",
+      "sha256": "8b477c51f886200d5b05e99f7bfa51887114a606517fd148bbf586f0719b8511"
+    },
+    {
+      "path": "src/components/crm/LeadDetailModal.tsx",
+      "sha256": "6590ba987d77d1e25c624a07088b7fb28ee72e14c563d0dd21692d03a7f17dd1"
+    },
+    {
+      "path": "src/components/marketing/MarketingCampaignsView.tsx",
+      "sha256": "fff87f9843b5bef0688a31a3b97d589880e03f7ce3993aaf32ce731fb44cf6ec"
+    },
+    {
+      "path": "src/components/meta/MetaBackendPanel.tsx",
+      "sha256": "6fe04e801f57ca32b524ed75c8b866a8537aa6454cd0fad66ada6a6da3cbe5de"
+    },
+    {
+      "path": "src/components/meta/MetaIntegrationView.tsx",
+      "sha256": "398892bfd0caa175ea32e99e71946a57459faee3c39e9bed123f014c3c448d83"
+    },
+    {
+      "path": "src/services/metaSources.ts",
+      "sha256": "3c9e03043edc10373f26f6906ebaa1bf77e2384e68dcb96815dd3f40bcada302"
+    },
+    {
+      "path": "src/services/metaStageQueue.ts",
+      "sha256": "32eef7a692863b26d82e22e2428ce8a416b10fdd0f9d42ff9fbe1f02bdbb4722"
+    },
+    {
+      "path": "src/services/metaStore.ts",
+      "sha256": "7515900c88b52e0a43c6efa9a072deeebbae49df71c6b5e5df99eaf041069d3d"
+    },
+    {
+      "path": "src/types/meta.ts",
+      "sha256": "5165eff00e7148e169fbd69ea3869841e4a590c385f60c178fb2a84fa0c65b21"
+    },
+    {
+      "path": "supabase/config.toml",
+      "sha256": "7cc641ca59f2126654ae4484af568df2f9a4ac90ccfc4ebacee026f906b8aa4e"
+    },
+    {
+      "path": "supabase/functions/_shared/meta-capi-handler.ts",
+      "sha256": "43e9f1c71515dfaf825c58ea3c0a865fbc8b17e4c81b379293a10e32a37a5044"
+    },
+    {
+      "path": "supabase/functions/_shared/meta-core.ts",
+      "sha256": "5c1d72aba15a707370fd9664902f1a3da1877a0cd4ec7cd9868c90624c6d009b"
+    },
+    {
+      "path": "supabase/functions/meta-capi/index.ts",
+      "sha256": "70cdb657ca48ad6d22082e67bf3b4c990c9f14c0b6f8d7b16d80844e0bf38731"
+    },
+    {
+      "path": "supabase/functions/meta-webhook/index.ts",
+      "sha256": "728be655524fd5fc847015bbd174c840d728bf2fdcd5ca33fbc3f6eb4b2885f3"
+    },
+    {
+      "path": "supabase/migrations/202610310001_meta_pipeline.sql",
+      "sha256": "0b3937e38e14da0b6c8d64f9b26403afff45b74adfc822123b17a11f93757700"
+    },
+    {
+      "path": "supabase/migrations/202611030001_meta_source_context.sql",
+      "sha256": "274dae31d2a18c7ad96e03f8a8d57df826060f10b43249d560d159a3eeab9cfa"
+    },
+    {
+      "path": "supabase/migrations/202611030002_meta_backend_lead_read.sql",
+      "sha256": "2b912078db502b2256e3c2743ab3ba3324eb37a1b9e90b26e1560328787084ad"
+    },
+    {
+      "path": "supabase/rollout/02_crm_rls_after_auth.sql",
+      "sha256": "216af8b1a47851d8947d0d26ce339d5d6ae777e0d9584ca61fa69a74347e2bc8"
+    },
+    {
+      "path": "tests/meta-capi-handler.test.ts",
+      "sha256": "caecc44519a7d5b0c1f3778d34acc474e41924dd28cf7d5e057f8d1864673b00"
+    },
+    {
+      "path": "tests/meta-core.test.ts",
+      "sha256": "56e8e6ab779b9b5948292c3ac590f7ed47bdad8efef95c8289d0478b63baa2af"
+    },
+    {
+      "path": "tests/meta-lock.test.ts",
+      "sha256": "d2164b51bc652d11a8056269773ed6ff97cac14b610af21d7ad7a8cef407317f"
+    },
+    {
+      "path": "tests/meta-source-contract.test.ts",
+      "sha256": "c60f7122774a8f6a301ed5acd7c4053129048af77740230723163791066fd413"
+    },
+    {
+      "path": "tests/meta-stage-queue.test.ts",
+      "sha256": "211918c37b7b2ecb207d72bfd088ec0e0538a9dac6729c9f1a2a78d5be6efdd9"
+    },
+    {
+      "path": "tests/meta-store.test.ts",
+      "sha256": "9b0ef73e611928b89d337f85554f34ba960fb266fda864add859579f63cbebdf"
+    },
+    {
+      "path": "verification/sql/check.mjs",
+      "sha256": "ff790f5d2682792eaafecad5ab7ec40a9008b9c37fc725b1b3ad0ac93514539e"
+    },
+    {
+      "path": "verification/sql/roundtrip.mjs",
+      "sha256": "a3dd4b0434260af3ea5d31c5d9069f816975baf2981056efb1d892b6d1ae66ef"
+    },
+    {
+      "path": "verification/sql/staging-concurrent-rollback.sql",
+      "sha256": "d815f11cc600020175bc413bb78893a8913375b46b9511b8bc106118913d142e"
+    },
+    {
+      "path": "verification/sql/staging-package.mjs",
+      "sha256": "440f1d98df94fc5567e9312eca8ad24b809ecc87c15ec0614055580320aeb9a4"
+    },
+    {
+      "path": "verification/sql/staging-readonly.sql",
+      "sha256": "6a8c94c8bcc1e675d1d856ff9bba6f683ce8d5e91ccb8c41c34817f04678910b"
+    }
+  ],
+  "finalizationNote": "Aynı açık Meta tamamlama talebi kapsamında, ilk snapshot saklandıktan sonra görünür işlem sonucu ve istek zaman aşımı tamamlandı. Güncel gerçek bağlantı Meta 190 nedeniyle yönetici token kabulü bekliyor."
+}
