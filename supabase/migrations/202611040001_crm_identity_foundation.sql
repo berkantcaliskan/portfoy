@@ -21,7 +21,7 @@ INSERT INTO public.crm_identities(auth_user_id,app_user_id)
  ON CONFLICT DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.crm_get_my_profile() RETURNS jsonb
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
 DECLARE result jsonb;
 BEGIN
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'authentication_required' USING ERRCODE='28000'; END IF;
