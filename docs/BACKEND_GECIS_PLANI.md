@@ -28,7 +28,7 @@ Geçiş ekranı: `http://127.0.0.1:9002/?workspace=backend`. Varsayılan uygulam
 
 ## Doğrulama
 
-`npm test` merkezi Auth adaptörünün negatif/pozitif kontrollerini de çalıştırır. SQL: önce `verification/sql` bağımlılıklarını kurun, ardından kökten `node verification/crm/auth.mjs` çalıştırın; aynı test-only PGlite bağımlılığı kullanılır.
+`npm test` merkezi Auth adaptörünün negatif/pozitif kontrollerini de çalıştırır. SQL: önce `npm ci --ignore-scripts --prefix verification/crm`, ardından kökten `npm test --prefix verification/crm` çalıştırın. Meta test paketini değiştirmeden aynı test-only PGlite sürümü ayrı, kilit dosyalı paket olarak kullanılır.
 
 Kayıt temeli testleri: `node verification/crm/records.mjs`. Salt okunur staging kontrolleri `verification/crm/staging-readonly.sql` ve `staging-profile-readonly.sql` içindedir. İkinci dosya DB bağlantısında `BEGIN READ ONLY` ve geçici rol bağlamı kurar; tarayıcıdan gerçek Auth kabulünün yerine geçmez.
 

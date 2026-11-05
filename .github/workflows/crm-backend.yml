@@ -22,6 +22,6 @@ jobs:
    - run: npm run typecheck
    - run: npm run build
    - run: npm run security:check
-   - run: npm ci --ignore-scripts --prefix verification/sql
+   - run: npm ci --ignore-scripts --prefix verification/crm
    - run: node verification/crm/auth.mjs
    - run: node verification/crm/records.mjs

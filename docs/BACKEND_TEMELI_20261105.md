@@ -26,10 +26,17 @@ Yalnızca sunucuda doğrulanmış etkin personel ve aynı şirket kapsamı kabul
 - Üç anonim HTTP çağrısı (profil, liste, yazım) 401 ile reddedildi; kayıt yaratılmadı.
 - 156 birim test, 7 kimlik SQL ve 20 kayıt SQL testi geçti. Tip kontrolü ve derleme başarılı. Lint mevcut uyarılarla; genel kod tabanındaki eski uyarılar bastırılmadı.
 - Kullanıcının ekranında sunucu profili “Staging Meta Yöneticisi · ADMIN · Yönetim” olarak doğrulandı. Bu, mevcut Supabase oturumuyla tek kullanıcı kabulüdür; iki farklı kullanıcı veya e-posta teslim kabulü değildir.
+- Son kullanıcı görüntüsünde yedi modülün yerel sayımı sıfır, her sunucu listesi “0 erişilebilir kayıt” döndü. Böylece tarayıcı üzerinden yetkili liste RPC'leri de doğrulandı. Bu sonuç yalnızca bu origin/tarayıcı alanı içindir; eski profil veya diğer bilgisayarlardaki verilerin boş olduğunu kanıtlamaz.
 
 ## Yedek ve veriler
 
 Mevcut eski masaüstü disk profilinin özel yerel kopyası ve 50 staging müşteri/kaynak kaydının özel JSON yedeği çalışma klasörü dışında Git kapsamına alınmadan saklandı. Rapora, Git'e veya kaynak zip'ine ham müşteri/parola verisi eklenmedi. 9002'nin disk endpointi etkin olmadığı için bu endpointten yedek alınabildiği iddia edilmiyor; tarayıcıya özgü diğer kayıtlar aktarım öncesi ayrıca yedeklenmelidir. Sunucudaki yedek rol/şema kurtarma veya tam PITR yedeği değildir.
+
+Eski profilin salt okunur envanteri 1 proje, bu projenin içinde 64 bağımsız bölüm ve 2 dosya kaydı gösterdi. Dosyalar `fileDataUrl` içerebiliyor; metadata'yı taşımak gerçek dosyayı güvenli Storage'a geçirmekle eşdeğer değildir. Bu kayıtlar otomatik aktarılmadı, sahiplikleri değiştirilmedi.
+
+## CI düzeltmesi
+
+İlk GitHub backend çalışmasında uygulama testleri, typecheck, build ve sır taraması geçti; SQL test kurulumu Meta test paketinde lock dosyası bulunmadığı için durdu. Başarısızlık saklanmadı. Korunan Meta paketini değiştirmeden `verification/crm` altında aynı PGlite 0.5.14 için ayrı package/lock eklendi ve temiz `npm ci` ile 27 SQL kontrolü yeniden çalıştırıldı. Üretim bağımlılığı eklenmedi.
 
 ## Auth dönüş ayarı
 

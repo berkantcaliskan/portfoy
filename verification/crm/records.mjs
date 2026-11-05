@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
-const require=createRequire(new URL('../sql/package.json',import.meta.url))
+const require=createRequire(new URL('./package.json',import.meta.url))
 const {PGlite}=require('@electric-sql/pglite')
 const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),db=new PGlite()
 await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;CREATE SCHEMA auth;
