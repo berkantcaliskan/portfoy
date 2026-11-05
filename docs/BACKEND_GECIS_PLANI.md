@@ -1,12 +1,18 @@
 # Genel CRM backend geçişi
 
-Meta alanı `meta-manual-v1` snapshot'ı ile korunur. Genel geçişte bu sözleşme değiştirilmez; gerektiğinde Meta'ya özgü açık kullanıcı onayı alınır.
+Meta alanı `meta-manual-v1.4-demo` snapshot'ı ile korunur. Genel geçişte bu sözleşme değiştirilmez; gerektiğinde Meta'ya özgü açık kullanıcı onayı alınır.
 
 ## Hazırlanan temel
 
 `202611040001_crm_identity_foundation.sql` Supabase Auth kullanıcısını personelle eşleyen ayrı `crm_identities` tablosu ve `crm_get_my_profile()` RPC'sini ekler. Yalnızca mevcut doğrulanmış Meta/personel eşlemelerini devralır; Meta üyeliği, rolü, politikaları veya olayları değiştirmez. Profilde parola yoktur. İstemci kendi yetkisini/eşlemesini değiştiremez. Devre dışı eşleme migration tekrarıyla yeniden açılmaz.
 
-`crmAuthService.ts` Auth sunucusunu doğrular ve canonical personel profilini RPC'den alır; localStorage veya Auth metadata rolünü yetki kabul etmez. Parola girişi/çıkışı için adaptör sağlar; parola loglanmaz veya yerel personel kaydına yazılmaz. Bu adaptör henüz mevcut giriş ekranının yerine etkinleştirilmedi. Migration üretime veya staging'e uygulanmadı; önce izole SQL testleri yapıldı.
+`crmAuthService.ts` Auth sunucusunu doğrular ve canonical personel profilini RPC'den alır; localStorage veya Auth metadata rolünü yetki kabul etmez. Parola ve e-posta bağlantısı/kod girişi adaptörleri sağlar. Parola loglanmaz veya yerel personel kaydına yazılmaz. Bu adaptör mevcut giriş ekranının yerine etkinleştirilmedi; ayrı geçiş alanında kullanılır.
+
+5 Kasım 2026: kimlik temeli ve `202611050001_crm_record_backend.sql` yalnızca `portfoy-meta-staging` projesine uygulandı. Yeni `crm_backend` şeması mevcut Meta/müşteri tablolarından ayrıdır. Yedi modül için kayıt başına sürüm, idempotent işlem kimliği, actor audit, şirket/rol/sahip kapsamı ve fiziksel silme yerine arşivleme sağlar. Projenin nested daire/çizim bilgileri JSON kayıt içinde kaybolmadan korunur. Bu temel, her modülün bütün iş kurallarının tamamlandığı anlamına gelmez; onay kararı genel kayıt endpointinden verilemez.
+
+Tüm modül yazımları **sunucuda kapalıdır**. Eski `syncService` bu depoya bağlanmadı. Böylece yerel tam kayıt upsert'i, eski önbellek veya geçmiş veriler otomatik yüklenmez. Yeni merkezi kayıtlara henüz veri aktarılmadı. Mevcut CRM ve korumalı Meta oturumu çalışmaya devam eder.
+
+Geçiş ekranı: `http://127.0.0.1:9002/?workspace=backend`. Varsayılan uygulama 9002'de aynı kalır. Bu ekran eski yerel store/senkronizasyon motorunu başlatmaz; ayrı sessionStorage Auth istemcisi kullanır. Sunucu profilini doğrular, yerel aktarım sayımını salt okunur gösterir ve yetkili sunucu listelerini kontrol eder. Gizli anahtar veya yerel personel parolası aktarmaz. İlk uygulamada yalnızca kod bekleniyordu; mevcut Supabase şablonu Sign in bağlantısı gönderdiği için SPA callback desteği eklendi. Sonra izin listesi boş olduğu doğrulandı; yalnızca bu ekranın 127.0.0.1 ve localhost 9002 dönüş adresleri eklendi. `site_url`, e-posta şablonu ve diğer ayarlar değiştirilmedi.
 
 ## Sonraki uygulama sırası
 
@@ -22,6 +28,8 @@ Meta alanı `meta-manual-v1` snapshot'ı ile korunur. Genel geçişte bu sözle�
 
 ## Doğrulama
 
-`npm test` merkezi Auth adaptörünün negatif/pozitif kontrollerini de çalıştırır. SQL: önce `verification/sql` bağımlılıklarını kurun, ardından kökten `node verification/crm/auth.mjs` çalıştırın; aynı test-only PGlite bağımlılığı kullanılır.
+`npm test` merkezi Auth adaptörünün negatif/pozitif kontrollerini de çalıştırır. SQL: önce `npm ci --ignore-scripts --prefix verification/crm`, ardından kökten `npm test --prefix verification/crm` çalıştırın. Meta test paketini değiştirmeden aynı test-only PGlite sürümü ayrı, kilit dosyalı paket olarak kullanılır.
+
+Kayıt temeli testleri: `node verification/crm/records.mjs`. Salt okunur staging kontrolleri `verification/crm/staging-readonly.sql` ve `staging-profile-readonly.sql` içindedir. İkinci dosya DB bağlantısında `BEGIN READ ONLY` ve geçici rol bağlamı kurar; tarayıcıdan gerçek Auth kabulünün yerine geçmez.
 
 Her backend adımında `npm run meta:verify` geçmelidir. Meta baseline farkı genel backend işi gerekçesiyle otomatik kabul edilmez.
