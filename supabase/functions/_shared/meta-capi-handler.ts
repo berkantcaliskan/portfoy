@@ -1,5 +1,6 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { buildCapiEvent, deliveryResult, graphGet, graphLeadGet, graphVersion, MetaError, normalizeLead, readBody, deliveryMode } from './meta-core.ts'
+import { getMetaPageAccess, resolveMetaPageAccess } from './meta-page-access.ts'
 
 const json = (body: unknown, status = 200, origin = '') => Response.json(body, {
   status, headers: { 'Access-Control-Allow-Origin': origin, Vary: 'Origin', 'Cache-Control': 'no-store',
@@ -57,7 +58,7 @@ return async (req: Request): Promise<Response> => {
       if (error) throw new MetaError(503, 'Olay geçmişi okunamadı.')
       return json({ configured: !!(env('META_DATASET_ID') && env('META_CAPI_ACCESS_TOKEN') && env('META_GRAPH_VERSION')),
         enabled: settings.enabled, testOnly: testOnly(), autoSyncStages: false, manualOnly: true, backgroundDelivery: false, securityReady: settings.security_ready,
-        datasetId: env('META_DATASET_ID'), events }, 200, origin)
+        pageAccessMode: env('META_SYSTEM_USER_TOKEN').trim() ? 'SYSTEM_USER' : 'PAGE', datasetId: env('META_DATASET_ID'), events }, 200, origin)
     }
     if (input.action === 'stage') {
       if (typeof input.leadId !== 'string' || typeof input.stage !== 'string' || typeof input.qualified !== 'boolean'
@@ -85,11 +86,12 @@ return async (req: Request): Promise<Response> => {
     if (input.action === 'connection') {
       if (!member?.is_admin) throw new MetaError(403, 'Yönetici yetkisi gerekli.')
       if (!/^\d+$/.test(dataset) || !accessToken) throw new MetaError(503, 'Sunucu dataset veya CAPI anahtarı eksik.')
-      const pageId = env('META_PAGE_ID'), pageToken = env('META_PAGE_ACCESS_TOKEN')
-      if (!/^\d+$/.test(pageId) || !pageToken) throw new MetaError(503, 'Sunucuda Meta sayfa ayarları eksik.')
+      const configuredAccess = getMetaPageAccess(env)
+      const access = await resolveMetaPageAccess(env,version,fetcher)
+      const pageId = access.pageId, pageToken = access.token
       let phase = 'Sayfa tokenı'
       try {
-        const page = await graphGet('me?fields=id', pageToken, version, fetcher)
+        const page = await graphGet(access.mode === 'SYSTEM_USER' ? `${pageId}?fields=id` : 'me?fields=id', pageToken, version, fetcher)
         if (String(page.id) !== pageId) throw new MetaError(409, 'Sayfa tokenı yapılandırılmış sayfayla eşleşmiyor.')
         phase = 'Form okuma'
         const forms = await graphGet(`${pageId}/leadgen_forms?fields=id&limit=1`, pageToken, version, fetcher)
@@ -115,12 +117,23 @@ return async (req: Request): Promise<Response> => {
           if (!(error instanceof MetaError) || ![10,100,200].includes(error.graphCode || 0)) throw error
           datasetReadWarning = error.graphCode || null
         }
-        return json({ success: true, pageVerified: true, formReadVerified: true, leadReadVerified, datasetVerified: datasetReadVerified,
+        let credentialInfo: {verified:boolean;type?:string;expiresAt?:number;dataAccessExpiresAt?:number}={verified:false}
+        if(access.mode === 'SYSTEM_USER') {
+          try {
+            const info=await graphGet(`debug_token?input_token=${encodeURIComponent(configuredAccess.token)}`,configuredAccess.token,version,fetcher)
+            if(info.data?.is_valid===false) throw new MetaError(503,'Sistem kullanıcısı tokenı geçersiz.')
+            if(info.data?.is_valid===true) credentialInfo={verified:true,type:info.data.type,
+              expiresAt:typeof info.data.expires_at==='number'?info.data.expires_at:undefined,
+              dataAccessExpiresAt:typeof info.data.data_access_expires_at==='number'?info.data.data_access_expires_at:undefined}
+          } catch(error) {if(error instanceof MetaError && error.message==='Sistem kullanıcısı tokenı geçersiz.') throw error}
+        }
+        const accessNote=access.mode==='SYSTEM_USER' ? ` Sistem kullanıcısı erişimi kullanılıyor.${credentialInfo.verified && credentialInfo.expiresAt===0 ? ' Token için planlı bitiş tarihi görünmüyor; erişim yine iptal edilebilir.' : credentialInfo.verified && credentialInfo.expiresAt ? ` Token bitişi: ${new Date(credentialInfo.expiresAt*1000).toISOString()}.` : ' Token bitiş tarihi doğrulanamadı.'}` : ''
+        return json({ success: true, pageAccessMode:access.mode, credentialInfo, pageVerified: true, formReadVerified: true, leadReadVerified, datasetVerified: datasetReadVerified,
           datasetReadWarning, eventSubmissionVerified: false,
           testOnly: testOnly(), automaticDelivery: false,
-          message: !datasetReadVerified ? `Sayfa ve form okuma doğrulandı${leadReadVerified ? '; lead okuma da doğrulandı' : '; form bulunmadığı için lead okuma doğrulanamadı'}. CAPI veri seti ayrıntısı okunamadı (Meta ${datasetReadWarning}); bu, olay gönderim yetkisini doğrulamaz veya reddetmez. Gerçek teslim sonucunu olay geçmişinden kontrol edin.`
+          message: (!datasetReadVerified ? `Sayfa ve form okuma doğrulandı${leadReadVerified ? '; lead okuma da doğrulandı' : '; form bulunmadığı için lead okuma doğrulanamadı'}. CAPI veri seti ayrıntısı okunamadı (Meta ${datasetReadWarning}); bu, olay gönderim yetkisini doğrulamaz veya reddetmez. Gerçek teslim sonucunu olay geçmişinden kontrol edin.`
             : leadReadVerified ? 'Sayfa, form, lead okuma ve veri seti erişimi doğrulandı. Bu işlem dönüşüm göndermez; Meta eşleşmesi ve optimizasyonu ayrıca doğrulanmalıdır.'
-            : 'Sayfa ve veri seti okunabildi; form bulunmadığı için lead okuma yetkisi doğrulanamadı.' }, 200, origin)
+            : 'Sayfa ve veri seti okunabildi; form bulunmadığı için lead okuma yetkisi doğrulanamadı.')+accessNote }, 200, origin)
       } catch (error) {
         if (error instanceof MetaError && error.graphCode) throw new MetaError(error.status, `${phase} başarısız (Meta ${error.graphCode}). Sunucu tokenı ve izinlerini kontrol edin.`)
         throw error
@@ -130,8 +143,8 @@ return async (req: Request): Promise<Response> => {
       if (!member?.is_admin || !settings.security_ready) throw new MetaError(403, 'Güvenli geçiş ve yönetici yetkisi gerekli.')
       const from = Date.parse(input.from), to = Date.parse(input.to)
       if (!Number.isFinite(from) || !Number.isFinite(to) || from > to || to-from > 31*86400000) throw new MetaError(400, 'En fazla 31 günlük geçerli tarih aralığı seçin.')
-      const pageId = env('META_PAGE_ID'), pageToken = env('META_PAGE_ACCESS_TOKEN')
-      if (!/^\d+$/.test(pageId) || !pageToken) throw new MetaError(503, 'Sunucuda Meta sayfa ayarları eksik.')
+      const access = await resolveMetaPageAccess(env,version,fetcher)
+      const pageId = access.pageId, pageToken = access.token
       // İşlem süresi sınırlı: her çağrı tek form sayfası işler; eksiklikler gizlenmez.
       const cursor = input.cursor ? String(input.cursor) : ''
       if (cursor.length > 2048) throw new MetaError(400, 'Geçersiz sayfalama imleci.')

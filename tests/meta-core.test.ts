@@ -8,6 +8,22 @@ const sign=(body:string)=>'sha256='+createHmac('sha256',secret).update(body).dig
 const payload={object:'page',entry:[{id:'123',changes:[{field:'leadgen',value:{leadgen_id:'456',form_id:'789',created_time:1793404800}}]}]}
 const details={id:'456',form_id:'789',created_time:'2026-10-31T00:00:00Z',field_data:[{name:'full_name',values:['Test Kişi']},{name:'phone_number',values:['05321234567']},{name:'butce_araligi',values:['5.000.000 - 8.000.000 TL']},{name:'konut_tipi',values:['2+1']}]}
 const config={verifyToken:'test-verify',appSecret:secret,pageToken:'test-page-token',version:'v99.0',pageId:'123'}
+test('Bozuk form yanıtı kişisel değeri göstermeden türü ve kaynağı belirtir',()=>{
+ for(const values of [null,[null],[123],[{private:'must-not-appear'}]]){
+  assert.throws(()=>normalizeLead({...details,field_data:[{name:'private-question',values}]},{leadgen_id:'456'}),(e:any)=>{
+   assert.equal(e.status,502);assert.ok(e.message.includes('başvuru 456, alan 1'))
+   assert.equal(e.message.includes('must-not-appear'),false);assert.equal(e.message.includes('private-question'),false);return true
+  })
+ }
+})
+test('Yanıtsız beşinci alan başvuruyu durdurmaz; ham alan ve eksiklik korunur',()=>{
+ const field_data=[...details.field_data,{name:'optional_question'}]
+ const lead=normalizeLead({...details,field_data},{leadgen_id:'456'})
+ assert.equal(lead.fullName,'Test Kişi');assert.equal(lead.phone,'905321234567')
+ assert.equal(lead.answers[4].answer,'');assert.ok(lead.warnings?.includes('FORM_ANSWER_MISSING:5'))
+ assert.deepEqual(lead.fields,field_data);assert.equal(Object.hasOwn(lead.fields[4],'values'),false)
+ assert.equal(Object.hasOwn(field_data[4],'values'),false)
+})
 function setup(options: Record<string,any>={}) {
   const ingested:any[]=[]
   const handler=createWebhook({...config,fetcher:async()=>Response.json(details),ingest:async intake=>{ingested.push(intake)},...options})

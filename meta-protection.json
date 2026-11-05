@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "meta-manual-v1.2",
+  "release": "meta-manual-v1.4-demo",
   "approvedScope": "Kullanıcının 4 Kasım 2026 Meta alanını tamamlama ve sabitleme talebi",
   "productionApproved": false,
   "protectedDirectories": [
@@ -25,6 +25,10 @@
     {
       "path": "docs/META_SABIT_SURUM.md",
       "sha256": "a9778efe707b416657a62fd8f218c742d4c43a207d83b4736abf452dca0150e4"
+    },
+    {
+      "path": "docs/META_SYSTEM_USER_GECISI.md",
+      "sha256": "58ca55f742c202ae98093aa8d7c1f49b83911b8da830efedc1b28c1044792007"
     },
     {
       "path": "package.json",
@@ -64,7 +68,7 @@
     },
     {
       "path": "src/services/metaStore.ts",
-      "sha256": "7515900c88b52e0a43c6efa9a072deeebbae49df71c6b5e5df99eaf041069d3d"
+      "sha256": "61a5ceedd4a5403a71daee4e07f7ae2938e96a36432171e762cecb5f4cce4cbd"
     },
     {
       "path": "src/types/meta.ts",
@@ -76,11 +80,15 @@
     },
     {
       "path": "supabase/functions/_shared/meta-capi-handler.ts",
-      "sha256": "f5524fed75f1f878feadf22b41e9fc86dfda5a8226953dfb9789172ad5073be1"
+      "sha256": "9ff11cc0908ab6c42bf6489ae871c2a0cebb0225a9cf37456f4a6b0aacef34fe"
     },
     {
       "path": "supabase/functions/_shared/meta-core.ts",
-      "sha256": "5c1d72aba15a707370fd9664902f1a3da1877a0cd4ec7cd9868c90624c6d009b"
+      "sha256": "2abdb2213a8983428fa858d7e94613606a0430b0c0d377aa210214eaa0ac7187"
+    },
+    {
+      "path": "supabase/functions/_shared/meta-page-access.ts",
+      "sha256": "a7597629c0815c52469f999383737cb0297e77d38a9c6b919638a6360ec019c2"
     },
     {
       "path": "supabase/functions/meta-capi/index.ts",
@@ -88,7 +96,7 @@
     },
     {
       "path": "supabase/functions/meta-webhook/index.ts",
-      "sha256": "728be655524fd5fc847015bbd174c840d728bf2fdcd5ca33fbc3f6eb4b2885f3"
+      "sha256": "7fd57aa759886cda295787d121f110c2a721eaeb4928904cebbdb5da355a5037"
     },
     {
       "path": "supabase/migrations/202610310001_meta_pipeline.sql",
@@ -108,15 +116,19 @@
     },
     {
       "path": "tests/meta-capi-handler.test.ts",
-      "sha256": "c98bc937fc7dd07cf9eaf1e9fc88d185289d32cf1ee04d6c5fac5e5be1e1ce56"
+      "sha256": "410191ce0612d5d561765584f569ad6ac3980bfe914469c06223a8d477ec7d61"
     },
     {
       "path": "tests/meta-core.test.ts",
-      "sha256": "56e8e6ab779b9b5948292c3ac590f7ed47bdad8efef95c8289d0478b63baa2af"
+      "sha256": "0437ae425acf801474bbf32dbf5cda500b24b422dbd534560f3aba5f8ea5c71f"
     },
     {
       "path": "tests/meta-lock.test.ts",
       "sha256": "d2164b51bc652d11a8056269773ed6ff97cac14b610af21d7ad7a8cef407317f"
+    },
+    {
+      "path": "tests/meta-page-access.test.ts",
+      "sha256": "303a1d92b32954b058408d6b2659e06e5e11db126f3bb99084ec706e441c99dc"
     },
     {
       "path": "tests/meta-source-contract.test.ts",
@@ -128,7 +140,7 @@
     },
     {
       "path": "tests/meta-store.test.ts",
-      "sha256": "9b0ef73e611928b89d337f85554f34ba960fb266fda864add859579f63cbebdf"
+      "sha256": "e94bdb8f191688d6286a2168cef5e7f8ad321cfbbab88c764a7e05abcd196809"
     },
     {
       "path": "verification/sql/check.mjs",
@@ -149,7 +161,15 @@
     {
       "path": "verification/sql/staging-readonly.sql",
       "sha256": "252e96e910925b61c829eeb40eb53d0b55a06f333f391826d77af116c018a6e4"
+    },
+    {
+      "path": "docs/META_EKSIK_FORM_YANITI_20261105.md",
+      "sha256": "633e94a3a1f0b26938b7825df0b34b21b12b646e49076a87dbc4a11c7ac8e0c5"
+    },
+    {
+      "path": "docs/META_KAPANIS_20261105.md",
+      "sha256": "fe81f0fd060728c77ce70d41d7b957f8208dbf6e5f6664643e2164c2e3d5d05e"
     }
   ],
-  "finalizationNote": "Mevcut açık Meta tamamlama talebi kapsamında ilk ve v1.1 snapshot saklandı. Metadata GET erişim reddi ile events POST teslim sonucu ayrıldı; Meta 190 gerçek token hatası olarak kalır. Yeni üçüncü test QualifiedLead API kabulü doğrulandı."
+  "finalizationNote": "5 Kasım demo/staging kabulü: 211 izole kontrol, 23 DB ve 11 HTTP kontrolü geçti. Gerçek form alımı ve test API teslimi doğrulandı; panel UUID mutabakatı ve tüm hesap mutabakatı sınırlı. Üretim/otomatik gönderim kapalı. META_KAPANIS_20261105.md kapsamı geçerlidir."
 }

@@ -256,19 +256,23 @@ class MetaStore {
     // Simülasyon gerçek müşteri / leadgen kimliği veya canlı dönüşüm oluşturmaz.
     return undefined
   }
-  public async fetchLeadsFromMeta(startDate: Date, endDate: Date): Promise<{ newCount: number; mergedCount: number; needsPageToken?: boolean; error?: string }> {
+  public async fetchLeadsFromMeta(startDate: Date, endDate: Date, onProgress?: (message:string)=>void): Promise<{ newCount: number; mergedCount: number; needsPageToken?: boolean; error?: string }> {
     let newCount = 0, mergedCount = 0
     const seen = new Set<string>()
+    let formCount=0,pageCount=0
     try {
       const range = { from: startDate.toISOString(), to: endDate.toISOString() }
       let formCursor: string | null = null
       const formCursors = new Set<string>()
       do {
+        onProgress?.(`Meta form listesi okunuyor; ${seen.size} müşteri işlendi.`)
         const data = await invokeMeta({ action: 'pull', ...range, cursor: formCursor })
         for (const form of data.forms || []) {
+          formCount++
           let cursor: string | null = null
           const leadCursors = new Set<string>()
           do {
+            onProgress?.(`Meta: ${formCount}. form okunuyor; ${pageCount} sayfa tamamlandı, ${seen.size} müşteri işlendi.`)
             const page = await invokeMeta({ action: 'pull', ...range, formId: form.id, cursor })
             for (const row of page.leads || []) {
               const lead = rowToLead(row)
@@ -276,6 +280,8 @@ class MetaStore {
               if (!seen.has(row.id)) { if (existing) mergedCount++; else newCount++; seen.add(row.id) }
               leadStore.acceptMetaServerLead(lead)
             }
+            pageCount++
+            onProgress?.(`Meta: ${pageCount} sayfa tamamlandı, ${seen.size} müşteri işlendi; tarama sürüyor.`)
             const next = page.cursor || null
             if (next && leadCursors.has(next)) throw new Error('Meta müşteri sayfalaması döngüye girdi; aktarım kısmi olabilir.')
             if (next) leadCursors.add(next)

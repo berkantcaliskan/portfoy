@@ -2,6 +2,35 @@ import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {createCapiHandler} from '../supabase/functions/_shared/meta-capi-handler.ts'
 
+test('Sistem kullanıcısı bağlantısı hedef sayfayı okur; sır yanıt içinde bulunmaz',async()=>{
+ const urls:string[]=[]
+ const s=setup({env:{META_PAGE_ID:'900',META_SYSTEM_USER_TOKEN:'isolated-system',META_PAGE_ACCESS_TOKEN:'expired-page'},fetcher:async(url:any)=>{
+  const path=String(url);urls.push(path)
+  if(path.includes('debug_token')) return Response.json({data:{is_valid:true,type:'SYSTEM_USER',expires_at:0}})
+  if(path.includes('fields=id,access_token')) return Response.json({id:'900',access_token:'derived-page'})
+  if(path.includes('leadgen_forms')) return Response.json({data:[{id:'901'}]})
+  if(path.includes('/leads')) return Response.json({data:[]})
+  return Response.json({id:path.includes('/900?')?'900':'123'})
+ }})
+ const response=await s.handler(s.req({action:'connection'},'valid-user'))
+ assert.equal(response.status,200)
+ const body=await response.json()
+ assert.equal(body.pageAccessMode,'SYSTEM_USER');assert.equal(body.credentialInfo.expiresAt,0)
+ assert.equal(body.leadReadVerified,true);assert.equal(body.eventSubmissionVerified,false)
+ assert.equal(urls.some(u=>u.includes('/me?')),false)
+ assert.equal(JSON.stringify(body).includes('isolated-system'),false)
+ assert.equal(JSON.stringify(body).includes('derived-page'),false)
+ for(const c of s.calls.filter(c=>c.fetch && (String(c.fetch[0]).includes('leadgen_forms')||String(c.fetch[0]).includes('/leads')))){
+  assert.equal(new Headers(c.fetch[1].headers).get('authorization'),'Bearer derived-page')
+ }
+ assert.equal(s.calls.filter(c=>c.fetch).some(c=>String(c.fetch[1]?.headers?.Authorization||'').includes('expired-page')),false)
+})
+test('Reddedilen sistem tokenı eski sayfa tokenına sessizce dönmez',async()=>{
+ const s=setup({env:{META_PAGE_ID:'900',META_SYSTEM_USER_TOKEN:'isolated-system',META_PAGE_ACCESS_TOKEN:'old'},fetcher:async()=>Response.json({error:{code:190}},{status:400})})
+ assert.equal((await s.handler(s.req({action:'connection'},'valid-user'))).status,503)
+ assert.equal(s.fetchCount(),1)
+})
+
 function setup(options:any={}) {
   const calls:any[]=[]
   const settings={enabled:false,security_ready:true,auto_sync:false,...options.settings}

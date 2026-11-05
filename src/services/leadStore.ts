@@ -52,6 +52,7 @@ class LeadStore {
     metaStore.resetStageWrite(incoming.id)
     this.leads = [...this.leads.filter(l => l.id !== incoming.id), incoming]
     this.saveToStorage()
+    this.notify()
   }
   private leads: Lead[] = []
   private activities: Record<string, LeadActivity[]> = {}
@@ -612,6 +613,7 @@ class LeadStore {
   public async pullLatestLeads(options?: {
     startDate?: Date
     endDate?: Date
+    onProgress?: (message:string)=>void
   }): Promise<{
     newCount: number
     updatedCount: number
@@ -640,7 +642,7 @@ class LeadStore {
       mergedCount: 0,
     }
     try {
-      metaResult = await metaStore.fetchLeadsFromMeta(startDate, endDate)
+      metaResult = await metaStore.fetchLeadsFromMeta(startDate, endDate, options?.onProgress)
     } catch {}
 
     if (!isSupabaseConfigured()) {

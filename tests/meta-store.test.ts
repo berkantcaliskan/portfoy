@@ -32,6 +32,14 @@ function setup(options:any={}) {
   return {store:exported.metaStore,exported,calls,getLead:()=>leads[0]}
 }
 const lead={id:'isolated',stage:'QUALIFIED',isQualified:true,metaRevision:3,metaLeadId:'123',fullName:'İzole Test',phone:'',metaCapiStatus:{status:'SENT',lastEventName:'QualifiedLead',label:'Nitelikli',revision:3}}
+test('Alım ilerlemesi yalnızca dönen sayfa ve işlenen müşterileri bildirir',async()=>{
+ const messages:string[]=[]
+ const s=setup({invoke:async(body:any)=>({data:body.formId?{leads:[{...lead,id:'returned'}],cursor:null}:{forms:[{id:'1'}]},error:null})})
+ await s.store.fetchLeadsFromMeta(new Date('2026-11-01'),new Date('2026-11-03'),(message:string)=>messages.push(message))
+ assert.ok(messages.some(m=>m.includes('0 müşteri')))
+ assert.ok(messages.at(-1)?.includes('1 sayfa tamamlandı, 1 müşteri'))
+ assert.equal(messages.some(m=>m.includes('tamamlandı!')),false)
+})
 test('Demo otomatik ayarı frontendden açılamaz; hiçbir istek göndermez',async()=>{
   const s=setup({leads:[lead]});await assert.rejects(s.store.setAutoSyncStages(true))
   assert.equal(s.calls.length,0)

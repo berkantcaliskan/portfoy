@@ -331,7 +331,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     const rangeLabel = customRange?.label || 'Son 48 Saat'
 
     try {
-      const result = await leadStore.pullLatestLeads({ startDate: start, endDate: end })
+      setPullFeedback({message:'Veri alımı başlatılıyor…',isNew:false})
+      const result = await leadStore.pullLatestLeads({ startDate: start, endDate: end,
+        onProgress:message=>setPullFeedback({message,isNew:false}) })
       // Yalnızca sağ tık ile özel tarih seçildiğinde tablo tarih filtresini o aralığa sabitle
       if (customRange) {
         setDateRange({

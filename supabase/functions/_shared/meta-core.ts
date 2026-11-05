@@ -88,13 +88,25 @@ export interface Intake {
   firstName?: string; lastName?: string; city?: string; state?: string; zip?: string; country?: string; warnings?: string[]
   formName: string; fullName: string; phone: string; email?: string; createdAt: string
   housingType?: string; budget?: number; answers: { question: string; answer: string }[]
-  fields: { name: string; values: string[] }[]
+  fields: { name: string; values?: string[] }[]
 }
 export function normalizeLead(details: Record<string, any>, value: Record<string, any>, formName?: string): Intake {
   const leadgenId = metaId(value.leadgen_id)
   if (!leadgenId) throw new MetaError(400, 'Meta başvuru kimliği geçersiz veya hassasiyet kaybetmiş.')
-  const fields = Array.isArray(details.field_data) ? details.field_data : []
-  if (!fields.every(f => f && typeof f.name === 'string' && Array.isArray(f.values) && f.values.every((v: unknown) => typeof v === 'string'))) throw new MetaError(502, 'Meta form alanları geçersiz.')
+  const rawFields = Array.isArray(details.field_data) ? details.field_data : []
+  const missingAnswerWarnings: string[] = []
+  const fields: {name:string;values:string[]}[] = []
+  for (const [index,field] of rawFields.entries()) {
+    const kind=(v:unknown)=>v===null?'null':Array.isArray(v)?'array':typeof v
+    let reason=''
+    if(!field || typeof field!=='object') reason=`alan türü ${kind(field)}`
+    else if(typeof field.name!=='string') reason=`alan adı türü ${kind(field.name)}`
+    else if(field.values===undefined) missingAnswerWarnings.push(`FORM_ANSWER_MISSING:${index+1}`)
+    else if(!Array.isArray(field.values)) reason=`yanıt listesi türü ${kind(field.values)}`
+    else { const invalid=field.values.findIndex((v:unknown)=>typeof v!=='string');if(invalid>=0)reason=`yanıt ${invalid+1} türü ${kind(field.values[invalid])}` }
+    if(reason) throw new MetaError(502,`Meta form alanı okunamadı: başvuru ${leadgenId}, alan ${index+1}, ${reason}. Aktarım kısmi olabilir; mevcut kayıtlar korunur.`)
+    fields.push({name:field.name,values:field.values===undefined?[]:field.values})
+  }
   const key = (name: string) => name.toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')
   const get = (...keys: string[]) => fields.find(f => keys.map(key).includes(key(f.name)))?.values.join(', ').trim() || ''
   const phone = get('phone_number','telefon','phone','telefon_numarasi','telefon_numaraniz','cep_telefonu','mobile_phone')
@@ -111,19 +123,20 @@ export function normalizeLead(details: Record<string, any>, value: Record<string
     firstName: get('first_name') || undefined, lastName: get('last_name') || undefined,
     city: get('city','sehir','şehir') || undefined, state: get('state') || undefined,
     zip: get('post_code','zip_code','zip') || undefined, country: get('country') || undefined,
-    warnings: [...(Array.isArray(details.__metaWarnings) ? details.__metaWarnings : []), ...(fields.length ? [] : ['FORM_FIELDS_UNAVAILABLE']),
+    warnings: [...(Array.isArray(details.__metaWarnings) ? details.__metaWarnings : []), ...missingAnswerWarnings, ...(fields.length ? [] : ['FORM_FIELDS_UNAVAILABLE']),
       ...(phone && !normalizePhone(phone) ? ['PHONE_UNSUPPORTED_OR_INVALID'] : [])],
     campaignName: details.campaign_name || undefined, formName: formName || 'Bilinmeyen Meta formu',
     fullName: name || 'İsmi belirtilmemiş başvuru', phone: normalizePhone(phone),
     email: get('email','email_address','e-posta','eposta','e_posta_adresi') || undefined, createdAt: new Date(created).toISOString(),
     housingType: fields.find(f => /konut|housing|daire/i.test(f.name))?.values.join(', '),
     budget: /^\d+(\.\d{1,2})?$/.test(rawBudget) ? Number(rawBudget) : undefined,
-    answers: fields.map(f => ({ question: f.name, answer: f.values.join(', ') })), fields,
+    answers: fields.map(f => ({ question: f.name, answer: f.values.join(', ') })), fields: rawFields,
   }
 }
 export interface WebhookDependencies {
   verifyToken: string; appSecret: string; pageToken: string; version: string; pageId: string
   fetcher?: typeof fetch; ingest: (intake: Intake) => Promise<void>
+  resolveAccessToken?: () => string | Promise<string>
 }
 export function createWebhook(deps: WebhookDependencies) {
   return async (req: Request): Promise<Response> => {
@@ -135,12 +148,13 @@ export function createWebhook(deps: WebhookDependencies) {
         return new Response(q.get('hub.challenge'), { headers: { 'Content-Type': 'text/plain' } })
       }
       if (req.method !== 'POST') return new Response('Yöntem desteklenmiyor.', { status: 405 })
-      if (!deps.appSecret || !deps.pageToken || !deps.pageId) throw new MetaError(503, 'Webhook sunucu ayarları eksik.')
+      if (!deps.appSecret || (!deps.pageToken && !deps.resolveAccessToken) || !deps.pageId) throw new MetaError(503, 'Webhook sunucu ayarları eksik.')
       const raw = await readBody(req, 1048576)
       if (!await verifySignature(raw, req.headers.get('x-hub-signature-256'), deps.appSecret)) throw new MetaError(401, 'İmza doğrulanamadı.')
       let payload: any
       try { payload = JSON.parse(new TextDecoder().decode(raw)) } catch { throw new MetaError(400, 'Geçersiz JSON.') }
       if (!payload || payload.object !== 'page' || !Array.isArray(payload.entry)) throw new MetaError(400, 'Geçersiz webhook nesnesi.')
+      let accessToken: string | undefined
       for (const entry of payload.entry) {
         if (!entry || String(entry.id) !== deps.pageId) throw new MetaError(403, 'Yetkisiz sayfa.')
         if (!Array.isArray(entry.changes)) throw new MetaError(400, 'Değişiklik listesi eksik.')
@@ -149,12 +163,13 @@ export function createWebhook(deps: WebhookDependencies) {
           const value = change.value || {}
           const leadgenId = metaId(value.leadgen_id)
           if (!leadgenId) throw new MetaError(400, 'Meta lead kimliği eksik veya geçersiz.')
-          const details = await graphLeadGet(leadgenId, deps.pageToken, deps.version, deps.fetcher)
+          accessToken ??= deps.resolveAccessToken ? await deps.resolveAccessToken() : deps.pageToken
+          const details = await graphLeadGet(leadgenId, accessToken, deps.version, deps.fetcher)
           if (metaId(details.id) !== leadgenId) throw new MetaError(502, 'Meta lead kimliği uyuşmuyor.')
           const formId = String(details.form_id || value.form_id || '')
           let formName: string | undefined
           if (/^\d{1,32}$/.test(formId)) {
-            try { formName = (await graphGet(`${formId}?fields=name`, deps.pageToken, deps.version, deps.fetcher)).name }
+            try { formName = (await graphGet(`${formId}?fields=name`, accessToken, deps.version, deps.fetcher)).name }
             catch { details.__metaWarnings = [...(details.__metaWarnings || []), 'FORM_NAME_UNAVAILABLE'] }
           }
           await deps.ingest(normalizeLead(details, { ...value, page_id: deps.pageId }, formName))
