@@ -280,14 +280,19 @@ export const SharedFilesView: React.FC = () => {
     return sanitizeFileNotes(file.notes, file.folder)
   }
 
-  const handleSaveNote = (fileId: string) => {
-    if (!currentUser) return
-    sharedFileStore.updateFileNotes(fileId, editingNoteValue, currentUser)
+  const handleSaveNote = async (fileId: string) => {
+
+    try {    if (!currentUser) return
+    const result = await sharedFileStore.updateFileNotes(fileId, editingNoteValue, currentUser)
+    if (!result.success) throw new Error(result.error || 'Dosya notu kaydedilemedi.')
     if (previewFile && previewFile.id === fileId) {
       setPreviewFile({ ...previewFile, notes: editingNoteValue.trim(), folder: editingNoteValue.trim() })
     }
     setEditingNoteFileId(null)
     setEditingNoteValue('')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Dosya işlemi tamamlanamadı.')
+    }
   }
 
   const kindTabs: { id: FileKindFilter; label: string; count: number }[] = [
@@ -389,9 +394,10 @@ export const SharedFilesView: React.FC = () => {
     }
   }
 
-  const handleDownload = (file: SharedFile) => {
-    if (!currentUser) return
-    const res = sharedFileStore.downloadFile(file.id, currentUser)
+  const handleDownload = async (file: SharedFile) => {
+
+    try {    if (!currentUser) return
+    const res = await sharedFileStore.downloadFile(file.id, currentUser)
     if (!res.success) {
       setErrorMessage(res.error || 'İndirme izniniz bulunmuyor.')
       setTimeout(() => setErrorMessage(null), 3500)
@@ -400,8 +406,8 @@ export const SharedFilesView: React.FC = () => {
 
     try {
       const link = document.createElement('a')
-      if (file.fileDataUrl) {
-        link.href = file.fileDataUrl
+      if (res.file?.fileDataUrl) {
+        link.href = res.file.fileDataUrl
       } else {
         const blob = new Blob([`Demirtürk Portföy Kurumsal Dosya: ${file.name}`], {
           type: file.mimeType || 'application/octet-stream',
@@ -414,19 +420,26 @@ export const SharedFilesView: React.FC = () => {
       document.body.removeChild(link)
     } catch {}
 
-    setDownloadSuccessMessage(`"${file.name}" bilgisayarınıza indirildi.`)
+    setDownloadSuccessMessage(`"${file.name}" için indirme başlatıldı.`)
     setTimeout(() => setDownloadSuccessMessage(null), 3500)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Dosya işlemi tamamlanamadı.')
+    }
   }
 
-  const handleDelete = (file: SharedFile) => {
-    if (!currentUser) return
+  const handleDelete = async (file: SharedFile) => {
+
+    try {    if (!currentUser) return
     if (!window.confirm(`"${file.name}" dosyasını silmek istediğinize emin misiniz?`)) return
 
-    const res = sharedFileStore.deleteFile(file.id, currentUser)
+    const res = await sharedFileStore.deleteFile(file.id, currentUser)
     if (!res.success) {
       alert(res.error)
     } else if (previewFile?.id === file.id) {
       setPreviewFile(null)
+    }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Dosya işlemi tamamlanamadı.')
     }
   }
 
@@ -446,8 +459,9 @@ export const SharedFilesView: React.FC = () => {
     }
   }
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!currentUser) return
 
     if (pendingFiles.length === 0) {
@@ -469,7 +483,7 @@ export const SharedFilesView: React.FC = () => {
     }
 
     for (const item of pendingFiles) {
-      sharedFileStore.uploadFile(
+      await sharedFileStore.uploadFile(
         {
           name: item.customName.trim() || item.file.name,
           notes: uploadNotes.trim(),
@@ -488,6 +502,7 @@ export const SharedFilesView: React.FC = () => {
         },
         currentUser
       )
+      setPendingFiles(current => current.filter(file => file.id !== item.id))
     }
 
     const uploadedCount = pendingFiles.length
@@ -501,6 +516,9 @@ export const SharedFilesView: React.FC = () => {
         : `${uploadedCount} dosya başarıyla yüklendi ve paylaşıldı.`
     )
     setTimeout(() => setDownloadSuccessMessage(null), 3500)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Dosya işlemi tamamlanamadı.')
+    }
   }
 
   const getFileIcon = (type: SharedFile['type'], sizeClass = 'w-5 h-5') => {
@@ -860,9 +878,9 @@ export const SharedFilesView: React.FC = () => {
             const noteText = getFileNotesText(file)
             const isEditingThisNote = editingNoteFileId === file.id
             const isImagePreview =
-              file.type === 'image' && file.fileDataUrl && file.fileDataUrl.startsWith('data:image/')
+              file.type === 'image' && file.fileDataUrl && /^(data:image[/]|https:|blob:)/.test(file.fileDataUrl)
             const isVideoPreview =
-              file.type === 'video' && file.fileDataUrl && file.fileDataUrl.startsWith('data:video/')
+              file.type === 'video' && file.fileDataUrl && /^(data:video[/]|https:|blob:)/.test(file.fileDataUrl)
             const kindLabel = getFileKindLabel(file.type)
 
             return (
@@ -1045,9 +1063,9 @@ export const SharedFilesView: React.FC = () => {
               currentUser?.role === 'ADMIN' ||
               currentUser?.isManager
             const isImagePreview =
-              file.type === 'image' && file.fileDataUrl && file.fileDataUrl.startsWith('data:image/')
+              file.type === 'image' && file.fileDataUrl && /^(data:image[/]|https:|blob:)/.test(file.fileDataUrl)
             const isVideoPreview =
-              file.type === 'video' && file.fileDataUrl && file.fileDataUrl.startsWith('data:video/')
+              file.type === 'video' && file.fileDataUrl && /^(data:video[/]|https:|blob:)/.test(file.fileDataUrl)
             const kindLabel = getFileKindLabel(file.type)
             const noteText = getFileNotesText(file)
 

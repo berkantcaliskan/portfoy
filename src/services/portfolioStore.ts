@@ -1,4 +1,7 @@
-import { PortfolioItem, PropertyType, PropertyStatus } from '@/types/portfolio'
+import { userStore } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCrmServerCollection } from './crmServerCollection'
+import { PortfolioItem, PropertyStatus } from '@/types/portfolio'
 import { Lead } from '@/types/lead'
 
 // Clean slate: no imported or mock data
@@ -8,14 +11,22 @@ const STORAGE_KEY_PROPERTIES = 'demirturk_properties_v2'
 type Listener = () => void
 
 class PortfolioStore {
+  private backend = createCrmServerCollection<PortfolioItem>('properties', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
+  public setAccount(id: string|null) { this.backend.setAccount(id) }
+  public async refreshFromBackend() { await this.backend.refresh(); this.notify() }
+  public getReadError() { return this.backend.getError() }
+
   private properties: PortfolioItem[] = []
   private listeners: Set<Listener> = new Set()
 
   constructor() {
+    this.backend.subscribe(() => this.notify())
+    if (isCentralCrm()) return
     this.loadFromStorage()
   }
 
   private loadFromStorage() {
+    if (isCentralCrm()) return
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PROPERTIES)
       this.properties = saved ? JSON.parse(saved) : INITIAL_PROPERTIES
@@ -45,21 +56,24 @@ class PortfolioStore {
   }
 
   public getAll(): PortfolioItem[] {
+    if (isCentralCrm()) return this.backend.getAll()
     return [...this.properties]
   }
 
-  public add(item: Omit<PortfolioItem, 'id' | 'createdAt'>): PortfolioItem {
+  public async add(item: Omit<PortfolioItem, 'id' | 'createdAt'>): Promise<PortfolioItem> {
     const newItem: PortfolioItem = {
       ...item,
-      id: 'prop-' + Date.now(),
+      id: isCentralCrm() ? crypto.randomUUID() : 'prop-' + Date.now(),
       createdAt: new Date().toISOString(),
     }
+    if (isCentralCrm()) return this.backend.save(JSON.stringify(newItem),newItem)
     this.properties = [newItem, ...this.properties]
     this.saveToStorage()
     return newItem
   }
 
-  public updateStatus(id: string, status: PropertyStatus): void {
+  public async updateStatus(id: string, status: PropertyStatus): Promise<void> {
+    if (isCentralCrm()) { const prior=this.getAll().find(p=>p.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); await this.backend.save(JSON.stringify([id,status]),{...prior,status}); return }
     const prop = this.properties.find(p => p.id === id)
     if (prop) {
       prop.status = status
@@ -68,7 +82,7 @@ class PortfolioStore {
   }
 
   public matchPropertiesForLead(lead: Lead): PortfolioItem[] {
-    return this.properties.filter(p => {
+    return this.getAll().filter(p => {
       if (p.status === 'SOLD') return false
       // Match housing type if specified
       if (lead.preferredHousingType && p.type.toLowerCase().includes(lead.preferredHousingType.toLowerCase())) {

@@ -127,22 +127,25 @@ export const ContactsView: React.FC = () => {
     setIsModalOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    if (id.startsWith('usr-')) {
+  const handleDelete = async (id: string) => {
+
+    try {    if (id.startsWith('usr-')) {
       alert('Sistem ekip üyeleri Ayarlar > Ekip Yönetimi alanından yönetilir.')
       return
     }
     if (confirm('Bu kişiyi rehberden silmek istediğinize emin misiniz?')) {
-      contactStore.delete(id)
+      await contactStore.delete(id)
     }
+    } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu kaydı başarısız.") }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!form.fullName.trim() || !form.phone.trim()) return
 
     if (editingContact && !editingContact.id.startsWith('usr-')) {
-      contactStore.update(editingContact.id, {
+      await contactStore.update(editingContact.id, {
         fullName: form.fullName.trim(),
         phone: form.phone.trim(),
         email: form.email.trim() || undefined,
@@ -152,7 +155,7 @@ export const ContactsView: React.FC = () => {
         notes: form.notes.trim() || undefined,
       })
     } else {
-      contactStore.add({
+      await contactStore.add({
         fullName: form.fullName.trim(),
         phone: form.phone.trim(),
         email: form.email.trim() || undefined,
@@ -164,6 +167,7 @@ export const ContactsView: React.FC = () => {
     }
 
     setIsModalOpen(false)
+    } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu kaydı başarısız.") }
   }
 
   return (

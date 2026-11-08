@@ -1,4 +1,6 @@
-import { AppUser } from './userStore'
+import { AppUser, userStore } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCrmServerCollection } from './crmServerCollection'
 import { trashStore } from './trashStore'
 
 export type PresenceStatusType =
@@ -168,6 +170,13 @@ const STORAGE_KEY_LEAVES = 'demirturk_team_leaves_v1'
 type Listener = () => void
 
 class TeamOperationsStore {
+ private presenceBackend=createCrmServerCollection<UserPresenceRecord&{id:string}>('team_presence',()=>{const u=userStore.getCurrentUser(),c=userStore.getServerClient();return u&&c?{id:u.id,client:c}:null})
+ private assetsBackend=createCrmServerCollection<SharedAssetItem&{history?:AssetHistoryLog[]}>('team_assets',()=>{const u=userStore.getCurrentUser(),c=userStore.getServerClient();return u&&c?{id:u.id,client:c}:null})
+ private leavesBackend=createCrmServerCollection<LeaveRequestItem>('team_leaves',()=>{const u=userStore.getCurrentUser(),c=userStore.getServerClient();return u&&c?{id:u.id,client:c}:null})
+ public setAccount(id:string|null){this.presenceBackend.setAccount(id);this.assetsBackend.setAccount(id);this.leavesBackend.setAccount(id);this.presenceMap={};this.assets=[];this.assetLogs=[];this.leaves=[];this.notify()}
+ public async refreshFromBackend(){await Promise.all([this.presenceBackend.refresh(),this.assetsBackend.refresh(),this.leavesBackend.refresh()])}
+ public getReadError(){return this.presenceBackend.getError()||this.assetsBackend.getError()||this.leavesBackend.getError()}
+
   private presenceMap: Record<string, UserPresenceRecord> = {}
   private assets: SharedAssetItem[] = []
   private assetLogs: AssetHistoryLog[] = []
@@ -175,6 +184,10 @@ class TeamOperationsStore {
   private listeners: Set<Listener> = new Set()
 
   constructor() {
+ this.presenceBackend.subscribe(()=>{if(isCentralCrm()){this.presenceMap=Object.fromEntries(this.presenceBackend.getAll().map(r=>[r.userId,r]));this.notify()}})
+ this.assetsBackend.subscribe(()=>{if(isCentralCrm()){this.assets=this.assetsBackend.getAll();this.assetLogs=this.assetsBackend.getAll().flatMap(r=>r.history||[]).sort((a,b)=>b.timestamp.localeCompare(a.timestamp));this.notify()}})
+ this.leavesBackend.subscribe(()=>{if(isCentralCrm()){this.leaves=this.leavesBackend.getAll();this.notify()}})
+
     this.loadFromStorage()
     if (typeof window !== 'undefined') {
       window.addEventListener('demirturk:cloud-db-synced', () => {
@@ -185,6 +198,7 @@ class TeamOperationsStore {
   }
 
   private loadFromStorage() {
+    if(isCentralCrm())return
     if (typeof window === 'undefined') return
     try {
       const pRaw = localStorage.getItem(STORAGE_KEY_PRESENCE)
@@ -214,6 +228,7 @@ class TeamOperationsStore {
   }
 
   private saveToStorage() {
+    if(isCentralCrm()){this.notify();return}
     if (typeof window === 'undefined') return
     try {
       localStorage.setItem(STORAGE_KEY_PRESENCE, JSON.stringify(this.presenceMap))
@@ -253,7 +268,7 @@ class TeamOperationsStore {
     return { ...this.presenceMap }
   }
 
-  public updateUserPresence(
+  public async updateUserPresence(
     userId: string,
     payload: {
       status: PresenceStatusType
@@ -262,6 +277,7 @@ class TeamOperationsStore {
       updatedBy?: string
     }
   ) {
+    if(isCentralCrm()){const value={id:userId,userId,status:payload.status,locationNote:payload.locationNote||'',returnTime:payload.returnTime||'',updatedAt:new Date().toISOString(),updatedBy:payload.updatedBy||userId};await this.presenceBackend.save(JSON.stringify([userId,payload]),value);return}
     this.presenceMap[userId] = {
       userId,
       status: payload.status,
@@ -288,14 +304,14 @@ class TeamOperationsStore {
     return [...this.assetLogs]
   }
 
-  public addAsset(input: {
+  public async addAsset(input: {
     name: string
     codeOrPlate: string
     category: SharedAssetCategory
     notes?: string
-  }): SharedAssetItem {
+  }): Promise<SharedAssetItem> {
     const newItem: SharedAssetItem = {
-      id: 'asset-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      id: isCentralCrm()?crypto.randomUUID():'asset-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
       name: input.name.trim(),
       codeOrPlate: input.codeOrPlate.trim(),
       category: input.category,
@@ -307,12 +323,14 @@ class TeamOperationsStore {
       expectedReturnTime: null,
       createdAt: new Date().toISOString(),
     }
+    if(isCentralCrm())return this.assetsBackend.save(JSON.stringify(newItem),newItem)
     this.assets = [newItem, ...this.assets]
     this.saveToStorage()
     return newItem
   }
 
-  public deleteAsset(assetId: string) {
+  public async deleteAsset(assetId: string) {
+    if(isCentralCrm()){const target=this.assetsBackend.getAll().find(a=>a.id===assetId);if(!target)throw Error('Kayıt bulunamadı.');await this.assetsBackend.save('archive:'+assetId,target,true);return}
     const target = this.assets.find((a) => a.id === assetId)
     if (target) {
       trashStore.addItemToTrash(STORAGE_KEY_ASSETS, target)
@@ -321,7 +339,7 @@ class TeamOperationsStore {
     this.saveToStorage()
   }
 
-  public checkoutAsset(
+  public async checkoutAsset(
     assetId: string,
     user: AppUser,
     options?: {
@@ -330,6 +348,7 @@ class TeamOperationsStore {
       autoUpdatePresenceStatus?: PresenceStatusType
     }
   ) {
+    if(isCentralCrm()){const target=this.assetsBackend.getAll().find(a=>a.id===assetId);if(!target)throw Error('Kayıt bulunamadı.');const value={...target,holderUserId:user.id,holderUserName:user.fullName,takenAt:new Date().toISOString(),destinationNote:options?.destinationNote||null,expectedReturnTime:options?.expectedReturnTime||null,autoPresenceStatus:options?.autoUpdatePresenceStatus};await this.assetsBackend.save(JSON.stringify([assetId,user.id,options]),value);await this.presenceBackend.refresh();return}
     const idx = this.assets.findIndex((a) => a.id === assetId)
     if (idx === -1) return
 
@@ -379,7 +398,8 @@ class TeamOperationsStore {
     this.saveToStorage()
   }
 
-  public returnAsset(assetId: string, returnedByUser?: AppUser | null) {
+  public async returnAsset(assetId: string, returnedByUser?: AppUser | null) {
+    if(isCentralCrm()){const target=this.assetsBackend.getAll().find(a=>a.id===assetId);if(!target)throw Error('Kayıt bulunamadı.');await this.assetsBackend.save('return:'+assetId,{...target,holderUserId:null,holderUserName:null,takenAt:null,destinationNote:null,expectedReturnTime:null});return}
     const idx = this.assets.findIndex((a) => a.id === assetId)
     if (idx === -1) return
 
@@ -418,7 +438,7 @@ class TeamOperationsStore {
     return [...this.leaves]
   }
 
-  public addLeaveRequest(input: {
+  public async addLeaveRequest(input: {
     user: AppUser
     leaveType: LeaveType
     startDate: string
@@ -426,9 +446,9 @@ class TeamOperationsStore {
     startTime?: string
     endTime?: string
     reason: string
-  }): LeaveRequestItem {
+  }): Promise<LeaveRequestItem> {
     const newReq: LeaveRequestItem = {
-      id: 'leave-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      id: isCentralCrm()?crypto.randomUUID():'leave-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
       userId: input.user.id,
       userName: input.user.fullName,
       userDepartment: input.user.department,
@@ -441,17 +461,19 @@ class TeamOperationsStore {
       status: 'BEKLEMEDE',
       createdAt: new Date().toISOString(),
     }
+    if(isCentralCrm())return this.leavesBackend.save(JSON.stringify(newReq),newReq)
     this.leaves = [newReq, ...this.leaves]
     this.saveToStorage()
     return newReq
   }
 
-  public decideLeaveRequest(
+  public async decideLeaveRequest(
     leaveId: string,
     decision: 'ONAYLANDI' | 'REDDEDILDI',
     reviewer: AppUser,
     reviewNote?: string
   ) {
+    if(isCentralCrm()){const target=this.leavesBackend.getAll().find(a=>a.id===leaveId);if(!target)throw Error('Kayıt bulunamadı.');await this.leavesBackend.save(JSON.stringify([leaveId,decision,reviewNote]),{...target,status:decision,reviewedBy:reviewer.fullName,reviewedAt:new Date().toISOString(),reviewNote});await this.presenceBackend.refresh();return}
     const idx = this.leaves.findIndex((l) => l.id === leaveId)
     if (idx === -1) return
 
@@ -485,7 +507,8 @@ class TeamOperationsStore {
     this.saveToStorage()
   }
 
-  public deleteLeaveRequest(leaveId: string) {
+  public async deleteLeaveRequest(leaveId: string) {
+    if(isCentralCrm()){const target=this.leavesBackend.getAll().find(a=>a.id===leaveId);if(!target)throw Error('Kayıt bulunamadı.');await this.leavesBackend.save('archive:'+leaveId,target,true);return}
     const target = this.leaves.find((l) => l.id === leaveId)
     if (target) {
       trashStore.addItemToTrash(STORAGE_KEY_LEAVES, target)

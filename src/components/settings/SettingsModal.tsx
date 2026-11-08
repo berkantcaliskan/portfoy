@@ -306,7 +306,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       if (!compressedData || !currentUser) return
 
       setAvatarPreview(compressedData)
-      const res = userStore.updateUser(currentUser.id, { avatarUrl: compressedData })
+      const res = await userStore.updateUser(currentUser.id, { avatarUrl: compressedData })
       if (res.success) {
         setAvatarMessage({ type: 'success', text: 'Profil fotoğrafı başarıyla kaydedildi.' })
       } else {
@@ -324,10 +324,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
-  const handleRemoveAvatar = () => {
+  const handleRemoveAvatar = async () => {
     if (!currentUser) return
     setAvatarPreview(null)
-    userStore.updateUser(currentUser.id, { avatarUrl: '' })
+    const result = await userStore.updateUser(currentUser.id, { avatarUrl: '' })
+    if (!result.success) { setAvatarMessage({ type: 'error', text: result.error || 'Profil kaydedilemedi.' }); return }
     setAvatarMessage({ type: 'success', text: 'Profil fotoğrafı kaldırıldı.' })
     setTimeout(() => setAvatarMessage(null), 3000)
   }
@@ -395,11 +396,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     ? generateUsername(newMemberFullName, allUsers)
     : ''
 
-  const handleAddTeamMember = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAddTeamMember = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
+
     if (!newMemberFullName.trim()) return
     const initialPassword = generateInitialPassword()
-    const res = userStore.addMember({
+    const res = await userStore.addMember({
       fullName: newMemberFullName.trim(),
       department: newMemberDepartment,
       departments: [newMemberDepartment],
@@ -414,6 +417,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       department: res.user.department,
     })
     setNewMemberFullName('')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Personel hesabı oluşturulamadı.')
+    }
   }
 
   // Department-specific mock configurations with persistence
@@ -1384,9 +1390,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             {u.id !== currentUser?.id && (
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={async () => {
                                   if (window.confirm(`${u.fullName} adlı kullanıcıyı silmek istediğinize emin misiniz?`)) {
-                                    userStore.deleteUser(u.id)
+                                    const result = await userStore.deleteUser(u.id)
+                                    if (!result.success) window.alert(result.error)
                                   }
                                 }}
                                 className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 cursor-pointer shrink-0"

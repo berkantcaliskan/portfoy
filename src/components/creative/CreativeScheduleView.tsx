@@ -277,7 +277,9 @@ export const CreativeScheduleView: React.FC = () => {
     setShowAddModal(true)
   }
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
+try {
+
     e.preventDefault()
     if (!title.trim() || !date) return
 
@@ -286,7 +288,7 @@ export const CreativeScheduleView: React.FC = () => {
       .map((c) => c.trim())
       .filter(Boolean)
 
-    creativeStore.addScheduleItem({
+    await creativeStore.addScheduleItem({
       title: title.trim(),
       date,
       category,
@@ -301,7 +303,9 @@ export const CreativeScheduleView: React.FC = () => {
     setTitle('')
     setNotes('')
     setShowAddModal(false)
-  }
+  
+} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
+}
 
   const upcomingCount = items.filter((i) => i.daysLeft >= 0 && i.daysLeft <= 45).length
   const inDesignCount = items.filter(
@@ -762,11 +766,11 @@ export const CreativeScheduleView: React.FC = () => {
                   <div className="flex items-center gap-2.5 self-end lg:self-center shrink-0">
                     <CustomSelect
                       value={item.status}
-                      onChange={(e) =>
-                        creativeStore.updateScheduleStatus(
+                      onChange={async (e) =>
+                        { try { await creativeStore.updateScheduleStatus(
                           item.id,
                           e.target.value as SchedulePrepStatus
-                        )
+                        ) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }
                       }
                       className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border bg-[#34302d] text-white focus:outline-none cursor-pointer ${statusMeta.badgeClass}`}
                     >
@@ -779,7 +783,7 @@ export const CreativeScheduleView: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => creativeStore.deleteScheduleItem(item.id)}
+                      onClick={async () => { try { await creativeStore.deleteScheduleItem(item.id) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }}
                       title="Takvimden Sil"
                       className="p-2 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-rose-400 hover:border-rose-500/40 transition-colors cursor-pointer"
                     >
@@ -867,11 +871,11 @@ export const CreativeScheduleView: React.FC = () => {
                         <div className="flex items-center gap-1.5 shrink-0">
                           <CustomSelect
                             value={item.status}
-                            onChange={(e) =>
-                              creativeStore.updateScheduleStatus(
+                            onChange={async (e) =>
+                              { try { await creativeStore.updateScheduleStatus(
                                 item.id,
                                 e.target.value as SchedulePrepStatus
-                              )
+                              ) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }
                             }
                             className="px-3 py-1 rounded-full text-xs font-semibold border border-[#4a443f] bg-[#282522] text-white focus:outline-none cursor-pointer"
                           >
@@ -884,7 +888,7 @@ export const CreativeScheduleView: React.FC = () => {
 
                           <button
                             type="button"
-                            onClick={() => creativeStore.deleteScheduleItem(item.id)}
+                            onClick={async () => { try { await creativeStore.deleteScheduleItem(item.id) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }}
                             title="Takvimden Sil"
                             className="p-1.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-rose-400 cursor-pointer"
                           >

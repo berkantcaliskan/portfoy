@@ -77,11 +77,13 @@ export function CreativeBriefsView() {
     return unsub
   }, [])
 
-  const handleAddBrief = (e: React.FormEvent) => {
+  const handleAddBrief = async (e: React.FormEvent) => {
+try {
+
     e.preventDefault()
     if (!title.trim()) return
     const currentUser = userStore.getCurrentUser()
-    creativeStore.addBrief({
+    await creativeStore.addBrief({
       title: title.trim(),
       requestedBy: currentUser?.fullName || 'Pazarlama Ekibi',
       requesterDepartment: currentUser?.department || 'Pazarlama',
@@ -100,7 +102,9 @@ export function CreativeBriefsView() {
     setKeyMessage('')
     setDeliverables('')
     setShowAddModal(false)
-  }
+  
+} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
+}
 
   return (
     <div className="space-y-4 pb-8">
@@ -212,8 +216,8 @@ export function CreativeBriefsView() {
 
                   <CustomSelect
                     value={brief.status}
-                    onChange={(e) =>
-                      creativeStore.updateBriefStatus(brief.id, e.target.value as BriefStatus)
+                    onChange={async (e) =>
+                      { try { await creativeStore.updateBriefStatus(brief.id, e.target.value as BriefStatus) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }
                     }
                     className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border bg-[#34302d] text-white focus:outline-none ${stat.badgeClass}`}
                   >

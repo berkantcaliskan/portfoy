@@ -242,8 +242,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     setIsReserveModalOpen(true)
   }
 
-  const handleExecuteReserve = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleExecuteReserve = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!selectedUnit || !currentProject || !currentUser) return
     if (!customerName.trim()) {
       setActionError('Lütfen müşteri adını girin.')
@@ -263,13 +264,16 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       return
     }
 
+    await projectStore.flushToBackend()
     setIsReserveModalOpen(false)
     setActionSuccess(`${selectedUnit.unitNumber} nolu daire başarıyla rezerve edildi.`)
     setTimeout(() => setActionSuccess(null), 4000)
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
-  const handleCancelReserve = (unit: FlatUnit) => {
-    if (!currentProject || !currentUser) return
+  const handleCancelReserve = async (unit: FlatUnit) => {
+
+    try {    if (!currentProject || !currentUser) return
     if (!window.confirm(`${unit.unitNumber} dairesinin rezervasyonunu iptal etmek istediğinize emin misiniz?`)) return
 
     const res = projectStore.cancelReservation(currentProject.id, unit.id, currentUser, 'Danışman tarafından iptal edildi.')
@@ -277,8 +281,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       alert(res.error)
       return
     }
+    await projectStore.flushToBackend()
     setActionSuccess(`${unit.unitNumber} rezervasyonu iptal edildi ve daire yeniden satışa açıldı.`)
     setTimeout(() => setActionSuccess(null), 4000)
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
   const handleOpenSell = (unit: FlatUnit) => {
@@ -290,8 +296,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     setIsSellModalOpen(true)
   }
 
-  const handleExecuteSell = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleExecuteSell = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!selectedUnit || !currentProject || !currentUser) return
     if (!customerName.trim()) {
       setActionError('Müşteri adı zorunludur.')
@@ -309,9 +316,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       return
     }
 
+    await projectStore.flushToBackend()
     setIsSellModalOpen(false)
-    setActionSuccess(`${selectedUnit.unitNumber} dairesinin satışı tamamlandı. Muhasebe tahsilat kaydı oluşturuldu.`)
+    setActionSuccess(`${selectedUnit.unitNumber} dairesinin satış kaydı sunucuya kaydedildi. Tahsilat ayrıca muhasebede kaydedilmelidir.`)
     setTimeout(() => setActionSuccess(null), 4000)
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
   const handleOpenPrice = (unit: FlatUnit) => {
@@ -321,8 +330,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     setIsPriceModalOpen(true)
   }
 
-  const handleExecutePrice = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleExecutePrice = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!selectedUnit || !currentProject || !currentUser) return
 
     const res = projectStore.updateUnitPrice(currentProject.id, selectedUnit.id, currentUser, Number(editPrice))
@@ -331,9 +341,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       return
     }
 
+    await projectStore.flushToBackend()
     setIsPriceModalOpen(false)
     setActionSuccess(`${selectedUnit.unitNumber} daire fiyatı güncellendi.`)
     setTimeout(() => setActionSuccess(null), 3000)
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
   const handleOpenHistory = (unit: FlatUnit) => {
@@ -369,8 +381,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     setIsEditUnitModalOpen(true)
   }
 
-  const handleExecuteSaveUnit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleExecuteSaveUnit = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!editingUnit || !currentProject) return
 
     const parsedFloor = Math.max(0, Math.min(2, Number(editUnitForm.floor) || 0))
@@ -403,14 +416,17 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       return
     }
 
+    await projectStore.flushToBackend()
     setProjects(projectStore.getAll())
     setIsEditUnitModalOpen(false)
     setActionSuccess(`${editingUnit.unitNumber} nolu daire bilgileri güncellendi.`)
     setTimeout(() => setActionSuccess(null), 3500)
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
-  const handleCreateProject = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateProject = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!newProject.name.trim()) return
 
     const fullLocation = [
@@ -456,6 +472,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       description: newProject.description.trim(),
     })
 
+    await projectStore.flushToBackend()
     setSelectedProjectId(created.id)
     setViewMode('detail')
     setDetailDisplayMode('blueprint')
@@ -485,6 +502,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       paymentBanner: undefined,
       parcelInfo: undefined,
     })
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
   const handleOpenProjectSettings = () => {
@@ -505,8 +523,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     setIsProjectSettingsOpen(true)
   }
 
-  const handleSaveProjectSettings = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSaveProjectSettings = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!currentProject) return
     if (!projectSettingsForm.name.trim()) {
       setActionError('Lütfen proje adını girin.')
@@ -540,16 +559,19 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       return
     }
 
+    await projectStore.flushToBackend()
     setProjects(projectStore.getAll())
     setIsProjectSettingsOpen(false)
     setActionSuccess(`"${projectSettingsForm.name.trim()}" projesinin ayarları kaydedildi.`)
     setTimeout(() => setActionSuccess(null), 3500)
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
-  const handleDeleteProject = () => {
-    if (!currentProject) return
+  const handleDeleteProject = async () => {
+
+    try {    if (!currentProject) return
     const confirmed = window.confirm(
-      `"${currentProject.name}" projesini ve kayıtlı ${currentProject.units?.length || 0} adet bağımsız bölümünü kalıcı olarak silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz!`
+      `"${currentProject.name}" projesini ve kayıtlı ${currentProject.units?.length || 0} adet bağımsız bölümünü arşivlemek istediğinize emin misiniz?`
     )
     if (!confirmed) return
 
@@ -560,6 +582,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       return
     }
 
+    await projectStore.flushToBackend()
     const remaining = projectStore.getAll()
     setProjects(remaining)
     setIsProjectSettingsOpen(false)
@@ -571,10 +594,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
     }
     setActionSuccess(`"${deletedName}" projesi sistemden başarıyla silindi.`)
     setTimeout(() => setActionSuccess(null), 3500)
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
-  const handleExecuteCancelSale = () => {
-    if (!editingUnit || !currentProject || !currentUser) return
+  const handleExecuteCancelSale = async () => {
+
+    try {    if (!editingUnit || !currentProject || !currentUser) return
     const confirmed = window.confirm(
       `${editingUnit.unitNumber} nolu dairenin satış kaydını iptal edip durumu 'Satışta' olarak güncellemek istediğinize emin misiniz?`
     )
@@ -586,10 +611,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onNavigateToPortfoli
       return
     }
 
+    await projectStore.flushToBackend()
     setProjects(projectStore.getAll())
     setIsEditUnitModalOpen(false)
     setActionSuccess(`${editingUnit.unitNumber} nolu dairenin satışı geri alındı ve durumu 'Satışta' yapıldı.`)
     setTimeout(() => setActionSuccess(null), 3500)
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Sunucu kaydı doğrulanamadı.") }
   }
 
   const canEditPrice = permissionService.canEditProjectPrice(currentUser)

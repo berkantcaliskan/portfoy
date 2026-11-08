@@ -3,6 +3,7 @@ import {createBackendPreviewClient,createBackendClientFromExistingSession} from 
 import {createCrmAuthService,type CrmAuthProfile} from '../../services/crmAuthService'
 import {createCrmBackendRepository,CRM_BACKEND_MODULES} from '../../services/crmBackendRepository'
 import {previewCrmMigration,type MigrationPreview} from '../../services/crmMigrationPreview'
+import {CrmAccountPanel} from './CrmAccountPanel'
 
 const labels:Record<string,string>={projects:'Projeler ve daireler',appointments:'Randevular',requests:'Müşteri talepleri',collections:'Tahsilatlar',payments:'Ödemeler',approvals:'Onaylar',files:'Dosya kayıtları'}
 export default function BackendTransitionView(){
@@ -22,7 +23,7 @@ export default function BackendTransitionView(){
   setCounts(found);setMessage('Sunucu listeleri kontrol edildi. Hiçbir yerel kayıt yüklenmedi; her satırın sonucunu ayrı inceleyin.')
  }
  return <main className="min-h-screen bg-[#f5f5f2] text-[#292d2b] p-6 sm:p-10"><div className="max-w-5xl mx-auto space-y-6">
-  <header className="flex justify-between gap-4 items-start"><div><h1 className="text-2xl font-bold">Merkezi backend geçişi</h1><p className="mt-2 text-sm">Kimlik, kayıt sürümü ve veri aktarımı hazırlığı</p></div><a className="underline" href="/">Mevcut CRM’e dön</a></header>
+  <header className="flex justify-between gap-4 items-start"><div><h1 className="text-2xl font-bold">Merkezi backend geçişi</h1><p className="mt-2 text-sm">Yeni kullanım için kimlik, yetki ve kalıcılık kontrolü</p></div><a className="underline" href="/">Mevcut CRM’e dön</a></header>
   <section className="bg-white border rounded-3xl p-6 space-y-4">
    <p>Bu geçiş alanı mevcut CRM’in girişini ve kayıtlarını değiştirmez. Meta alanı korunur. Buradan toplu aktarım veya üretim aktivasyonu yapılmaz.</p>
    {profile?<><p>Sunucuda doğrulandı: <strong>{profile.fullName}</strong> · {profile.role} · {profile.department}</p><button disabled={busy} className="border rounded-xl px-4 py-2" onClick={()=>void action(async()=>{if(!borrowed)await auth.signOut();setBorrowed(false);setClient(createBackendPreviewClient());setProfile(null);setPreview([]);setCounts({});setMessage('Geçiş alanı oturumu kapandı.')})}>Bu alandan çıkış yap</button></>:<div className="space-y-3">
@@ -37,7 +38,8 @@ export default function BackendTransitionView(){
    </div>}
    <p role="status" aria-live="polite" className="text-sm text-[#705432]">{busy?'İşlem sürüyor…':message}</p>
   </section>
-  <section className="bg-white border rounded-3xl p-6 space-y-4"><h2 className="font-bold">Aktarım önizlemesi</h2><p className="text-sm">Bu tarayıcıdaki modül sayıları okunur. Parolalar, Auth sırları ve Meta müşteri kayıtları aktarım kapsamına alınmaz. Sunucudaki sayı yalnızca erişebildiğiniz kayıtları gösterir.</p>
+  <CrmAccountPanel client={client} profile={profile} borrowed={borrowed} onAuthenticated={(next,p)=>{setClient(next);setBorrowed(false);setProfile(p)}}/>
+  <section className="bg-white border rounded-3xl p-6 space-y-4"><h2 className="font-bold">Kayıt durumu kontrolü</h2><p className="text-sm">Yeni kullanım sıfırdan başlayacak; eski profildeki test proje ve dosyaları taşınmayacak. Bu bölüm yalnızca kayıt sayılarını okur. Sunucudaki sayı yalnızca erişebildiğiniz kayıtları gösterir.</p>
    <div className="flex gap-3 flex-wrap"><button disabled={busy||!profile||profile.role!=='ADMIN'} className="border rounded-xl px-4 py-2 disabled:opacity-40" onClick={()=>void action(async()=>{setPreview(await previewCrmMigration(localStorage));setMessage('Yerel önizleme hazır. Hiçbir veri sunucuya gönderilmedi.')})}>Yerel kayıt sayımını göster</button><button disabled={busy||!profile} className="border rounded-xl px-4 py-2 disabled:opacity-40" onClick={()=>void action(readBackend)}>Sunucu kayıtlarını kontrol et</button></div>
    <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr><th className="p-2">Modül</th><th className="p-2">Yerel kayıt</th><th className="p-2">Ön kontrol</th><th className="p-2">Sunucu</th></tr></thead><tbody>{CRM_BACKEND_MODULES.map(module=>{const row=preview.find(p=>p.module===module);return <tr key={module} className="border-t"><td className="p-2">{labels[module]}</td><td className="p-2">{row?.count??'Kontrol edilmedi'}</td><td className="p-2">{row?(row.valid?'Kimlik yapısı uygun':row.error||`${row.missingIds} eksik, ${row.duplicateIds} tekrarlı kimlik`):'Kontrol edilmedi'}</td><td className="p-2">{counts[module]||'Kontrol edilmedi'}</td></tr>})}</tbody></table></div>
   </section>

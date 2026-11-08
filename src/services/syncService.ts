@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient'
+import {isCentralCrm} from './crmRuntime'
 import {
   leadToRow,
   rowToLead,
@@ -102,6 +103,7 @@ class SyncService {
 
   // --- PROJECTS & UNITS ---
   private async syncProjects(options: SyncInitOptions) {
+    if (isCentralCrm()) return
     try {
       const { data: dbProjects, error: prjErr } = await supabase.from('projects').select('*').order('created_at', { ascending: true })
       if (prjErr) throw prjErr
@@ -126,6 +128,7 @@ class SyncService {
   }
 
   public async saveProject(project: SharedProject) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('projects').upsert(projectToRow(project))
@@ -139,6 +142,7 @@ class SyncService {
   }
 
   public async deleteProject(projectId: string) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('projects').delete().eq('id', projectId)
@@ -148,6 +152,7 @@ class SyncService {
   }
 
   public async saveUnit(unit: FlatUnit) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('units').upsert(unitToRow(unit))
@@ -157,6 +162,7 @@ class SyncService {
   }
 
   public async deleteUnit(unitId: string) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('units').delete().eq('id', unitId)
@@ -218,6 +224,7 @@ class SyncService {
 
   // --- APPOINTMENTS ---
   private async syncAppointments(options: SyncInitOptions) {
+    if (isCentralCrm()) return
     try {
       const { data, error } = await supabase.from('appointments').select('*').order('created_at', { ascending: false })
       if (error) throw error
@@ -231,6 +238,7 @@ class SyncService {
   }
 
   public async saveAppointment(appointment: Appointment) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('appointments').upsert(appointmentToRow(appointment))
@@ -240,6 +248,7 @@ class SyncService {
   }
 
   public async deleteAppointment(id: string) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('appointments').delete().eq('id', id)
@@ -250,6 +259,7 @@ class SyncService {
 
   // --- REQUESTS ---
   private async syncRequests(options: SyncInitOptions) {
+    if (isCentralCrm()) return
     try {
       const { data, error } = await supabase.from('customer_requests').select('*').order('created_at', { ascending: false })
       if (error) throw error
@@ -263,6 +273,7 @@ class SyncService {
   }
 
   public async saveRequest(request: CustomerRequest) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('customer_requests').upsert(requestToRow(request))
@@ -272,6 +283,7 @@ class SyncService {
   }
 
   public async deleteRequest(id: string) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('customer_requests').delete().eq('id', id)
@@ -282,6 +294,7 @@ class SyncService {
 
   // --- USERS ---
   private async syncUsers(options: SyncInitOptions) {
+    if(isCentralCrm())return
     try {
       const { data, error } = await supabase.from('app_users').select('*').order('created_at', { ascending: true })
       if (error) throw error
@@ -295,6 +308,7 @@ class SyncService {
   }
 
   public async saveUser(user: AppUser) {
+    if(isCentralCrm())return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('app_users').upsert(userToRow(user))
@@ -304,6 +318,7 @@ class SyncService {
   }
 
   public async deleteUser(id: string) {
+    if(isCentralCrm())return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('app_users').delete().eq('id', id)
@@ -314,6 +329,7 @@ class SyncService {
 
   // --- ACCOUNTING ---
   private async syncAccounting(options: SyncInitOptions) {
+    if (isCentralCrm()) return
     try {
       const { data: dbCol, error: colErr } = await supabase.from('collections').select('*')
       if (colErr) throw colErr
@@ -332,6 +348,7 @@ class SyncService {
   }
 
   public async saveCollection(col: CollectionRecord) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('collections').upsert(collectionToRow(col))
@@ -341,6 +358,7 @@ class SyncService {
   }
 
   public async savePayment(pay: PaymentRecord) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('payments').upsert(paymentToRow(pay))
@@ -351,6 +369,7 @@ class SyncService {
 
   // --- APPROVALS ---
   private async syncApprovals(options: SyncInitOptions) {
+    if (isCentralCrm()) return
     try {
       const { data, error } = await supabase.from('approvals').select('*').order('created_at', { ascending: false })
       if (error) throw error
@@ -364,6 +383,7 @@ class SyncService {
   }
 
   public async saveApproval(approval: ApprovalRequest) {
+    if (isCentralCrm()) return
     if (!isSupabaseConfigured()) return
     try {
       await supabase.from('approvals').upsert(approvalToRow(approval))
@@ -374,6 +394,7 @@ class SyncService {
 
   // --- SHARED FILES ---
   private async syncFiles(options: SyncInitOptions) {
+    if (isCentralCrm()) return
     try {
       const { data, error } = await supabase.from('shared_files').select('*').order('created_at', { ascending: false })
       if (error) return // Table might not exist yet, fallback smoothly

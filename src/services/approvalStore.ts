@@ -1,4 +1,6 @@
-import { AppUser } from './userStore'
+import { userStore, type AppUser } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCrmServerCollection } from './crmServerCollection'
 import { Department } from '@/types/department'
 import { permissionService } from './permissionService'
 import { supabase, isSupabaseConfigured } from './supabaseClient'
@@ -35,11 +37,20 @@ const INITIAL_APPROVALS: ApprovalRequest[] = []
 type Listener = () => void
 
 class ApprovalStore {
+  private backend = createCrmServerCollection<ApprovalRequest>('approvals', () => {
+    const user = userStore.getCurrentUser(), client = userStore.getServerClient()
+    return user && client ? { id: user.id, client } : null
+  })
+  public setAccount(id: string | null) { this.backend.setAccount(id) }
+  public async refreshFromBackend() { await this.backend.refresh() }
+  public getReadError() { return this.backend.getError() }
   private approvals: ApprovalRequest[] = []
   private listeners: Set<Listener> = new Set()
   private realtimeChannel: any = null
 
   constructor() {
+    this.backend.subscribe(() => this.notify())
+    if (isCentralCrm()) return
     this.loadFromStorage()
     this.initRealtime()
     if (typeof window !== 'undefined') {
@@ -51,6 +62,7 @@ class ApprovalStore {
   }
 
   public setLoadedApprovals(approvals: ApprovalRequest[]) {
+    if (isCentralCrm()) return
     const byId = new Map<string, ApprovalRequest>()
     for (const a of approvals || []) byId.set(a.id, a)
     for (const local of this.approvals) {
@@ -117,34 +129,44 @@ class ApprovalStore {
   }
 
   public getAll(): ApprovalRequest[] {
+    if (isCentralCrm()) return this.backend.getAll()
     return [...this.approvals]
   }
 
-  public requestApproval(
+  public async requestApproval(
     data: Omit<ApprovalRequest, 'id' | 'status' | 'createdAt'>,
     user: AppUser
-  ): ApprovalRequest {
+  ): Promise<ApprovalRequest> {
     const newReq: ApprovalRequest = {
       ...data,
-      id: 'app-' + Date.now(),
+      id: isCentralCrm() ? 'app-' + crypto.randomUUID() : 'app-' + Date.now(),
       requestedByUserId: user.id,
       requestedByUserName: user.fullName,
       requestedDepartment: user.department,
       status: 'BEKLEMEDE',
       createdAt: new Date().toISOString(),
     }
+    if (isCentralCrm()) return this.backend.save(JSON.stringify(['create', data]), newReq)
     this.approvals = [newReq, ...this.approvals]
     this.saveToStorage()
     syncService.saveApproval(newReq)
     return newReq
   }
 
-  public decideApproval(
+  public async decideApproval(
     id: string,
     decision: 'ONAYLANDI' | 'REDDEDILDI',
     user: AppUser,
     notes?: string
-  ): { success: boolean; error?: string } {
+  ): Promise<{ success: boolean; error?: string }> {
+    if (isCentralCrm()) {
+      const target = this.backend.getAll().find(row => row.id === id)
+      if (!target) throw new Error('Onay talebi bulunamadı. Listeyi yenileyin.')
+      await this.backend.save(JSON.stringify(['decide', id, decision, notes]), {
+        ...target, status: decision, reviewNotes: notes,
+      }, false, true)
+      return { success: true }
+    }
     if (!permissionService.canApproveDiscounts(user)) {
       return {
         success: false,

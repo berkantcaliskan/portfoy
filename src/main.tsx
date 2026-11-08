@@ -8,6 +8,8 @@ async function bootstrap(){
  if(new URLSearchParams(window.location.search).get('workspace')==='backend'){
   View=(await import('./components/backend/BackendTransitionView')).default
  }else{
+  const {enableCentralCrm}=await import('./services/crmRuntime')
+  enableCentralCrm()
   await import('./services/zeroStatePurge')
   View=(await import('./App.tsx')).default
  }

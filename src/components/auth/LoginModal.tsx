@@ -121,7 +121,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   // Auto-switch to register-admin if no admin exists in the system
   useEffect(() => {
-    if (!hasAdmin && !currentUser) {
+    if (!hasAdmin && !currentUser && !userStore.centralAuthEnabled) {
       setView('register-admin')
     } else if (view === 'register-admin' && hasAdmin) {
       setView('signin')
@@ -131,9 +131,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   // Real-time username preview for admin registration
   const previewUsername = adminFullName ? generateUsername(adminFullName, userStore.getAllUsers()) : ''
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage('')
+
+    if(userStore.centralAuthEnabled){
+      try{const user=await userStore.loginWithServer(identifier,password);setPassword('');onLoginSuccess(user);onClose()}
+      catch(err){setErrorMessage(err instanceof Error?err.message:'Sunucu girişi tamamlanamadı.')}
+      return
+    }
 
     const res = userStore.login(identifier, password)
     if (!res.success || !res.user) {
@@ -154,6 +160,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleRegisterAdmin = (e: React.FormEvent) => {
     e.preventDefault()
+    if(userStore.centralAuthEnabled){setErrorMessage('Yönetici hesabı yalnızca yetkili sunucu kurulumu ile açılır.');return}
     setErrorMessage('')
 
     if (!adminFullName.trim() || !adminPassword.trim()) {

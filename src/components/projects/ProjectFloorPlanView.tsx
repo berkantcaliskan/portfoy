@@ -3667,7 +3667,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         />
                         {/* Çizginin altında / yanında hafif ayrık GİRİŞ yazısı */}
                         <span
-                          style={{ fontFamily: "'Karla', sans-serif" }}
+                          style={{ fontFamily: "var(--font-ui)" }}
                           className={`text-[10px] sm:text-[11px] font-extrabold tracking-[0.16em] uppercase text-[#282522] leading-none whitespace-nowrap ${
                             isVerticalEntrance ? `${inwardVerticalTextClass} py-0.5` : ''
                           }`}
@@ -3861,7 +3861,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                         /* ÇOK DAR YÜKSEKLİK (Örn: 12 daire dikey dizildiğinde tek satırda Daire Adı, Durum ve Fiyat) */
                         <div className="flex-1 flex items-center justify-between gap-1 min-w-0 overflow-hidden">
                           <span
-                            style={{ fontFamily: "'Karla', sans-serif" }}
+                            style={{ fontFamily: "var(--font-ui)" }}
                             className="unit-inline-title text-[10px] font-extrabold truncate leading-none"
                           >
                             {unit.unitNumber}
@@ -3874,7 +3874,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                             </span>
                             {unit.price > 0 && (
                               <span
-                                style={{ fontFamily: "'Karla', sans-serif" }}
+                                style={{ fontFamily: "var(--font-ui)" }}
                                 className="unit-pill-light text-[9px] font-bold px-1.5 py-0.2 rounded-full leading-tight"
                               >
                                 {formatCurrency(unit.price)}
@@ -3889,7 +3889,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                             className={`${unitInwardVerticalClass} flex items-center justify-between gap-1.5 w-full h-full text-center whitespace-nowrap`}
                           >
                             <span
-                              style={{ fontFamily: "'Karla', sans-serif" }}
+                              style={{ fontFamily: "var(--font-ui)" }}
                               className="unit-inline-title text-[10px] font-extrabold tracking-tight leading-none"
                             >
                               {unit.unitNumber}
@@ -3901,7 +3901,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                             </span>
                             {unit.price > 0 && (
                               <span
-                                style={{ fontFamily: "'Karla', sans-serif" }}
+                                style={{ fontFamily: "var(--font-ui)" }}
                                 className="unit-pill-light text-[8.5px] font-bold px-1 py-1 rounded-full leading-none"
                               >
                                 {formatCurrency(unit.price)}
@@ -3910,10 +3910,10 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           </div>
                         </div>
                       ) : isNarrowVertical ? (
-                        /* DÜŞEY (9:16) KUTU GÖRÜNÜMÜ: Sadece Daire Adı (Karla, katmansız siyah), Satışta ibaresi ve Fiyatı */
+                        /* DÜŞEY (9:16) KUTU GÖRÜNÜMÜ: Sadece Daire Adı (katmansız siyah), Satışta ibaresi ve Fiyatı */
                         <div className="flex-1 flex flex-col items-center justify-between text-center gap-0.5 py-0.5 min-h-0 overflow-hidden">
                           <span
-                            style={{ fontFamily: "'Karla', sans-serif" }}
+                            style={{ fontFamily: "var(--font-ui)" }}
                             className="unit-inline-title text-[11px] font-extrabold tracking-tight truncate max-w-full leading-tight"
                           >
                             {unit.unitNumber}
@@ -3925,7 +3925,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           </span>
                           {unit.price > 0 && (
                             <span
-                              style={{ fontFamily: "'Karla', sans-serif" }}
+                              style={{ fontFamily: "var(--font-ui)" }}
                               className="unit-pill-light text-[9px] font-bold px-1.5 py-0.5 rounded-full truncate max-w-full leading-tight"
                             >
                               {formatCurrency(unit.price)}
@@ -3933,11 +3933,11 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           )}
                         </div>
                       ) : (
-                        /* STANDART (1:1 veya 16:9) GÖRÜNÜM: Sadece Daire Adı (Karla, katmansız siyah), Satışta ibaresi ve Fiyatı */
+                        /* STANDART (1:1 veya 16:9) GÖRÜNÜM: Sadece Daire Adı (katmansız siyah), Satışta ibaresi ve Fiyatı */
                         <div className="flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
                           <div className="flex items-center justify-between gap-1 min-w-0">
                             <span
-                              style={{ fontFamily: "'Karla', sans-serif" }}
+                              style={{ fontFamily: "var(--font-ui)" }}
                               className={`unit-inline-title ${
                                 isShortBox ? 'text-[10.5px]' : 'text-xs'
                               } font-extrabold tracking-tight truncate leading-tight`}
@@ -3956,7 +3956,7 @@ export const ProjectFloorPlanView: React.FC<ProjectFloorPlanViewProps> = ({
                           <div className="flex items-center justify-end pt-0.5 min-w-0 mt-auto">
                             {unit.price > 0 && (
                               <span
-                                style={{ fontFamily: "'Karla', sans-serif" }}
+                                style={{ fontFamily: "var(--font-ui)" }}
                                 className={`unit-pill-light ${
                                   isShortBox ? 'text-[9.5px] px-1.5 py-0.2' : 'text-[11px] px-2.5 py-0.5'
                                 } font-bold rounded-full shadow-2xs truncate max-w-full leading-tight`}

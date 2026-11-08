@@ -1,3 +1,6 @@
+import { userStore } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCrmServerCollection } from './crmServerCollection'
 import { trashStore } from './trashStore'
 
 export type ContactCategory = 'EKIP' | 'MUSTERI' | 'ORTAK' | 'DIGER'
@@ -17,10 +20,17 @@ export interface Contact {
 const STORAGE_KEY_CONTACTS = 'demirturk_contacts_v2'
 
 class ContactStore {
+  private backend = createCrmServerCollection<Contact>('contacts', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
+  public setAccount(id: string|null) { this.backend.setAccount(id) }
+  public async refreshFromBackend() { await this.backend.refresh(); this.notify() }
+  public getReadError() { return this.backend.getError() }
+
   private contacts: Contact[] = []
   private listeners: (() => void)[] = []
 
   constructor() {
+    this.backend.subscribe(() => this.notify())
+    if (isCentralCrm()) return
     this.loadFromStorage()
     if (typeof window !== 'undefined') {
       window.addEventListener('demirturk:cloud-db-synced', () => {
@@ -31,6 +41,7 @@ class ContactStore {
   }
 
   private loadFromStorage() {
+    if (isCentralCrm()) return
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CONTACTS)
       if (saved) {
@@ -65,25 +76,28 @@ class ContactStore {
   }
 
   getAll(): Contact[] {
+    if (isCentralCrm()) return this.backend.getAll()
     return [...this.contacts]
   }
 
   getById(id: string): Contact | undefined {
-    return this.contacts.find((c) => c.id === id)
+    return this.getAll().find((c) => c.id === id)
   }
 
-  add(contact: Omit<Contact, 'id' | 'createdAt'>): Contact {
+  async add(contact: Omit<Contact, 'id' | 'createdAt'>): Promise<Contact> {
     const newContact: Contact = {
       ...contact,
-      id: 'cnt-' + Date.now(),
+      id: isCentralCrm() ? crypto.randomUUID() : 'cnt-' + Date.now(),
       createdAt: new Date().toISOString(),
     }
+    if (isCentralCrm()) return this.backend.save(JSON.stringify(newContact), newContact)
     this.contacts = [newContact, ...this.contacts]
     this.saveToStorage()
     return newContact
   }
 
-  update(id: string, updates: Partial<Omit<Contact, 'id' | 'createdAt'>>): Contact | null {
+  async update(id: string, updates: Partial<Omit<Contact, 'id' | 'createdAt'>>): Promise<Contact | null> {
+    if (isCentralCrm()) { const prior=this.getById(id); return prior?this.backend.save(JSON.stringify([id,updates]),{...prior,...updates,id}):null }
     const idx = this.contacts.findIndex((c) => c.id === id)
     if (idx === -1) return null
     this.contacts[idx] = { ...this.contacts[idx], ...updates }
@@ -91,7 +105,8 @@ class ContactStore {
     return this.contacts[idx]
   }
 
-  delete(id: string): boolean {
+  async delete(id: string): Promise<boolean> {
+    if (isCentralCrm()) { const prior=this.getById(id); if(!prior)return false; await this.backend.save('archive:'+id,prior,true); return true }
     const target = this.contacts.find((c) => c.id === id)
     if (target) {
       trashStore.addItemToTrash(STORAGE_KEY_CONTACTS, target)

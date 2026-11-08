@@ -109,6 +109,8 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [requestError, setRequestError] = useState('')
+  const [requestSaving, setRequestSaving] = useState(false)
 
   // Form states for manual request creation
   const [customerName, setCustomerName] = useState('')
@@ -389,11 +391,15 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
   }, [unifiedItems, filterStatus, searchQuery])
 
   // Handle Create Submit
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+
+    if (requestSaving) return
+    setRequestSaving(true)
+    setRequestError('')
+    try {    e.preventDefault()
     if (!customerName.trim() || !subject.trim()) return
 
-    requestStore.addRequest({
+    await requestStore.addRequest({
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
       subject: subject.trim(),
@@ -409,15 +415,24 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
     setCustomerPhone('')
     setSubject('')
     setNotes('')
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Talep işlemi tamamlanamadı.')
+    } finally {
+      setRequestSaving(false)
+    }
   }
 
   // Handle Status Change
-  const handleStatusChange = (item: UnifiedRequestItem, newStatus: RequestStatus) => {
-    if (item.isFromRequestStore && item.rawRequest) {
-      requestStore.updateStatus(item.id, newStatus)
+  const handleStatusChange = async (item: UnifiedRequestItem, newStatus: RequestStatus) => {
+
+    if (requestSaving) return
+    setRequestSaving(true)
+    setRequestError('')
+    try {    if (item.isFromRequestStore && item.rawRequest) {
+      await requestStore.updateStatus(item.id, newStatus)
     } else {
       // Persist to requestStore so it gets a synchronized record
-      requestStore.addRequest({
+      await requestStore.addRequest({
         customerName: item.customerName,
         customerPhone: item.customerPhone,
         subject: item.subject,
@@ -437,22 +452,37 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
         leadStore.updateStage(item.lead.id, 'QUALIFIED', currentUser)
       }
     }
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Talep işlemi tamamlanamadı.')
+    } finally {
+      setRequestSaving(false)
+    }
   }
 
   // Handle Delete Request / Web Submission
-  const handleDeleteItem = (item: UnifiedRequestItem) => {
-    if (item.isFromRequestStore) {
-      requestStore.deleteRequest(item.id)
+  const handleDeleteItem = async (item: UnifiedRequestItem) => {
+
+    if (requestSaving) return
+    setRequestSaving(true)
+    setRequestError('')
+    try {    if (item.isFromRequestStore) {
+      await requestStore.deleteRequest(item.id)
     }
     if (item.leadId) {
       leadStore.delete(item.leadId)
     }
     setRequests(requestStore.getAll())
     setAllLeads(leadStore.getAllRaw())
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Talep işlemi tamamlanamadı.')
+    } finally {
+      setRequestSaving(false)
+    }
   }
 
   return (
     <div className="space-y-6">
+      {(requestError || requestStore.getReadError()) && <p role="alert">{requestError || requestStore.getReadError()}</p>}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -816,6 +846,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
         title="Yeni Müşteri Destek / Bilgi Talebi"
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
+          {requestError && <p role="alert">{requestError}</p>}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
@@ -915,7 +946,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
             >
               Vazgeç
             </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
+            <GlassButton disabled={requestSaving} type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
               Talebi Kaydet
             </GlassButton>
           </div>

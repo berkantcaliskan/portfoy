@@ -70,12 +70,14 @@ export const TeamPermissionsView: React.FC = () => {
     }
   }
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
+
     if (!fullName.trim()) return
 
     const initialPassword = generateInitialPassword()
-    const res = userStore.addMember({
+    const res = await userStore.addMember({
       fullName: fullName.trim(),
       department,
       departments: [department],
@@ -88,6 +90,9 @@ export const TeamPermissionsView: React.FC = () => {
     setIsAddModalOpen(false)
     setFullName('')
     setEmail('')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Personel hesabı oluşturulamadı.')
+    }
   }
 
   const handleOpenEdit = (user: AppUser) => {
@@ -99,11 +104,11 @@ export const TeamPermissionsView: React.FC = () => {
     setPermissions(user.permissions || {})
   }
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedUserToEdit) return
 
-    userStore.updateUser(selectedUserToEdit.id, {
+    const result = await userStore.updateUser(selectedUserToEdit.id, {
       department,
       departments: selectedDepts,
       role,
@@ -111,12 +116,13 @@ export const TeamPermissionsView: React.FC = () => {
       permissions,
     })
 
+    if (!result.success) { window.alert(result.error); return }
     setSelectedUserToEdit(null)
   }
 
-  const handleDelete = (userId: string) => {
+  const handleDelete = async (userId: string) => {
     if (!window.confirm('Bu kullanıcıyı sistemden silmek istediğinize emin misiniz?')) return
-    const res = userStore.deleteUser(userId)
+    const res = await userStore.deleteUser(userId)
     if (!res.success) {
       alert(res.error)
     }
@@ -329,6 +335,16 @@ export const TeamPermissionsView: React.FC = () => {
         title={`Yetkileri Düzenle - ${selectedUserToEdit?.fullName}`}
       >
         <form onSubmit={handleSaveEdit} className="space-y-4">
+          {userStore.centralAuthEnabled && selectedUserToEdit && <button type="button" onClick={async () => {
+            if (!window.confirm('Personelin parolasını yenileyip ilk girişte değiştirmesini zorunlu kılmak istiyor musunuz?')) return
+            try {
+              const credentials = await userStore.resetStaffPassword(selectedUserToEdit.id)
+              setCreatedInfo({ username: credentials.username, pass: credentials.password })
+              setSelectedUserToEdit(null)
+            } catch (error) {
+              window.alert(error instanceof Error ? error.message : 'Parola yenilenemedi.')
+            }
+          }}>Yeni geçici parola oluştur</button>}
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">

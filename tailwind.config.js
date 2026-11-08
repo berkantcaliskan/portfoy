@@ -12,12 +12,12 @@ export default {
         '5.5': '1.375rem',
       },
       fontFamily: {
-        sans: ['"Karla"', 'system-ui', '-apple-system', 'sans-serif'],
-        heading: ['"Karla"', 'system-ui', '-apple-system', 'sans-serif'],
-        serif: ['"Karla"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['var(--font-ui)'],
+        heading: ['var(--font-ui)'],
+        serif: ['var(--font-ui)'],
         mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
         theSeasons: ['"The Seasons"', '"Cormorant Garamond"', 'Georgia', 'serif'],
-        codec: ['"Karla"', 'system-ui', 'sans-serif'],
+        codec: ['var(--font-ui)'],
       },
       colors: {
         canvas: '#252c33',

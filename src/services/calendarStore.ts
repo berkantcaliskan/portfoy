@@ -1,6 +1,8 @@
+import { createCrmServerCollection } from './crmServerCollection'
 import { Department, CANONICAL_DEPARTMENTS } from '@/types/department'
 import { AppUser, userStore } from './userStore'
 import { appointmentStore, Appointment } from './appointmentStore'
+import { isCentralCrm } from './crmRuntime'
 import { leadStore } from './leadStore'
 import { accountingStore } from './accountingStore'
 import { requestStore } from './requestStore'
@@ -208,12 +210,21 @@ export function extractDateAndTimeFromText(
 }
 
 class CalendarStore {
+ private backend=createCrmServerCollection<CalendarEvent>('calendar',()=>{const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null})
+ private overrideBackend=createCrmServerCollection<{id:string; updates?:Partial<CalendarEvent>; hidden?:boolean}>('calendar_overrides',()=>{const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null})
+ public setAccount(id:string|null) { this.backend.setAccount(id);this.overrideBackend.setAccount(id);this.manualEvents=[];this.overrides={};this.deletedAutoIds.clear();this.notify() }
+ public async refreshFromBackend() { await Promise.all([this.backend.refresh(),this.overrideBackend.refresh()]) }
+ public getReadError() { return this.backend.getError()||this.overrideBackend.getError() }
+
   private manualEvents: CalendarEvent[] = []
   private overrides: Record<string, Partial<CalendarEvent>> = {}
   private deletedAutoIds: Set<string> = new Set()
   private listeners: Set<Listener> = new Set()
 
   constructor() {
+ this.backend.subscribe(()=>{if(isCentralCrm()){this.manualEvents=this.backend.getAll();this.notify()}})
+ this.overrideBackend.subscribe(()=>{if(isCentralCrm()){const rows=this.overrideBackend.getAll();this.overrides=Object.fromEntries(rows.filter(r=>r.updates).map(r=>[r.id,r.updates!]));this.deletedAutoIds=new Set(rows.filter(r=>r.hidden).map(r=>r.id));this.notify()}})
+
     this.loadFromStorage()
 
     if (typeof window !== 'undefined') {
@@ -232,6 +243,7 @@ class CalendarStore {
   }
 
   private loadFromStorage() {
+    if(isCentralCrm())return
     try {
       const raw = localStorage.getItem(STORAGE_KEY_CALENDAR)
       if (raw) {
@@ -248,6 +260,7 @@ class CalendarStore {
   }
 
   private saveToStorage() {
+    if(isCentralCrm()){this.notify();return}
     try {
       const payload: StoredCalendarData = {
         manualEvents: this.manualEvents,
@@ -715,7 +728,7 @@ class CalendarStore {
   /**
    * Manuel yeni plan/etkinlik ekler.
    */
-  public addEvent(
+  public async addEvent(
     data: {
       title: string
       description?: string
@@ -733,12 +746,12 @@ class CalendarStore {
       projectName?: string
     },
     user?: AppUser | null
-  ): CalendarEvent {
+  ): Promise<CalendarEvent> {
     const activeUser = user || userStore.getCurrentUser()
     const nowIso = new Date().toISOString()
 
     const newEvent: CalendarEvent = {
-      id: 'cal-manual-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      id: isCentralCrm()?crypto.randomUUID():'cal-manual-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
       title: data.title.trim(),
       description: data.description?.trim() || '',
       date: data.date,
@@ -764,6 +777,7 @@ class CalendarStore {
       updatedAt: nowIso,
     }
 
+    if(isCentralCrm())return this.backend.save(JSON.stringify(newEvent),newEvent)
     this.manualEvents = [newEvent, ...this.manualEvents]
     this.saveToStorage()
     return newEvent
@@ -772,7 +786,7 @@ class CalendarStore {
   /**
    * Hem manuel hem de otomatik kaydedilmiş bir etkinliği düzenler (görünürlük, departman, kişi/grup, tarih, başlık vb.).
    */
-  public updateEvent(id: string, updates: Partial<CalendarEvent>): CalendarEvent | undefined {
+  public async updateEvent(id: string, updates: Partial<CalendarEvent>): Promise<CalendarEvent | undefined> {
     const nowIso = new Date().toISOString()
 
     // 1. Manuel etkinlik mi?
@@ -784,18 +798,13 @@ class CalendarStore {
         id,
         updatedAt: nowIso,
       }
+      if(isCentralCrm())return this.backend.save(JSON.stringify(updated),updated)
       this.manualEvents[manualIdx] = updated
       this.saveToStorage()
       return updated
     }
 
     // 2. Otomatik senkronize etkinlik (Randevu, Görüşme, Tahsilat, Ödeme vb.)
-    this.overrides[id] = {
-      ...(this.overrides[id] || {}),
-      ...updates,
-      updatedAt: nowIso,
-    }
-
     // Eğer bir Randevu (appointmentStore) kaydıysa temel alanları appointmentStore'a da yansıt
     if (id.startsWith('cal-apt-')) {
       const aptId = id.replace('cal-apt-', '')
@@ -806,9 +815,23 @@ class CalendarStore {
       if (updates.description !== undefined) aptUpdates.notes = updates.description
       if (updates.status) aptUpdates.status = updates.status
       if (Object.keys(aptUpdates).length > 0) {
-        appointmentStore.updateAppointment(aptId, aptUpdates)
+        if (!await appointmentStore.updateAppointment(aptId, aptUpdates)) {
+          throw new Error('Takvimdeki randevu bulunamadı. Randevu listesini yenileyin.')
+        }
       }
     }
+
+    const overrides = { ...(this.overrides[id] || {}), ...updates, updatedAt: nowIso }
+    if (isCentralCrm() && id.startsWith('cal-apt-')) {
+      // Sunucudan gelen randevu alanlarını tarayıcıdaki eski değerlerle gölgeleme.
+      delete overrides.date
+      delete overrides.time
+      delete overrides.location
+      delete overrides.description
+      delete overrides.status
+    }
+    if(isCentralCrm())await this.overrideBackend.save(JSON.stringify([id,overrides]),{id,updates:overrides})
+    this.overrides[id] = overrides
 
     this.saveToStorage()
     return this.getAllRaw().find((e) => e.id === id)
@@ -817,7 +840,9 @@ class CalendarStore {
   /**
    * Etkinliği siler.
    */
-  public deleteEvent(id: string): void {
+  public async deleteEvent(id: string): Promise<void> {
+    if(isCentralCrm()) { const manual=this.manualEvents.find(e=>e.id===id); if(manual)await this.backend.save('archive:'+id,manual,true); else await this.overrideBackend.save('hide:'+id,{id,hidden:true}); return }
+
     const target = this.getAllRaw().find((e) => e.id === id)
     if (target) {
       trashStore.addItemToTrash(STORAGE_KEY_CALENDAR, target)

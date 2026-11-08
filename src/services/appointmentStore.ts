@@ -1,4 +1,6 @@
-import { AppUser } from './userStore'
+import { userStore, type AppUser } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { CrmBackendError, createCrmBackendRepository, type CrmWriteCommand } from './crmBackendRepository'
 import { Department } from '@/types/department'
 import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { syncService } from './syncService'
@@ -35,10 +37,18 @@ type Listener = () => void
 
 class AppointmentStore {
   private appointments: Appointment[] = []
+  private revisions = new Map<string, number>()
+  private accountId: string | null = null
+  private generation = 0
+  private readSequence = 0
+  private pendingWrite: { key: string; command: CrmWriteCommand } | null = null
+  private writing = false
+  private readError = ''
   private listeners: Set<Listener> = new Set()
   private realtimeChannel: any = null
 
   constructor() {
+    if (isCentralCrm()) return
     this.loadFromStorage()
     this.initRealtime()
     if (typeof window !== 'undefined') {
@@ -50,6 +60,7 @@ class AppointmentStore {
   }
 
   public setLoadedAppointments(appointments: Appointment[]) {
+    if (isCentralCrm()) return
     const byId = new Map<string, Appointment>()
     for (const a of appointments || []) byId.set(a.id, a)
     for (const local of this.appointments) {
@@ -124,6 +135,10 @@ class AppointmentStore {
   }
 
   public getAll(user?: AppUser | null): Appointment[] {
+    if (isCentralCrm()) {
+      const activeId = userStore.getCurrentUser()?.id
+      return activeId && activeId === this.accountId && (!user || user.id === activeId) ? [...this.appointments] : []
+    }
     if (!user) return [...this.appointments]
     if (user.role === 'ADMIN' || user.scope === 'ALL') return [...this.appointments]
     if (user.scope === 'ASSIGNED_ONLY') {
@@ -135,7 +150,93 @@ class AppointmentStore {
     return [...this.appointments]
   }
 
-  public createAppointment(
+  public getReadError() {
+    return this.readError
+  }
+
+  public setAccount(id: string | null) {
+    if (!isCentralCrm() || this.accountId === id) return
+    this.accountId = id
+    this.generation++
+    this.appointments = []
+    this.revisions.clear()
+    this.pendingWrite = null
+    this.readError = ''
+    this.notify()
+  }
+
+  private getRepository() {
+    const client = userStore.getServerClient()
+    if (!client || !this.accountId || this.accountId !== userStore.getCurrentUser()?.id) {
+      throw new Error('Randevular için sunucu oturumu gerekli.')
+    }
+    return createCrmBackendRepository(client)
+  }
+
+  public async refreshFromBackend() {
+    if (!isCentralCrm() || !this.accountId || this.writing) return
+    const generation = this.generation
+    const sequence = ++this.readSequence
+    const records: Appointment[] = []
+    const revisions = new Map<string, number>()
+    try {
+      const repository = this.getRepository()
+      let cursor: string | null = ''
+      do {
+        const page = await repository.list('appointments', cursor, 100)
+        if (generation !== this.generation || sequence !== this.readSequence) return
+        for (const row of page.records) {
+          records.push({ ...row.payload, id: row.id, createdByUserId: row.owner_id, createdByDepartment: row.department } as Appointment)
+          revisions.set(row.id, row.revision)
+        }
+        if (page.next !== null && page.next <= cursor) throw new Error('Randevu listesi doğrulanamadı.')
+        cursor = page.next
+      } while (cursor !== null)
+      this.appointments = records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      this.revisions = revisions
+      this.readError = ''
+    } catch (error) {
+      if (generation !== this.generation || sequence !== this.readSequence) return
+      this.readError = error instanceof Error ? error.message : 'Randevular sunucudan okunamadı.'
+    }
+    this.notify()
+  }
+
+  private async writeBackend(key: string, appointment: Appointment, revision: number, archive = false) {
+    if (this.writing) throw new Error('Önceki randevu işlemi sürüyor.')
+    const repository = this.getRepository()
+    const generation = this.generation
+    if (this.pendingWrite && this.pendingWrite.key !== key) {
+      throw new Error('Önce sonucu belirsiz kalan randevu işlemini aynı bilgilerle yeniden gönderin.')
+    }
+    const command = this.pendingWrite?.command ?? {
+      requestId: crypto.randomUUID(), module: 'appointments', id: appointment.id,
+      revision, payload: { ...appointment }, archive,
+    }
+    this.pendingWrite = { key, command }
+    this.writing = true
+    this.readSequence++
+    try {
+      const result = await repository.write(command)
+      if (generation !== this.generation) throw new Error('Randevu işlemi sırasında oturum değişti.')
+      const saved = command.payload as unknown as Appointment
+      this.appointments = this.appointments.filter(row => row.id !== saved.id)
+      if (!archive) this.appointments.unshift(saved)
+      this.revisions.set(saved.id, result.revision)
+      this.pendingWrite = null
+      this.notify()
+      return saved
+    } catch (error) {
+      if (generation === this.generation && error instanceof CrmBackendError &&
+          !['request_failed', 'invalid_response'].includes(error.code)) this.pendingWrite = null
+      throw error
+    } finally {
+      this.writing = false
+      void this.refreshFromBackend()
+    }
+  }
+
+  public async createAppointment(
     data: {
       leadId?: string
       customerName: string
@@ -150,9 +251,9 @@ class AppointmentStore {
       notes?: string
     },
     user: AppUser
-  ): Appointment {
+  ): Promise<Appointment> {
     const newApt: Appointment = {
-      id: 'apt-' + Date.now(),
+      id: isCentralCrm() ? 'apt-' + crypto.randomUUID() : 'apt-' + Date.now(),
       leadId: data.leadId,
       customerName: data.customerName.trim(),
       customerPhone: data.customerPhone.trim(),
@@ -170,17 +271,20 @@ class AppointmentStore {
       createdAt: new Date().toISOString(),
     }
 
+    if (isCentralCrm()) return this.writeBackend(JSON.stringify(['create', data]), newApt, 0)
+
     this.appointments = [newApt, ...this.appointments]
     this.saveToStorage()
     syncService.saveAppointment(newApt)
     return newApt
   }
 
-  public updateStatus(
+  public async updateStatus(
     id: string,
     status: AppointmentStatus,
     outcomeNote?: string
-  ): Appointment | undefined {
+  ): Promise<Appointment | undefined> {
+    if (isCentralCrm()) return this.updateAppointment(id, { status, ...(outcomeNote ? { outcomeNote } : {}) })
     const index = this.appointments.findIndex((a) => a.id === id)
     if (index === -1) return undefined
 
@@ -196,10 +300,10 @@ class AppointmentStore {
     return updated
   }
 
-  public updateAppointment(
+  public async updateAppointment(
     id: string,
     updates: Partial<Omit<Appointment, 'id' | 'createdAt'>>
-  ): Appointment | undefined {
+  ): Promise<Appointment | undefined> {
     const index = this.appointments.findIndex((a) => a.id === id)
     if (index === -1) return undefined
 
@@ -208,13 +312,26 @@ class AppointmentStore {
       ...updates,
     }
 
+    if (isCentralCrm()) {
+      const revision = this.revisions.get(id)
+      if (!revision) throw new Error('Randevu sürümü bulunamadı. Listeyi yenileyin.')
+      return this.writeBackend(JSON.stringify(['update', id, updates]), updated, revision)
+    }
+
     this.appointments[index] = updated
     this.saveToStorage()
     syncService.saveAppointment(updated)
     return updated
   }
 
-  public deleteAppointment(id: string): boolean {
+  public async deleteAppointment(id: string): Promise<boolean> {
+    if (isCentralCrm()) {
+      const record = this.appointments.find(row => row.id === id)
+      const revision = this.revisions.get(id)
+      if (!record || !revision) throw new Error('Randevu bulunamadı. Listeyi yenileyin.')
+      await this.writeBackend(JSON.stringify(['archive', id]), record, revision, true)
+      return true
+    }
     const before = this.appointments.length
     this.appointments = this.appointments.filter((a) => a.id !== id)
     this.saveToStorage()

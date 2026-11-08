@@ -160,7 +160,7 @@ export const PermissionsMatrixPanel: React.FC = () => {
     setTimeout(() => setSavedToast(null), 2200)
   }
 
-  const handleTogglePermission = (key: keyof UserPermissions) => {
+  const handleTogglePermission = async (key: keyof UserPermissions) => {
     if (!selectedUser || !canManage) return
 
     const isPureCallCenter =
@@ -181,14 +181,15 @@ export const PermissionsMatrixPanel: React.FC = () => {
       [key]: nextVal,
     }
 
-    userStore.updateUser(selectedUser.id, {
+    const result = await userStore.updateUser(selectedUser.id, {
       permissions: updatedPermissions,
       ...(key === 'canManageTeam' ? { isManager: nextVal || selectedUser.role === 'ADMIN' } : {}),
     })
+    if (!result.success) { window.alert(result.error); return }
     showSavedFeedback(`${selectedUser.fullName} yetkisi güncellendi`)
   }
 
-  const handleUpdateUserMeta = (updates: Partial<AppUser>) => {
+  const handleUpdateUserMeta = async (updates: Partial<AppUser>) => {
     if (!selectedUser || !canManage) return
 
     const nextDept = updates.department || selectedUser.department
@@ -204,10 +205,11 @@ export const PermissionsMatrixPanel: React.FC = () => {
       nextPerms.canPullLeads = false
     }
 
-    userStore.updateUser(selectedUser.id, {
+    const result = await userStore.updateUser(selectedUser.id, {
       ...updates,
       permissions: nextPerms,
     })
+    if (!result.success) { window.alert(result.error); return }
     showSavedFeedback(`${selectedUser.fullName} profili güncellendi`)
   }
 

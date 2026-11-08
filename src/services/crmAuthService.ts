@@ -5,6 +5,8 @@ export interface CrmAuthProfile {
  authUserId:string; id:string; fullName:string; username:string; email?:string;
  department:Department; departments:Department[]; role:UserRole; scope:AccessScope;
  companyName:string; isManager:boolean; permissions:UserPermissions; createdAt:string;
+ mustChangePassword?: boolean;
+ avatarUrl?: string;
 }
 export class CrmAuthError extends Error {
  code:string
@@ -28,7 +30,7 @@ export function parseCrmProfile(raw:any,authUserId:string):CrmAuthProfile {
   ||typeof raw.username!=='string'||!roles.includes(raw.role)||!departments.includes(raw.department)||!scopes.includes(raw.scope)) {
   throw new CrmAuthError('invalid_profile','Sunucu personel profili doğrulanamadı.')
  }
- return {authUserId,id:raw.id,fullName:raw.full_name,username:raw.username,email:typeof raw.email==='string'?raw.email:undefined,
+ return {authUserId,id:raw.id,fullName:raw.full_name,username:raw.username,email:typeof raw.email==='string'?raw.email:undefined,mustChangePassword:raw.must_change_password===true,avatarUrl:typeof raw.avatar_url==='string'?raw.avatar_url:undefined,
   department:raw.department,departments:Array.isArray(raw.departments)?raw.departments.filter((v:any)=>departments.includes(v)):[],
   role:raw.role,scope:raw.scope,companyName:typeof raw.company_name==='string'?raw.company_name:'',isManager:raw.is_manager===true,
   permissions:raw.permissions&&typeof raw.permissions==='object'&&!Array.isArray(raw.permissions)?Object.fromEntries(Object.entries(raw.permissions).filter(([,v])=>typeof v==='boolean')):{},
@@ -60,7 +62,9 @@ export function createCrmAuthService(client:SupabaseClient){
   },
   async signInWithPassword(email:string,password:string){
    if(!email.trim()||!password) throw new CrmAuthError('credentials_required','E-posta ve parola gerekli.')
-   const {error}=await client.auth.signInWithPassword({email:email.trim(),password})
+   const identifier=email.trim().toLowerCase()
+   const loginEmail=identifier.includes('@')?identifier:`${identifier}@staff.demirturk.invalid`
+   const {error}=await client.auth.signInWithPassword({email:loginEmail,password})
    if(error) throw new CrmAuthError('sign_in_failed','Sunucu girişi reddedildi. E-posta ve parolayı kontrol edin.')
    try{return await getProfile()}
    catch(error){await client.auth.signOut({scope:'local'});throw error}

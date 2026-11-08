@@ -1,5 +1,7 @@
 # Genel CRM backend geçişi
 
+> Bu belge başlangıç planıdır. 8 Kasım uygulaması ve doğrulama sınırları için [güncel backend durumu](BACKEND_DURUMU_20261108.md) esas alınmalıdır.
+
 Meta alanı `meta-manual-v1.4-demo` snapshot'ı ile korunur. Genel geçişte bu sözleşme değiştirilmez; gerektiğinde Meta'ya özgü açık kullanıcı onayı alınır.
 
 ## Hazırlanan temel

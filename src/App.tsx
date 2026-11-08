@@ -1,4 +1,10 @@
+import { teamOperationsStore } from '@/services/teamOperationsStore'
+import { brandKitStore } from '@/services/brandKitStore'
+import { calendarStore } from '@/services/calendarStore'
+import { contactStore } from '@/services/contactStore'
+import { creativeStore } from '@/services/creativeStore'
 import React, { useState, useEffect } from 'react'
+import { BackendStatusBanner } from '@/components/common/BackendStatusBanner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Navbar, NavTab } from '@/components/layout/Navbar'
 import { AppDock } from '@/components/layout/AppDock'
@@ -62,8 +68,52 @@ import { notificationStore } from '@/services/notificationStore'
 import { SearchResultItem, normalizeTr } from '@/services/departmentSearchService'
 
 export function App() {
+  const [projectSync, setProjectSync] = useState(projectStore.getSyncState())
+  useEffect(() => projectStore.subscribe(() => setProjectSync(projectStore.getSyncState())), [])
   const [showOpening, setShowOpening] = useState(false)
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
+  useEffect(()=>{userStore.startServerAuth()},[])
+  useEffect(() => {
+    if (!userStore.centralAuthEnabled) return
+    const refresh = () => { void appointmentStore.refreshFromBackend() }
+    appointmentStore.setAccount(currentUser?.id ?? null)
+    refresh()
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [currentUser?.id])
+  useEffect(() => {
+    if (!userStore.centralAuthEnabled) return
+    requestStore.setAccount(currentUser?.id ?? null)
+    accountingStore.setAccount(currentUser?.id ?? null)
+    approvalStore.setAccount(currentUser?.id ?? null)
+    sharedFileStore.setAccount(currentUser?.id ?? null)
+    projectStore.setAccount(currentUser?.id ?? null)
+    contactStore.setAccount(currentUser?.id ?? null)
+    portfolioStore.setAccount(currentUser?.id ?? null)
+    creativeStore.setAccount(currentUser?.id ?? null)
+    calendarStore.setAccount(currentUser?.id ?? null)
+    brandKitStore.setAccount(currentUser?.id ?? null)
+    messageStore.setAccount(currentUser?.id ?? null)
+    teamOperationsStore.setAccount(currentUser?.id ?? null)
+    const refresh = () => {
+      void requestStore.refreshFromSupabase()
+      void accountingStore.refreshFromBackend()
+      void approvalStore.refreshFromBackend()
+      void sharedFileStore.refreshFromBackend()
+      void projectStore.refreshFromBackend()
+      void contactStore.refreshFromBackend()
+      void portfolioStore.refreshFromBackend()
+      void creativeStore.refreshFromBackend()
+      void calendarStore.refreshFromBackend()
+      void brandKitStore.refreshFromBackend()
+      void messageStore.refreshFromBackend()
+      void teamOperationsStore.refreshFromBackend()
+    }
+    refresh()
+    window.addEventListener('focus', refresh)
+    const timer=setInterval(()=>{if(document.visibilityState==='visible')void messageStore.refreshFromBackend()},15000)
+    return () => { window.removeEventListener('focus', refresh);clearInterval(timer) }
+  }, [currentUser?.id])
   const [activeTab, setActiveTabState] = useState<NavTab>(() => {
     const raw = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : 'dashboard'
     return (raw as NavTab) || 'dashboard'
@@ -268,7 +318,7 @@ export function App() {
 
   // If no admin exists in system, automatically prompt register admin
   useEffect(() => {
-    if (!userStore.hasAdmin()) {
+    if (!userStore.centralAuthEnabled && !userStore.hasAdmin()) {
       setIsLoginModalOpen(true)
     }
   }, [])
@@ -383,6 +433,9 @@ export function App() {
   }, [])
 
   // Not logged in: Show dedicated modern Sign In & Sign Up screen
+  if (currentUser?.mustChangePassword) {
+    return <main className="p-8"><h1>İlk girişte parolanızı değiştirin</h1><p>Geçici parolanızla hesabınızı doğrulayıp yeni parolanızı belirleyin.</p><a href="/?workspace=backend">Hesap güvenliği ekranını aç</a></main>
+  }
   if (!currentUser) {
     return (
       <>
@@ -405,6 +458,16 @@ export function App() {
         {showOpening && <OpeningAnimation onComplete={() => setShowOpening(false)} />}
       </AnimatePresence>
 
+      {userStore.centralAuthEnabled && (projectSync.dirty || projectSync.error) && (
+        <div role="status" className="sticky top-0 z-[100] bg-amber-50 border-b border-amber-300 p-3 text-sm">
+          {projectSync.error || (projectSync.saving ? 'Proje sunucuya kaydediliyor…' : 'Proje değişiklikleri henüz sunucuda doğrulanmadı.')}
+          {!projectSync.saving && <>
+            <button className="ml-3 underline" onClick={() => void projectStore.flushToBackend().catch(() => {})}>Tekrar kaydet</button>
+            <button className="ml-3 underline" onClick={() => { if (window.confirm('Kaydedilmemiş proje değişiklikleri bırakılıp sunucudaki kayıt okunsun mu?')) void projectStore.discardDraftAndReload().catch(error => window.alert(error.message)) }}>Sunucudaki kaydı yükle</button>
+          </>}
+        </div>
+      )}
+      {userStore.centralAuthEnabled && <BackendStatusBanner />}
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -584,6 +647,7 @@ export function App() {
         currentUser={currentUser}
         onLoginSuccess={(user) => setCurrentUser(user)}
         onLogout={() => {
+          if ((projectStore.getSyncState().dirty || brandKitStore.state().dirty) && !window.confirm('Kaydedilmemiş proje değişiklikleri var. Yine de çıkılsın mı?')) return
           userStore.logout()
           setCurrentUser(null)
         }}

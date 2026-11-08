@@ -45,6 +45,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   const [appointments, setAppointments] = useState<Appointment[]>(() => appointmentStore.getAll(currentUser))
   const [filterType, setFilterType] = useState<string>('ALL')
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -87,66 +89,72 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
     return true
   })
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!customerName.trim()) return
+    if (!customerName.trim() || saving) return
+    setSaveError('')
 
-    const effectiveUser =
-      currentUser ||
-      userStore.getCurrentUser() ||
-      ({
-        id: 'usr-demo-rel',
-        fullName: 'Müşteri Temsilcisi',
-        department: 'Müşteri İlişkileri',
-        role: 'SPECIALIST',
-        companyName: 'Demirtürk Portföy',
-        departments: ['Müşteri İlişkileri'],
-        isManager: false,
-        scope: 'ALL',
-        permissions: {},
-        username: 'temsilci',
-        password: '',
-        createdAt: new Date().toISOString(),
-      } as AppUser)
+    const effectiveUser = userStore.getCurrentUser()
+    if (!effectiveUser) {
+      setSaveError('Randevu oluşturmak için giriş yapın.')
+      return
+    }
 
-    appointmentStore.createAppointment(
-      {
+    setSaving(true)
+    try {
+      await appointmentStore.createAppointment({
         customerName,
         customerPhone,
         date,
         time,
         location,
         type,
+        assignedToUserId: allUsers.find(user => user.fullName === assignedToUserName)?.id,
         assignedToUserName,
         projectName,
         notes,
-      },
-      effectiveUser
-    )
-
-    setIsAddModalOpen(false)
-    setCustomerName('')
-    setCustomerPhone('')
-    setNotes('')
+      }, effectiveUser)
+      setIsAddModalOpen(false)
+      setCustomerName('')
+      setCustomerPhone('')
+      setNotes('')
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Randevu kaydedilemedi.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleOpenOutcome = (apt: Appointment, targetStatus: AppointmentStatus) => {
+    setSaveError('')
     setSelectedAppointment(apt)
     setOutcomeStatus(targetStatus)
     setOutcomeNote('')
     setIsOutcomeModalOpen(true)
   }
 
-  const handleSaveOutcome = (e: React.FormEvent) => {
+  const handleSaveOutcome = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedAppointment) return
+    if (!selectedAppointment || saving) return
 
-    appointmentStore.updateStatus(selectedAppointment.id, outcomeStatus, outcomeNote)
-    setIsOutcomeModalOpen(false)
+    setSaving(true)
+    setSaveError('')
+    try {
+      if (!await appointmentStore.updateStatus(selectedAppointment.id, outcomeStatus, outcomeNote)) {
+        throw new Error('Randevu bulunamadı. Listeyi yenileyin.')
+      }
+      setIsOutcomeModalOpen(false)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Randevu güncellenemedi.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="space-y-6">
+      {appointmentStore.getReadError() && <p role="alert">{appointmentStore.getReadError()}</p>}
+      {userStore.centralAuthEnabled && <button type="button" onClick={() => void appointmentStore.refreshFromBackend()}>Randevuları yenile</button>}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -165,7 +173,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           variant="gold"
           size="sm"
           icon={<Plus className="w-3.5 h-3.5" />}
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => { setSaveError(''); setIsAddModalOpen(true) }}
           className="rounded-full px-4 text-xs font-semibold"
         >
           Randevu Oluştur
@@ -439,7 +447,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             >
               Vazgeç
             </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
+            {saveError && <p role="alert" className="text-sm text-red-500">{saveError}</p>}
+            <GlassButton disabled={saving} type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
               Randevuyu Kaydet
             </GlassButton>
           </div>
@@ -505,7 +514,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             >
               Vazgeç
             </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
+            {saveError && <p role="alert" className="text-sm text-red-500">{saveError}</p>}
+            <GlassButton disabled={saving} type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
               Durumu Güncelle
             </GlassButton>
           </div>

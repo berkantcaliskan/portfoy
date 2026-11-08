@@ -70,6 +70,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   )
 
   // Sub-store states for department-specific widgets
+  const [, setAppointmentVersion] = useState(0)
+  useEffect(() => appointmentStore.subscribe(() => setAppointmentVersion(version => version + 1)), [])
   const appointments = appointmentStore.getAll(currentUser)
   const collections = accountingStore.getCollections()
   const payments = accountingStore.getPayments()
@@ -1254,11 +1256,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       (c) => c.status === 'YAYINDA' || c.status === 'ONAYLANDI'
     )
 
-    const handleQuickCommentSubmit = (e: React.FormEvent) => {
+    const handleQuickCommentSubmit = async (e: React.FormEvent) => {
+try {
+
       e.preventDefault()
       const targetId = quickCommentCreativeId || creativesList[0]?.id
       if (!targetId || !quickCommentText.trim()) return
-      creativeStore.addComment({
+      await creativeStore.addComment({
         creativeId: targetId,
         authorName: currentUser?.fullName || 'Kreatif Ekip',
         authorDepartment: currentUser?.department || 'Kreatif',
@@ -1266,7 +1270,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         type: quickCommentType,
       })
       setQuickCommentText('')
-    }
+    
+} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
+}
 
     return (
       <div className="space-y-5">
@@ -1665,7 +1671,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => creativeStore.toggleCommentResolved(cm.id)}
+                        onClick={async () => { try { await creativeStore.toggleCommentResolved(cm.id) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }}
                         className={`text-[10px] px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
                           cm.isResolved
                             ? 'bg-emerald-500/20 text-emerald-300'

@@ -2,6 +2,6 @@
   "name": "crm-backend-verification",
   "private": true,
   "type": "module",
-  "scripts": {"test": "node auth.mjs && node records.mjs"},
+  "scripts": {"test": "node auth.mjs && node records.mjs && node onboarding.mjs"},
   "dependencies": {"@electric-sql/pglite": "0.5.14"}
 }

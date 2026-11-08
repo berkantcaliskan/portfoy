@@ -57,11 +57,12 @@ export const ApprovalsView: React.FC = () => {
     setErrorMsg(null)
   }
 
-  const handleExecuteDecision = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleExecuteDecision = async (e: React.FormEvent) => {
+
+    try {    e.preventDefault()
     if (!selectedReq || !currentUser) return
 
-    const res = approvalStore.decideApproval(selectedReq.id, decision, currentUser, reviewNotes)
+    const res = await approvalStore.decideApproval(selectedReq.id, decision, currentUser, reviewNotes)
     if (!res.success) {
       setErrorMsg(res.error || 'Onay yetkisi doğrulanamadı.')
       return
@@ -70,12 +71,16 @@ export const ApprovalsView: React.FC = () => {
     setSelectedReq(null)
     setSuccessMsg(`Talep başarıyla ${decision === 'ONAYLANDI' ? 'onaylandı' : 'reddedildi'}.`)
     setTimeout(() => setSuccessMsg(null), 3500)
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Onay işlemi tamamlanamadı.')
+    }
   }
 
   const canApprove = permissionService.canApproveDiscounts(currentUser)
 
   return (
     <div className="space-y-6">
+      {approvalStore.getReadError() && <p role="alert">{approvalStore.getReadError()}</p>}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

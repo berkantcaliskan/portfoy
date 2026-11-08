@@ -1,4 +1,6 @@
-import { AppUser } from './userStore'
+import { AppUser, userStore } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCrmServerCollection } from './crmServerCollection'
 
 export interface ChatMessage {
   id: string
@@ -35,6 +37,25 @@ const STORAGE_KEY_WIDTH = 'demirturk_messages_width'
 type Listener = () => void
 
 class MessageStore {
+ private backend=createCrmServerCollection<ChatMessage>('messages',()=>{const user=userStore.getCurrentUser(),client=userStore.getServerClient();return user&&client?{id:user.id,client}:null})
+ public setAccount(id:string|null) { this.backend.setAccount(id);this.messages={};this.conversations=[];this.notify() }
+ public async refreshFromBackend() { await this.backend.refresh() }
+ public getReadError() { return this.backend.getError() }
+ private rebuildServerMessages() {
+  const user=userStore.getCurrentUser();this.messages={};this.conversations=[];if(!user)return;
+  const rows=this.backend.getAll().sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+  for(const row of rows) {
+   (this.messages[row.conversationId]??=[]).push(row)
+   const peer=row.senderId===user.id?row.recipientId:row.senderId;
+   let conv=this.conversations.find(c=>c.id===row.conversationId)
+   if(!conv){const person=userStore.getAllUsers().find(u=>u.id===peer);conv={id:row.conversationId,participantIds:[user.id,peer],recipientId:peer,recipientName:person?.fullName||row.senderName,recipientDepartment:person?.department,lastMessageText:'',lastMessageTime:row.createdAt,unreadCount:0};this.conversations.push(conv)}
+   conv.lastMessageText=row.text||row.attachmentName||'';conv.lastMessageTime=row.createdAt;
+   if(row.recipientId===user.id&&!row.isRead)conv.unreadCount++;
+  }
+  this.conversations.sort((a,b)=>b.lastMessageTime.localeCompare(a.lastMessageTime));this.notify()
+ }
+ public async markRead(peer:string) { const client=userStore.getServerClient();if(!isCentralCrm()||!client)return;const {error}=await client.rpc('crm_mark_messages_read',{p_peer:peer}).abortSignal(AbortSignal.timeout(15000));if(error)throw Error('Mesaj okundu bilgisi kaydedilemedi.');await this.refreshFromBackend() }
+
   private conversations: ChatConversation[] = []
   private messages: Record<string, ChatMessage[]> = {}
   private listeners: Set<Listener> = new Set()
@@ -42,6 +63,7 @@ class MessageStore {
   private displayMode: 'popup' | 'sidebar' = 'popup'
 
   constructor() {
+    this.backend.subscribe(()=>{if(isCentralCrm())this.rebuildServerMessages()})
     this.loadFromStorage()
     try {
       localStorage.setItem(STORAGE_KEY_MODE, 'popup')
@@ -49,6 +71,7 @@ class MessageStore {
   }
 
   private loadFromStorage() {
+    if(isCentralCrm())return
     try {
       const savedConv = localStorage.getItem(STORAGE_KEY_CONVERSATIONS)
       const savedMsg = localStorage.getItem(STORAGE_KEY_MESSAGES)
@@ -61,6 +84,7 @@ class MessageStore {
   }
 
   private saveToStorage() {
+    if(isCentralCrm()){this.notify();return}
     try {
       localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(this.conversations))
       localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(this.messages))
@@ -154,7 +178,7 @@ class MessageStore {
       return existing
     }
 
-    const newId = `conv-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+    const newId = isCentralCrm() ? [currentUser.id,recipientUser.id].sort().join("::") : `conv-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
     const newConv: ChatConversation = {
       id: newId,
       participantIds: [currentUser.id, recipientUser.id],
@@ -173,7 +197,7 @@ class MessageStore {
     return newConv
   }
 
-  public sendMessage(
+  public async sendMessage(
     conversationId: string,
     sender: AppUser,
     recipientId: string,
@@ -181,9 +205,9 @@ class MessageStore {
     attachmentType?: 'emoji' | 'voice' | 'file' | 'image',
     attachmentName?: string,
     attachmentUrl?: string
-  ): ChatMessage {
+  ): Promise<ChatMessage> {
     const newMsg: ChatMessage = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: isCentralCrm()?crypto.randomUUID():`msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       conversationId,
       senderId: sender.id,
       senderName: sender.fullName,
@@ -196,6 +220,7 @@ class MessageStore {
       isRead: false,
     }
 
+    if(isCentralCrm())return this.backend.save(JSON.stringify(newMsg),newMsg)
     const currentList = this.messages[conversationId] || []
     this.messages[conversationId] = [...currentList, newMsg]
 

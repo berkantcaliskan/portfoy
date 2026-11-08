@@ -25,3 +25,4 @@ jobs:
    - run: npm ci --ignore-scripts --prefix verification/crm
    - run: node verification/crm/auth.mjs
    - run: node verification/crm/records.mjs
+   - run: node verification/crm/onboarding.mjs
