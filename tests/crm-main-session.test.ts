@@ -74,3 +74,17 @@ test('Çıkıştan sonra gelen personel parolası başka oturuma gösterilemez',
   await assert.rejects(operation, /oturum değişti/)
  }
 })
+
+test('Çift personel tıklaması tek istek yapar; liste yavaşken parola sonucu bekletilmez', async () => {
+ const { store } = storeHarness(), pending = deferred()
+ let calls = 0
+ store.currentUser = { ...profile, id: 'admin-a', role: 'ADMIN' }
+ store.serverClient = { functions: { invoke: () => { calls++; return pending.promise } }, rpc: () => ({ abortSignal: () => new Promise(() => {}) }) }
+ const input = { fullName: 'Isolated staff', department: 'Satış', role: 'MEMBER', scope: 'ASSIGNED_ONLY' }
+ const first = store.addMember(input)
+ await assert.rejects(store.addMember(input), /oluşturuluyor/)
+ pending.resolve({ data: { user: { id: 'staff-b', username: 'isolated' }, generatedPassword: 'isolated-test-only' }, error: null })
+ const result = await first
+ assert.equal(result.generatedPassword, 'isolated-test-only')
+ assert.equal(calls, 1)
+})

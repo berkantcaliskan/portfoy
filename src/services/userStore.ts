@@ -98,6 +98,7 @@ class UserStore {
   }
   private serverAuthStarted=false
   private serverLoginPending=false
+  private staffCreationBusy = false
   private pendingStaffCreation: { key: string; requestId: string; username: string } | null = null
   private users: AppUser[] = []
   private currentUser: AppUser | null = null
@@ -505,6 +506,8 @@ class UserStore {
    * Add Member:
    * Departman ve erişebileceği departmanlar kaydeden tarafından belirlenir ve atanır.
    */
+  isStaffCreationBusy() { return this.staffCreationBusy }
+
   async addMember(data: {
     fullName: string
     department: Department
@@ -517,6 +520,10 @@ class UserStore {
   }): Promise<{ user: AppUser; generatedPassword: string }> {
     if (this.centralAuthEnabled) {
       if (!this.serverClient || this.currentUser?.role !== 'ADMIN') throw new Error('Personel oluşturmak için yönetici girişi gerekli.')
+      if (this.staffCreationBusy) throw new Error('Personel hesabı oluşturuluyor. İşlemin tamamlanmasını bekleyin.')
+      this.staffCreationBusy = true
+      this.notify()
+      try {
       const actor = this.currentUser.id
       const key = JSON.stringify([data.fullName, data.department, data.role, data.scope])
       if (this.pendingStaffCreation && this.pendingStaffCreation.key !== key) throw new Error('Önce önceki personel oluşturma işleminin sonucunu kontrol edin.')
@@ -530,17 +537,22 @@ class UserStore {
       if (this.currentUser?.id !== actor) throw new Error('Personel oluşturulurken oturum değişti; yönetici hesabından durumu kontrol edin.')
       if (error || !result?.user?.id || typeof result.generatedPassword !== 'string') {
         let code = result?.error
-        if (error?.context instanceof Response) code = (await error.context.json().catch(() => ({}))).error
+        if (typeof error?.context?.json === 'function') code = (await (error.context.clone?.() || error.context).json().catch(() => ({}))).error
+        if (code === 'crm_operation_processing') throw new Error('Personel oluşturma işlemi sunucuda sürüyor. Biraz bekleyip aynı bilgilerle tekrar deneyin.')
+        if (code === 'crm_username_taken' || code === 'username_taken') throw new Error('Bu kullanıcı adı zaten kullanılıyor. Ekip listesindeki hesabı kontrol edin.')
+        if (code === 'crm_rate_limited') throw new Error('Personel işlem sınırına ulaşıldı. Daha sonra tekrar deneyin.')
+        if (code === 'authentication_required') throw new Error('Sunucu oturumu sona erdi. Yeniden giriş yapın.')
         if (code === 'account_already_created') throw new Error('Hesap oluşturulmuş. Ekip ve Yetkiler ekranından geçici parolasını yenileyin.')
         throw new Error('Personel hesabı sonucu doğrulanamadı. Aynı bilgilerle tekrar deneyin veya yönetici hesabından durumu kontrol edin.')
       }
       this.pendingStaffCreation = null
-      await this.refreshStaffDirectory()
+      void this.refreshStaffDirectory().catch(() => {})
       if (this.currentUser?.id !== actor) throw new Error('Personel oluşturulurken oturum değişti; yönetici hesabından durumu kontrol edin.')
       const user = this.users.find(row => row.id === result.user.id) ?? this.normalizeUser({
         ...data, id: result.user.id, username: result.user.username, password: '', companyName: this.currentUser.companyName,
       })
       return { user, generatedPassword: result.generatedPassword }
+      } finally { this.staffCreationBusy = false; this.notify() }
     }
     const username = generateUsername(data.fullName, this.users)
     const initialPassword = data.initialPassword || generateInitialPassword()

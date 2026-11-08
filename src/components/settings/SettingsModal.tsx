@@ -1250,7 +1250,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <h4 className="text-xs font-bold text-white">Ekip Üyesi Ekle</h4>
                         </div>
                         <span className="text-[11px] text-[#8c857f]">
-                          Otomatik 6 haneli sayısal şifre verilir
+                          Güçlü geçici parola otomatik oluşturulur
                         </span>
                       </div>
 
@@ -1297,8 +1297,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             variant="gold"
                             size="sm"
                             className="w-full rounded-full py-2 justify-center font-bold"
+                            disabled={userStore.isStaffCreationBusy()}
                           >
-                            Ekle
+                            {userStore.isStaffCreationBusy() ? 'Oluşturuluyor…' : 'Ekle'}
                           </GlassButton>
                         </div>
                       </div>
@@ -1315,7 +1316,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <span className="font-mono font-bold text-white">
                                 {createdMemberInfo.username}
                               </span>{' '}
-                              • 6 Haneli Şifre:{' '}
+                              • Geçici parola:{' '}
                               <span className="font-mono font-bold text-amber-300 tracking-wider">
                                 {createdMemberInfo.password}
                               </span>

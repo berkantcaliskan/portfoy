@@ -31,8 +31,8 @@ Mesajları yalnızca gönderen/alıcı okuyabilir; yönetici rolü tüm özel ko
 
 ## Doğrulama sonucu
 
-- `npm test`: 184 test geçti.
-- İzole PostgreSQL/PGlite: Auth 7, kayıt/yetki/iş akışları 34, onboarding/kalıcılık 20 test geçti.
+- `npm test`: 189 test geçti.
+- İzole PostgreSQL/PGlite: Auth 7, kayıt/yetki/iş akışları 34, onboarding/kalıcılık 21 test geçti.
 - TypeScript ve üretim derlemesi geçti. Vite büyük parça uyarısı sürüyor.
 - Lint: hata yok; mevcut kod tabanında uyarılar var. Uyarılar bastırılmadı.
 - Kaynak sır taraması geçti. Git geçmişinin temizlendiği anlamına gelmez.
@@ -64,3 +64,11 @@ Geri dönüşte etkilenen modülün yazımı kapatılır ve kayıtlar korunur. T
 Mailcow posta kutusu ve Google Ads canlı entegrasyonu bu backend geçişiyle kurulmuş sayılmaz. Yerel görünüm tercihleri ve hesaplama araçlarının taslakları sunucu iş kaydı değildir. Meta üyeliği ayrı yetki alanıdır; yeni CRM personeli veya yöneticiye otomatik Meta gönderim yetkisi eklenmez. Meta otomatik geri bildirim kapalı kalır.
 
 Resmî dayanaklar: [Supabase Auth kullanıcıları](https://supabase.com/docs/guides/auth/users), [Storage erişim kontrolü](https://supabase.com/docs/guides/storage/security/access-control), [özel dosya sunumu](https://supabase.com/docs/guides/storage/serving/downloads).
+
+## Personel oluşturma kabulünde bulunan ve düzeltilen durum
+
+Gerçek denemede personel Auth hesabı ve CRM eşlemesi oluşmuşken arayüz sonucu doğrulayamadı; geçici parola gösterilemedi. Kesin ağ hatasının türü belirlenmedi. Yeni akışta aynı oluşturma işlemi tekrarlandığında yalnızca ilk parolası hâlâ kullanılmamış/değiştirilmemiş hesap dar kapsamlı RPC ile kurtarılabilir. Kullanıcının seçtiği parola bu yoldan sıfırlanamaz; yeni Auth hesabı açılmaz. Normal yönetici parola sıfırlaması ayrı ve açık kullanıcı işlemidir.
+
+İstemci tek oluşturma isteği gönderir, işlem süresince düğme devre dışıdır ve durum görünürdür. Parola sonucu liste yenilenmesini beklemez. Yeni personeli otomatik “Ofiste” işaretleyen, parola gösterimini ikinci yazımın sonucuna bağlayan adım kaldırıldı. Ekip kartında mevcut personel için açık “Geçici parola oluştur” düğmesi bulunur. Parola yalnızca ekranda gösterilir; kaynakta, kalıcı tarayıcı depolamasında veya logda saklanmaz. Eski altı haneli sayısal parola açıklamaları düzeltildi.
+
+Kurtarma SQL'i izolasyonda, oluşturma/kurtarma endpointi mock servislerle ve çift tıklama/yavaş liste cevabı birim testleriyle doğrulandı. Staging migration/function güncellendi. Yeni geçici parolanın gerçek arayüzde gösterimi kullanıcı kabulü bekler.

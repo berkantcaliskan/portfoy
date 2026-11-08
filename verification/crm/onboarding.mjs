@@ -125,6 +125,25 @@ await test('Personel parola sıfırlaması kilitli, denetimli ve hizmet rolüyle
  assert.equal((await db.query('SELECT must_change_password FROM app_users WHERE id=$1',[target])).rows[0].must_change_password,true)
  await as('admin',()=>assert.rejects(finish(),/crm_forbidden/),'service_role')
 })
+
+await db.exec(read('supabase/migrations/202611080012_crm_staff_creation_recovery.sql'))
+await test('Yanıtı kaybolan ilk personel hesabı çoğaltılmadan kurtarılır; kullanılan parola korunur',async()=>{
+ const creation='40000000-0000-0000-0000-000000000001',reset='40000000-0000-0000-0000-000000000002'
+ ids.recovery='00000000-0000-0000-0000-000000000007'
+ const operation=await as('admin',()=>db.query("SELECT crm_prepare_staff($1,'recoverycase','Recovery case','Satış','MEMBER','ASSIGNED_ONLY') r",[creation]).then(r=>r.rows[0].r))
+ await db.query("INSERT INTO auth.users(id,email,email_confirmed_at,encrypted_password) VALUES($1,'recoverycase@staff.demirturk.invalid',now(),'isolated-first-hash')",[ids.recovery])
+ await as('admin',()=>db.query('SELECT crm_finalize_staff($1,$2,$3,$4)',[ids.admin,creation,ids.recovery,operation.lease_id]),'service_role')
+ await as('member',()=>assert.rejects(db.query('SELECT crm_recover_staff_creation($1,$2)',[creation,reset]),/crm_forbidden/))
+ const recovery=await as('admin',()=>db.query('SELECT crm_recover_staff_creation($1,$2) r',[creation,reset]).then(r=>r.rows[0].r))
+ assert.equal(recovery.auth_user_id,ids.recovery)
+ await as('admin',()=>assert.rejects(db.query('SELECT crm_recover_staff_creation($1,$2)',[creation,'40000000-0000-0000-0000-000000000003']),/crm_reset_in_progress/))
+ await db.query("UPDATE auth.users SET encrypted_password='isolated-recovered-temporary-hash' WHERE id=$1",[ids.recovery])
+ await as('admin',()=>db.query('SELECT crm_finish_staff_reset($1,$2,$3,$4)',[ids.admin,ids.recovery,reset,recovery.lease_id]),'service_role')
+ await db.query("UPDATE auth.users SET encrypted_password='isolated-user-chosen-hash' WHERE id=$1",[ids.recovery])
+ await as('recovery',()=>db.query('SELECT crm_finish_initial_password()'))
+ await as('admin',()=>assert.rejects(db.query('SELECT crm_recover_staff_creation($1,$2)',[creation,'40000000-0000-0000-0000-000000000004']),/crm_creation_already_used/))
+ assert.equal((await db.query('SELECT count(*)::int n FROM crm_backend.staff_accounts WHERE request_id=$1',[creation])).rows[0].n,1)
+})
 console.log(`CRM onboarding/kalıcılık SQL: ${passed}/${passed}. Disk yeniden açılışı izole testtir; gerçek Supabase tarayıcı testi ayrıca yapılır.`)
 }finally{
  await db.close()

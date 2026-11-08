@@ -50,8 +50,24 @@ Deno.serve(async request => {
       p_request: input.requestId, p_username: input.username, p_name: input.fullName,
       p_department: input.department, p_role: input.role || 'MEMBER', p_scope: input.scope || 'ASSIGNED_ONLY',
     }).abortSignal(AbortSignal.timeout(15000))
-    if (prepareError) return respond(400, { error: prepareError.message.includes('crm_username_taken') ? 'username_taken' : 'staff_request_rejected' })
-    if (operation.auth_user_id) return respond(409, { error: 'account_already_created' })
+    if (prepareError) {
+      const code = ['crm_username_taken','crm_operation_processing','crm_rate_limited','crm_invalid_input','crm_request_conflict'].find(value => prepareError.message.includes(value))
+      return respond(code === 'crm_rate_limited' ? 429 : code === 'crm_operation_processing' ? 409 : 400, { error: code || 'staff_request_rejected' })
+    }
+    if (operation.auth_user_id) {
+      const recoveryRequest = crypto.randomUUID()
+      const { data: target, error: recoveryError } = await client.rpc('crm_recover_staff_creation', {
+        p_creation_request: input.requestId, p_reset_request: recoveryRequest,
+      })
+      if (recoveryError || !target?.auth_user_id) return respond(409, { error: recoveryError?.message.includes('crm_reset_in_progress') ? 'crm_operation_processing' : 'account_already_created' })
+      const { error: passwordError } = await secret.auth.admin.updateUserById(target.auth_user_id, { password })
+      if (passwordError) return respond(503, { error: 'password_reset_failed' })
+      const { error: completeError } = await secret.rpc('crm_finish_staff_reset', {
+        p_actor: identity.user.id, p_auth_user: target.auth_user_id, p_request: recoveryRequest, p_lease: target.lease_id,
+      })
+      if (completeError) return respond(503, { error: 'password_reset_incomplete' })
+      return respond(200, { user: { id: `auth-${target.auth_user_id}`, username: target.username }, generatedPassword: password, recovered: true })
+    }
     const { data: created, error: createError } = await secret.auth.admin.createUser({
       email: `${operation.username}@staff.demirturk.invalid`, password, email_confirm: true,
       app_metadata: { crm_staff_request: input.requestId },

@@ -167,7 +167,7 @@ export const TeamPermissionsView: React.FC = () => {
               <CheckCircle2 className="w-4 h-4" /> Ekip üyesi başarıyla oluşturuldu!
             </div>
             <div className="text-[11px] text-[#a69f99] mt-1">
-              Kullanıcı Adı: <span className="text-white font-mono font-bold">{createdInfo.username}</span> • 6 Haneli Şifre: <span className="text-amber-300 font-mono font-bold tracking-wider">{createdInfo.pass}</span>
+              Kullanıcı Adı: <span className="text-white font-mono font-bold">{createdInfo.username}</span> • Geçici parola: <span className="text-amber-300 font-mono font-bold tracking-wider">{createdInfo.pass}</span>
             </div>
           </div>
           <button
@@ -310,7 +310,7 @@ export const TeamPermissionsView: React.FC = () => {
           </div>
 
           <p className="text-[11px] text-[#8c857f]">
-            Otomatik olarak 6 haneli yalnızca sayıdan oluşan şifre tanımlanır. Kullanıcı adı ilk başta yalnızca ad olarak verilir; kullanıcı dilerse sonradan değiştirebilir.
+            Güçlü geçici parola sunucuda otomatik oluşturulur ve işlem sonunda gösterilir. İlk girişte değiştirilmesi zorunludur.
           </p>
 
           <div className="pt-2 flex justify-end gap-2">
@@ -321,8 +321,8 @@ export const TeamPermissionsView: React.FC = () => {
             >
               Vazgeç
             </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
-              Ekip Üyesi Ekle
+            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold" disabled={userStore.isStaffCreationBusy()}>
+              {userStore.isStaffCreationBusy()?"Oluşturuluyor…":"Ekip Üyesi Ekle"}
             </GlassButton>
           </div>
         </form>
