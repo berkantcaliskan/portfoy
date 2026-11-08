@@ -3,6 +3,9 @@ import { syncService } from './syncService'
 import { rowToRequest } from './dbMapper'
 import { trashStore } from './trashStore'
 import { allowManualWebsiteDelete } from './zeroStatePurge'
+import { isCentralCrm } from './crmRuntime'
+import { userStore } from './userStore'
+import { createCrmServerCollection } from './crmServerCollection'
 
 export type RequestPriority = 'Düşük' | 'Orta' | 'Yüksek' | 'Acil'
 export type RequestStatus = 'Açık' | 'İşlemde' | 'Çözüldü' | 'İptal'
@@ -33,11 +36,17 @@ const INITIAL_REQUESTS: CustomerRequest[] = []
 type Listener = () => void
 
 class RequestStore {
+  private backend = createCrmServerCollection<CustomerRequest>('requests', () => {
+    const user = userStore.getCurrentUser(), client = userStore.getServerClient()
+    return user && client ? { id: user.id, client } : null
+  })
   private requests: CustomerRequest[] = []
   private listeners: Set<Listener> = new Set()
   private realtimeChannel: any = null
 
   constructor() {
+    this.backend.subscribe(() => this.notify())
+    if (isCentralCrm()) return
     this.loadFromStorage()
     this.initRealtime()
     if (typeof window !== 'undefined') {
@@ -49,6 +58,7 @@ class RequestStore {
   }
 
   public setLoadedRequests(requests: CustomerRequest[]) {
+    if (isCentralCrm()) return
     const byId = new Map<string, CustomerRequest>()
     for (const r of requests || []) byId.set(r.id, r)
     for (const local of this.requests) {
@@ -126,6 +136,7 @@ class RequestStore {
   }
 
   public async refreshFromSupabase(): Promise<void> {
+    if (isCentralCrm()) { await this.backend.refresh(); return }
     if (!isSupabaseConfigured()) return
     try {
       const { data, error } = await supabase
@@ -141,25 +152,36 @@ class RequestStore {
   }
 
   public getAll(): CustomerRequest[] {
+    if (isCentralCrm()) return this.backend.getAll()
     return [...this.requests]
   }
 
-  public addRequest(
+  public setAccount(id: string | null) { this.backend.setAccount(id) }
+  public getReadError() { return this.backend.getError() }
+
+  public async addRequest(
     data: Omit<CustomerRequest, 'id' | 'createdAt' | 'updatedAt'>
-  ): CustomerRequest {
+  ): Promise<CustomerRequest> {
     const newReq: CustomerRequest = {
       ...data,
-      id: 'req-' + Date.now(),
+      id: isCentralCrm() ? 'req-' + crypto.randomUUID() : 'req-' + Date.now(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
+    if (isCentralCrm()) return this.backend.save(JSON.stringify(['create', data]), newReq)
     this.requests = [newReq, ...this.requests]
     this.saveToStorage()
     syncService.saveRequest(newReq)
     return newReq
   }
 
-  public updateStatus(id: string, status: RequestStatus): boolean {
+  public async updateStatus(id: string, status: RequestStatus): Promise<boolean> {
+    if (isCentralCrm()) {
+      const target = this.backend.getAll().find(row => row.id === id)
+      if (!target) throw new Error('Talep bulunamadı. Listeyi yenileyin.')
+      await this.backend.save(JSON.stringify(['status', id, status]), { ...target, status, updatedAt: new Date().toISOString() })
+      return true
+    }
     const index = this.requests.findIndex((r) => r.id === id)
     if (index === -1) return false
     this.requests[index] = {
@@ -172,7 +194,13 @@ class RequestStore {
     return true
   }
 
-  public deleteRequest(id: string): boolean {
+  public async deleteRequest(id: string): Promise<boolean> {
+    if (isCentralCrm()) {
+      const target = this.backend.getAll().find(row => row.id === id)
+      if (!target) throw new Error('Talep bulunamadı. Listeyi yenileyin.')
+      await this.backend.save(JSON.stringify(['archive', id]), target, true)
+      return true
+    }
     const target = this.requests.find((r) => r.id === id)
     allowManualWebsiteDelete(id)
     if (target) {

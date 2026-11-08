@@ -9,6 +9,10 @@ import {
 import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { syncService } from './syncService'
 import { rowToUser } from './dbMapper'
+import {isCentralCrm} from './crmRuntime'
+import {createBackendPreviewClient} from './crmBackendClient'
+import {createCrmAuthService,type CrmAuthProfile} from './crmAuthService'
+import {createCrmMainSession} from './crmMainSession'
 
 export type { Department, UserRole, AccessScope, UserPermissions }
 
@@ -29,6 +33,7 @@ export interface AppUser {
   mustChangePassword?: boolean
   createdAt: string
   updatedAt?: string
+  serverRevision?: number
 }
 
 export function normalizeTurkish(text: string): string {
@@ -53,7 +58,7 @@ export function generateUsername(fullName: string, existingUsers: { username: st
   const parts = fullName.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return 'kullanici'
 
-  const firstName = normalizeTurkish(parts[0]).replace(/[^a-z0-9]/g, '') || 'kullanici'
+  const firstName = (normalizeTurkish(parts[0]).replace(/[^a-z0-9]/g, '') || 'kullanici').padEnd(3, '1').slice(0, 35)
   const taken = new Set(existingUsers.map((u) => u.username.toLowerCase()))
 
   // İlk başta yalnızca ad (aynı ad varsa sonuna numara eklenir)
@@ -84,12 +89,24 @@ const STORAGE_KEY_CURRENT_USER = 'demirturk_active_user_v2'
 type Listener = () => void
 
 class UserStore {
+  readonly centralAuthEnabled=isCentralCrm()
+  private serverSession:ReturnType<typeof createCrmMainSession>|null=null
+  private serverClient: ReturnType<typeof createBackendPreviewClient> | null = null
+
+  getServerClient() {
+    return this.serverClient
+  }
+  private serverAuthStarted=false
+  private serverLoginPending=false
+  private staffCreationBusy = false
+  private pendingStaffCreation: { key: string; requestId: string; username: string } | null = null
   private users: AppUser[] = []
   private currentUser: AppUser | null = null
   private listeners: Set<Listener> = new Set()
   private realtimeChannel: any = null
 
   constructor() {
+    if(this.centralAuthEnabled)return
     this.loadFromStorage()
     this.initRealtime()
     if (typeof window !== 'undefined') {
@@ -100,6 +117,7 @@ class UserStore {
   }
 
   public reloadUsersFromStorage() {
+    if(this.centralAuthEnabled)return
     try {
       const savedUsers = localStorage.getItem(STORAGE_KEY_USERS)
       if (!savedUsers) return
@@ -128,6 +146,7 @@ class UserStore {
   }
 
   public setLoadedUsers(users: AppUser[]) {
+    if(this.centralAuthEnabled)return
     if (Array.isArray(users)) {
       if (users.length === 0) {
         // Keep all local users if cloud is empty, and push local users up to cloud
@@ -263,7 +282,7 @@ class UserStore {
       avatarUrl = user.avatarUrl
     } else if (user.avatar_url) {
       avatarUrl = user.avatar_url
-    } else if (typeof window !== 'undefined') {
+    } else if (!this.centralAuthEnabled && typeof window !== 'undefined') {
       avatarUrl = localStorage.getItem(`demirturk_avatar_${userId}`) || undefined
     }
 
@@ -272,6 +291,7 @@ class UserStore {
       fullName: user.fullName || 'Kullanıcı',
       username: user.username || 'user',
       password: user.password || '123456',
+      serverRevision: Number.isSafeInteger(user.serverRevision) ? user.serverRevision : undefined,
       email: user.email || undefined,
       avatarUrl,
       companyName: user.companyName || 'Demirtürk Portföy',
@@ -335,6 +355,7 @@ class UserStore {
   }
 
   private saveToStorage() {
+    if(this.centralAuthEnabled){this.notify();return}
     try {
       localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(this.users))
       if (this.currentUser) {
@@ -369,6 +390,65 @@ class UserStore {
     return this.currentUser
   }
 
+  private publishServerProfile(profile:CrmAuthProfile|null){
+    if (this.currentUser?.id !== profile?.id) this.pendingStaffCreation = null
+    // Parola, yerel kullanıcı listesi ve eski rol önbelleği bu oturumda kullanılmaz.
+    const workspace=this.currentUser?.id===profile?.id?this.currentUser?.department:undefined
+    const canKeepWorkspace=profile&&workspace&&(profile.role==='ADMIN'||profile.departments.includes(workspace))
+    this.currentUser=profile?{...profile,department:canKeepWorkspace?workspace:profile.department,password:'',mustChangePassword:profile.mustChangePassword===true}:null
+    this.users=this.currentUser?[this.currentUser]:[]
+    this.notify()
+    if (profile && this.serverClient) void this.refreshStaffDirectory().catch(() => {})
+  }
+
+  async refreshStaffDirectory() {
+    const actor = this.currentUser?.id
+    if (!actor || !this.serverClient) return
+    const { data, error } = await this.serverClient.rpc('crm_staff_directory').abortSignal(AbortSignal.timeout(15000))
+    if (error || !Array.isArray(data) || this.currentUser?.id !== actor) return
+    this.users = data.map(row => ({ ...this.normalizeUser(row), password: '' }))
+    this.notify()
+  }
+
+  async resetStaffPassword(userId: string) {
+    if (!this.serverClient || this.currentUser?.role !== 'ADMIN') throw new Error('Yönetici girişi gerekli.')
+    const actor = this.currentUser.id
+    const { data, error } = await this.serverClient.functions.invoke('crm-staff', { body: {
+      action: 'reset-password', requestId: crypto.randomUUID(), userId,
+    } })
+    if (this.currentUser?.id !== actor) throw new Error('Parola işlemi sırasında oturum değişti; yönetici hesabından durumu kontrol edin.')
+    if (error || typeof data?.generatedPassword !== 'string') throw new Error('Geçici parola oluşturulamadı. Hesabın durumunu kontrol edin.')
+    return { username: data.user.username as string, password: data.generatedPassword as string }
+  }
+
+  startServerAuth(){
+    if(!this.centralAuthEnabled||this.serverAuthStarted)return
+    this.serverAuthStarted=true
+    const client=createBackendPreviewClient()
+    this.serverClient = client
+    this.serverSession=createCrmMainSession(createCrmAuthService(client),p=>this.publishServerProfile(p))
+    client.auth.onAuthStateChange(event=>{
+      if(event==='SIGNED_OUT')this.serverSession?.invalidate()
+      else if(event==='SIGNED_IN'&&!this.serverLoginPending){this.serverSession?.invalidate();setTimeout(()=>void this.serverSession?.restore(),0)}
+      // SDK Auth kilidi dışında sunucuda profil kontrolü yap.
+      else if(event==='TOKEN_REFRESHED'||event==='USER_UPDATED')setTimeout(()=>void this.serverSession?.restore(),0)
+    })
+    if(typeof window!=='undefined'){
+      window.addEventListener('focus',()=>void this.serverSession?.restore())
+      window.addEventListener('online',()=>void this.serverSession?.restore())
+    }
+    void this.serverSession.restore()
+  }
+
+  async loginWithServer(email:string,password:string):Promise<AppUser>{
+    if(!this.centralAuthEnabled)throw Error('Merkezi giriş etkin değil.')
+    this.startServerAuth()
+    this.serverLoginPending=true
+    try{await this.serverSession!.login(email,password)}finally{this.serverLoginPending=false}
+    if(!this.currentUser)throw Error('Sunucu oturumu doğrulanamadı.')
+    return this.currentUser
+  }
+
   hasAdmin(): boolean {
     return this.users.some((u) => u.role === 'ADMIN' || u.isManager)
   }
@@ -381,6 +461,7 @@ class UserStore {
     departments?: Department[]
     email?: string
   }): AppUser {
+    if(this.centralAuthEnabled)throw Error('Yönetici hesabı yalnızca yetkili sunucu kurulumu ile açılabilir.')
     const username = generateUsername(data.fullName, this.users)
     const normalizedDept = normalizeDepartmentName(data.department || 'Yönetim')
     const depts = data.departments && data.departments.length > 0
@@ -425,7 +506,9 @@ class UserStore {
    * Add Member:
    * Departman ve erişebileceği departmanlar kaydeden tarafından belirlenir ve atanır.
    */
-  addMember(data: {
+  isStaffCreationBusy() { return this.staffCreationBusy }
+
+  async addMember(data: {
     fullName: string
     department: Department
     departments?: Department[]
@@ -434,7 +517,43 @@ class UserStore {
     initialPassword?: string
     email?: string
     permissions?: UserPermissions
-  }): { user: AppUser; generatedPassword: string } {
+  }): Promise<{ user: AppUser; generatedPassword: string }> {
+    if (this.centralAuthEnabled) {
+      if (!this.serverClient || this.currentUser?.role !== 'ADMIN') throw new Error('Personel oluşturmak için yönetici girişi gerekli.')
+      if (this.staffCreationBusy) throw new Error('Personel hesabı oluşturuluyor. İşlemin tamamlanmasını bekleyin.')
+      this.staffCreationBusy = true
+      this.notify()
+      try {
+      const actor = this.currentUser.id
+      const key = JSON.stringify([data.fullName, data.department, data.role, data.scope])
+      if (this.pendingStaffCreation && this.pendingStaffCreation.key !== key) throw new Error('Önce önceki personel oluşturma işleminin sonucunu kontrol edin.')
+      const requestId = this.pendingStaffCreation?.requestId ?? crypto.randomUUID()
+      const username = this.pendingStaffCreation?.username ?? generateUsername(data.fullName, this.users)
+      this.pendingStaffCreation = { key, requestId, username }
+      const { data: result, error } = await this.serverClient.functions.invoke('crm-staff', { body: {
+        requestId, username, fullName: data.fullName, department: data.department,
+        role: data.role || 'MEMBER', scope: data.scope || 'ASSIGNED_ONLY',
+      } })
+      if (this.currentUser?.id !== actor) throw new Error('Personel oluşturulurken oturum değişti; yönetici hesabından durumu kontrol edin.')
+      if (error || !result?.user?.id || typeof result.generatedPassword !== 'string') {
+        let code = result?.error
+        if (typeof error?.context?.json === 'function') code = (await (error.context.clone?.() || error.context).json().catch(() => ({}))).error
+        if (code === 'crm_operation_processing') throw new Error('Personel oluşturma işlemi sunucuda sürüyor. Biraz bekleyip aynı bilgilerle tekrar deneyin.')
+        if (code === 'crm_username_taken' || code === 'username_taken') throw new Error('Bu kullanıcı adı zaten kullanılıyor. Ekip listesindeki hesabı kontrol edin.')
+        if (code === 'crm_rate_limited') throw new Error('Personel işlem sınırına ulaşıldı. Daha sonra tekrar deneyin.')
+        if (code === 'authentication_required') throw new Error('Sunucu oturumu sona erdi. Yeniden giriş yapın.')
+        if (code === 'account_already_created') throw new Error('Hesap oluşturulmuş. Ekip ve Yetkiler ekranından geçici parolasını yenileyin.')
+        throw new Error('Personel hesabı sonucu doğrulanamadı. Aynı bilgilerle tekrar deneyin veya yönetici hesabından durumu kontrol edin.')
+      }
+      this.pendingStaffCreation = null
+      void this.refreshStaffDirectory().catch(() => {})
+      if (this.currentUser?.id !== actor) throw new Error('Personel oluşturulurken oturum değişti; yönetici hesabından durumu kontrol edin.')
+      const user = this.users.find(row => row.id === result.user.id) ?? this.normalizeUser({
+        ...data, id: result.user.id, username: result.user.username, password: '', companyName: this.currentUser.companyName,
+      })
+      return { user, generatedPassword: result.generatedPassword }
+      } finally { this.staffCreationBusy = false; this.notify() }
+    }
     const username = generateUsername(data.fullName, this.users)
     const initialPassword = data.initialPassword || generateInitialPassword()
     const normalizedDept = normalizeDepartmentName(data.department)
@@ -480,6 +599,7 @@ class UserStore {
   }
 
   login(identifier: string, password: string): { success: boolean; error?: string; user?: AppUser } {
+    if(this.centralAuthEnabled)return {success:false,error:'E-posta ve parolanızla güvenli sunucu girişini kullanın.'}
     this.reloadUsersFromStorage()
 
     const rawTrimmed = identifier.trim().replace(/^@+/, '')
@@ -521,6 +641,7 @@ class UserStore {
   }
 
   logout() {
+    if(this.centralAuthEnabled)void this.serverSession?.logout().catch(()=>{console.error('[CRM Auth] Sunucu çıkışı tamamlanamadı.')})
     // Paylaşılan bilgisayarda yerel kullanıcıdan çıkınca Meta yetkili oturumu diğer kullanıcıya kalmaz.
     void supabase.auth.signOut({ scope: 'local' }).then(({ error }) => {
       if (error) console.error('[Auth] Sunucu oturumu kapatılamadı; Meta panelinden oturumu kapatın.')
@@ -558,16 +679,27 @@ class UserStore {
     }
 
     try {
-      localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
+      if(!this.centralAuthEnabled)localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(this.currentUser))
     } catch {}
     this.notify()
     return { success: true }
   }
 
-  updateUser(
+  async updateUser(
     userId: string,
     updates: Partial<Omit<AppUser, 'id' | 'createdAt'>>
-  ): { success: boolean; error?: string } {
+  ): Promise<{ success: boolean; error?: string }> {
+    if (this.centralAuthEnabled) {
+      if (!this.serverClient) return { success: false, error: 'Sunucu oturumu gerekli.' }
+      const ownProfile = userId === this.currentUser?.id
+      const { error } = ownProfile
+        ? await this.serverClient.rpc('crm_update_own_profile', { p_updates: updates })
+        : await this.serverClient.rpc('crm_manage_staff', { p_id: userId, p_updates: { ...updates, _revision: this.users.find(user => user.id === userId)?.serverRevision }, p_disable: false })
+      if (error) return { success: false, error: 'Profil veya yetki değişikliği sunucuda reddedildi.' }
+      await this.serverSession?.restore()
+      await this.refreshStaffDirectory()
+      return { success: true }
+    }
     const index = this.users.findIndex((u) => u.id === userId)
     if (index === -1) return { success: false, error: 'Kullanıcı bulunamadı.' }
 
@@ -630,7 +762,14 @@ class UserStore {
     return { success: true }
   }
 
-  deleteUser(userId: string): { success: boolean; error?: string } {
+  async deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
+    if (this.centralAuthEnabled) {
+      if (!this.serverClient) return { success: false, error: 'Sunucu oturumu gerekli.' }
+      const { error } = await this.serverClient.rpc('crm_manage_staff', { p_id: userId, p_updates: { _revision: this.users.find(user => user.id === userId)?.serverRevision }, p_disable: true })
+      if (error) return { success: false, error: 'Personel devre dışı bırakılamadı. Yönetici yetkisini kontrol edin.' }
+      await this.refreshStaffDirectory()
+      return { success: true }
+    }
     if (this.currentUser?.id === userId) {
       return { success: false, error: 'Kendinizi silemezsiniz.' }
     }
@@ -641,6 +780,7 @@ class UserStore {
   }
 
   updateUsername(userId: string, newUsername: string): { success: boolean; error?: string } {
+    if(this.centralAuthEnabled)return {success:false,error:'Kullanıcı adı değişikliği sunucuda yapılmalı.'}
     const cleanUsername = normalizeTurkish(newUsername).replace(/[^a-z0-9]/g, '')
     if (!cleanUsername || cleanUsername.length < 3) {
       return { success: false, error: 'Kullanıcı adı en az 3 karakter olmalıdır.' }
@@ -671,6 +811,7 @@ class UserStore {
   }
 
   changePassword(userId: string, newPassword: string): { success: boolean; error?: string } {
+    if(this.centralAuthEnabled)return {success:false,error:'Parolanızı Hesap güvenliği ekranından Supabase Auth üzerinde değiştirin.'}
     if (!newPassword || newPassword.length < 6) {
       return { success: false, error: 'Şifre en az 6 karakter olmalıdır.' }
     }

@@ -49,6 +49,30 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
   onClose,
   sidebarCollapsed,
 }) => {
+  const recorderRef=useRef<MediaRecorder|null>(null)
+  const sendVoiceRef=useRef(false)
+  useEffect(()=>()=>{sendVoiceRef.current=false;const recorder=recorderRef.current;if(recorder&&recorder.state!=='inactive')recorder.stop()},[])
+  const readBlob=(blob:Blob)=>new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(Error('Dosya okunamadı.'));reader.readAsDataURL(blob)})
+  const cancelVoice=()=>{sendVoiceRef.current=false;const recorder=recorderRef.current;if(recorder&&recorder.state!=='inactive')recorder.stop();setIsRecordingVoice(false)}
+  const toggleVoice=async()=>{
+   if(isRecordingVoice){cancelVoice();return}
+   if(!currentUser||!activeConversation)return
+   try {
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true})
+    let recorder:MediaRecorder
+    try { recorder=new MediaRecorder(stream) } catch(error) {stream.getTracks().forEach(track=>track.stop());throw error}
+    recorderRef.current=recorder;sendVoiceRef.current=false
+    const chunks:BlobPart[]=[],started=Date.now(),sender=currentUser,conversation=activeConversation
+    recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data)}
+    recorder.onstop=async()=>{
+     stream.getTracks().forEach(track=>track.stop());setIsRecordingVoice(false)
+     if(!sendVoiceRef.current)return
+     sendVoiceRef.current=false
+     try {const blob=new Blob(chunks,{type:recorder.mimeType});if(!blob.size||blob.size>1024*1024)throw Error('Ses kaydı boş veya 1 MB sınırını aşıyor.');const data=await readBlob(blob);await messageStore.sendMessage(conversation.id,sender,conversation.recipientId,'','voice','Ses kaydı ('+Math.round((Date.now()-started)/1000)+' sn)',data)} catch(error){window.alert(error instanceof Error?error.message:'Ses gönderilemedi.')}
+    }
+    recorder.start();setIsRecordingVoice(true)
+   }catch(error){window.alert(error instanceof Error?error.message:'Mikrofon açılamadı.')}
+  }
   const [mode, setMode] = useState<'popup' | 'sidebar'>(() => messageStore.getDisplayMode())
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => messageStore.getSidebarWidth())
   const [view, setView] = useState<'list' | 'contacts' | 'chat'>('list')
@@ -164,6 +188,7 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
     setActiveConversation(conv)
     setMessages(messageStore.getMessages(conv.id))
     setView('chat')
+    void messageStore.markRead(conv.recipientId).catch(error=>window.alert(error.message))
   }
 
   const handleOpenConversation = (conv: ChatConversation) => {
@@ -172,11 +197,12 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
     setView('chat')
   }
 
-  const handleSendMessage = (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (!inputText.trim() || !activeConversation || !currentUser) return
 
-    messageStore.sendMessage(
+    try {
+    await messageStore.sendMessage(
       activeConversation.id,
       currentUser,
       activeConversation.recipientId,
@@ -184,40 +210,26 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
     )
     setInputText('')
     setShowEmojiPicker(false)
+    }catch(error){window.alert(error instanceof Error?error.message:"Mesaj gönderilemedi.")}
   }
 
   const handleSendVoiceMessage = () => {
-    if (!activeConversation || !currentUser) return
-    setIsRecordingVoice(false)
-    const secs = recordingSeconds || 3
-    messageStore.sendMessage(
-      activeConversation.id,
-      currentUser,
-      activeConversation.recipientId,
-      '',
-      'voice',
-      `Ses Kaydı (00:${secs < 10 ? '0' : ''}${secs})`
-    )
+    sendVoiceRef.current=true
+    const recorder=recorderRef.current
+    if(recorder&&recorder.state!=='inactive')recorder.stop()
   }
 
-  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !activeConversation || !currentUser) return
 
-    const isImage = file.type.startsWith('image/')
-    const fileName = file.name
-    const previewUrl = isImage ? URL.createObjectURL(file) : undefined
-
-    messageStore.sendMessage(
-      activeConversation.id,
-      currentUser,
-      activeConversation.recipientId,
-      file.name,
-      isImage ? 'image' : 'file',
-      fileName,
-      previewUrl
-    )
-
+    try {
+    if(file.size>1024*1024)throw Error('Mesaj eki en fazla 1 MB olabilir. Daha büyük dosyayı Dosyalar alanından paylaşın.')
+    const isImage=/^image\/(png|jpeg|gif|webp)$/.test(file.type)
+    const blob=isImage?file:new Blob([await file.arrayBuffer()],{type:'application/octet-stream'})
+    const data=await readBlob(blob)
+    await messageStore.sendMessage(activeConversation.id,currentUser,activeConversation.recipientId,file.name,isImage?'image':'file',file.name,data)
+    }catch(error){window.alert(error instanceof Error?error.message:'Dosya gönderilemedi.')}
     e.target.value = ''
   }
 
@@ -411,13 +423,13 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
                     {m.attachmentType === 'voice' && (
                       <div className={`flex items-center gap-2 py-1 font-medium ${isMe ? 'justify-end' : ''}`}>
                         <Volume2 className="w-4 h-4 shrink-0 text-white" />
-                        <span>{m.attachmentName || 'Ses Kaydı'}</span>
+                        {m.attachmentUrl ? <audio controls src={m.attachmentUrl} className="max-w-[220px]" /> : <span>Ses içeriği bulunamadı</span>}
                       </div>
                     )}
                     {m.attachmentType === 'file' && (
                       <div className="flex items-center gap-2 py-1.5 px-2 rounded-xl bg-black/20 border border-white/10 my-1 font-medium text-left">
                         <FileText className="w-4 h-4 shrink-0 text-[#b99881]" />
-                        <span className="truncate text-xs font-mono">{m.attachmentName || 'Belge'}</span>
+                        <a href={m.attachmentUrl} download={m.attachmentName || "Belge"} className="truncate text-xs font-mono underline">{m.attachmentName || "Belge"}</a>
                       </div>
                     )}
                     {m.text && m.attachmentType !== 'image' && m.attachmentType !== 'file' && (
@@ -464,7 +476,7 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsRecordingVoice(false)}
+                onClick={cancelVoice}
                 className="text-xs text-[#a69f99] hover:text-white"
               >
                 İptal
@@ -518,7 +530,7 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
               {/* 2. Ses Gönder */}
               <button
                 type="button"
-                onClick={() => setIsRecordingVoice(!isRecordingVoice)}
+                onClick={toggleVoice}
                 className={`p-1 rounded-full hover:text-[#b99881] hover:bg-white/10 transition-colors cursor-pointer ${
                   isRecordingVoice ? 'text-rose-400' : ''
                 }`}

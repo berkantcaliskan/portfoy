@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react'
+import { brandKitStore } from '@/services/brandKitStore'
+import { isCentralCrm } from '@/services/crmRuntime'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Sparkles,
   Copy,
@@ -181,6 +183,7 @@ const DEFAULT_BRAND_KIT: BrandKitData = {
 const STORAGE_KEY = 'demirturk_brand_kit_v1'
 
 function loadBrandKit(): BrandKitData {
+  if(isCentralCrm())return (brandKitStore.get() as unknown as BrandKitData)||DEFAULT_BRAND_KIT
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -197,6 +200,8 @@ function loadBrandKit(): BrandKitData {
 }
 
 export function BrandKitView() {
+  const [syncState,setSyncState]=useState(brandKitStore.state())
+  useEffect(()=>{if(!isCentralCrm())return;const update=()=>{const remote=brandKitStore.get();if(remote)setData(remote as unknown as BrandKitData);setSyncState(brandKitStore.state())};const unsub=brandKitStore.subscribe(update);void brandKitStore.refreshFromBackend();update();return unsub},[])
   const [data, setData] = useState<BrandKitData>(() => loadBrandKit())
   const [copiedHex, setCopiedHex] = useState<string | null>(null)
   const [editingSection, setEditingSection] = useState<'colors' | 'typography' | 'logo' | 'formats' | null>(null)
@@ -205,6 +210,7 @@ export function BrandKitView() {
   const lightLogoInputRef = useRef<HTMLInputElement>(null)
 
   const saveAll = (next: BrandKitData) => {
+    if(isCentralCrm()){try{brandKitStore.save(next as unknown as Record<string,unknown>)}catch(error){window.alert(error instanceof Error?error.message:"Marka kiti kaydedilemedi.")}return}
     setData(next)
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
@@ -257,6 +263,8 @@ export function BrandKitView() {
 
   return (
     <div className="space-y-4 pb-8">
+      {isCentralCrm()&&(syncState.dirty||syncState.error)&&<div role="status" className="p-3 bg-amber-50 text-sm">{syncState.error||(syncState.saving?'Marka kiti kaydediliyor…':'Kaydedilmemiş marka kiti değişikliği var.')}<button className="ml-3 underline" onClick={()=>void brandKitStore.flush().catch(()=>{})}>Kaydet / tekrar dene</button><button className="ml-3 underline" onClick={()=>{if(window.confirm('Taslak bırakılıp sunucudaki marka kiti okunsun mu?'))void brandKitStore.reload().catch(error=>window.alert(error.message))}}>Sunucudan oku</button></div>}
+
       {/* Header */}
       <div>
         <div className="flex items-center gap-2.5">

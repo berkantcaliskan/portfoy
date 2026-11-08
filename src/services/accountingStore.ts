@@ -1,4 +1,6 @@
-import { AppUser } from './userStore'
+import { userStore, type AppUser } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCrmServerCollection } from './crmServerCollection'
 import { permissionService } from './permissionService'
 import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { syncService } from './syncService'
@@ -52,12 +54,24 @@ const INITIAL_PAYMENTS: PaymentRecord[] = []
 type Listener = () => void
 
 class AccountingStore {
+  private context = () => {
+    const user = userStore.getCurrentUser(), client = userStore.getServerClient()
+    return user && client ? { id: user.id, client } : null
+  }
+  private collectionBackend = createCrmServerCollection<CollectionRecord>('collections', this.context)
+  private paymentBackend = createCrmServerCollection<PaymentRecord>('payments', this.context)
+  public setAccount(id: string | null) { this.collectionBackend.setAccount(id); this.paymentBackend.setAccount(id) }
+  public async refreshFromBackend() { await Promise.all([this.collectionBackend.refresh(), this.paymentBackend.refresh()]) }
+  public getReadError() { return this.collectionBackend.getError() || this.paymentBackend.getError() }
   private collections: CollectionRecord[] = []
   private payments: PaymentRecord[] = []
   private listeners: Set<Listener> = new Set()
   private realtimeChannel: any = null
 
   constructor() {
+    this.collectionBackend.subscribe(() => this.notify())
+    this.paymentBackend.subscribe(() => this.notify())
+    if (isCentralCrm()) return
     this.loadFromStorage()
     this.initRealtime()
     if (typeof window !== 'undefined') {
@@ -69,6 +83,7 @@ class AccountingStore {
   }
 
   public setLoadedAccounting(collections: CollectionRecord[], payments: PaymentRecord[]) {
+    if (isCentralCrm()) return
     const colMap = new Map<string, CollectionRecord>()
     for (const c of collections || []) colMap.set(c.id, c)
     for (const lc of this.collections) {
@@ -167,14 +182,25 @@ class AccountingStore {
   }
 
   public getCollections(): CollectionRecord[] {
+    if (isCentralCrm()) return this.collectionBackend.getAll()
     return [...this.collections]
   }
 
   public getPayments(): PaymentRecord[] {
+    if (isCentralCrm()) return this.paymentBackend.getAll()
     return [...this.payments]
   }
 
-  public markCollectionAsPaid(id: string, receiptNo?: string): boolean {
+  public async markCollectionAsPaid(id: string, receiptNo?: string): Promise<boolean> {
+    if (isCentralCrm()) {
+      const target = this.collectionBackend.getAll().find(row => row.id === id)
+      if (!target) throw new Error('Tahsilat kaydı bulunamadı. Listeyi yenileyin.')
+      await this.collectionBackend.save(JSON.stringify(['collect', id, receiptNo]), {
+        ...target, status: 'COLLECTED', paidDate: new Date().toISOString().slice(0, 10),
+        receiptNo: receiptNo || `DK-${crypto.randomUUID()}`,
+      })
+      return true
+    }
     const index = this.collections.findIndex((c) => c.id === id)
     if (index === -1) return false
 
@@ -190,31 +216,39 @@ class AccountingStore {
     return true
   }
 
-  public addCollection(data: Omit<CollectionRecord, 'id' | 'createdAt'>): CollectionRecord {
+  public async addCollection(data: Omit<CollectionRecord, 'id' | 'createdAt'>): Promise<CollectionRecord> {
     const newRecord: CollectionRecord = {
       ...data,
-      id: 'col-' + Date.now(),
+      id: isCentralCrm() ? 'col-' + crypto.randomUUID() : 'col-' + Date.now(),
       createdAt: new Date().toISOString(),
     }
+    if (isCentralCrm()) return this.collectionBackend.save(JSON.stringify(['create', data]), newRecord)
     this.collections = [newRecord, ...this.collections]
     this.saveToStorage()
     syncService.saveCollection(newRecord)
     return newRecord
   }
 
-  public addPayment(data: Omit<PaymentRecord, 'id' | 'createdAt'>): PaymentRecord {
+  public async addPayment(data: Omit<PaymentRecord, 'id' | 'createdAt'>): Promise<PaymentRecord> {
     const newRecord: PaymentRecord = {
       ...data,
-      id: 'pay-' + Date.now(),
+      id: isCentralCrm() ? 'pay-' + crypto.randomUUID() : 'pay-' + Date.now(),
       createdAt: new Date().toISOString(),
     }
+    if (isCentralCrm()) return this.paymentBackend.save(JSON.stringify(['create', data]), newRecord)
     this.payments = [newRecord, ...this.payments]
     this.saveToStorage()
     syncService.savePayment(newRecord)
     return newRecord
   }
 
-  public markPaymentAsPaid(id: string): boolean {
+  public async markPaymentAsPaid(id: string): Promise<boolean> {
+    if (isCentralCrm()) {
+      const target = this.paymentBackend.getAll().find(row => row.id === id)
+      if (!target) throw new Error('Ödeme kaydı bulunamadı. Listeyi yenileyin.')
+      await this.paymentBackend.save(JSON.stringify(['pay', id]), { ...target, status: 'PAID', paidDate: new Date().toISOString().slice(0, 10) })
+      return true
+    }
     const index = this.payments.findIndex((p) => p.id === id)
     if (index === -1) return false
 
@@ -232,11 +266,19 @@ class AccountingStore {
   /**
    * Refund Deposit (Authorized only if user has canRefundDeposit permission)
    */
-  public refundDeposit(
+  public async refundDeposit(
     id: string,
     user: AppUser,
     reason: string
-  ): { success: boolean; error?: string } {
+  ): Promise<{ success: boolean; error?: string }> {
+    if (isCentralCrm()) {
+      const target = this.collectionBackend.getAll().find(row => row.id === id)
+      if (!target) throw new Error('Tahsilat kaydı bulunamadı. Listeyi yenileyin.')
+      await this.collectionBackend.save(JSON.stringify(['refund', id, reason]), {
+        ...target, status: 'REFUNDED', refundReason: reason, refundedByUserName: user.fullName,
+      })
+      return { success: true }
+    }
     if (!permissionService.canRefundDeposit(user)) {
       return {
         success: false,

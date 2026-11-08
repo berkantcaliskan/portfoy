@@ -1,9 +1,15 @@
-import { AppUser } from './userStore'
+import { CrmBackendError } from './crmBackendRepository'
+import { userStore, type AppUser } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCrmServerCollection } from './crmServerCollection'
 import { permissionService } from './permissionService'
 import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { syncService } from './syncService'
 import { rowToProject, rowToUnit } from './dbMapper'
 
+function comparable(value: unknown): string {
+ return JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item)
+}
 export type FlatStatus = 'SATISTA' | 'REZERVE' | 'SATILDI'
 export type RoomType = '1+1' | '2+1' | '3+1' | '4+1' | 'Villa' | 'Penthouse' | 'Ticari'
 
@@ -594,11 +600,124 @@ function normalizeProjectFloors(project: SharedProject): SharedProject {
 type Listener = () => void
 
 class ProjectStore {
+  private backend = createCrmServerCollection<SharedProject>('projects', () => {
+    const user = userStore.getCurrentUser(), client = userStore.getServerClient()
+    return user && client ? { id: user.id, client } : null
+  }, { refreshAfterWrite: false })
+  private accountId: string | null = null
+  private accountGeneration = 0
+  private draftDirty = false
+  private saveError = ''
+  private flushPromise: Promise<void> | null = null
+  private saveTimer: ReturnType<typeof setTimeout> | null = null
+  private pendingSnapshot: { key: string; value: SharedProject; archive: boolean } | null = null
+
+  public setAccount(id: string | null) {
+    if (!isCentralCrm() || this.accountId === id) return
+    this.accountId = id
+    this.accountGeneration++
+    this.projects = []
+    this.draftDirty = false
+    this.saveError = ''
+    this.pendingSnapshot = null
+    if (this.saveTimer) clearTimeout(this.saveTimer)
+    this.backend.setAccount(id)
+    this.notify()
+  }
+
+  public getSyncState() {
+    return { dirty: this.draftDirty, saving: Boolean(this.flushPromise), error: this.saveError || this.backend.getError() }
+  }
+
+  public async refreshFromBackend() {
+    if (!isCentralCrm() || this.draftDirty || this.flushPromise) return
+    await this.backend.refresh()
+    this.projects = this.backend.getAll().map(normalizeProjectFloors)
+    this.notify()
+  }
+
+  public async discardDraftAndReload() {
+    if (this.flushPromise) throw new Error('Önce sunucu işleminin tamamlanmasını bekleyin.')
+    this.draftDirty = false
+    this.pendingSnapshot = null
+    this.saveError = ''
+    this.backend.setAccount(null)
+    this.backend.setAccount(this.accountId)
+    await this.refreshFromBackend()
+  }
+
+  public async flushToBackend() {
+    if (!isCentralCrm()) return
+    if (this.flushPromise) return this.flushPromise
+    if (this.saveTimer) clearTimeout(this.saveTimer)
+    const generation = this.accountGeneration
+    const run = async () => {
+      this.saveError = ''
+      try {
+        while (this.draftDirty) {
+          if (!this.accountId || generation !== this.accountGeneration) throw new Error('Proje kaydı sırasında oturum değişti.')
+          const remote = new Map(this.backend.getAll().map(project => [project.id, project]))
+          const local = new Map(this.projects.map(project => [project.id, project]))
+          if (!this.pendingSnapshot) {
+            const changed = this.projects.find(project => comparable(project) !== comparable(remote.get(project.id)))
+            const archived = Array.from(remote.values()).find(project => !local.has(project.id))
+            const value = changed || archived
+            if (!value) { this.draftDirty = false; break }
+            const snapshot = structuredClone(value)
+            const archive = !changed
+            this.pendingSnapshot = { key: JSON.stringify([snapshot, archive]), value: snapshot, archive }
+          }
+          const pending = this.pendingSnapshot
+          const canonical = await this.backend.save(pending.key, pending.value, pending.archive)
+          if (generation !== this.accountGeneration) throw new Error('Proje kaydı sırasında oturum değişti.')
+          if (!pending.archive) {
+            const current = this.projects.find(project => project.id === canonical.id)
+            if (current) {
+              const sentUnits = new Map(pending.value.units.map(unit => [unit.id, unit]))
+              const canonicalUnits = new Map(canonical.units.map(unit => [unit.id, unit]))
+              current.units = current.units.map(unit => {
+                const sent = sentUnits.get(unit.id), saved = canonicalUnits.get(unit.id)
+                if (!sent || !saved) return unit
+                return {
+                  ...unit,
+                  sale: JSON.stringify(unit.sale) === JSON.stringify(sent.sale) ? saved.sale : unit.sale,
+                  reservation: JSON.stringify(unit.reservation) === JSON.stringify(sent.reservation) ? saved.reservation : unit.reservation,
+                  history: JSON.stringify(unit.history) === JSON.stringify(sent.history) ? saved.history : unit.history,
+                }
+              })
+            }
+          }
+          this.pendingSnapshot = null
+        }
+      } catch (error) {
+        if (generation === this.accountGeneration) {
+ this.saveError = error instanceof Error ? error.message : 'Proje sunucuya kaydedilemedi.'
+ if (error instanceof CrmBackendError && !['request_failed', 'invalid_response'].includes(error.code)) this.pendingSnapshot = null
+}
+        throw error
+      }
+    }
+    this.flushPromise = run()
+    this.notify()
+    try { await this.flushPromise } finally {
+      this.flushPromise = null
+      this.notify()
+    }
+    await this.refreshFromBackend()
+  }
   private projects: SharedProject[] = []
   private listeners: Set<Listener> = new Set()
   private realtimeChannel: any = null
 
   constructor() {
+    if (isCentralCrm()) {
+      if (typeof window !== 'undefined') window.addEventListener('beforeunload', event => {
+        if (!this.draftDirty) return
+        event.preventDefault()
+        event.returnValue = ''
+      })
+      return
+    }
     this.loadFromStorage()
     this.initRealtime()
     if (typeof window !== 'undefined') {
@@ -610,6 +729,7 @@ class ProjectStore {
   }
 
   public setLoadedProjects(incomingProjects: SharedProject[]) {
+    if (isCentralCrm()) return
     // Merge with existing local kroki metadata so Supabase sync never wipes out planBox, customAreas, customFacades, or locally edited units
     const existingById = new Map(this.projects.map((p) => [p.id, p]))
     const merged = (incomingProjects || []).map((inc) => {
@@ -760,6 +880,13 @@ class ProjectStore {
   }
 
   private saveToStorage() {
+    if (isCentralCrm()) {
+      this.draftDirty = true
+      this.notify()
+      if (this.saveTimer) clearTimeout(this.saveTimer)
+      if (!this.saveError) this.saveTimer = setTimeout(() => { void this.flushToBackend().catch(() => {}) }, 600)
+      return
+    }
     try {
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(this.projects))
     } catch (e) {
@@ -788,6 +915,7 @@ class ProjectStore {
   }
 
   public getAll(): SharedProject[] {
+    if (isCentralCrm() && userStore.getCurrentUser()?.id !== this.accountId) return []
     return this.projects.map((p) => ({
       ...p,
       units: [...(p.units || [])],
@@ -797,6 +925,7 @@ class ProjectStore {
   }
 
   public getById(id: string): SharedProject | undefined {
+    if (isCentralCrm() && userStore.getCurrentUser()?.id !== this.accountId) return undefined
     return this.projects.find((p) => p.id === id)
   }
 
@@ -1125,7 +1254,7 @@ class ProjectStore {
     const { parsedUnits, ...restData } = data
     const newPrj: SharedProject = {
       ...restData,
-      id: 'prj-' + Date.now(),
+      id: isCentralCrm() ? 'prj-' + crypto.randomUUID() : 'prj-' + Date.now(),
       maxFloors: maxFl,
       unitsPerFloor: upf,
       blockCount: blkCount,

@@ -12,7 +12,7 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(() =>
-    userStore.getAllUsers().length === 0 ? 'signup' : 'signin'
+    !userStore.centralAuthEnabled && userStore.getAllUsers().length === 0 ? 'signup' : 'signin'
   )
 
   // Sign In States
@@ -36,7 +36,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     ? generateUsername(fullName, userStore.getAllUsers())
     : ''
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setSignInError('')
 
@@ -46,6 +46,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }
 
     setIsSubmitting(true)
+    if(userStore.centralAuthEnabled){
+      try{onLoginSuccess(await userStore.loginWithServer(identifier,password))}
+      catch(err){setSignInError(err instanceof Error?err.message:'Sunucu girişi tamamlanamadı.')}
+      finally{setIsSubmitting(false);setPassword('')}
+      return
+    }
     setTimeout(() => {
       const res = userStore.login(identifier, password)
       setIsSubmitting(false)
@@ -61,6 +67,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault()
+    if(userStore.centralAuthEnabled){setSignUpError('Herkese açık kayıt kapalı. Hesabınızı yönetici oluşturmalı.');return}
     setSignUpError('')
 
     if (!fullName.trim() || !email.trim() || !newPassword.trim() || !companyName.trim()) {
@@ -164,6 +171,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             </button>
             <button
               type="button"
+              disabled={userStore.centralAuthEnabled}
               onClick={() => {
                 setActiveTab('signup')
                 setSignUpError('')
@@ -174,9 +182,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   : 'text-[#a69f99] hover:text-white'
               }`}
             >
-              Yönetici Kaydı
+              {userStore.centralAuthEnabled?'Kayıt yöneticiye özel':'Yönetici Kaydı'}
             </button>
           </div>
+          {userStore.centralAuthEnabled&&<p className="text-sm mb-5">Yönetici girişi için doğrulanmış e-posta ve Supabase parolanızı kullanın. <a className="underline" href="/?workspace=backend">Hesap güvenliği ve parola işlemleri</a></p>}
 
           {/* Tab 1: GİRİŞ YAP (SIGN IN) */}
           {activeTab === 'signin' && (
@@ -191,7 +200,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               {/* E-posta veya Kullanıcı Adı */}
               <div className="space-y-1.5 text-left">
                 <label className="text-xs font-semibold text-[#d6beae] block pl-1">
-                  E-Posta veya Kullanıcı Adı
+                  E-posta veya kullanıcı adı
                 </label>
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8c857f]">

@@ -1,3 +1,5 @@
+import { downloadCsv } from '@/utils/csvExport'
+import { useStoreUpdates } from '@/components/common/useStoreUpdates'
 import React from 'react'
 import {
   TrendingUp,
@@ -16,6 +18,8 @@ import { accountingStore } from '@/services/accountingStore'
 import { formatCurrency } from '@/utils/formatters'
 
 export const FinancialReportsView: React.FC = () => {
+
+  useStoreUpdates(accountingStore)
   const collections = accountingStore.getCollections()
   const payments = accountingStore.getPayments()
 
@@ -54,10 +58,14 @@ export const FinancialReportsView: React.FC = () => {
           variant="subtle"
           size="sm"
           icon={<Download className="w-3.5 h-3.5 text-[#b99881]" />}
-          onClick={() => alert('Finansal mizan ve nakit akış tablosu Excel formatında indiriliyor...')}
+          onClick={() => downloadCsv('finans-kayitlari.csv', [
+            ['Kayıt türü','Kimlik','İsim / Başlık','Tutar (TRY)','Durum','Vade','Gerçekleşme'],
+            ...collections.map(row=>['Tahsilat',row.id,row.customerName,row.amount,row.status,row.dueDate,row.paidDate||'']),
+            ...payments.map(row=>['Ödeme',row.id,row.title,row.amount,row.status,row.dueDate,row.paidDate||'']),
+          ])}
           className="rounded-full px-4 text-xs font-semibold"
         >
-          Mizan Tablosunu İndir
+          Finans Kayıtlarını İndir (CSV)
         </GlassButton>
       </div>
 

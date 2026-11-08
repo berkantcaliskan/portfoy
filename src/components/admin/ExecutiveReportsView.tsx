@@ -1,3 +1,4 @@
+import { useStoreUpdates } from '@/components/common/useStoreUpdates'
 import React from 'react'
 import {
   TrendingUp,
@@ -23,10 +24,13 @@ interface ExecutiveReportsViewProps {
 }
 
 export const ExecutiveReportsView: React.FC<ExecutiveReportsViewProps> = ({ leads }) => {
+
+  useStoreUpdates(projectStore)
+  useStoreUpdates(accountingStore)
   const projects = projectStore.getAll()
   const allUnits = projects.flatMap((p) => p.units || [])
   const soldUnits = allUnits.filter((u) => u.status === 'SATILDI')
-  const totalVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
+  const totalVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || 0), 0)
 
   const collections = accountingStore.getCollections()
   const payments = accountingStore.getPayments()
@@ -37,6 +41,8 @@ export const ExecutiveReportsView: React.FC<ExecutiveReportsViewProps> = ({ lead
 
   return (
     <div className="space-y-6">
+      {soldUnits.some(unit=>!unit.sale?.salePrice)&&<p className="text-xs text-amber-600">Satış tutarı girilmemiş kayıtlar parasal toplama dahil edilmez.</p>}
+
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -55,10 +61,10 @@ export const ExecutiveReportsView: React.FC<ExecutiveReportsViewProps> = ({ lead
           variant="subtle"
           size="sm"
           icon={<Download className="w-3.5 h-3.5 text-[#b99881]" />}
-          onClick={() => alert('Yönetici brifing raporu PDF formatında oluşturuluyor...')}
+          onClick={() => window.print()}
           className="rounded-full px-4 text-xs font-semibold"
         >
-          Yönetim Raporu Al
+          Yazdır / PDF Kaydet
         </GlassButton>
       </div>
 

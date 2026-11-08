@@ -8,7 +8,7 @@ import { PortfolioItem, PropertyType, PropertyStatus } from '@/types/portfolio'
 interface AddPropertyModalProps {
   isOpen: boolean
   onClose: () => void
-  onAdd: (item: Omit<PortfolioItem, 'id' | 'createdAt'>) => void
+  onAdd: (item: Omit<PortfolioItem, 'id' | 'createdAt'>) => unknown | Promise<unknown>
 }
 
 export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
@@ -32,11 +32,12 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
     status: 'AVAILABLE' as PropertyStatus,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title.trim() || !formData.price) return
 
-    onAdd({
+    try {
+    await onAdd({
       title: formData.title.trim(),
       projectCode: formData.projectCode.trim(),
       type: formData.type,
@@ -53,6 +54,7 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
     })
 
     onClose()
+    } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu kaydı başarısız.") }
   }
 
   return (

@@ -37,6 +37,8 @@ export const CollectionsView: React.FC = () => {
   const [refundReason, setRefundReason] = useState('')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [backendError, setBackendError] = useState('')
+  const [backendSaving, setBackendSaving] = useState(false)
 
   // Add form
   const [customerName, setCustomerName] = useState('')
@@ -70,10 +72,19 @@ export const CollectionsView: React.FC = () => {
     .filter((c) => c.status === 'OVERDUE')
     .reduce((acc, c) => acc + c.amount, 0)
 
-  const handleMarkCollected = (id: string) => {
-    accountingStore.markCollectionAsPaid(id)
+  const handleMarkCollected = async (id: string) => {
+
+    if (backendSaving) return
+    setBackendSaving(true)
+    setBackendError('')
+    try {    await accountingStore.markCollectionAsPaid(id)
     setSuccessMsg('Tahsilat makbuzu düzenlendi ve tahsil edildi olarak kaydedildi.')
     setTimeout(() => setSuccessMsg(null), 3000)
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : 'Sunucu işlemi tamamlanamadı.')
+    } finally {
+      setBackendSaving(false)
+    }
   }
 
   const handleOpenRefund = (col: CollectionRecord) => {
@@ -82,11 +93,15 @@ export const CollectionsView: React.FC = () => {
     setErrorMsg(null)
   }
 
-  const handleExecuteRefund = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleExecuteRefund = async (e: React.FormEvent) => {
+
+    if (backendSaving) return
+    setBackendSaving(true)
+    setBackendError('')
+    try {    e.preventDefault()
     if (!selectedRefundCol || !currentUser) return
 
-    const res = accountingStore.refundDeposit(selectedRefundCol.id, currentUser, refundReason)
+    const res = await accountingStore.refundDeposit(selectedRefundCol.id, currentUser, refundReason)
     if (!res.success) {
       setErrorMsg(res.error || 'İade yetkisi doğrulanamadı.')
       return
@@ -95,13 +110,22 @@ export const CollectionsView: React.FC = () => {
     setSelectedRefundCol(null)
     setSuccessMsg('Kapora iadesi onaylandı ve muhasebe iade kaydı oluşturuldu.')
     setTimeout(() => setSuccessMsg(null), 3500)
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : 'Sunucu işlemi tamamlanamadı.')
+    } finally {
+      setBackendSaving(false)
+    }
   }
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+
+    if (backendSaving) return
+    setBackendSaving(true)
+    setBackendError('')
+    try {    e.preventDefault()
     if (!customerName.trim() || !amount) return
 
-    accountingStore.addCollection({
+    await accountingStore.addCollection({
       customerName: customerName.trim(),
       projectName,
       unitNumber,
@@ -117,12 +141,18 @@ export const CollectionsView: React.FC = () => {
     setCustomerName('')
     setSuccessMsg('Yeni tahsilat planı oluşturuldu.')
     setTimeout(() => setSuccessMsg(null), 3000)
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : 'Sunucu işlemi tamamlanamadı.')
+    } finally {
+      setBackendSaving(false)
+    }
   }
 
   const canRefund = permissionService.canRefundDeposit(currentUser)
 
   return (
     <div className="space-y-6">
+      {(backendError || accountingStore.getReadError()) && <p role="alert">{backendError || accountingStore.getReadError()}</p>}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -282,6 +312,7 @@ export const CollectionsView: React.FC = () => {
         title={`Kapora İadesi - ${selectedRefundCol?.customerName}`}
       >
         <form onSubmit={handleExecuteRefund} className="space-y-4">
+          {backendError && <p role="alert">{backendError}</p>}
           <div className="text-xs text-[#a69f99]">
             <div className="text-white font-semibold flex justify-between">
               <span>{selectedRefundCol?.projectName} ({selectedRefundCol?.unitNumber})</span>
@@ -321,7 +352,7 @@ export const CollectionsView: React.FC = () => {
             >
               Vazgeç
             </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
+            <GlassButton disabled={backendSaving} type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
               İadeyi Onayla
             </GlassButton>
           </div>
@@ -335,6 +366,7 @@ export const CollectionsView: React.FC = () => {
         title="Yeni Tahsilat Planı Ekle"
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
+          {backendError && <p role="alert">{backendError}</p>}
           <div>
             <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
               Müşteri Adı Soyadı *
@@ -441,7 +473,7 @@ export const CollectionsView: React.FC = () => {
             >
               Vazgeç
             </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
+            <GlassButton disabled={backendSaving} type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
               Kaydet
             </GlassButton>
           </div>

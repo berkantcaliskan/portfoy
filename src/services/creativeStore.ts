@@ -1,3 +1,6 @@
+import { userStore } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCrmServerCollection } from './crmServerCollection'
 export type ScheduleCategory =
   | 'OZEL_GUN'
   | 'RESMI_BAYRAM'
@@ -134,6 +137,14 @@ const PURGED_MOCK_CREATIVE_IDS = new Set([
 type Listener = () => void
 
 class CreativeStore {
+  private scheduleBackend = createCrmServerCollection<CreativeScheduleItem>('creative_schedule', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
+  private creativesBackend = createCrmServerCollection<CreativeAssetItem>('creative_assets', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
+  private commentsBackend = createCrmServerCollection<CreativeCommentItem>('creative_comments', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
+  private briefsBackend = createCrmServerCollection<CreativeBriefItem>('creative_briefs', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
+  public setAccount(id: string|null) { this.scheduleBackend.setAccount(id); this.schedule=[]; this.creativesBackend.setAccount(id); this.creatives=[]; this.commentsBackend.setAccount(id); this.comments=[]; this.briefsBackend.setAccount(id); this.briefs=[]; this.notify() }
+  public async refreshFromBackend() { await Promise.all([this.scheduleBackend.refresh(),this.creativesBackend.refresh(),this.commentsBackend.refresh(),this.briefsBackend.refresh()]) }
+  public getReadError() { return [this.scheduleBackend.getError(),this.creativesBackend.getError(),this.commentsBackend.getError(),this.briefsBackend.getError()].filter(Boolean).join(' · ') }
+
   private schedule: CreativeScheduleItem[] = []
   private creatives: CreativeAssetItem[] = []
   private comments: CreativeCommentItem[] = []
@@ -141,6 +152,11 @@ class CreativeStore {
   private listeners: Set<Listener> = new Set()
 
   constructor() {
+ this.scheduleBackend.subscribe(() => { if(isCentralCrm()) { this.schedule=this.scheduleBackend.getAll(); this.notify() } })
+this.creativesBackend.subscribe(() => { if(isCentralCrm()) { this.creatives=this.creativesBackend.getAll(); this.notify() } })
+this.commentsBackend.subscribe(() => { if(isCentralCrm()) { this.comments=this.commentsBackend.getAll(); this.notify() } })
+this.briefsBackend.subscribe(() => { if(isCentralCrm()) { this.briefs=this.briefsBackend.getAll(); this.notify() } })
+ if(isCentralCrm())return
     this.loadFromStorage()
     if (typeof window !== 'undefined') {
       window.addEventListener('demirturk:cloud-db-synced', () => {
@@ -151,6 +167,7 @@ class CreativeStore {
   }
 
   private loadFromStorage() {
+    if(isCentralCrm())return
     try {
       const rawSchedule = localStorage.getItem(STORAGE_KEY_SCHEDULE)
       if (rawSchedule) {
@@ -276,27 +293,30 @@ class CreativeStore {
       .sort((a, b) => a.date.localeCompare(b.date))
   }
 
-  addScheduleItem(
+  async addScheduleItem(
     data: Omit<CreativeScheduleItem, 'id' | 'createdAt'>
-  ): CreativeScheduleItem {
+  ): Promise<CreativeScheduleItem> {
     const newItem: CreativeScheduleItem = {
       ...data,
-      id: 'sch-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      id: isCentralCrm()?crypto.randomUUID():'sch-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       createdAt: new Date().toISOString(),
     }
+    if(isCentralCrm())return this.scheduleBackend.save(JSON.stringify(newItem),newItem)
     this.schedule.push(newItem)
     this.saveSchedule()
     return newItem
   }
 
-  updateScheduleStatus(id: string, status: SchedulePrepStatus) {
+  async updateScheduleStatus(id: string, status: SchedulePrepStatus) {
+    if(isCentralCrm()) { const prior=this.schedule.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value={...prior,status}; await this.scheduleBackend.save(JSON.stringify([value,false]),value,false); return }
     this.schedule = this.schedule.map((item) =>
       item.id === id ? { ...item, status } : item
     )
     this.saveSchedule()
   }
 
-  deleteScheduleItem(id: string) {
+  async deleteScheduleItem(id: string) {
+    if(isCentralCrm()) { const prior=this.schedule.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value=prior; await this.scheduleBackend.save(JSON.stringify([value,true]),value,true); return }
     this.schedule = this.schedule.filter((item) => item.id !== id)
     this.saveSchedule()
   }
@@ -306,24 +326,26 @@ class CreativeStore {
     return [...this.creatives].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   }
 
-  addCreative(
+  async addCreative(
     data: Omit<CreativeAssetItem, 'id' | 'code' | 'createdAt' | 'updatedAt'>
-  ): CreativeAssetItem {
+  ): Promise<CreativeAssetItem> {
     const nextNum = 101 + this.creatives.length
     const nowIso = new Date().toISOString()
     const newItem: CreativeAssetItem = {
       ...data,
-      id: 'crt-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      id: isCentralCrm()?crypto.randomUUID():'crt-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       code: `KRT-${nextNum}`,
       createdAt: nowIso,
       updatedAt: nowIso,
     }
+    if(isCentralCrm())return this.creativesBackend.save(JSON.stringify(newItem),newItem)
     this.creatives.unshift(newItem)
     this.saveCreatives()
     return newItem
   }
 
-  updateCreativeStatus(id: string, status: CreativeStatus) {
+  async updateCreativeStatus(id: string, status: CreativeStatus) {
+    if(isCentralCrm()) { const prior=this.creatives.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value={...prior,status}; await this.creativesBackend.save(JSON.stringify([value,false]),value,false); return }
     const nowIso = new Date().toISOString()
     this.creatives = this.creatives.map((c) =>
       c.id === id ? { ...c, status, updatedAt: nowIso } : c
@@ -331,7 +353,8 @@ class CreativeStore {
     this.saveCreatives()
   }
 
-  updateCreative(id: string, updates: Partial<CreativeAssetItem>) {
+  async updateCreative(id: string, updates: Partial<CreativeAssetItem>) {
+    if(isCentralCrm()) { const prior=this.creatives.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value={...prior,...updates,id}; await this.creativesBackend.save(JSON.stringify([value,false]),value,false); return }
     const nowIso = new Date().toISOString()
     this.creatives = this.creatives.map((c) =>
       c.id === id ? { ...c, ...updates, updatedAt: nowIso } : c
@@ -339,7 +362,8 @@ class CreativeStore {
     this.saveCreatives()
   }
 
-  deleteCreative(id: string) {
+  async deleteCreative(id: string) {
+    if(isCentralCrm()) { const prior=this.creatives.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value=prior; await this.creativesBackend.save(JSON.stringify([value,true]),value,true); return }
     this.creatives = this.creatives.filter((c) => c.id !== id)
     this.comments = this.comments.filter((cm) => cm.creativeId !== id)
     this.saveCreatives()
@@ -354,20 +378,20 @@ class CreativeStore {
     return filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
-  addComment(data: {
+  async addComment(data: {
     creativeId: string
     authorName: string
     authorDepartment: string
     content: string
     type?: CommentBadgeType
     pinNote?: string
-  }): CreativeCommentItem | null {
+  }): Promise<CreativeCommentItem | null> {
     const creative = this.creatives.find((c) => c.id === data.creativeId)
     if (!creative) return null
 
     const commentType: CommentBadgeType = data.type || 'YORUM'
     const newComment: CreativeCommentItem = {
-      id: 'cmt-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      id: isCentralCrm()?crypto.randomUUID():'cmt-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       creativeId: creative.id,
       creativeCode: creative.code,
       creativeTitle: creative.title,
@@ -380,6 +404,7 @@ class CreativeStore {
       createdAt: new Date().toISOString(),
     }
 
+    if(isCentralCrm()) { const result=await this.commentsBackend.save(JSON.stringify(newComment),newComment); await this.creativesBackend.refresh(); return result }
     this.comments.unshift(newComment)
     this.saveComments()
 
@@ -392,7 +417,8 @@ class CreativeStore {
     return newComment
   }
 
-  toggleCommentResolved(commentId: string) {
+  async toggleCommentResolved(commentId: string) {
+    if(isCentralCrm()) { const prior=this.comments.find(row=>row.id===commentId); if(!prior)throw Error('Kayıt bulunamadı.'); const value={...prior,isResolved:!prior.isResolved}; await this.commentsBackend.save(JSON.stringify([value,false]),value,false); return }
     this.comments = this.comments.map((c) =>
       c.id === commentId ? { ...c, isResolved: !c.isResolved } : c
     )
@@ -404,25 +430,28 @@ class CreativeStore {
     return [...this.briefs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
-  addBrief(
+  async addBrief(
     data: Omit<CreativeBriefItem, 'id' | 'createdAt'>
-  ): CreativeBriefItem {
+  ): Promise<CreativeBriefItem> {
     const newBrief: CreativeBriefItem = {
       ...data,
-      id: 'brf-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      id: isCentralCrm()?crypto.randomUUID():'brf-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       createdAt: new Date().toISOString(),
     }
+    if(isCentralCrm())return this.briefsBackend.save(JSON.stringify(newBrief),newBrief)
     this.briefs.unshift(newBrief)
     this.saveBriefs()
     return newBrief
   }
 
-  updateBriefStatus(id: string, status: BriefStatus) {
+  async updateBriefStatus(id: string, status: BriefStatus) {
+    if(isCentralCrm()) { const prior=this.briefs.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value={...prior,status}; await this.briefsBackend.save(JSON.stringify([value,false]),value,false); return }
     this.briefs = this.briefs.map((b) => (b.id === id ? { ...b, status } : b))
     this.saveBriefs()
   }
 
-  deleteBrief(id: string) {
+  async deleteBrief(id: string) {
+    if(isCentralCrm()) { const prior=this.briefs.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value=prior; await this.briefsBackend.save(JSON.stringify([value,true]),value,true); return }
     this.briefs = this.briefs.filter((b) => b.id !== id)
     this.saveBriefs()
   }

@@ -141,22 +141,28 @@ export function CreativesGalleryView() {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
+try {
+
       const dataUrl = typeof reader.result === 'string' ? reader.result : undefined
       if (targetId && dataUrl) {
-        creativeStore.updateCreative(targetId, { previewImageUrl: dataUrl })
+        await creativeStore.updateCreative(targetId, { previewImageUrl: dataUrl })
       } else if (dataUrl) {
         setNewPreviewImage(dataUrl)
       }
-    }
+    
+} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
+}
     reader.readAsDataURL(file)
   }
 
-  const handlePostComment = (e: React.FormEvent) => {
+  const handlePostComment = async (e: React.FormEvent) => {
+try {
+
     e.preventDefault()
     if (!selectedCreative || !commentText.trim()) return
     const currentUser = userStore.getCurrentUser()
-    creativeStore.addComment({
+    await creativeStore.addComment({
       creativeId: selectedCreative.id,
       authorName: currentUser?.fullName || 'Kreatif Ekip',
       authorDepartment: currentUser?.department || 'Kreatif',
@@ -166,13 +172,17 @@ export function CreativesGalleryView() {
     })
     setCommentText('')
     setCommentPin('')
-  }
+  
+} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
+}
 
-  const handleCreateCreative = (e: React.FormEvent) => {
+  const handleCreateCreative = async (e: React.FormEvent) => {
+try {
+
     e.preventDefault()
     if (!newTitle.trim()) return
     const currentUser = userStore.getCurrentUser()
-    const created = creativeStore.addCreative({
+    const created = await creativeStore.addCreative({
       title: newTitle.trim(),
       project: newProject,
       format: newFormat,
@@ -199,7 +209,9 @@ export function CreativesGalleryView() {
     setNewPreviewImage(undefined)
     setShowCreateModal(false)
     setSelectedCreativeId(created.id)
-  }
+  
+} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
+}
 
   return (
     <div className="space-y-4 pb-8">
@@ -401,11 +413,11 @@ export function CreativesGalleryView() {
                 <div className="flex items-center gap-2">
                   <CustomSelect
                     value={selectedCreative.status}
-                    onChange={(e) =>
-                      creativeStore.updateCreativeStatus(
+                    onChange={async (e) =>
+                      { try { await creativeStore.updateCreativeStatus(
                         selectedCreative.id,
                         e.target.value as CreativeStatus
-                      )
+                      ) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }
                     }
                     className="px-3 py-1 rounded-full text-xs font-semibold border border-[#4a443f] bg-[#34302d] text-white focus:outline-none"
                   >
@@ -418,10 +430,14 @@ export function CreativesGalleryView() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      creativeStore.deleteCreative(selectedCreative.id)
+                    onClick={async () => {
+try {
+
+                      await creativeStore.deleteCreative(selectedCreative.id)
                       setSelectedCreativeId(null)
-                    }}
+                    
+} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
+}}
                     title="Kreatifi Sil"
                     className="p-1.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-rose-400 cursor-pointer"
                   >
@@ -562,7 +578,7 @@ export function CreativesGalleryView() {
 
                         <button
                           type="button"
-                          onClick={() => creativeStore.toggleCommentResolved(cm.id)}
+                          onClick={async () => { try { await creativeStore.toggleCommentResolved(cm.id) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }}
                           className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${
                             cm.isResolved
                               ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'

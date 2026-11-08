@@ -30,6 +30,8 @@ export const PaymentsView: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState<string>('ALL')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [backendError, setBackendError] = useState('')
+  const [backendSaving, setBackendSaving] = useState(false)
 
   // Add form
   const [title, setTitle] = useState('')
@@ -59,17 +61,30 @@ export const PaymentsView: React.FC = () => {
     .filter((p) => p.status === 'PENDING')
     .reduce((acc, p) => acc + p.amount, 0)
 
-  const handleMarkPaid = (id: string) => {
-    accountingStore.markPaymentAsPaid(id)
+  const handleMarkPaid = async (id: string) => {
+
+    if (backendSaving) return
+    setBackendSaving(true)
+    setBackendError('')
+    try {    await accountingStore.markPaymentAsPaid(id)
     setSuccessMsg('Ödeme tamamlandı olarak işaretlendi.')
     setTimeout(() => setSuccessMsg(null), 3000)
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : 'Sunucu işlemi tamamlanamadı.')
+    } finally {
+      setBackendSaving(false)
+    }
   }
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+
+    if (backendSaving) return
+    setBackendSaving(true)
+    setBackendError('')
+    try {    e.preventDefault()
     if (!title.trim() || !payee.trim() || !amount) return
 
-    accountingStore.addPayment({
+    await accountingStore.addPayment({
       title: title.trim(),
       payee: payee.trim(),
       category,
@@ -85,10 +100,16 @@ export const PaymentsView: React.FC = () => {
     setPayee('')
     setSuccessMsg('Yeni gider/ödeme kaydı oluşturuldu.')
     setTimeout(() => setSuccessMsg(null), 3000)
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : 'Sunucu işlemi tamamlanamadı.')
+    } finally {
+      setBackendSaving(false)
+    }
   }
 
   return (
     <div className="space-y-6">
+      {(backendError || accountingStore.getReadError()) && <p role="alert">{backendError || accountingStore.getReadError()}</p>}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -233,6 +254,7 @@ export const PaymentsView: React.FC = () => {
         title="Yeni Ödeme / Hakediş Planla"
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
+          {backendError && <p role="alert">{backendError}</p>}
           <div>
             <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
               Ödeme Başlığı *
@@ -328,7 +350,7 @@ export const PaymentsView: React.FC = () => {
             >
               Vazgeç
             </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
+            <GlassButton disabled={backendSaving} type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
               Kaydet
             </GlassButton>
           </div>

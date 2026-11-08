@@ -1,3 +1,4 @@
+import { useStoreUpdates } from '@/components/common/useStoreUpdates'
 import React, { useState, useEffect, useMemo } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -62,6 +63,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToTab,
   currentUser,
 }) => {
+
+  useStoreUpdates(accountingStore)
+  useStoreUpdates(projectStore)
+  useStoreUpdates(approvalStore)
+  useStoreUpdates(requestStore)
   const department: Department = currentUser?.department || 'Pazarlama'
   // Satış departmanında yalnızca manuel olarak "Satışa İlet" denmiş veriler gösterilir
   const leads = useMemo(
@@ -70,6 +76,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   )
 
   // Sub-store states for department-specific widgets
+  const [, setAppointmentVersion] = useState(0)
+  useEffect(() => appointmentStore.subscribe(() => setAppointmentVersion(version => version + 1)), [])
   const appointments = appointmentStore.getAll(currentUser)
   const collections = accountingStore.getCollections()
   const payments = accountingStore.getPayments()
@@ -1167,7 +1175,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const pendingApprovals = approvals.filter((a) => a.status === 'BEKLEMEDE')
     const allUnits = projects.flatMap((p) => p.units || [])
     const soldUnits = allUnits.filter((u) => u.status === 'SATILDI')
-    const totalSalesVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
+    const totalSalesVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || 0), 0)
 
     return (
       <div className="space-y-5">
@@ -1254,11 +1262,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       (c) => c.status === 'YAYINDA' || c.status === 'ONAYLANDI'
     )
 
-    const handleQuickCommentSubmit = (e: React.FormEvent) => {
+    const handleQuickCommentSubmit = async (e: React.FormEvent) => {
+try {
+
       e.preventDefault()
       const targetId = quickCommentCreativeId || creativesList[0]?.id
       if (!targetId || !quickCommentText.trim()) return
-      creativeStore.addComment({
+      await creativeStore.addComment({
         creativeId: targetId,
         authorName: currentUser?.fullName || 'Kreatif Ekip',
         authorDepartment: currentUser?.department || 'Kreatif',
@@ -1266,7 +1276,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         type: quickCommentType,
       })
       setQuickCommentText('')
-    }
+    
+} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
+}
 
     return (
       <div className="space-y-5">
@@ -1665,7 +1677,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => creativeStore.toggleCommentResolved(cm.id)}
+                        onClick={async () => { try { await creativeStore.toggleCommentResolved(cm.id) } catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") } }}
                         className={`text-[10px] px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
                           cm.isResolved
                             ? 'bg-emerald-500/20 text-emerald-300'

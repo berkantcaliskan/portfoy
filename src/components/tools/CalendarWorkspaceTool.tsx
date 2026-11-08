@@ -178,9 +178,13 @@ export const CalendarWorkspaceTool: React.FC = () => {
     })
   }
 
-  const handleSaveForm = (e: React.FormEvent) => {
+  const [calendarSaving, setCalendarSaving] = useState(false)
+  const [calendarError, setCalendarError] = useState('')
+
+  const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formTitle.trim()) return
+    if (!formTitle.trim() || calendarSaving) return
+    setCalendarError('')
 
     // Seçilen kullanıcıların isimlerini bul
     const selectedUsers = allUsers.filter((u) => formUserIds.includes(u.id))
@@ -220,21 +224,30 @@ export const CalendarWorkspaceTool: React.FC = () => {
         : sharedUserNames
 
     if (editingEvent) {
-      calendarStore.updateEvent(editingEvent.id, {
-        title: formTitle.trim(),
-        description: formDescription.trim(),
-        date: formDate,
-        time: formTime || '14:00',
-        endTime: formEndTime || undefined,
-        location: formLocation.trim(),
-        category: finalCategory,
-        visibilityScope: formVisibility,
-        sharedDepartments: finalDepts,
-        sharedUserIds: finalUserIds,
-        sharedUserNames: finalUserNames,
-      })
+      setCalendarSaving(true)
+      try {
+        await calendarStore.updateEvent(editingEvent.id, {
+          title: formTitle.trim(),
+          description: formDescription.trim(),
+          date: formDate,
+          time: formTime || '14:00',
+          endTime: formEndTime || undefined,
+          location: formLocation.trim(),
+          category: finalCategory,
+          visibilityScope: formVisibility,
+          sharedDepartments: finalDepts,
+          sharedUserIds: finalUserIds,
+          sharedUserNames: finalUserNames,
+        })
+      } catch (error) {
+        setCalendarError(error instanceof Error ? error.message : 'Takvim kaydı güncellenemedi.')
+        return
+      } finally {
+        setCalendarSaving(false)
+      }
     } else {
-      calendarStore.addEvent(
+      try {
+      await calendarStore.addEvent(
         {
           title: formTitle.trim(),
           description: formDescription.trim(),
@@ -250,19 +263,25 @@ export const CalendarWorkspaceTool: React.FC = () => {
         },
         currentUser
       )
+      }catch(error){setCalendarError(error instanceof Error?error.message:"Takvim kaydı başarısız.");return}
     }
 
     setIsFormOpen(false)
     setEditingEvent(null)
   }
 
-  const handleToggleCompleted = (ev: CalendarEvent) => {
+  const handleToggleCompleted = async (ev: CalendarEvent) => {
     const nextStatus = ev.status === 'COMPLETED' ? 'SCHEDULED' : 'COMPLETED'
-    calendarStore.updateEvent(ev.id, { status: nextStatus })
+    setCalendarError('')
+    try {
+      await calendarStore.updateEvent(ev.id, { status: nextStatus })
+    } catch (error) {
+      setCalendarError(error instanceof Error ? error.message : 'Takvim durumu güncellenemedi.')
+    }
   }
 
-  const handleDeleteEvent = (id: string) => {
-    calendarStore.deleteEvent(id)
+  const handleDeleteEvent = async (id: string) => {
+    try { await calendarStore.deleteEvent(id) }catch(error){setCalendarError(error instanceof Error?error.message:"Takvim kaydı başarısız.");return}
     if (editingEvent?.id === id) {
       setIsFormOpen(false)
       setEditingEvent(null)
@@ -399,6 +418,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
 
   return (
     <div className="space-y-2.5">
+      {calendarError && <p role="alert" className="text-sm text-red-500">{calendarError}</p>}
       {/* Üst Aksiyon ve Kapsam Filtre Barı */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -781,6 +801,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
               </button>
               <GlassButton
                 type="submit"
+                disabled={calendarSaving}
                 variant="gold"
                 size="sm"
                 className="rounded-full px-5 font-bold"

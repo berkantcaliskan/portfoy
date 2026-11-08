@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -32,7 +32,6 @@ import { GlassModal } from '@/components/ui/GlassModal'
 import {
   AppUser,
   Department,
-  generateInitialPassword,
   generateUsername,
   userStore,
 } from '@/services/userStore'
@@ -121,6 +120,10 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
 
   // Modal: Add Team Member (Ekip Üyesi Ekle)
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
+  const memberCreatingRef = useRef(false)
+  const [memberCreating, setMemberCreating] = useState(false)
+  const [memberCreateError, setMemberCreateError] = useState('')
+  const [resettingMember, setResettingMember] = useState<string|null>(null)
   const [newMemberFullName, setNewMemberFullName] = useState('')
   const [newMemberDepartment, setNewMemberDepartment] = useState<Department>('Satış')
   const [createdMemberBanner, setCreatedMemberBanner] = useState<{
@@ -228,22 +231,28 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
     setEditReturnTime(rec.returnTime || '')
   }
 
-  const handleSaveUserStatus = (e: React.FormEvent) => {
+  const handleSaveUserStatus = async (e: React.FormEvent) => {
+try {
+
     e.preventDefault()
     if (!editingUser) return
-    teamOperationsStore.updateUserPresence(editingUser.id, {
+    await teamOperationsStore.updateUserPresence(editingUser.id, {
       status: editStatus,
       locationNote: editStatus === 'OFISTE' ? '' : editLocationNote,
       returnTime: editStatus === 'OFISTE' ? '' : editReturnTime,
       updatedBy: currentUser?.id || editingUser.id,
     })
     setEditingUser(null)
-  }
+  
+} catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}
+}
 
-  const handleCreateAsset = (e: React.FormEvent) => {
+  const handleCreateAsset = async (e: React.FormEvent) => {
+try {
+
     e.preventDefault()
     if (!newAssetName.trim() || !newAssetCode.trim()) return
-    teamOperationsStore.addAsset({
+    await teamOperationsStore.addAsset({
       name: newAssetName,
       codeOrPlate: newAssetCode,
       category: newAssetCategory,
@@ -253,12 +262,16 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
     setNewAssetCode('')
     setNewAssetNotes('')
     setIsAddAssetOpen(false)
-  }
+  
+} catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}
+}
 
-  const handleConfirmCheckoutAsset = (e: React.FormEvent) => {
+  const handleConfirmCheckoutAsset = async (e: React.FormEvent) => {
+try {
+
     e.preventDefault()
     if (!checkoutTargetAsset || !currentUser) return
-    teamOperationsStore.checkoutAsset(checkoutTargetAsset.id, currentUser, {
+    await teamOperationsStore.checkoutAsset(checkoutTargetAsset.id, currentUser, {
       destinationNote: checkoutDestination,
       expectedReturnTime: checkoutReturnTime,
       autoUpdatePresenceStatus: checkoutUpdateMyStatus ? checkoutAutoStatus : undefined,
@@ -266,12 +279,16 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
     setCheckoutTargetAsset(null)
     setCheckoutDestination('')
     setCheckoutReturnTime('')
-  }
+  
+} catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}
+}
 
-  const handleCreateLeave = (e: React.FormEvent) => {
+  const handleCreateLeave = async (e: React.FormEvent) => {
+try {
+
     e.preventDefault()
     if (!currentUser || !leaveReason.trim()) return
-    teamOperationsStore.addLeaveRequest({
+    await teamOperationsStore.addLeaveRequest({
       user: currentUser,
       leaveType,
       startDate: leaveStartDate,
@@ -284,7 +301,9 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
     setLeaveStartTime('')
     setLeaveEndTime('')
     setIsAddLeaveOpen(false)
-  }
+  
+} catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}
+}
 
   const formatTimeShort = (iso?: string | null) => {
     if (!iso) return ''
@@ -482,13 +501,13 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
             <div className="font-bold text-emerald-400 flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
               <span>
-                {createdMemberBanner.fullName} ({createdMemberBanner.department}) başarıyla eklendi!
+                {createdMemberBanner.fullName} ({createdMemberBanner.department}) için giriş bilgileri hazır.
               </span>
             </div>
             <div className="text-[#f3efe9] mt-1">
               Kullanıcı Adı:{' '}
-              <span className="font-mono font-bold text-white">{createdMemberBanner.username}</span> • 6 Haneli Şifre:{' '}
-              <span className="font-mono font-bold text-amber-300 tracking-wider">
+              <span className="font-mono font-bold text-white">{createdMemberBanner.username}</span> • Geçici parola:{' '}
+              <span className="font-mono font-bold text-amber-300 tracking-wider break-all select-all">
                 {createdMemberBanner.password}
               </span>
             </div>
@@ -693,10 +712,15 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                     </div>
 
                     {/* Footer: Updated Time + Quick Update Button */}
-                    <div className="pt-1 flex items-center justify-between text-[11px] text-[#8c857f]">
+                    <div className="pt-1 flex flex-wrap gap-2 items-center justify-between text-[11px] text-[#8c857f]">
                       <span>
                         Son güncelleme: {formatTimeShort(rec.updatedAt) || 'Bugün'}
                       </span>
+                      {currentUser?.role==='ADMIN'&&member.role!=='ADMIN'&&member.id.startsWith('auth-')&&<GlassButton variant="outline" size="sm" disabled={resettingMember!==null} onClick={async()=>{
+                        if(resettingMember||!window.confirm(member.fullName+' için yeni geçici parola oluşturulsun mu? İlk girişte değiştirmesi gerekecek.'))return
+                        setResettingMember(member.id)
+                        try{const result=await userStore.resetStaffPassword(member.id);setCreatedMemberBanner({fullName:member.fullName,username:result.username,password:result.password,department:member.department})}catch(error){window.alert(error instanceof Error?error.message:'Geçici parola oluşturulamadı.')}finally{setResettingMember(null)}
+                      }}>{resettingMember===member.id?'Oluşturuluyor…':'Geçici parola oluştur'}</GlassButton>}
                       {canEditThisUser && (
                         <button
                           type="button"
@@ -872,7 +896,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                           size="sm"
                           icon={<RotateCcw className="w-3.5 h-3.5" />}
                           className="rounded-full flex-1"
-                          onClick={() => teamOperationsStore.returnAsset(asset.id, currentUser)}
+                          onClick={async () => {try{await teamOperationsStore.returnAsset(asset.id, currentUser)}catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}}}
                         >
                           Ofise Teslim Et (Bırak)
                         </GlassButton>
@@ -881,7 +905,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                       {isManagerOrAdmin && (
                         <button
                           type="button"
-                          onClick={() => teamOperationsStore.deleteAsset(asset.id)}
+                          onClick={async () => {try{await teamOperationsStore.deleteAsset(asset.id)}catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}}}
                           className="p-2 rounded-full text-[#8c857f] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                           title="Kaydı Sil"
                         >
@@ -1036,12 +1060,12 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                             size="sm"
                             icon={<Check className="w-3.5 h-3.5" />}
                             className="rounded-full"
-                            onClick={() =>
-                              teamOperationsStore.decideLeaveRequest(
+                            onClick={async () =>
+                              {try{await teamOperationsStore.decideLeaveRequest(
                                 lv.id,
                                 'ONAYLANDI',
                                 currentUser
-                              )
+                              )}catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}}
                             }
                           >
                             Onayla
@@ -1051,12 +1075,12 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                             size="sm"
                             icon={<X className="w-3.5 h-3.5" />}
                             className="rounded-full"
-                            onClick={() =>
-                              teamOperationsStore.decideLeaveRequest(
+                            onClick={async () =>
+                              {try{await teamOperationsStore.decideLeaveRequest(
                                 lv.id,
                                 'REDDEDILDI',
                                 currentUser
-                              )
+                              )}catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}}
                             }
                           >
                             Reddet
@@ -1067,7 +1091,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
                       {canDelete && (
                         <button
                           type="button"
-                          onClick={() => teamOperationsStore.deleteLeaveRequest(lv.id)}
+                          onClick={async () => {try{await teamOperationsStore.deleteLeaveRequest(lv.id)}catch(error){window.alert(error instanceof Error?error.message:"Ekip kaydı sunucuya yazılamadı.")}}}
                           className="p-2 rounded-xl text-[#8c857f] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                           title="Talebi Sil"
                         >
@@ -1459,7 +1483,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
       </GlassModal>
 
       {/* =================================================================== */}
-      {/* MODAL 5: EKİP ÜYESİ EKLE (Ad Soyad + Departman + Otomatik 6 Haneli Şifre) */}
+      {/* MODAL 5: EKİP ÜYESİ EKLE (Ad Soyad + Departman + Otomatik Geçici Parola) */}
       {/* =================================================================== */}
       <GlassModal
         isOpen={isAddMemberOpen}
@@ -1468,32 +1492,16 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
         maxWidth="md"
       >
         <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!newMemberFullName.trim()) return
-            const initialPassword = generateInitialPassword()
-            const res = userStore.addMember({
-              fullName: newMemberFullName.trim(),
-              department: newMemberDepartment,
-              departments: [newMemberDepartment],
-              role: newMemberDepartment === 'Yönetim' ? 'MANAGER' : 'REPRESENTATIVE',
-              scope: 'DEPARTMENT',
-              initialPassword,
-            })
-            teamOperationsStore.updateUserPresence(res.user.id, {
-              status: 'OFISTE',
-              locationNote: '',
-              returnTime: '',
-              updatedBy: currentUser?.id || res.user.id,
-            })
-            setCreatedMemberBanner({
-              fullName: res.user.fullName,
-              username: res.user.username,
-              password: res.generatedPassword,
-              department: res.user.department,
-            })
-            setNewMemberFullName('')
-            setIsAddMemberOpen(false)
+          onSubmit={async (event) => {
+            event.preventDefault()
+            if(memberCreatingRef.current||!newMemberFullName.trim())return
+            memberCreatingRef.current=true;setMemberCreating(true);setMemberCreateError('')
+            try{
+              const res=await userStore.addMember({fullName:newMemberFullName.trim(),department:newMemberDepartment,departments:[newMemberDepartment],role:newMemberDepartment==='Yönetim'?'MANAGER':'REPRESENTATIVE',scope:'DEPARTMENT'})
+              setCreatedMemberBanner({fullName:res.user.fullName,username:res.user.username,password:res.generatedPassword,department:res.user.department})
+              setNewMemberFullName('');setIsAddMemberOpen(false)
+            }catch(error){setMemberCreateError(error instanceof Error?error.message:'Personel hesabı oluşturulamadı.')}
+            finally{memberCreatingRef.current=false;setMemberCreating(false)}
           }}
           className="space-y-4"
         >
@@ -1534,9 +1542,11 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
           </div>
 
           <p className="text-[11px] text-[#8c857f]">
-            Otomatik olarak 6 haneli yalnızca sayıdan oluşan şifre tanımlanır. Kullanıcı adı ilk başta yalnızca ad olarak verilir; kullanıcı dilerse sonradan Ayarlar menüsünden değiştirebilir.
+            Güçlü geçici parola sunucuda otomatik oluşturulur ve işlem tamamlandığında bu ekranda gösterilir. Personel ilk girişinde parolasını değiştirmelidir.
           </p>
 
+          {memberCreateError&&<p role="alert" className="text-sm text-red-600">{memberCreateError}</p>}
+          {memberCreating&&<p role="status" className="text-sm">Hesap oluşturuluyor; geçici parola işlem tamamlandığında gösterilecek…</p>}
           <div className="flex justify-end gap-2 pt-2">
             <GlassButton
               variant="outline"
@@ -1546,8 +1556,8 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
             >
               Vazgeç
             </GlassButton>
-            <GlassButton variant="gold" size="sm" type="submit">
-              Ekip Üyesi Ekle
+            <GlassButton variant="gold" size="sm" type="submit" disabled={memberCreating}>
+              {memberCreating?"Oluşturuluyor…":"Ekip Üyesi Ekle"}
             </GlassButton>
           </div>
         </form>
