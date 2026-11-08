@@ -1,3 +1,4 @@
+import { useStoreUpdates } from '@/components/common/useStoreUpdates'
 import React from 'react'
 import {
   Trophy,
@@ -22,10 +23,13 @@ interface SalesPerformanceViewProps {
 }
 
 export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ leads }) => {
+
+  useStoreUpdates(userStore)
+  useStoreUpdates(projectStore)
   const allUsers = userStore.getAllUsers()
   const allUnits = projectStore.getAll().flatMap((p) => p.units || [])
   const soldUnits = allUnits.filter((u) => u.status === 'SATILDI')
-  const totalVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
+  const totalVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || 0), 0)
 
   const salesUsers = allUsers.filter(
     (u) =>
@@ -38,6 +42,8 @@ export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ lead
 
   return (
     <div className="space-y-6">
+      {soldUnits.some(unit=>!unit.sale?.salePrice)&&<p className="text-xs text-amber-600">Satış tutarı girilmemiş kayıtlar parasal toplama dahil edilmez.</p>}
+
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -115,7 +121,7 @@ export const SalesPerformanceView: React.FC<SalesPerformanceViewProps> = ({ lead
               <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]">
                 {salesUsers.map((user, idx) => {
                   const userSold = soldUnits.filter((u) => u.sale?.soldByUserId === user.id || u.sale?.soldByUserName === user.fullName)
-                  const volume = userSold.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
+                  const volume = userSold.reduce((acc, u) => acc + (u.sale?.salePrice || 0), 0)
                   const comm = Math.round(volume * 0.02)
 
                   return (

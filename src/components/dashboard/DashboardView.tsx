@@ -1,3 +1,4 @@
+import { useStoreUpdates } from '@/components/common/useStoreUpdates'
 import React, { useState, useEffect, useMemo } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -62,6 +63,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToTab,
   currentUser,
 }) => {
+
+  useStoreUpdates(accountingStore)
+  useStoreUpdates(projectStore)
+  useStoreUpdates(approvalStore)
+  useStoreUpdates(requestStore)
   const department: Department = currentUser?.department || 'Pazarlama'
   // Satış departmanında yalnızca manuel olarak "Satışa İlet" denmiş veriler gösterilir
   const leads = useMemo(
@@ -1169,7 +1175,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const pendingApprovals = approvals.filter((a) => a.status === 'BEKLEMEDE')
     const allUnits = projects.flatMap((p) => p.units || [])
     const soldUnits = allUnits.filter((u) => u.status === 'SATILDI')
-    const totalSalesVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || u.price), 0)
+    const totalSalesVolume = soldUnits.reduce((acc, u) => acc + (u.sale?.salePrice || 0), 0)
 
     return (
       <div className="space-y-5">

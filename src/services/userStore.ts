@@ -411,9 +411,11 @@ class UserStore {
 
   async resetStaffPassword(userId: string) {
     if (!this.serverClient || this.currentUser?.role !== 'ADMIN') throw new Error('Yönetici girişi gerekli.')
+    const actor = this.currentUser.id
     const { data, error } = await this.serverClient.functions.invoke('crm-staff', { body: {
       action: 'reset-password', requestId: crypto.randomUUID(), userId,
     } })
+    if (this.currentUser?.id !== actor) throw new Error('Parola işlemi sırasında oturum değişti; yönetici hesabından durumu kontrol edin.')
     if (error || typeof data?.generatedPassword !== 'string') throw new Error('Geçici parola oluşturulamadı. Hesabın durumunu kontrol edin.')
     return { username: data.user.username as string, password: data.generatedPassword as string }
   }
@@ -515,6 +517,7 @@ class UserStore {
   }): Promise<{ user: AppUser; generatedPassword: string }> {
     if (this.centralAuthEnabled) {
       if (!this.serverClient || this.currentUser?.role !== 'ADMIN') throw new Error('Personel oluşturmak için yönetici girişi gerekli.')
+      const actor = this.currentUser.id
       const key = JSON.stringify([data.fullName, data.department, data.role, data.scope])
       if (this.pendingStaffCreation && this.pendingStaffCreation.key !== key) throw new Error('Önce önceki personel oluşturma işleminin sonucunu kontrol edin.')
       const requestId = this.pendingStaffCreation?.requestId ?? crypto.randomUUID()
@@ -524,6 +527,7 @@ class UserStore {
         requestId, username, fullName: data.fullName, department: data.department,
         role: data.role || 'MEMBER', scope: data.scope || 'ASSIGNED_ONLY',
       } })
+      if (this.currentUser?.id !== actor) throw new Error('Personel oluşturulurken oturum değişti; yönetici hesabından durumu kontrol edin.')
       if (error || !result?.user?.id || typeof result.generatedPassword !== 'string') {
         let code = result?.error
         if (error?.context instanceof Response) code = (await error.context.json().catch(() => ({}))).error
@@ -532,6 +536,7 @@ class UserStore {
       }
       this.pendingStaffCreation = null
       await this.refreshStaffDirectory()
+      if (this.currentUser?.id !== actor) throw new Error('Personel oluşturulurken oturum değişti; yönetici hesabından durumu kontrol edin.')
       const user = this.users.find(row => row.id === result.user.id) ?? this.normalizeUser({
         ...data, id: result.user.id, username: result.user.username, password: '', companyName: this.currentUser.companyName,
       })

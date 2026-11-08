@@ -31,7 +31,7 @@ Mesajları yalnızca gönderen/alıcı okuyabilir; yönetici rolü tüm özel ko
 
 ## Doğrulama sonucu
 
-- `npm test`: 181 test geçti.
+- `npm test`: 184 test geçti.
 - İzole PostgreSQL/PGlite: Auth 7, kayıt/yetki/iş akışları 34, onboarding/kalıcılık 20 test geçti.
 - TypeScript ve üretim derlemesi geçti. Vite büyük parça uyarısı sürüyor.
 - Lint: hata yok; mevcut kod tabanında uyarılar var. Uyarılar bastırılmadı.
@@ -42,6 +42,8 @@ Mesajları yalnızca gönderen/alıcı okuyabilir; yönetici rolü tüm özel ko
 - `crm-staff` anonim/yabancı origin reddi kontrol edildi. Gerçek personel hesabı açma/sıfırlama ve iki kullanıcıyla dosya/mesaj akışı henüz tarayıcıda kabul edilmedi.
 
 Staging'de 20 modül yazıma açıldı. Genel kayıt sayısı sıfırdır; eski test proje/dosyaları taşınmadı. Mevcut 50 Meta müşterisi ve 50 kaynak kaydı korundu. Meta `enabled=false`, `auto_sync=false` değerleri değişmedi; yeni Meta olayı gönderilmedi.
+
+Rapor ekranları asenkron sunucu kayıtlarını dinler. Satış tutarı olmayan kayıtta ilan fiyatı gerçekleşmiş satış geliri sayılmaz. Finans indirme düğmesi gerçek CSV üretir; formül olarak yorumlanabilecek müşteri metinleri kaçırılır. Yönetici raporu tarayıcının yazdır/PDF kaydet akışını açar; arka planda PDF üretildiği iddia edilmez.
 
 ## Yayın ve geri dönüş
 

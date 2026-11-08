@@ -41,7 +41,7 @@ function storeHarness(){
  }
  const source=fs.readFileSync(new URL('../src/services/userStore.ts',import.meta.url),'utf8')
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- vm.runInNewContext(js,{module:mod,exports:mod.exports,require:(name:string)=>{if(!(name in mocks))throw Error('Unmocked dependency');return mocks[name]},localStorage:storage,window:{addEventListener(){}},console,setTimeout,Set,Map})
+ vm.runInNewContext(js,{module:mod,exports:mod.exports,require:(name:string)=>{if(!(name in mocks))throw Error('Unmocked dependency');return mocks[name]},localStorage:storage,window:{addEventListener(){}},console,setTimeout,Set,Map,crypto})
  return {store:mod.exports.userStore,stats:()=>({reads,writes,saves,authCalls})}
 }
 test('Ana store sahte yerel yönetici hesabını yüklemez ve yerel parolayı kabul etmez',()=>{
@@ -59,4 +59,18 @@ test('Doğrulanan profil yerel senkronizasyonla ezilemez; parola diske veya eski
  await assert.rejects(s.store.addMember({}),/yönetici/)
  assert.equal(s.stats().reads,0);assert.equal(s.stats().writes,0);assert.equal(s.stats().saves,0)
  s.store.logout();assert.equal(s.store.getCurrentUser(),null)
+})
+
+test('Çıkıştan sonra gelen personel parolası başka oturuma gösterilemez', async () => {
+ for (const action of ['create', 'reset']) {
+  const { store } = storeHarness(), pending = deferred()
+  store.currentUser = { ...profile, id: 'admin-a', role: 'ADMIN' }
+  store.serverClient = { functions: { invoke: () => pending.promise } }
+  const operation = action === 'create'
+   ? store.addMember({ fullName: 'Isolated staff', department: 'Satış', role: 'MEMBER', scope: 'ASSIGNED_ONLY' })
+   : store.resetStaffPassword('staff-b')
+  store.currentUser = { ...profile, id: 'other-account' }
+  pending.resolve({ data: { user: { id: 'staff-b', username: 'isolated' }, generatedPassword: 'isolated-test-only' }, error: null })
+  await assert.rejects(operation, /oturum değişti/)
+ }
 })
