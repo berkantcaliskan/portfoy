@@ -23,12 +23,14 @@ import {
 } from '@/services/accountingStore'
 import { userStore, AppUser } from '@/services/userStore'
 import { formatCurrency } from '@/utils/formatters'
+import { PromissoryNoteModal } from './PromissoryNoteModal'
 
 export const PaymentsView: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
   const [payments, setPayments] = useState<PaymentRecord[]>(() => accountingStore.getPayments())
   const [filterCategory, setFilterCategory] = useState<string>('ALL')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [backendError, setBackendError] = useState('')
   const [backendSaving, setBackendSaving] = useState(false)
@@ -124,16 +126,27 @@ export const PaymentsView: React.FC = () => {
           </p>
         </div>
 
-        <GlassButton
-          variant="gold"
-          size="sm"
-          icon={<Plus className="w-3.5 h-3.5" />}
-          onClick={() => setIsAddModalOpen(true)}
-          className="rounded-full px-4 text-xs font-semibold"
-        >
-          Ödeme Planla
-        </GlassButton>
+        <div className="flex flex-wrap items-center gap-2">
+          <GlassButton
+            variant="gold"
+            size="sm"
+            icon={<Plus className="w-3.5 h-3.5" />}
+            onClick={() => setIsAddModalOpen(true)}
+            className="rounded-full px-4 text-xs font-semibold"
+          >
+            Ödeme Planla
+          </GlassButton>
+          <GlassButton
+            variant="outline"
+            size="sm"
+            icon={<FileText className="w-3.5 h-3.5" />}
+            onClick={() => setIsNoteModalOpen(true)}
+          >
+            Senet oluştur
+          </GlassButton>
+        </div>
       </div>
+      <PromissoryNoteModal isOpen={isNoteModalOpen} onClose={() => setIsNoteModalOpen(false)} />
 
       {successMsg && (
         <div className="p-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">

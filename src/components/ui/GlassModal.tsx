@@ -12,6 +12,7 @@ interface GlassModalProps {
   children: React.ReactNode
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full'
   className?: string
+  scrollable?: boolean
 }
 
 export const GlassModal: React.FC<GlassModalProps> = ({
@@ -22,6 +23,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
   children,
   maxWidth = 'xl',
   className,
+  scrollable = true,
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -56,7 +58,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-y-auto">
+        <div className={cn('fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8', scrollable ? 'overflow-y-auto' : 'overflow-hidden')}>
           {/* Backdrop Blur Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -102,7 +104,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
             )}
 
             {/* Content */}
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-1 py-1">
+            <div className={cn('flex-1 min-h-0 px-1 py-1', scrollable ? 'overflow-y-auto no-scrollbar' : 'overflow-hidden')}>
               {children}
             </div>
           </motion.div>
