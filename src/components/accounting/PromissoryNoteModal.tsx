@@ -432,33 +432,44 @@ export function PromissoryNoteModal({ isOpen, onClose }: { isOpen: boolean; onCl
               <input className={input} required type="date" min={issuedOn} value={firstDue} onChange={event => setFirstDue(event.target.value)} />
             </label>
             <div className="note-prepayments col-span-full">
-              <div className="note-down-payment-grid">
-                <span className={label}>Peşinat (TL)</span>
-                <span className={label}>Peşinat tarihi</span>
-                <button type="button" className="note-icon-button" aria-label="Peşinat ekle" title="Peşinat ekle" onClick={() => {
-                  const id = ++downPaymentIds.current
-                  setDownPayments(previous => [...previous, { id, amount: '', date: '' }])
-                }}><Plus size={16} /></button>
-                {downPayments.map((payment, index) => (
-                  <div key={payment.id} className="contents">
-                    <input className={input} inputMode="decimal" maxLength={22} placeholder="0,00"
-                      aria-label={index === 0 ? 'Peşinat (TL)' : `${index + 1}. peşinat tutarı (TL)`} value={payment.amount}
-                      onChange={event => updateDownPayment(payment.id, { amount: event.target.value })} />
+              {downPayments.map((payment, index) => (
+                <div key={payment.id} className="contents">
+                  <div className="col-start-1 min-w-0">
+                    {index === 0 && <span className={label}>Peşinat (TL)</span>}
+                    <div className="note-prepayment-amount">
+                      <input className={input} inputMode="decimal" maxLength={22} placeholder="0,00"
+                        aria-label={index === 0 ? 'Peşinat (TL)' : `${index + 1}. peşinat tutarı (TL)`} value={payment.amount}
+                        onChange={event => updateDownPayment(payment.id, { amount: event.target.value })} />
+                      {index === 0 ? <button type="button" className="note-icon-button" aria-label="Peşinat ekle" title="Peşinat ekle" onClick={() => {
+                        const id = ++downPaymentIds.current
+                        setDownPayments(previous => [...previous, { id, amount: '', date: '' }])
+                      }}><Plus size={16} /></button> : <button type="button" className="note-icon-button"
+                        aria-label={`${index + 1}. peşinatı kaldır`}
+                        onClick={() => setDownPayments(previous => previous.filter(entry => entry.id !== payment.id))}><X size={15} /></button>}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    {index === 0 && <span className={label}>Peşinat tarihi</span>}
                     <input className={input} type="date" aria-label={index === 0 ? 'Peşinat tarihi' : `${index + 1}. peşinat tarihi`}
                       value={payment.date} onChange={event => updateDownPayment(payment.id, { date: event.target.value })} />
-                    {index === 0 ? <span /> : <button type="button" className="note-icon-button"
-                      aria-label={`${index + 1}. peşinatı kaldır`}
-                      onClick={() => setDownPayments(previous => previous.filter(entry => entry.id !== payment.id))}><X size={15} /></button>}
                   </div>
-                ))}
-              </div>
-              {hasDeposit ? <div className="note-deposit flex min-w-0 items-end gap-1">
-                <label className={`${label} flex-1`}>Kapora (TL)
-                  <input className={input} inputMode="decimal" maxLength={22} placeholder="0,00" value={deposit} onChange={event => setDeposit(event.target.value)} />
-                </label>
-                <button type="button" className="note-icon-button" aria-label="Kaporayı kaldır" title="Kaporayı kaldır" onClick={() => setHasDeposit(false)}><X size={15} /></button>
-              </div> : <GlassButton type="button" size="sm" variant="outline" icon={<Plus size={14} />}
-                className="justify-self-start" onClick={() => setHasDeposit(true)}>Kapora ekle</GlassButton>}
+                  {index === 0 && <div className="note-deposit min-w-0">
+                    {hasDeposit ? (
+                      <div className="note-prepayment-amount">
+                        <label className={label}>Kapora (TL)
+                          <input className={input} inputMode="decimal" maxLength={22} placeholder="0,00"
+                            value={deposit} onChange={event => setDeposit(event.target.value)} />
+                        </label>
+                        <button type="button" className="note-icon-button" aria-label="Kaporayı kaldır" title="Kaporayı kaldır"
+                          onClick={() => setHasDeposit(false)}><X size={15} /></button>
+                      </div>
+                    ) : (
+                      <GlassButton type="button" size="sm" variant="outline" icon={<Plus size={14} />}
+                        className="note-add-deposit" onClick={() => setHasDeposit(true)}>Kapora ekle</GlassButton>
+                    )}
+                  </div>}
+                </div>
+              ))}
               <p className="col-span-full text-right text-xs" aria-live="polite">Ön ödeme toplamı{' '}
                 <strong>{prepaid === null ? 'Geçersiz tutar' : `${formatLira(prepaid)} TL`}</strong>
               </p>

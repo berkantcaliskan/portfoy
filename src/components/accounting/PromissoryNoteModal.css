@@ -48,33 +48,36 @@
 
 .note-prepayments {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 0.35rem 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.35rem 0.5rem;
 }
 
-.note-prepayments > button { margin-top: 1.25rem; }
+.note-prepayment-amount { position: relative; }
+.note-prepayment-amount input { padding-inline-end: 2rem; }
 
-.note-down-payment-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-  align-items: center;
-  gap: 0.25rem 0.4rem;
+.note-prepayments input,
+.note-prepayments .note-add-deposit {
+  height: 2rem;
+  padding-block: 0;
 }
+
+.note-prepayments input { display: block; }
+.note-prepayments .note-add-deposit { vertical-align: top; }
 
 .note-icon-button {
+  position: absolute;
+  inset-inline-end: 0.2rem;
+  bottom: 0.1875rem;
   display: grid;
   width: 1.625rem;
   height: 1.625rem;
-  flex: none;
-  align-self: center;
   place-items: center;
   border-radius: 0.4rem;
   color: #d6beae;
 }
 
 .note-icon-button:is(:hover, :focus-visible) { background: #8883; color: white; }
-.note-deposit .note-icon-button { align-self: end; margin-bottom: 0.2rem; }
 
 .note-period-grid {
   display: grid;
@@ -105,8 +108,7 @@
 }
 
 .note-installment-grid input,
-.note-period-grid input,
-.note-down-payment-grid input {
+.note-period-grid input {
   height: 1.8rem;
   margin-top: 0;
   padding-block: 0.1rem;
@@ -141,8 +143,8 @@
 
 @media (width < 640px) {
   .note-debtor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .note-prepayments { grid-template-columns: minmax(0, 1fr); }
-  .note-prepayments > button { margin-top: 0; }
+  .note-prepayments { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .note-deposit { grid-column: 1 / -1; }
   .note-checkboxes { gap: 0.3rem; }
   .note-checkboxes label { gap: 0.25rem; font-size: 0.7rem; }
   .note-installment-grid { grid-template-columns: 2.3rem minmax(0, 1.2fr) minmax(0, 1fr); gap: 2px 0.35rem; }

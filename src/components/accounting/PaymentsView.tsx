@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
-  CreditCard,
+  ArrowUpRight,
+  TurkishLira,
   Plus,
   CheckCircle2,
   Clock,
@@ -116,7 +117,7 @@ export const PaymentsView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <CreditCard className="w-5 h-5 text-[#b99881]" />
+            <TurkishLira aria-hidden="true" className="w-5 h-5 text-[#b99881]" />
             <h2 className="text-2xl font-bold text-white tracking-wide">
               Ödemeler
             </h2>
@@ -158,7 +159,10 @@ export const PaymentsView: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Gerçekleşen Ödemeler</div>
+          <div className="flex items-center gap-1.5 text-xs text-[#a69f99]">
+            <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-[#b99881]" />
+            Gerçekleşen Ödemeler
+          </div>
           <div className="text-2xl font-bold text-white mt-1">{formatCurrency(totalPaid)}</div>
           <div className="text-[11px] text-emerald-400 mt-1">Hesaptan çıkan tutar</div>
         </GlassCard>

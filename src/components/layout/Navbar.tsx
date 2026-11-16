@@ -27,6 +27,7 @@ import {
   Award,
   Wallet,
   ArrowUpRight,
+  TurkishLira,
   ShieldCheck,
   FileText,
   CheckSquare,
@@ -101,7 +102,7 @@ export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?:
     case 'collections':
       return Wallet
     case 'payments':
-      return ArrowUpRight
+      return TurkishLira
     case 'team-permissions':
       return ShieldCheck
     case 'approvals':
