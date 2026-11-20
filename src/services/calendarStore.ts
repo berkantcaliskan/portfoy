@@ -216,6 +216,19 @@ class CalendarStore {
  public async refreshFromBackend() { await Promise.all([this.backend.refresh(),this.overrideBackend.refresh()]) }
  public getReadError() { return this.backend.getError()||this.overrideBackend.getError() }
 
+  private toolOwner = ''
+  private toolPayments: {id:string; item:string; amount:number; date:string}[] = []
+
+  setToolPayments(owner:string, payments:typeof this.toolPayments) {
+    this.toolOwner=owner
+    this.toolPayments=payments
+    this.notify()
+  }
+  getPersonalEvents(user:AppUser|null) {
+    if (!user) return []
+    return this.getAllRaw().filter(event => event.createdByUserId === user.id && event.visibilityScope === 'PERSONAL')
+  }
+
   private manualEvents: CalendarEvent[] = []
   private overrides: Record<string, Partial<CalendarEvent>> = {}
   private deletedAutoIds: Set<string> = new Set()
@@ -521,8 +534,6 @@ class CalendarStore {
       let sharedDepartments: Department[] = ['Muhasebe']
       if (pay.category === 'MARKETING') {
         sharedDepartments = ['Muhasebe', 'Pazarlama']
-      } else if (pay.category === 'COMMISSION') {
-        sharedDepartments = ['Muhasebe', 'Satış']
       } else if (pay.category === 'CONSTRUCTION' || pay.category === 'TAX') {
         sharedDepartments = ['Muhasebe', 'Yönetim']
       }
@@ -601,55 +612,44 @@ class CalendarStore {
       autoEvents.push(override ? { ...baseEvent, ...override, id: eventId } : baseEvent)
     }
 
-    // 6. HIZLI ARAÇLAR ÖDEMELERDE TARİH İÇEREN KAYITLAR (demirturk_tool_payments_v1)
-    try {
-      const toolPaysRaw = localStorage.getItem('demirturk_tool_payments_v1')
-      if (toolPaysRaw) {
-        const toolPays = JSON.parse(toolPaysRaw) as {
-          id: string
-          item: string
-          amount: number
-          date: string
-        }[]
-        if (Array.isArray(toolPays)) {
-          for (const tp of toolPays) {
-            if (!tp.date) continue
-            const eventId = `cal-tpay-${tp.id}`
-            if (this.deletedAutoIds.has(eventId)) continue
+    if (currentUser && currentUser.id === this.toolOwner) {
+    for (const tp of this.toolPayments) {
+      if (!tp.date) continue
+      const eventId = `cal-tpay-${tp.id}`
+      if (this.deletedAutoIds.has(eventId)) continue
 
-            const baseEvent: CalendarEvent = {
-              id: eventId,
-              title: `Ödeme Planı: ${tp.item}`,
-              description: `Tutar: ${new Intl.NumberFormat('tr-TR', {
-                style: 'currency',
-                currency: 'TRY',
-                maximumFractionDigits: 0,
-              }).format(tp.amount || 0)}`,
-              date: tp.date.slice(0, 10),
-              time: '12:00',
-              category: 'FINANCE',
-              visibilityScope: 'DEPARTMENT',
-              sharedDepartments: ['Muhasebe', 'Yönetim'],
-              sharedUserIds: currentUser ? [currentUser.id] : [],
-              sharedUserNames: currentUser ? [currentUser.fullName] : [],
-              createdByUserId: currentUser?.id || 'system',
-              createdByUserName: currentUser?.fullName || 'Muhasebe',
-              createdByDepartment: currentUser?.department || 'Muhasebe',
-              companyName: defaultCompany,
-              isAutoSynced: true,
-              autoSource: 'TOOL_PAYMENT',
-              sourceRefId: tp.id,
-              status: 'SCHEDULED',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }
-
-            const override = this.overrides[eventId]
-            autoEvents.push(override ? { ...baseEvent, ...override, id: eventId } : baseEvent)
-          }
-        }
+      const baseEvent: CalendarEvent = {
+        id: eventId,
+        title: `Ödeme Planı: ${tp.item}`,
+        description: `Tutar: ${new Intl.NumberFormat('tr-TR', {
+          style: 'currency',
+          currency: 'TRY',
+          maximumFractionDigits: 0,
+        }).format(tp.amount || 0)}`,
+        date: tp.date.slice(0, 10),
+        time: '12:00',
+        category: 'FINANCE',
+        visibilityScope: 'PERSONAL',
+        sharedDepartments: [],
+        sharedUserIds: currentUser ? [currentUser.id] : [],
+        sharedUserNames: currentUser ? [currentUser.fullName] : [],
+        createdByUserId: currentUser?.id || 'system',
+        createdByUserName: currentUser?.fullName || 'Muhasebe',
+        createdByDepartment: currentUser?.department || 'Muhasebe',
+        companyName: defaultCompany,
+        isAutoSynced: true,
+        autoSource: 'TOOL_PAYMENT',
+        sourceRefId: tp.id,
+        status: 'SCHEDULED',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
-    } catch {}
+
+      const override = this.overrides[eventId]
+      autoEvents.push(override ? { ...baseEvent, ...override, id: eventId } : baseEvent)
+    }
+
+    }
 
     return autoEvents
   }

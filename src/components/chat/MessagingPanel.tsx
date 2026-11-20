@@ -16,9 +16,12 @@ import {
   FileText,
   Volume2,
   Trash2,
+  Download,
 } from 'lucide-react'
 import { messageStore, ChatConversation, ChatMessage } from '@/services/messageStore'
 import { userStore, AppUser } from '@/services/userStore'
+import { downloadMessageAttachment, saveMessageAttachment } from '@/services/messageAttachments'
+import { messageDayKey, messageDayLabel } from '@/utils/messageDates'
 
 export const IosChatBubbleIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
   <svg
@@ -84,6 +87,41 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [isRecordingVoice, setIsRecordingVoice] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const [readError, setReadError] = useState('')
+  const [saveAttachment, setSaveAttachment] = useState<ChatMessage | null>(null)
+  const [attachmentBusy, setAttachmentBusy] = useState(false)
+  const [attachmentError, setAttachmentError] = useState('')
+  const [attachmentNotice, setAttachmentNotice] = useState('')
+  const attachmentLock = useRef(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const unreadKey = messages.filter(message => message.recipientId === currentUser?.id && !message.isRead).map(message => message.id).join(',')
+  useEffect(() => {
+    setActiveConversation(null); setMessages([]); setView('list'); setSaveAttachment(null); setAttachmentError(''); setAttachmentNotice(''); setReadError('')
+  }, [currentUser?.id])
+  useEffect(() => {
+    let active = true
+    const mark = () => {
+      if (!isOpen || view !== 'chat' || !activeConversation || !unreadKey || !panelRef.current?.getClientRects().length || document.visibilityState !== 'visible' || !document.hasFocus()) return
+      void messageStore.markRead(activeConversation.recipientId)
+        .then(() => { if (active) setReadError('') })
+        .catch(() => { if (active) setReadError('Okundu bilgisi kaydedilemedi. Sohbeti yeniden açarak tekrar deneyin.') })
+    }
+    mark(); window.addEventListener('focus', mark); window.addEventListener('resize', mark); document.addEventListener('visibilitychange', mark)
+    return () => { active = false; window.removeEventListener('focus', mark); window.removeEventListener('resize', mark); document.removeEventListener('visibilitychange', mark) }
+  }, [isOpen, view, activeConversation?.id, currentUser?.id, unreadKey])
+  async function saveAttachmentTo(destination: 'computer' | 'app') {
+    if (!saveAttachment || attachmentLock.current) return
+    const account = currentUser?.id
+    attachmentLock.current = true; setAttachmentBusy(true); setAttachmentError('')
+    try {
+      if (destination === 'app') await saveMessageAttachment(saveAttachment)
+      else await downloadMessageAttachment(saveAttachment)
+      if (account === userStore.getCurrentUser()?.id) {
+        setSaveAttachment(null); setAttachmentNotice(destination === 'app' ? 'Paylaşılanlar’a kaydedildi. Yalnızca siz görebilirsiniz.' : 'Dosya indirmesi başlatıldı.')
+      }
+    } catch (error) { if (account === userStore.getCurrentUser()?.id) setAttachmentError(error instanceof Error ? error.message : 'Dosya kaydedilemedi.') }
+    finally { attachmentLock.current = false; setAttachmentBusy(false) }
+  }
 
   // Track collapsed sidebar state to dynamically position popup
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -188,7 +226,6 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
     setActiveConversation(conv)
     setMessages(messageStore.getMessages(conv.id))
     setView('chat')
-    void messageStore.markRead(conv.recipientId).catch(error=>window.alert(error.message))
   }
 
   const handleOpenConversation = (conv: ChatConversation) => {
@@ -395,11 +432,12 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
               <p className="text-[11px] text-[#a69f99]">Aşağıdaki alandan ilk mesajınızı gönderin.</p>
             </div>
           ) : (
-            messages.map((m) => {
+            messages.map((m, index) => {
               const isMe = m.senderId === currentUser?.id
               return (
+                <React.Fragment key={m.id}>
+                {(index === 0 || messageDayKey(messages[index - 1].createdAt) !== messageDayKey(m.createdAt)) && <div className="flex justify-center py-2" data-message-day={messageDayKey(m.createdAt)}><span className="px-3 py-1 rounded-full text-[10px] text-[var(--tertiary-white)] opacity-60 bg-[var(--card-surface)]">{messageDayLabel(m.createdAt)}</span></div>}
                 <div
-                  key={m.id}
                   className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                 >
                   <div
@@ -429,12 +467,14 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
                     {m.attachmentType === 'file' && (
                       <div className="flex items-center gap-2 py-1.5 px-2 rounded-xl bg-black/20 border border-white/10 my-1 font-medium text-left">
                         <FileText className="w-4 h-4 shrink-0 text-[#b99881]" />
-                        <a href={m.attachmentUrl} download={m.attachmentName || "Belge"} className="truncate text-xs font-mono underline">{m.attachmentName || "Belge"}</a>
+                        <span className="truncate text-xs font-mono">{m.attachmentName || 'Belge'}</span>
                       </div>
                     )}
                     {m.text && m.attachmentType !== 'image' && m.attachmentType !== 'file' && (
                       <div className="whitespace-pre-wrap">{m.text}</div>
                     )}
+                    {m.attachmentUrl && ['file', 'image', 'voice'].includes(m.attachmentType || '') && <button type="button" aria-label={`${m.attachmentName || 'Mesaj eki'} dosyasını kaydet`}
+                      className="mt-1 flex items-center gap-1 text-[10px] text-[var(--accent-color)] hover:underline" onClick={() => { setSaveAttachment(m); setAttachmentError(''); setAttachmentNotice('') }}><Download size={12} />Kaydet</button>}
                   </div>
 
                   <span className={`text-[9px] text-[#8c857f] mt-1 ${isMe ? 'pr-3 text-right' : 'px-1'}`}>
@@ -444,11 +484,21 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
                     })}
                   </span>
                 </div>
+                </React.Fragment>
               )
             })
           )}
           <div ref={messagesEndRef} />
         </div>
+        {readError && <p role="alert" className="px-4 py-1 text-[10px] text-rose-400">{readError}</p>}
+        {attachmentNotice && <p role="status" className="px-4 py-2 text-[10px] text-[var(--accent-color)]">{attachmentNotice}</p>}
+        {saveAttachment && <div role="dialog" aria-label="Dosyayı kaydet" className="mx-3 mb-2 p-3 rounded-xl border border-[var(--glass-border)] bg-[var(--card-surface)] space-y-2">
+          <div className="flex items-center justify-between gap-2"><span className="text-xs truncate">Dosyayı nereye kaydedelim?</span><button type="button" aria-label="Kaydetmeyi iptal et" disabled={attachmentBusy} onClick={() => setSaveAttachment(null)}><X size={14} /></button></div>
+          <div className="flex flex-wrap gap-2"><button type="button" disabled={attachmentBusy} className="rounded-lg border border-[var(--glass-border)] p-2 text-[11px]" onClick={() => void saveAttachmentTo('computer')}>Bilgisayara kaydet</button>
+            <button type="button" disabled={attachmentBusy} className="rounded-lg bg-[var(--accent-color)] text-white p-2 text-[11px]" onClick={() => void saveAttachmentTo('app')}>{attachmentBusy ? 'Kaydediliyor…' : 'Uygulamaya kaydet'}</button></div>
+          <p className="text-[10px] opacity-60">Uygulamaya kaydettiğiniz dosya Paylaşılanlar’da yalnızca size görünür.</p>
+          {attachmentError && <p role="alert" className="text-[10px] text-rose-400">{attachmentError}</p>}
+        </div>}
 
         {/* Emoji Quick Picker Popup */}
         {showEmojiPicker && (
@@ -699,6 +749,7 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
   if (mode === 'sidebar') {
     return (
       <div
+        ref={panelRef}
         style={{
           width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100%' : `${sidebarWidth}px`,
         }}
@@ -739,6 +790,7 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
 
   return (
     <div
+      ref={panelRef}
       style={{
         left:
           typeof window !== 'undefined' && window.innerWidth >= 768

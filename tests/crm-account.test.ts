@@ -12,7 +12,7 @@ function setup(options:any={}){
   resetPasswordForEmail:async(...args:any[])=>{calls.push({reset:args});return {error:options.resetError||null}},
  },rpc:(name:string,args:any)=>{const run=async()=>{
   calls.push({rpc:name,args})
-  if(name==='crm_get_my_profile')return {data:profile,error:options.noProfile?{message:'disabled'}:null}
+  if(name==='crm_get_my_profile')return {data:{...profile,must_change_password:options.firstLogin},error:options.noProfile?{message:'disabled'}:null}
   return options.rpc?options.rpc(name,args):{data:{valid:true},error:null}
  };return {abortSignal:run,then:(resolve:any,reject:any)=>run().then(resolve,reject)}}}
  return {service:createCrmAccountService(client),calls}
@@ -49,6 +49,22 @@ test('Parola değişiminde Auth e-postası ve aynı kullanıcı kontrol edilir',
 })
 test('Yeniden giriş başka kimlik döndürürse parola değişmez',async()=>{
  const s=setup({differentUser:true});await assert.rejects(s.service.changePassword('OldPass123','NewIsolatedPass123'));assert.equal(s.calls.some(c=>c.update),false)
+})
+test('Personelin ilk girişi doğrulanmış hesapta parola değişiminden sonra tamamlanır',async()=>{
+ const s=setup({firstLogin:true})
+ await s.service.changePassword('TempPass1','NewIsolatedPass123','employee')
+ assert.ok(s.calls.findIndex(c=>c.update)<s.calls.findIndex(c=>c.rpc==='crm_finish_initial_password'))
+ const differentProfile=setup({firstLogin:true})
+ await assert.rejects(differentProfile.service.changePassword('TempPass1','NewIsolatedPass123','another-user'),/Oturum değişti/)
+ assert.equal(differentProfile.calls.some(c=>c.reauth||c.update),false)
+})
+test('Parola kaydedildikten sonra ilk giriş adımı aynı yeni parolayla tekrar denenebilir',async()=>{
+ const failed=setup({firstLogin:true,rpc:()=>({error:{message:'connection failed'}})})
+ await assert.rejects(failed.service.changePassword('TempPass1','NewIsolatedPass123'),/Yeni parolanız kaydedildi/)
+ const retry=setup({firstLogin:true})
+ await retry.service.changePassword('NewIsolatedPass123','NewIsolatedPass123')
+ assert.equal(retry.calls.some(c=>c.update),false)
+ assert.equal(retry.calls.filter(c=>c.rpc==='crm_finish_initial_password').length,1)
 })
 test('Kurtarma olayı ve etkin profil olmadan kurtarma parolası yazılmaz',async()=>{
  const s=setup();await assert.rejects(s.service.completePasswordRecovery('NewIsolatedPass123',false),/kurtarma bağlantısı/)

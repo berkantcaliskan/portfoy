@@ -39,7 +39,13 @@ type Listener = () => void
 class MessageStore {
  private backend=createCrmServerCollection<ChatMessage>('messages',()=>{const user=userStore.getCurrentUser(),client=userStore.getServerClient();return user&&client?{id:user.id,client}:null})
  public setAccount(id:string|null) { this.backend.setAccount(id);this.messages={};this.conversations=[];this.notify() }
- public async refreshFromBackend() { await this.backend.refresh() }
+ private refreshPromise: Promise<void> | null = null
+ public async refreshFromBackend() {
+  if (this.refreshPromise) return this.refreshPromise
+  const pending = this.backend.refresh()
+  this.refreshPromise = pending
+  try { await pending } finally { if (this.refreshPromise === pending) this.refreshPromise = null }
+ }
  public getReadError() { return this.backend.getError() }
  private rebuildServerMessages() {
   const user=userStore.getCurrentUser();this.messages={};this.conversations=[];if(!user)return;
@@ -54,7 +60,36 @@ class MessageStore {
   }
   this.conversations.sort((a,b)=>b.lastMessageTime.localeCompare(a.lastMessageTime));this.notify()
  }
- public async markRead(peer:string) { const client=userStore.getServerClient();if(!isCentralCrm()||!client)return;const {error}=await client.rpc('crm_mark_messages_read',{p_peer:peer}).abortSignal(AbortSignal.timeout(15000));if(error)throw Error('Mesaj okundu bilgisi kaydedilemedi.');await this.refreshFromBackend() }
+ private reading = new Map<string, Promise<void>>()
+ public async markRead(peer: string): Promise<void> {
+  const user = userStore.getCurrentUser()
+  if (!user) return
+  const key = user.id + ':' + peer
+  const pending = this.reading.get(key)
+  if (pending) return pending
+  const operation = (async () => {
+   if (isCentralCrm()) {
+    const client = userStore.getServerClient()
+    if (!client) throw Error('Mesaj sunucusuna bağlanılamadı.')
+    const { error } = await client.rpc('crm_mark_messages_read', { p_peer: peer }).abortSignal(AbortSignal.timeout(15000))
+    if (error) throw Error('Mesaj okundu bilgisi kaydedilemedi.')
+    if (user.id === userStore.getCurrentUser()?.id) {
+     if (this.refreshPromise) await this.refreshPromise
+     if (user.id !== userStore.getCurrentUser()?.id) return
+     await this.refreshFromBackend()
+     if (this.getReadError()) throw Error('Mesajların okundu durumu sunucudan doğrulanamadı.')
+    }
+   } else {
+    for (const list of Object.values(this.messages)) for (const message of list) {
+     if (message.senderId === peer && message.recipientId === user.id) message.isRead = true
+    }
+    this.conversations = this.conversations.map(conversation => ({ ...conversation, unreadCount: this.getMessages(conversation.id).filter(message => message.recipientId === user.id && !message.isRead).length }))
+    this.saveToStorage()
+   }
+  })()
+  this.reading.set(key, operation)
+  try { await operation } finally { if (this.reading.get(key) === operation) this.reading.delete(key) }
+ }
 
   private conversations: ChatConversation[] = []
   private messages: Record<string, ChatMessage[]> = {}
@@ -246,8 +281,7 @@ class MessageStore {
   }
 
   public getTotalUnreadCount(currentUserId: string): number {
-    const userConvs = this.getConversations(currentUserId)
-    return userConvs.reduce((acc, c) => acc + (c.unreadCount || 0), 0)
+    return Object.values(this.messages).flat().filter(message => message.recipientId === currentUserId && !message.isRead).length
   }
 }
 

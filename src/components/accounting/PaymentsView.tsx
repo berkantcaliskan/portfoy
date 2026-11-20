@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
-  CreditCard,
+  ArrowUpRight,
+  TurkishLira,
   Plus,
   CheckCircle2,
   Clock,
@@ -23,12 +24,15 @@ import {
 } from '@/services/accountingStore'
 import { userStore, AppUser } from '@/services/userStore'
 import { formatCurrency } from '@/utils/formatters'
+import { PromissoryNoteModal } from './PromissoryNoteModal'
+import { SavedPromissoryNotes } from './SavedPromissoryNotes'
 
 export const PaymentsView: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
   const [payments, setPayments] = useState<PaymentRecord[]>(() => accountingStore.getPayments())
   const [filterCategory, setFilterCategory] = useState<string>('ALL')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [backendError, setBackendError] = useState('')
   const [backendSaving, setBackendSaving] = useState(false)
@@ -36,7 +40,7 @@ export const PaymentsView: React.FC = () => {
   // Add form
   const [title, setTitle] = useState('')
   const [payee, setPayee] = useState('')
-  const [category, setCategory] = useState<PaymentCategory>('COMMISSION')
+  const [category, setCategory] = useState<Exclude<PaymentCategory, 'MARKETING' | 'COMMISSION'>>('OFFICE')
   const [amount, setAmount] = useState<number>(50000)
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0])
   const [invoiceNo, setInvoiceNo] = useState('')
@@ -49,15 +53,16 @@ export const PaymentsView: React.FC = () => {
     return () => unsub()
   }, [])
 
-  const filtered = payments.filter((p) => {
+  const visiblePayments = payments.filter(payment => payment.category !== 'MARKETING')
+  const filtered = visiblePayments.filter((p) => {
     if (filterCategory !== 'ALL' && p.category !== filterCategory) return false
     return true
   })
 
-  const totalPaid = payments
+  const totalPaid = visiblePayments
     .filter((p) => p.status === 'PAID')
     .reduce((acc, p) => acc + p.amount, 0)
-  const totalPending = payments
+  const totalPending = visiblePayments
     .filter((p) => p.status === 'PENDING')
     .reduce((acc, p) => acc + p.amount, 0)
 
@@ -114,26 +119,38 @@ export const PaymentsView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <CreditCard className="w-5 h-5 text-[#b99881]" />
+            <TurkishLira aria-hidden="true" className="w-5 h-5 text-[#b99881]" />
             <h2 className="text-2xl font-bold text-white tracking-wide">
               Ödemeler
             </h2>
           </div>
           <p className="text-xs text-[#a69f99] mt-1">
-            Satış danışmanı komisyonları, şantiye müteahhit hakedişleri ve operasyonel giderler.
+            Şantiye hakedişleri, ofis ve operasyonel giderler.
           </p>
         </div>
 
-        <GlassButton
-          variant="gold"
-          size="sm"
-          icon={<Plus className="w-3.5 h-3.5" />}
-          onClick={() => setIsAddModalOpen(true)}
-          className="rounded-full px-4 text-xs font-semibold"
-        >
-          Ödeme Planla
-        </GlassButton>
+        <div className="flex flex-wrap items-center gap-2">
+          <SavedPromissoryNotes />
+          <GlassButton
+            variant="gold"
+            size="sm"
+            icon={<Plus className="w-3.5 h-3.5" />}
+            onClick={() => setIsAddModalOpen(true)}
+            className="rounded-full px-4 text-xs font-semibold"
+          >
+            Ödeme Planla
+          </GlassButton>
+          <GlassButton
+            variant="outline"
+            size="sm"
+            icon={<FileText className="w-3.5 h-3.5" />}
+            onClick={() => setIsNoteModalOpen(true)}
+          >
+            Senet oluştur
+          </GlassButton>
+        </div>
       </div>
+      {isNoteModalOpen && <PromissoryNoteModal isOpen onClose={() => setIsNoteModalOpen(false)} />}
 
       {successMsg && (
         <div className="p-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
@@ -145,7 +162,10 @@ export const PaymentsView: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-          <div className="text-xs text-[#a69f99]">Gerçekleşen Ödemeler</div>
+          <div className="flex items-center gap-1.5 text-xs text-[#a69f99]">
+            <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-[#b99881]" />
+            Gerçekleşen Ödemeler
+          </div>
           <div className="text-2xl font-bold text-white mt-1">{formatCurrency(totalPaid)}</div>
           <div className="text-[11px] text-emerald-400 mt-1">Hesaptan çıkan tutar</div>
         </GlassCard>
@@ -158,8 +178,8 @@ export const PaymentsView: React.FC = () => {
 
         <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
           <div className="text-xs text-[#a69f99]">Toplam Ödeme Kalemi</div>
-          <div className="text-2xl font-bold text-sky-400 mt-1">{payments.length}</div>
-          <div className="text-[11px] text-[#8c857f] mt-1">Komisyon & Şantiye</div>
+          <div className="text-2xl font-bold text-sky-400 mt-1">{visiblePayments.length}</div>
+          <div className="text-[11px] text-[#8c857f] mt-1">Planlanan giderler</div>
         </GlassCard>
       </div>
 
@@ -170,9 +190,7 @@ export const PaymentsView: React.FC = () => {
         onSelect={(id) => setFilterCategory(id)}
         tabs={[
           { id: 'ALL', label: 'Tümü' },
-          { id: 'COMMISSION', label: 'Danışman Komisyonu' },
           { id: 'CONSTRUCTION', label: 'Şantiye Hakedişi' },
-          { id: 'MARKETING', label: 'Pazarlama' },
           { id: 'OFFICE', label: 'Ofis Gideri' },
         ]}
       />
@@ -214,7 +232,7 @@ export const PaymentsView: React.FC = () => {
                     <td className="py-3 px-3 text-[#a69f99]">{pay.payee}</td>
                     <td className="py-3 px-3">
                       <span className="text-[11px] text-[#d6beae]">
-                        {pay.category === 'COMMISSION' ? 'Komisyon' : pay.category === 'CONSTRUCTION' ? 'İnşaat/Şantiye' : pay.category === 'MARKETING' ? 'Reklam/Pazarlama' : 'Ofis'}
+                        {pay.category === 'CONSTRUCTION' ? 'İnşaat/Şantiye' : pay.category === 'TAX' ? 'Vergi' : pay.category === 'OFFICE' ? 'Ofis' : 'Diğer giderler'}
                       </span>
                     </td>
                     <td className="py-3 px-3 font-bold text-white">
@@ -262,7 +280,7 @@ export const PaymentsView: React.FC = () => {
             <input
               type="text"
               required
-              placeholder="Örn: 2026 Q3 Satış Primi"
+              placeholder="Örn: Ofis gideri"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
@@ -290,12 +308,10 @@ export const PaymentsView: React.FC = () => {
               </label>
               <CustomSelect
                 value={category}
-                onChange={(e) => setCategory(e.target.value as PaymentCategory)}
+                onChange={(e) => setCategory(e.target.value as Exclude<PaymentCategory, 'MARKETING' | 'COMMISSION'>)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
-                <option value="COMMISSION">Danışman Komisyonu</option>
                 <option value="CONSTRUCTION">Şantiye Hakedişi</option>
-                <option value="MARKETING">Reklam & Pazarlama</option>
                 <option value="OFFICE">Ofis & Operasyon</option>
               </CustomSelect>
             </div>

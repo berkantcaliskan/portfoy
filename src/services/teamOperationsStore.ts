@@ -173,9 +173,28 @@ class TeamOperationsStore {
  private presenceBackend=createCrmServerCollection<UserPresenceRecord&{id:string}>('team_presence',()=>{const u=userStore.getCurrentUser(),c=userStore.getServerClient();return u&&c?{id:u.id,client:c}:null})
  private assetsBackend=createCrmServerCollection<SharedAssetItem&{history?:AssetHistoryLog[]}>('team_assets',()=>{const u=userStore.getCurrentUser(),c=userStore.getServerClient();return u&&c?{id:u.id,client:c}:null})
  private leavesBackend=createCrmServerCollection<LeaveRequestItem>('team_leaves',()=>{const u=userStore.getCurrentUser(),c=userStore.getServerClient();return u&&c?{id:u.id,client:c}:null})
- public setAccount(id:string|null){this.presenceBackend.setAccount(id);this.assetsBackend.setAccount(id);this.leavesBackend.setAccount(id);this.presenceMap={};this.assets=[];this.assetLogs=[];this.leaves=[];this.notify()}
- public async refreshFromBackend(){await Promise.all([this.presenceBackend.refresh(),this.assetsBackend.refresh(),this.leavesBackend.refresh()])}
- public getReadError(){return this.presenceBackend.getError()||this.assetsBackend.getError()||this.leavesBackend.getError()}
+ public setAccount(id:string|null){this.presenceBackend.setAccount(id);this.assetsBackend.setAccount(id);this.leavesBackend.setAccount(id);this.presenceMap={};this.assets=[];this.assetLogs=[];this.leaves=[];this.assetReadError='';this.notify()}
+ public async refreshFromBackend(){
+   const user = userStore.getCurrentUser()
+   if (!user) return
+   if (user.role === 'ADMIN') {
+     await Promise.all([this.presenceBackend.refresh(), this.assetsBackend.refresh(), this.leavesBackend.refresh()])
+     return
+   }
+   await this.presenceBackend.refresh()
+   const client = userStore.getServerClient()
+   if (!client) return
+   try {
+     const { data, error } = await client.rpc('crm_team_asset_locations').abortSignal(AbortSignal.timeout(15000))
+     if (userStore.getCurrentUser()?.id !== user.id) return
+     if (error || !Array.isArray(data)) throw Error('Ekipman konumları okunamadı.')
+     this.assets = data
+     this.assetReadError = ''
+   } catch { if (userStore.getCurrentUser()?.id === user.id) this.assetReadError = 'Ekipman konumları sunucudan yenilenemedi.' }
+   this.notify()
+ }
+ private assetReadError = ''
+ public getReadError(){return this.presenceBackend.getError() || (userStore.getCurrentUser()?.role === 'ADMIN' ? this.assetsBackend.getError() || this.leavesBackend.getError() : this.assetReadError)}
 
   private presenceMap: Record<string, UserPresenceRecord> = {}
   private assets: SharedAssetItem[] = []

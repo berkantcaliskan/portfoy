@@ -123,9 +123,11 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
         email: editForm.email.trim() || undefined,
         budget: editForm.budget ? Number(editForm.budget) : undefined,
         preferredHousingType: editForm.preferredHousingType,
-        assignedToUserId: assignedUser ? assignedUser.id : undefined,
-        assignedToUserName: assignedUser ? assignedUser.fullName : undefined,
-        owner: assignedUser ? assignedUser.fullName : 'Atanmamış',
+        ...(permissionService.canAssignConsultant(currentUser) ? {
+          assignedToUserId: assignedUser ? assignedUser.id : undefined,
+          assignedToUserName: assignedUser ? assignedUser.fullName : undefined,
+          owner: assignedUser ? assignedUser.fullName : 'Atanmamış',
+        } : {}),
       },
       currentUser
     )
@@ -134,6 +136,8 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
 
   const currentUser = userStore.getCurrentUser()
   const canDeleteLead = permissionService.canDeleteCustomer(currentUser)
+  const [deletingLead, setDeletingLead] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const handleSendCapiSignal = async (signal: MetaCapiEventName) => {
     if (!selectedMetaSourceId) { setCapiToast({ status: 'FAILED', text: 'Sonucu göndereceğiniz Meta form/başvurusunu seçin.' }); return }
@@ -319,10 +323,9 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
                     }
                   }}
                   className="px-3 py-1 rounded-full text-xs font-semibold border bg-emerald-500/15 hover:bg-rose-500/20 text-emerald-400 hover:text-rose-400 border-emerald-500/35 hover:border-rose-500/40 transition-colors cursor-pointer flex items-center gap-1.5"
-                  title="Satışa iletildi — Satış devrini geri çekmek için tıklayın"
                 >
                   <Check className="w-3 h-3" />
-                  <span>Satışa İletildi (Geri Çek)</span>
+                  <span>Satışa Devredildi (Geri Çek)</span>
                 </button>
               ) : (
                 <button
@@ -333,10 +336,9 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
                     }
                   }}
                   className="px-3 py-1 rounded-full text-xs font-semibold border bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border-[#4a443f] transition-colors cursor-pointer flex items-center gap-1.5"
-                  title="Bu müşteri kaydını manuel olarak Satış departmanına ilet"
                 >
                   <UserPlus className="w-3 h-3 text-amber-400" />
-                  <span>Satışa İlet</span>
+                  <span>Satışa Devret</span>
                 </button>
               )
             )}
@@ -445,7 +447,7 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
                 </CustomSelect>
               </div>
 
-              <div className="space-y-1.5">
+              {permissionService.canAssignConsultant(currentUser) && <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-[#f3efe9]">
                   Danışman ata
                 </label>
@@ -463,7 +465,7 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
                     </option>
                   ))}
                 </CustomSelect>
-              </div>
+              </div>}
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-1">
@@ -818,8 +820,9 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
                 ) : (
                   <div className="p-2.5 rounded-[16px] bg-transparent border border-rose-500/45 space-y-1.5">
                     <p className="text-[10.5px] font-medium text-rose-700">
-                      Bu kayıt ve tüm verileri silinecek. Emin misiniz?
+                      Müşteri çöp kutusuna taşınacak. Daha sonra geri yükleyebilirsiniz.
                     </p>
+                    {deleteError && <p role="alert" className="text-xs text-rose-500">{deleteError}</p>}
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
@@ -830,14 +833,18 @@ const LeadDetailContent: React.FC<Omit<LeadDetailModalProps, 'lead'> & { lead: L
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          leadStore.delete(lead.id)
-                          setIsConfirmingDelete(false)
-                          onClose()
+                        disabled={deletingLead}
+                        onClick={async () => {
+                          if (deletingLead) return
+                          setDeletingLead(true); setDeleteError('')
+                          try {
+                            if (await leadStore.delete(lead.id)) { setIsConfirmingDelete(false); onClose() }
+                            else setDeleteError(leadStore.getReadError() || 'Müşteri silinemedi.')
+                          } finally { setDeletingLead(false) }
                         }}
                         className="px-3 py-1 rounded-full text-[10.5px] font-bold text-white bg-rose-600 hover:bg-rose-500 cursor-pointer"
                       >
-                        Evet, sil
+                        {deletingLead ? 'Taşınıyor…' : 'Çöp kutusuna taşı'}
                       </button>
                     </div>
                   </div>

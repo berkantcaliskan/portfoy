@@ -1,14 +1,14 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
-const zlib = require('zlib')
+const { activeRenderer, checkRendererUpdate } = require('./desktop-updates.cjs')
 
 // Ensure portable .exe always uses a fixed, permanent userData directory in %APPDATA%\DemirturkPortfoy
 app.setName('Demirtürk Portföy')
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.demirturk.portfoy')
 }
-const permanentUserDataDir = path.join(app.getPath('appData'), 'DemirturkPortfoy')
+const permanentUserDataDir = app.commandLine.getSwitchValue('user-data-dir') || path.join(app.getPath('appData'), 'DemirturkPortfoy')
 try {
   if (!fs.existsSync(permanentUserDataDir)) {
     fs.mkdirSync(permanentUserDataDir, { recursive: true })
@@ -34,42 +34,6 @@ function loadDiskStore() {
     }
   } catch (err) {
     console.error('Failed to read persistent disk store:', err)
-  }
-
-  // Also merge bundled/OTA shared-db.json so any new PC immediately has all users & company data
-  const seedCandidates = [
-    path.join(permanentUserDataDir, 'ota-dist', 'shared-db.json'),
-    path.join(__dirname, '../dist/shared-db.json'),
-  ]
-  for (const seedPath of seedCandidates) {
-    try {
-      if (fs.existsSync(seedPath)) {
-        const seedParsed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'))
-        if (seedParsed && typeof seedParsed === 'object') {
-          for (const [k, v] of Object.entries(seedParsed)) {
-            if (k === 'demirturk_active_user_v2' || k === 'demirturk_logged_out') continue
-            if (!(k in localObj) || localObj[k] === '[]' || localObj[k] === '') {
-              localObj[k] = v
-            } else if (k === 'demirturk_users_v2') {
-              try {
-                const curUsers = JSON.parse(localObj[k] || '[]')
-                const seedUsers = JSON.parse(v || '[]')
-                if (Array.isArray(curUsers) && Array.isArray(seedUsers)) {
-                  const byUsername = new Map()
-                  seedUsers.forEach((u) => {
-                    if (u && u.username) byUsername.set(String(u.username).toLowerCase(), u)
-                  })
-                  curUsers.forEach((u) => {
-                    if (u && u.username) byUsername.set(String(u.username).toLowerCase(), u)
-                  })
-                  localObj[k] = JSON.stringify(Array.from(byUsername.values()))
-                }
-              } catch {}
-            }
-          }
-        }
-      }
-    } catch {}
   }
 
   diskStoreCache = localObj
@@ -123,261 +87,58 @@ ipcMain.on('disk-store-replace-all', (_event, newStore) => {
   }
 })
 
-// ============================================================================
-// AUTOMATIC GITHUB + CLOUD OTA (OVER-THE-AIR) AUTO-UPDATER
-// Automatically pulls latest build from GitHub (berkantcaliskan/portfoy)
-// and updates all running/launched portföyapp.exe instances without USB sticks.
-// ============================================================================
-const SUPABASE_URL = process.env.SUPABASE_URL || ''
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || ''
-const GITHUB_REPO = 'berkantcaliskan/portfoy'
-const GITHUB_BRANCH = 'main'
-
 const bundledDistDir = path.join(__dirname, '../dist')
-const userOtaDistDir = path.join(permanentUserDataDir, 'ota-dist')
-
-let isCheckingOta = false
-let lastOtaStatus = {
-  state: 'idle',
-  versionId: readLocalOtaVersion().versionId || 'v1.0.0',
-  buildTime: readLocalOtaVersion().buildTime || 0,
-  lastCheckedAt: null,
-  source: null,
-}
-
-function readVersionFile(dir) {
-  try {
-    const p = path.join(dir, 'ota-version.json')
-    if (fs.existsSync(p)) {
-      return JSON.parse(fs.readFileSync(p, 'utf-8'))
-    }
-  } catch {}
-  return { versionId: 'v1.0.0', buildTime: 0 }
-}
-
-function readLocalOtaVersion() {
-  const vBundled = readVersionFile(bundledDistDir)
-  const vUser = readVersionFile(userOtaDistDir)
-  return (vUser.buildTime || 0) > (vBundled.buildTime || 0) ? vUser : vBundled
-}
-
-function getActiveDistIndexHtml() {
-  const vBundled = readVersionFile(bundledDistDir)
-  const vUser = readVersionFile(userOtaDistDir)
-  const userIndex = path.join(userOtaDistDir, 'index.html')
-  const bundledIndex = path.join(bundledDistDir, 'index.html')
-
-  if ((vUser.buildTime || 0) > (vBundled.buildTime || 0) && fs.existsSync(userIndex)) {
-    return userIndex
-  }
-  if (fs.existsSync(bundledIndex)) {
-    return bundledIndex
-  }
-  if (fs.existsSync(userIndex)) {
-    return userIndex
-  }
-  return bundledIndex
-}
+const updateCacheDir = path.join(permanentUserDataDir, 'desktop-updates-v1')
+let renderer = { index: path.join(bundledDistDir, 'index.html'), buildTime: 0 }
+let lastOtaStatus = { state: 'idle', versionId: app.getVersion(), buildTime: 0, lastCheckedAt: null, source: null }
+let checkingUpdate
 
 function notifyOtaStatus(patch) {
   lastOtaStatus = { ...lastOtaStatus, ...patch }
-  if (mainWindow && !mainWindow.isDestroyed()) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('ota-status-changed', lastOtaStatus)
+}
+
+function checkAndApplyOtaUpdate(reload = false) {
+  if (process.env.VITE_DEV_SERVER_URL) return Promise.resolve({ updated: false })
+  if (checkingUpdate) return checkingUpdate
+  checkingUpdate = (async () => {
+    let updated = false
+    notifyOtaStatus({ state: 'checking', lastCheckedAt: new Date().toISOString() })
     try {
-      mainWindow.webContents.send('ota-status-changed', lastOtaStatus)
-    } catch {}
-  }
-}
-
-async function fetchSupabaseSetting(key) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}&select=value`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    )
-    if (!res.ok) return null
-    const rows = await res.json()
-    return rows && rows[0] ? rows[0].value : null
-  } catch {
-    return null
-  }
-}
-
-async function resolveGitHubToken() {
-  return process.env.DEMIRTURK_OTA_READ_TOKEN || ''
-}
-
-async function fetchFromGitHubRepo(filePath, ghToken) {
-  const headers = {
-    Accept: 'application/vnd.github.v3.raw',
-    'User-Agent': 'DemirturkPortfoy-OTA-Updater',
-  }
-  if (ghToken) {
-    headers.Authorization = `Bearer ${ghToken}`
-  }
-  const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}?ref=${GITHUB_BRANCH}&t=${Date.now()}`
-  const res = await fetch(url, { headers })
-  if (!res.ok) return null
-  return await res.json()
-}
-
-function writeUnpackedBundleToDir(targetDir, bundle) {
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true })
-  }
-
-  // Copy static assets (fonts, backgrounds, icons) from bundledDistDir if targetDir is userOtaDistDir
-  if (targetDir === userOtaDistDir && fs.existsSync(bundledDistDir)) {
-    for (const item of fs.readdirSync(bundledDistDir)) {
-      if (item === 'assets' || item === 'index.html' || item.startsWith('ota-')) continue
-      const srcPath = path.join(bundledDistDir, item)
-      const destPath = path.join(targetDir, item)
-      if (!fs.existsSync(destPath)) {
-        try {
-          fs.cpSync(srcPath, destPath, { recursive: true })
-        } catch {}
-      }
-    }
-  }
-
-  const assetsDir = path.join(targetDir, 'assets')
-  if (!fs.existsSync(assetsDir)) {
-    fs.mkdirSync(assetsDir, { recursive: true })
-  }
-
-  for (const [relPath, gzBase64] of Object.entries(bundle.files || {})) {
-    const destFile = path.join(targetDir, relPath)
-    const destParent = path.dirname(destFile)
-    if (!fs.existsSync(destParent)) {
-      fs.mkdirSync(destParent, { recursive: true })
-    }
-    const rawBuffer = zlib.gunzipSync(Buffer.from(gzBase64, 'base64'))
-    fs.writeFileSync(destFile, rawBuffer)
-  }
-
-  const versionMeta = {
-    versionId: bundle.versionId,
-    buildTime: bundle.buildTime,
-    buildIso: bundle.buildIso,
-    fileCount: bundle.fileCount,
-    repo: GITHUB_REPO,
-  }
-  fs.writeFileSync(
-    path.join(targetDir, 'ota-version.json'),
-    JSON.stringify(versionMeta, null, 2),
-    'utf-8'
-  )
-}
-
-async function checkAndApplyOtaUpdate(forceReloadIfUpdated = true) {
-  if (isCheckingOta || process.env.VITE_DEV_SERVER_URL) return { updated: false }
-  isCheckingOta = true
-  notifyOtaStatus({ state: 'checking', lastCheckedAt: new Date().toISOString() })
-
-  try {
-    const localVer = readLocalOtaVersion()
-    const ghToken = await resolveGitHubToken()
-
-    // 1. Check GitHub (berkantcaliskan/portfoy) first, then Supabase mirror
-    let remoteVer = await fetchFromGitHubRepo('dist/ota-version.json', ghToken)
-    let source = 'github'
-
-    const supaVer = await fetchSupabaseSetting('demirturk_ota_version_v1')
-    if (!remoteVer || (supaVer && (supaVer.buildTime || 0) > (remoteVer.buildTime || 0))) {
-      if (supaVer && supaVer.buildTime) {
-        remoteVer = supaVer
-        source = 'github-mirror'
-      }
-    }
-
-    if (!remoteVer || !remoteVer.buildTime || remoteVer.buildTime <= (localVer.buildTime || 0)) {
-      notifyOtaStatus({
-        state: 'up-to-date',
-        versionId: localVer.versionId || 'v1.0.0',
-        buildTime: localVer.buildTime || 0,
-        lastCheckedAt: new Date().toISOString(),
+      renderer = await activeRenderer(bundledDistDir, updateCacheDir)
+      const next = await checkRendererUpdate({
+        cacheDir: updateCacheDir, active: renderer,
+        onDownload: () => notifyOtaStatus({ state: 'downloading', source: 'github' }),
       })
-      isCheckingOta = false
-      return { updated: false, versionId: localVer.versionId }
+      updated = next.buildTime > renderer.buildTime
+      renderer = next
+      notifyOtaStatus({ state: updated ? 'updated' : 'up-to-date', buildTime: renderer.buildTime })
+    } catch (error) {
+      console.warn('[OTA]', error.message)
+      notifyOtaStatus({ state: 'idle', buildTime: renderer.buildTime })
     }
-
-    // 2. Newer version detected! Download bundle from GitHub (or mirror)
-    notifyOtaStatus({
-      state: 'downloading',
-      versionId: remoteVer.versionId,
-      source,
-    })
-
-    let bundle = null
-    if (source === 'github') {
-      bundle = await fetchFromGitHubRepo('dist/ota-bundle.json', ghToken)
-    }
-    if (!bundle || !bundle.files) {
-      bundle = await fetchSupabaseSetting('demirturk_ota_bundle_v1')
-    }
-
-    if (!bundle || !bundle.files) {
-      notifyOtaStatus({ state: 'up-to-date' })
-      isCheckingOta = false
-      return { updated: false }
-    }
-
-    // 3. Write updated files directly to bundledDistDir AND userOtaDistDir
-    try {
-      writeUnpackedBundleToDir(bundledDistDir, bundle)
-    } catch (e) {
-      console.warn('[OTA] Could not write to bundledDistDir, using userOtaDistDir:', e.message)
-    }
-    try {
-      writeUnpackedBundleToDir(userOtaDistDir, bundle)
-    } catch (e) {
-      console.warn('[OTA] Could not write to userOtaDistDir:', e.message)
-    }
-
-    notifyOtaStatus({
-      state: 'updated',
-      versionId: bundle.versionId,
-      buildTime: bundle.buildTime,
-      lastCheckedAt: new Date().toISOString(),
-      source,
-    })
-
-    // 4. Flush persistent DB and reload window seamlessly
-    if (forceReloadIfUpdated && mainWindow && !mainWindow.isDestroyed()) {
+    if (reload && updated && mainWindow && !mainWindow.isDestroyed()) {
       flushDiskStoreToFile()
-      const targetHtml = getActiveDistIndexHtml()
-      if (fs.existsSync(targetHtml)) {
-        mainWindow.loadFile(targetHtml)
-      } else {
-        mainWindow.webContents.reloadIgnoringCache()
-      }
+      await loadRenderer(mainWindow)
     }
+    return { updated, versionId: lastOtaStatus.versionId }
+  })().finally(() => { checkingUpdate = undefined })
+  return checkingUpdate
+}
 
-    isCheckingOta = false
-    return { updated: true, versionId: bundle.versionId }
-  } catch (err) {
-    console.warn('[OTA] Auto-update check error:', err.message)
-    notifyOtaStatus({ state: 'idle' })
-    isCheckingOta = false
-    return { updated: false, error: err.message }
+async function loadRenderer(win) {
+  if (win.isDestroyed()) return
+  const bundled = path.join(bundledDistDir, 'index.html')
+  try {
+    await win.loadFile(renderer.index)
+  } catch (error) {
+    if (renderer.index === bundled || win.isDestroyed()) throw error
+    await win.loadFile(bundled)
   }
 }
 
-ipcMain.handle('ota-check-now', async () => {
-  return await checkAndApplyOtaUpdate(true)
-})
-
-ipcMain.handle('ota-get-status', () => {
-  return {
-    ...lastOtaStatus,
-    ...readLocalOtaVersion(),
-  }
-})
+ipcMain.handle('ota-check-now', () => checkAndApplyOtaUpdate(true))
+ipcMain.handle('ota-get-status', () => lastOtaStatus)
 
 let mainWindow = null
 
@@ -395,7 +156,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
     },
     show: false,
   })
@@ -468,16 +229,21 @@ function createWindow() {
     return { action: 'deny' }
   })
 
-  // Decide whether to load dev server or latest OTA / bundled production file
-  const activeDistHtml = getActiveDistIndexHtml()
+  const win = mainWindow
   const devUrl = process.env.VITE_DEV_SERVER_URL
-
   if (devUrl) {
-    mainWindow.loadURL(devUrl)
-  } else if (fs.existsSync(activeDistHtml)) {
-    mainWindow.loadFile(activeDistHtml)
+    void win.loadURL(devUrl)
   } else {
-    mainWindow.loadURL('http://localhost:9001')
+    void (async () => {
+      const splash = win.loadFile(path.join(__dirname, 'startup.html'))
+      await Promise.all([splash, checkAndApplyOtaUpdate()])
+      await loadRenderer(win)
+    })().catch(error => {
+      if (!win.isDestroyed()) {
+        require('electron').dialog.showErrorBox('Portföy açılamadı', 'Uygulama dosyaları yüklenemedi. Portföy’ü yeniden açın.')
+      }
+      console.error('Portföy başlatılamadı:', error.message)
+    })
   }
 
   mainWindow.on('close', () => {
@@ -502,16 +268,11 @@ if (!gotTheLock) {
   })
 
   app.whenReady().then(() => {
+    // Chromium serializes header values as bytes. Keep the product token ASCII.
+    app.userAgentFallback = app.userAgentFallback
+      .replace(/Demirtürk\s*Portföy/gi, 'DemirturkPortfoy')
+      .replace(/[^\x20-\x7e]/g, '')
     createWindow()
-
-    // Check GitHub & Cloud OTA immediately on startup and every 45 seconds
-    setTimeout(() => {
-      checkAndApplyOtaUpdate(true)
-    }, 1500)
-
-    setInterval(() => {
-      checkAndApplyOtaUpdate(true)
-    }, 45000)
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()

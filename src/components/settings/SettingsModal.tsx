@@ -47,7 +47,10 @@ import { trashStore, TrashItem } from '@/services/trashStore'
 import { CANONICAL_DEPARTMENTS } from '@/types/department'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { PermissionsMatrixPanel } from './PermissionsMatrixPanel'
+import { ApplicationLockSettings } from './ApplicationLockSettings'
+import { LeadTrashPanel } from './LeadTrashPanel'
 import { permissionService } from '@/services/permissionService'
+import { createCompanyRepository } from '@/services/companyRepository'
 import {
   AMBIENT_SCENE_OPTIONS,
   AmbientSceneId,
@@ -59,18 +62,20 @@ interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
   currentUser: AppUser | null
+  screenSaverDisabled: boolean
+  onScreenSaverDisabledChange: (disabled: boolean) => void
 }
 
 export type SettingsTab =
   | 'account'
   | 'appearance'
+  | 'security'
   | 'company'
   | 'permissions'
   | 'trash'
   | 'dept-meta'
   | 'dept-leads'
   | 'dept-notifications'
-  | 'dept-sales-commission'
   | 'dept-sales-appointments'
   | 'dept-sales-reservations'
   | 'dept-crm-sla'
@@ -154,6 +159,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   currentUser,
+  screenSaverDisabled,
+  onScreenSaverDisabledChange,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -430,6 +437,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [afterHoursMsgEnabled, setAfterHoursMsgEnabled] = useState(true)
   const [dailyKpiReportEnabled, setDailyKpiReportEnabled] = useState(true)
   const [deptSavedMessage, setDeptSavedMessage] = useState<string | null>(null)
+  const [deptServerError, setDeptServerError] = useState('')
+  const [deptLoading, setDeptLoading] = useState(false)
+  const [deptSaving, setDeptSaving] = useState(false)
+  const [deptDraftNotice, setDeptDraftNotice] = useState('')
+  const deptRevision = useRef(0)
+  const deptLoaded = useRef(false)
+  const deptSaveLock = useRef(false)
+  const deptRequest = useRef<{ key: string; requestId: string } | null>(null)
 
   const [deptSettings, setDeptSettings] = useState(() => {
     const defaults = {
@@ -459,7 +474,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       crmCallbackPriorityBoost: true,
 
       // Satış Departmanı
-      salesCommissionRate: '1.5',
       salesMonthlyTargetAmount: '15000000',
       salesBonusAcceleratorEnabled: true,
       salesDefaultSlotMins: '45',
@@ -489,6 +503,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       adminAuditRetentionDays: '365',
       adminLogExportAlerts: true,
     }
+    if (userStore.centralAuthEnabled) return defaults
     try {
       const raw = localStorage.getItem('demirturk_dept_settings_v1')
       if (raw) {
@@ -497,11 +512,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     } catch {}
     return defaults
   })
+  const deptDefaults = useRef(deptSettings)
+  const loadDeptSettings = async () => {
+    if (!userStore.centralAuthEnabled) return
+    const actor = currentUser?.id, client = userStore.getServerClient()
+    if (!actor || !client) return
+    setDeptLoading(true); setDeptServerError(''); setDeptSavedMessage(null); setDeptDraftNotice(''); setDeptSettings({ ...deptDefaults.current }); deptLoaded.current = false
+    try {
+      const row = await createCompanyRepository(client).get('department_settings')
+      if (actor !== userStore.getCurrentUser()?.id) return
+      const data = row.payload
+      const next = { ...deptDefaults.current }
+      for (const key of Object.keys(next) as (keyof typeof next)[]) if (typeof data[key] === typeof next[key]) (next as Record<string, unknown>)[key] = data[key]
+      setDeptSettings(next); deptRevision.current = row.revision; deptLoaded.current = true
+      if (typeof data.marketingDailyBudget === 'string') setMetaDailyBudget(data.marketingDailyBudget)
+      if (typeof data.marketingTargetCpl === 'string') setTargetCpl(data.marketingTargetCpl)
+      if (typeof data.marketingAutoQualifyThreshold === 'string') setAutoQualifyThreshold(data.marketingAutoQualifyThreshold)
+      if (typeof data.marketingAutoHandoverEnabled === 'boolean') setAutoHandoverEnabled(data.marketingAutoHandoverEnabled)
+      if (typeof data.marketingAfterHoursMsgEnabled === 'boolean') setAfterHoursMsgEnabled(data.marketingAfterHoursMsgEnabled)
+      if (typeof data.marketingDailyKpiReportEnabled === 'boolean') setDailyKpiReportEnabled(data.marketingDailyKpiReportEnabled)
+    } catch (e) { setDeptServerError(e instanceof Error ? e.message : 'Departman ayarları okunamadı.') }
+    finally { setDeptLoading(false) }
+  }
+  useEffect(() => { if (isOpen) void loadDeptSettings() }, [isOpen, currentUser?.id])
+  const loadLegacyDeptDraft = () => {
+    try {
+      const data = JSON.parse(localStorage.getItem('demirturk_dept_settings_v1') || '{}')
+      const next = { ...deptSettings }
+      for (const key of Object.keys(next) as (keyof typeof next)[]) if (typeof data[key] === typeof next[key]) (next as Record<string, unknown>)[key] = data[key]
+      setDeptSettings(next); setDeptSavedMessage(null); setDeptDraftNotice('Yerel ayarlar forma yüklendi. Kaydet ile sunucuya aktarın.'); setDeptServerError('')
+    } catch { setDeptServerError('Yerel ayar dosyası okunamadı. Mevcut sunucu kaydı değiştirilmedi.') }
+  }
 
   const updateDeptSetting = <K extends keyof typeof deptSettings>(key: K, value: (typeof deptSettings)[K]) => {
     setDeptSettings((prev: typeof deptSettings) => {
       const next = { ...prev, [key]: value }
       try {
+        if (userStore.centralAuthEnabled) return next
         localStorage.setItem('demirturk_dept_settings_v1', JSON.stringify(next))
       } catch {}
       return next
@@ -579,7 +626,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setCapiLogs(metaStore.getCapiLogs())
   }
 
-  const handleSaveDeptConfig = (msg = 'Departman ayarları başarıyla kaydedildi.') => {
+  const handleSaveDeptConfig = async (msg = 'Departman ayarları başarıyla kaydedildi.') => {
+    if (userStore.centralAuthEnabled) {
+      if (deptSaveLock.current) return
+      setDeptSavedMessage(null); setDeptServerError('')
+      if (!deptLoaded.current) { setDeptServerError('Önce sunucu ayarlarını yükleyin.'); return }
+      const actor = currentUser?.id, client = userStore.getServerClient()
+      if (!client || !actor) { setDeptServerError('Sunucu oturumu gerekli.'); return }
+      const payload = { ...deptSettings, marketingDailyBudget: metaDailyBudget, marketingTargetCpl: targetCpl, marketingAutoQualifyThreshold: autoQualifyThreshold, marketingAutoHandoverEnabled: autoHandoverEnabled, marketingAfterHoursMsgEnabled: afterHoursMsgEnabled, marketingDailyKpiReportEnabled: dailyKpiReportEnabled }
+      const key = JSON.stringify(payload)
+      if (deptRequest.current?.key !== key) deptRequest.current = { key, requestId: crypto.randomUUID() }
+      deptSaveLock.current = true; setDeptSaving(true)
+      try {
+        const row = await createCompanyRepository(client).save('department_settings', deptRevision.current, payload, deptRequest.current.requestId)
+        if (actor !== userStore.getCurrentUser()?.id) return
+        deptRevision.current = row.revision; deptRequest.current = null; setDeptDraftNotice(''); setDeptSavedMessage(msg)
+      } catch (e) { setDeptServerError(e instanceof Error ? e.message : 'Departman ayarları kaydedilemedi.') }
+      finally { deptSaveLock.current = false; setDeptSaving(false) }
+      return
+    }
     try {
       localStorage.setItem('demirturk_dept_settings_v1', JSON.stringify(deptSettings))
     } catch {}
@@ -594,7 +659,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     switch (dept) {
       case 'Satış':
         return [
-          { id: 'dept-sales-commission' as SettingsTab, label: 'Komisyon & Hedef', icon: TurkishLira },
           { id: 'dept-sales-appointments' as SettingsTab, label: 'Randevu Kuralları', icon: Calendar },
           { id: 'dept-sales-reservations' as SettingsTab, label: 'Daire Opsiyon Süresi', icon: Clock },
         ]
@@ -692,6 +756,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="truncate">Şirket ve departman</span>
                 </button>
 
+                <button
+                  onClick={() => setActiveTab('security')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs transition-colors cursor-pointer text-left ${activeTab === 'security' ? 'bg-[#b99881] text-white font-bold is-active-aside-btn' : 'hover:bg-white/12 font-medium'}`}
+                ><Lock className="w-4 h-4 shrink-0" /><span className="truncate">Gizlilik ve Güvenlik</span></button>
+
                 {permissionService.canManagePermissions(currentUser) && (
                   <button
                     onClick={() => setActiveTab('permissions')}
@@ -780,6 +849,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Fixed Scrollable Content */}
           <div className="flex-1 p-7 pt-4 overflow-y-auto space-y-6">
+            {activeTab.startsWith('dept-') && userStore.centralAuthEnabled && currentUser?.role === 'ADMIN' && localStorage.getItem('demirturk_dept_settings_v1') && <button type="button" disabled={deptLoading || deptSaving} className="rounded-full border border-[#4a443f] px-4 py-2 text-xs" onClick={loadLegacyDeptDraft}>Bu bilgisayardaki eski departman ayarlarını forma yükle</button>}
+            {activeTab.startsWith('dept-') && deptDraftNotice && <p role="status" className="text-xs text-amber-500">{deptDraftNotice}</p>}
+            {activeTab.startsWith('dept-') && userStore.centralAuthEnabled && <div className="text-xs" aria-live="polite">{deptLoading ? 'Şirket ayarları sunucudan okunuyor…' : deptSaving ? 'Sunucuya kaydediliyor…' : deptServerError ? <p role="alert" className="text-rose-400">{deptServerError} <button type="button" className="underline" onClick={() => void loadDeptSettings()}>Sunucudan yeniden yükle</button></p> : <span className="text-[#a69f99]">Şirket ayarları sunucuda saklanır.</span>}</div>}
 
             {/* TAB 1: HESAP VE PROFİL */}
             {activeTab === 'account' && (
@@ -948,6 +1020,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
             {/* TAB 2: KİŞİSELLEŞTİR */}
+            {activeTab === 'security' && <ApplicationLockSettings key={currentUser?.id} />}
             {activeTab === 'appearance' && (
               <div className="space-y-5 animate-in fade-in duration-200">
                 <div>
@@ -1119,6 +1192,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       )
                     })}
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#4a443f] bg-[#24211f]/60 p-4">
+                  <div className="space-y-1">
+                    <div id="screensaver-setting-label" className="text-xs font-bold text-white">Ekran koruyucuyu kapat</div>
+                    <div className="text-[11px] text-[#8c857f]">Ekran koruyucu 10 dakika kullanılmadığında açılır.</div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-labelledby="screensaver-setting-label"
+                    aria-checked={screenSaverDisabled}
+                    onClick={() => onScreenSaverDisabledChange(!screenSaverDisabled)}
+                    className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors ${screenSaverDisabled ? 'bg-[#b99881]' : 'bg-[#4a443f]'}`}
+                  >
+                    <span className={`absolute left-1 top-1 size-4 rounded-full bg-white transition-transform ${screenSaverDisabled ? 'translate-x-5' : ''}`} />
+                  </button>
                 </div>
 
                 {/* Başlat ve Gezinme Ayarları */}
@@ -1464,7 +1554,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Müşteri akış kuralları güncellendi.')}
+                      onClick={() => handleSaveDeptConfig('Müşteri akış kuralları güncellendi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -1540,7 +1630,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Bildirim tercihleri güncellendi.')}
+                      onClick={() => handleSaveDeptConfig('Bildirim tercihleri güncellendi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Tercihleri Kaydet
@@ -1570,7 +1660,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.crmFirstResponseMins}
+                        value={deptSettings.crmFirstResponseMins} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmFirstResponseMins', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -1581,7 +1671,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.crmFollowupCallbackMins}
+                        value={deptSettings.crmFollowupCallbackMins} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmFollowupCallbackMins', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -1592,7 +1682,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.crmOverdueEscalationHours}
+                        value={deptSettings.crmOverdueEscalationHours} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmOverdueEscalationHours', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -1606,7 +1696,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="time"
-                        value={deptSettings.crmWorkingHoursStart}
+                        value={deptSettings.crmWorkingHoursStart} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmWorkingHoursStart', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -1617,7 +1707,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="time"
-                        value={deptSettings.crmWorkingHoursEnd}
+                        value={deptSettings.crmWorkingHoursEnd} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmWorkingHoursEnd', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -1677,7 +1767,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('SLA ve yanıt süresi kuralları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('SLA ve yanıt süresi kuralları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -1707,7 +1797,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="text"
-                        value={deptSettings.crmWhatsappLine}
+                        value={deptSettings.crmWhatsappLine} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmWhatsappLine', e.target.value)}
                         placeholder="+90 532 000 00 00"
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
@@ -1719,7 +1809,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="text"
-                        value={deptSettings.crmSwitchboardPrefix}
+                        value={deptSettings.crmSwitchboardPrefix} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmSwitchboardPrefix', e.target.value)}
                         placeholder="0850"
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
@@ -1733,7 +1823,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </label>
                     <textarea
                       rows={3}
-                      value={deptSettings.crmWhatsappGreeting}
+                      value={deptSettings.crmWhatsappGreeting} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       onChange={(e) => updateDeptSetting('crmWhatsappGreeting', e.target.value)}
                       className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none resize-none"
                     />
@@ -1792,7 +1882,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('İletişim kanalı ayarları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('İletişim kanalı ayarları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -1821,7 +1911,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         Web Sitesi Başvurusu Önceliği
                       </label>
                       <CustomSelect
-                        value={deptSettings.crmWebRequestDefaultPriority}
+                        value={deptSettings.crmWebRequestDefaultPriority} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmWebRequestDefaultPriority', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       >
@@ -1835,7 +1925,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         Manuel Müşteri İsteği Önceliği
                       </label>
                       <CustomSelect
-                        value={deptSettings.crmManualRequestDefaultPriority}
+                        value={deptSettings.crmManualRequestDefaultPriority} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmManualRequestDefaultPriority', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       >
@@ -1850,7 +1940,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.crmVipBudgetThreshold}
+                        value={deptSettings.crmVipBudgetThreshold} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('crmVipBudgetThreshold', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -1910,83 +2000,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Talep önceliği kuralları kaydedildi.')}
-                      className="rounded-full px-5"
-                    >
-                      Kaydet
-                    </GlassButton>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* SATIŞ: 1. KOMİSYON & HEDEF */}
-            {activeTab === 'dept-sales-commission' && (
-              <div className="space-y-5 animate-in fade-in duration-200">
-                <div>
-                  <h3 className="text-sm font-bold text-white tracking-wide">
-                    Komisyon Oranları & Aylık Satış Hedefi
-                  </h3>
-                  <p className="text-xs text-[#a69f99] mt-0.5">
-                    Satış temsilcilerinin prim hesaplama yüzdeleri ve aylık ciro hedefleri.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#24211f]/60 border border-[#4a443f] space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[11px] text-[#a69f99] block mb-1">
-                        Varsayılan Satış Komisyon Oranı (%)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={deptSettings.salesCommissionRate}
-                        onChange={(e) => updateDeptSetting('salesCommissionRate', e.target.value)}
-                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-[#a69f99] block mb-1">
-                        Temsilci Aylık Hedef Ciro (₺)
-                      </label>
-                      <input
-                        type="number"
-                        value={deptSettings.salesMonthlyTargetAmount}
-                        onChange={(e) => updateDeptSetting('salesMonthlyTargetAmount', e.target.value)}
-                        className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-[#4a443f]/40">
-                    <div>
-                      <div className="text-xs font-medium text-white">Hedef Üstü Kademeli Prim Çarpanı</div>
-                      <div className="text-[11px] text-[#8c857f]">
-                        Aylık hedefini %100 aşan temsilcilerin sonraki satışlarında ek prim çarpanı uygular
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => updateDeptSetting('salesBonusAcceleratorEnabled', !deptSettings.salesBonusAcceleratorEnabled)}
-                      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                        deptSettings.salesBonusAcceleratorEnabled ? 'bg-[#b99881]' : 'bg-[#4a443f]'
-                      }`}
-                    >
-                      <div
-                        className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
-                          deptSettings.salesBonusAcceleratorEnabled ? 'left-6' : 'left-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    {deptSavedMessage ? <span className="text-xs text-emerald-400">{deptSavedMessage}</span> : <span />}
-                    <GlassButton
-                      variant="gold"
-                      size="sm"
-                      onClick={() => handleSaveDeptConfig('Satış komisyon ve hedef ayarları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('Talep önceliği kuralları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -2016,7 +2030,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.salesDefaultSlotMins}
+                        value={deptSettings.salesDefaultSlotMins} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('salesDefaultSlotMins', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2027,7 +2041,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.salesBufferBetweenApptsMins}
+                        value={deptSettings.salesBufferBetweenApptsMins} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('salesBufferBetweenApptsMins', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2061,7 +2075,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Randevu kuralları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('Randevu kuralları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -2091,7 +2105,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.salesOptionHoldHours}
+                        value={deptSettings.salesOptionHoldHours} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('salesOptionHoldHours', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2102,7 +2116,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.salesMaxOptionsPerRep}
+                        value={deptSettings.salesMaxOptionsPerRep} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('salesMaxOptionsPerRep', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2136,7 +2150,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Daire opsiyon kuralları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('Daire opsiyon kuralları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -2166,7 +2180,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="text"
-                        value={deptSettings.accDefaultBankName}
+                        value={deptSettings.accDefaultBankName} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('accDefaultBankName', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2176,7 +2190,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         Varsayılan Para Birimi
                       </label>
                       <CustomSelect
-                        value={deptSettings.accDefaultCurrency}
+                        value={deptSettings.accDefaultCurrency} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('accDefaultCurrency', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       >
@@ -2193,7 +2207,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={deptSettings.accDefaultIban}
+                      value={deptSettings.accDefaultIban} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       onChange={(e) => updateDeptSetting('accDefaultIban', e.target.value)}
                       className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white font-mono focus:outline-none"
                     />
@@ -2204,7 +2218,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Kasa ve banka tanımları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('Kasa ve banka tanımları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -2234,7 +2248,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="text"
-                        value={deptSettings.accInvoicePrefix}
+                        value={deptSettings.accInvoicePrefix} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('accInvoicePrefix', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2245,7 +2259,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="text"
-                        value={deptSettings.accReceiptPrefix}
+                        value={deptSettings.accReceiptPrefix} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('accReceiptPrefix', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2256,7 +2270,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.accDefaultVatRate}
+                        value={deptSettings.accDefaultVatRate} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('accDefaultVatRate', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2290,7 +2304,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Fatura ve makbuz serisi ayarları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('Fatura ve makbuz serisi ayarları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -2320,7 +2334,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.accReminderDaysBefore}
+                        value={deptSettings.accReminderDaysBefore} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('accReminderDaysBefore', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2331,7 +2345,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.accOverdueWarningDays}
+                        value={deptSettings.accOverdueWarningDays} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('accOverdueWarningDays', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2365,7 +2379,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Vade hatırlatıcı kuralları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('Vade hatırlatıcı kuralları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -2381,7 +2395,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {activeTab === 'trash' && (
+            {activeTab === 'trash' && userStore.centralAuthEnabled && <LeadTrashPanel key={currentUser?.id} />}
+            {activeTab === 'trash' && (!userStore.centralAuthEnabled || currentUser?.role === 'ADMIN') && (
               <div className="space-y-4 animate-in fade-in duration-200">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -2411,7 +2426,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>Tümünü Geri Yükle</span>
                       </button>
-                      <button
+                      {currentUser?.role === 'ADMIN' && <button
                         type="button"
                         onClick={() => {
                           trashStore.emptyTrash()
@@ -2423,7 +2438,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Çöp Kutusunu Boşalt</span>
-                      </button>
+                      </button>}
                     </div>
                   )}
                 </div>
@@ -2537,7 +2552,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <span>Geri Yükle</span>
                               </button>
 
-                              <button
+                              {currentUser?.role === 'ADMIN' && <button
                                 type="button"
                                 onClick={() => {
                                   trashStore.deletePermanently(item.trashId)
@@ -2548,7 +2563,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                                 <span>Kalıcı Sil</span>
-                              </button>
+                              </button>}
                             </div>
                           </div>
                         )
@@ -2578,7 +2593,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.adminRepMaxDiscountPct}
+                        value={deptSettings.adminRepMaxDiscountPct} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('adminRepMaxDiscountPct', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2589,7 +2604,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.adminManagerMaxDiscountPct}
+                        value={deptSettings.adminManagerMaxDiscountPct} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('adminManagerMaxDiscountPct', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2600,7 +2615,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.adminRequireBoardApprovalAbovePct}
+                        value={deptSettings.adminRequireBoardApprovalAbovePct} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('adminRequireBoardApprovalAbovePct', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2612,7 +2627,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('İskonto ve onay sınırları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('İskonto ve onay sınırları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet
@@ -2641,7 +2656,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.adminSessionTimeoutMins}
+                        value={deptSettings.adminSessionTimeoutMins} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('adminSessionTimeoutMins', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2652,7 +2667,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={deptSettings.adminAuditRetentionDays}
+                        value={deptSettings.adminAuditRetentionDays} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                         onChange={(e) => updateDeptSetting('adminAuditRetentionDays', e.target.value)}
                         className="w-full bg-[#1e1c1a] border border-[#4a443f] focus:border-[#b99881] rounded-full px-4 py-2 text-xs text-white focus:outline-none"
                       />
@@ -2686,7 +2701,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <GlassButton
                       variant="gold"
                       size="sm"
-                      onClick={() => handleSaveDeptConfig('Güvenlik ve denetim ayarları kaydedildi.')}
+                      onClick={() => handleSaveDeptConfig('Güvenlik ve denetim ayarları kaydedildi.')} disabled={deptLoading || deptSaving || (userStore.centralAuthEnabled && currentUser?.role !== 'ADMIN')}
                       className="rounded-full px-5"
                     >
                       Kaydet

@@ -1,5 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js'
-import {createCrmAuthService,crmEmailError,CrmAuthError,parseCrmProfile} from './crmAuthService.ts'
+import {createCrmAuthService,crmEmailError,crmPasswordSignInError,CrmAuthError,parseCrmProfile} from './crmAuthService.ts'
 
 export function validateNewCrmPassword(password:string){
  if(password.length<12||password.length>128)throw new CrmAuthError('weak_password','Parola 12–128 karakter olmalı.')
@@ -14,14 +14,19 @@ export function createCrmAccountService(client:SupabaseClient){
   return data
  }
  return {
-  async registerWithInvite(email:string,password:string,token:string,redirectTo:string){
+  async registerWithInvite(email:string,password:string,token:string,redirectTo?:string){
    validateNewCrmPassword(password)
    await rpc('crm_check_staff_invite',{p_token:token,p_email:email.trim()})
    // Metadata'da rol veya personel ID'si verilmez. Yetki davet kabul RPC'sinden gelir.
-   const {data,error}=await client.auth.signUp({email:email.trim(),password,options:{emailRedirectTo:redirectTo}})
+   const {data,error}=await client.auth.signUp({email:email.trim(),password,...(redirectTo?{options:{emailRedirectTo:redirectTo}}:{})})
    if(error)throw crmEmailError(error)
    // E-posta onayı gerekiyorsa kayıt başarılı olsa da uygulama oturumu hazır değildir.
    return {confirmationRequired:!data.session}
+  },
+  async signInForInvite(email:string,password:string,token:string){
+   await rpc('crm_check_staff_invite',{p_token:token,p_email:email.trim()})
+   const {error}=await client.auth.signInWithPassword({email:email.trim(),password})
+   if(error)throw crmPasswordSignInError(error)
   },
   async acceptInvite(token?:string){
    const {data,error}=await client.auth.getUser()
@@ -38,17 +43,26 @@ export function createCrmAccountService(client:SupabaseClient){
    const {error}=await client.auth.resetPasswordForEmail(email.trim(),{redirectTo})
    if(error)throw crmEmailError(error)
   },
-  async changePassword(currentPassword:string,newPassword:string){
+  async changePassword(currentPassword:string,newPassword:string,expectedProfileId?:string){
    validateNewCrmPassword(newPassword)
    const profile=await auth.getProfile()
+   if(expectedProfileId!==undefined&&profile.id!==expectedProfileId)throw new CrmAuthError('authentication_required','Oturum değişti. Tekrar giriş yapın.')
    const {data:identity,error}=await client.auth.getUser()
-   if(error||!identity.user?.email)throw new CrmAuthError('authentication_required','Sunucu kimliği doğrulanamadı.')
+   if(error||!identity.user?.email||identity.user.id!==profile.authUserId)throw new CrmAuthError('authentication_required','Sunucu kimliği doğrulanamadı.')
    const {data:reauth,error:reauthError}=await client.auth.signInWithPassword({email:identity.user.email,password:currentPassword})
-   if(reauthError||reauth.user?.id!==profile.authUserId)throw new CrmAuthError('reauthentication_failed','Mevcut Supabase parolası doğrulanamadı; parola değiştirilmedi.')
-   const {error:updateError}=await client.auth.updateUser({password:newPassword,current_password:currentPassword})
-   if(updateError)throw new CrmAuthError('password_update_failed','Parola güncellenemedi; sunucu parola kurallarını kontrol edin.')
+   if(reauthError||reauth.user?.id!==profile.authUserId)throw new CrmAuthError('reauthentication_failed','Mevcut parola doğrulanamadı.')
+   const retryInitialCompletion=profile.mustChangePassword&&newPassword===currentPassword
+   if(!retryInitialCompletion){
+    const {error:updateError}=await client.auth.updateUser({password:newPassword,current_password:currentPassword})
+    if(updateError)throw new CrmAuthError('password_update_failed','Parola güncellenemedi. Parola kurallarını kontrol edip tekrar deneyin.')
+   }
    if (profile.mustChangePassword) {
-    await rpc('crm_finish_initial_password')
+    try { await rpc('crm_finish_initial_password') }
+    catch {
+     throw new CrmAuthError('initial_password_pending',retryInitialCompletion
+      ? 'İlk giriş tamamlanamadı. Geçici parolanızdan farklı bir parola seçin veya daha önce kaydettiğiniz parolayla tekrar deneyin.'
+      : 'Yeni parolanız kaydedildi ama ilk giriş tamamlanamadı. Tekrar denemek için yeni parolanızı üç alana da girin.')
+    }
    }
   },
   async completePasswordRecovery(newPassword:string,recoveryEventReceived:boolean){

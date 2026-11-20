@@ -1,11 +1,12 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.117.2'
-import { buildCapiEvent, deliveryResult, graphGet, graphLeadGet, graphVersion, MetaError, normalizeLead, readBody, deliveryMode } from './meta-core.ts'
+import { buildCapiEvent, deliveryResult, graphGet, graphLeadGet, graphVersion, MetaError, normalizeLead, readBody, deliveryMode, stageEvent, leadRangePath } from './meta-core.ts'
 import { getMetaPageAccess, resolveMetaPageAccess } from './meta-page-access.ts'
 
 const json = (body: unknown, status = 200, origin = '') => Response.json(body, {
   status, headers: { 'Access-Control-Allow-Origin': origin, Vary: 'Origin', 'Cache-Control': 'no-store',
     'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS' },
 })
+const MANUAL_FROM = '2026-11-17T21:00:00.000Z' // 18 Kasım, Europe/Istanbul
 
 export function createCapiHandler(deps: {
   env: (name: string) => string
@@ -20,7 +21,9 @@ const testOnly = () => env('META_TEST_ONLY') !== 'false'
 return async (req: Request): Promise<Response> => {
   const origin = req.headers.get('origin') || ''
   const allowed = env('META_ALLOWED_ORIGINS').split(',').map(s => s.trim()).filter(Boolean)
-  if (origin && !allowed.includes(origin)) return json({ error: 'Bu kaynağa izin verilmiyor.' }, 403)
+  // Kurulumsuz masaüstü arayüzü file:// üzerinden açılır ve Origin: null gönderir.
+  // Bu yalnızca CORS iznidir; aşağıdaki JWT ve Meta üyeliği kontrolleri yine zorunludur.
+  if (origin && origin !== 'null' && !allowed.includes(origin)) return json({ error: 'Bu kaynağa izin verilmiyor.' }, 403)
   if (req.method === 'OPTIONS') return json({}, 200, origin)
   if (req.method !== 'POST') return json({ error: 'Yöntem desteklenmiyor.' }, 405, origin)
   try {
@@ -51,6 +54,36 @@ return async (req: Request): Promise<Response> => {
     }
     const { data: settings, error: settingsError } = await db.from('meta_settings').select('*').eq('id', true).single()
     if (settingsError) throw new MetaError(503, 'Meta migration veya ayarları eksik.')
+    if (input.action === 'pending') {
+      if (!member?.is_admin) throw new MetaError(403, 'Yönetici yetkisi gerekli.')
+      const cursor = input.cursor ? String(input.cursor) : ''
+      if (cursor.length > 200) throw new MetaError(400, 'Geçersiz liste imleci.')
+      let query = db.from('leads').select('id,full_name,stage,meta_revision,meta_changed_at,is_qualified')
+        .in('stage', Object.keys(stageEvent).filter(key => stageEvent[key]))
+        .gt('meta_revision', 0).gte('meta_changed_at', MANUAL_FROM).order('id', { ascending: true }).limit(50)
+      if (cursor) query = query.gt('id', cursor)
+      const { data: rows, error } = await query
+      if (error) throw new MetaError(503, 'Bekleyen müşteri sonuçları sunucudan okunamadı.')
+      const records = []
+      for (const lead of rows || []) {
+        if (lead.stage === 'QUALIFIED' && !lead.is_qualified) continue
+        const { data: sources, error: sourceError } = await db.rpc('meta_list_sources', { p_user: userId, p_lead: lead.id })
+        if (sourceError) {
+          if (sourceError.message?.includes('forbidden')) continue
+          throw new MetaError(503, 'Başvuru kaynakları okunamadı.')
+        }
+        const allowedSources = (sources || []).filter((s: any) => Date.parse(s.submitted_at) >= Date.parse(MANUAL_FROM))
+        if (!allowedSources.length) continue
+        const { data: events, error: eventError } = await db.from('meta_outbox').select('state,meta_leadgen_id')
+          .eq('lead_id', lead.id).eq('revision', lead.meta_revision).eq('event_name', stageEvent[lead.stage]).eq('test_mode', false)
+        if (eventError) throw new MetaError(503, 'Önceki gönderim sonuçları okunamadı.')
+        if ((events || []).some((e: any) => e.state === 'sent' && allowedSources.some((s: any) => s.leadgen_id === e.meta_leadgen_id))) continue
+        records.push({ id: lead.id, fullName: lead.full_name, stage: lead.stage, revision: lead.meta_revision,
+          eventName: stageEvent[lead.stage], retry: (events || []).some((e: any) => ['retry','rejected'].includes(e.state)),
+          sources: allowedSources.map((s: any) => ({ id: s.leadgen_id, label: s.context?.formName || `Başvuru …${s.leadgen_id.slice(-6)}` })) })
+      }
+      return json({ records, cursor: rows?.length === 50 ? rows[rows.length - 1].id : null, from: MANUAL_FROM }, 200, origin)
+    }
     if (input.action === 'status' || input.action === 'history') {
       let query = db.from('meta_outbox').select('id,lead_id,meta_leadgen_id,revision,event_name,occurred_at,state,attempt,next_attempt_at,last_attempt_at,sent_at,events_received,fbtrace_id,error_code,test_mode').order('occurred_at', { ascending: false }).limit(100)
       if (!member?.is_admin) query = query.eq('requested_by', userId)
@@ -158,7 +191,7 @@ return async (req: Request): Promise<Response> => {
       // Sayfanın formu olduğu sunucuda doğrulanır; istemcinin form adına güvenilmez.
       const form = await graphGet(`${formId}?fields=id,name,page_id`, pageToken, version, fetcher)
       if (String(form.id) !== formId || String(form.page_id) !== pageId) throw new MetaError(403, 'Formun yapılandırılmış sayfaya ait olduğu doğrulanamadı.')
-      const leads = await graphLeadGet(`${formId}/leads?limit=25&since=${Math.floor(from/1000)}&until=${Math.floor(to/1000)}${cursor ? `&after=${encodeURIComponent(cursor)}` : ''}`, pageToken, version, fetcher)
+      const leads = await graphLeadGet(leadRangePath(formId, from, to, cursor), pageToken, version, fetcher)
       let processed = 0
       const savedLeads: any[] = []
       for (const details of leads.data || []) {
@@ -182,6 +215,14 @@ return async (req: Request): Promise<Response> => {
       if (!Number.isSafeInteger(input.revision) || input.revision < 0 || !['Contact','QualifiedLead','DisqualifiedLead','Schedule'].includes(input.eventName)) throw new MetaError(400, 'Güncel aşama sürümü ve olay türü gerekli.')
       if (input.leadgenId !== undefined && input.leadgenId !== null && (typeof input.leadgenId !== 'string' || !/^\d{1,32}$/.test(input.leadgenId))) throw new MetaError(400, 'Meta başvuru kimliği geçersiz.')
       if (input.action === 'test' && (!member?.is_admin || !env('META_TEST_EVENT_CODE'))) throw new MetaError(409, 'Yönetici ve sunucuda test olay kodu gerekli.')
+      if (input.action === 'enqueue') {
+        const { data: sources, error } = await db.rpc('meta_list_sources', { p_user: userId, p_lead: input.leadId })
+        if (error) throw new MetaError(403, 'Başvuru kaynağı doğrulanamadı.')
+        const selected = input.leadgenId ? (sources || []).find((s: any) => s.leadgen_id === input.leadgenId)
+          : sources?.length === 1 ? sources[0] : null
+        if (!selected) throw new MetaError(409, 'Sonucun ait olduğu başvuruyu seçin.')
+        if (!(Date.parse(selected.submitted_at) >= Date.parse(MANUAL_FROM))) throw new MetaError(409, '18 Kasım 2026 öncesindeki başvurular gönderilmez.')
+      }
       const { data, error } = await db.rpc('meta_enqueue_checked', { p_user: userId, p_lead: input.leadId,
         p_test: input.action === 'test', p_revision: input.revision, p_event: input.eventName, p_leadgen_id: input.leadgenId || null })
       if (error) throw new MetaError(409, error.message?.includes('meta_source_selection_required')

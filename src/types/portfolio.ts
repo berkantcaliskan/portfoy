@@ -8,6 +8,7 @@ export type PropertyType =
   | 'Penthouse'
   | 'Ticari'
   | 'Arsa'
+  | 'Diğer'
 
 export type PropertyStatus = 'AVAILABLE' | 'RESERVED' | 'SOLD'
 
@@ -16,6 +17,9 @@ export interface PortfolioItem {
   title: string
   projectCode: string
   type: PropertyType
+  typeDescription?: string
+  hasPool?: boolean
+  rowColor?: string
   location: string
   price: number
   currency: 'TRY' | 'USD' | 'EUR'
@@ -27,4 +31,10 @@ export interface PortfolioItem {
   description: string
   status: PropertyStatus
   createdAt: string
+  entryKind?: 'EXTERNAL'
+  installmentPrice?: number
+  installmentTerms?: string
+  consultant?: string
+  loan?: string
+  createdByUserId?: string
 }

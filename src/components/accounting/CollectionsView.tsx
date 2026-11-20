@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
-  TurkishLira,
+  Wallet,
   Plus,
   CheckCircle2,
   AlertCircle,
@@ -157,7 +157,7 @@ export const CollectionsView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <TurkishLira className="w-5 h-5 text-[#b99881]" />
+            <Wallet className="w-5 h-5 text-[#b99881]" />
             <h2 className="text-2xl font-bold text-white tracking-wide">
               Tahsilatlar
             </h2>

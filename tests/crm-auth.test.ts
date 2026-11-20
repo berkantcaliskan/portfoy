@@ -12,7 +12,7 @@ test('E-posta limit ve sağlayıcı hataları ayırt edilir; ham hata metni gös
 function setup(options:any={}){
  const calls:any[]=[]
  const client:any={auth:{getUser:async()=>({data:{user:options.noUser?null:{id:'auth-id',user_metadata:{role:'ADMIN'}}},error:null}),
- signInWithPassword:async(input:any)=>{calls.push({signIn:input});return {error:options.loginError?{}:null}},
+ signInWithPassword:async(input:any)=>{calls.push({signIn:input});return {error:options.passwordError??(options.loginError?{code:'invalid_credentials',status:400}:null)}},
  signInWithOtp:async(input:any)=>{calls.push({otp:input});return {error:options.loginError?{}:null}},
  verifyOtp:async(input:any)=>{calls.push({verify:input});return {error:options.loginError?{}:null}},
  signOut:async()=>{calls.push({signOut:true});return {error:null}}},
@@ -34,9 +34,31 @@ test('Bilinmeyen rol ve kapsam reddedilir',()=>{assert.throws(()=>parseCrmProfil
 test('Parola normalize edilmez; e-posta kenar boşluğu temizlenir',async()=>{
  const s=setup();await s.auth.signInWithPassword(' test@example.invalid ',' pass ');assert.deepEqual(s.calls[0].signIn,{email:'test@example.invalid',password:' pass '})
 })
+test('Berkant kullanıcı adı doğrulanan e-postaya gider; diğer personel ve doğrudan e-posta girişi korunur',async()=>{
+ for(const [identifier,email] of [
+  ['berkant','dijital@demirturkinsaat.com'],
+  [' BERKANT ','dijital@demirturkinsaat.com'],
+  ['murat','murat@staff.demirturk.invalid'],
+  ['nazli','nazli@staff.demirturk.invalid'],
+  ['dijital@demirturkinsaat.com','dijital@demirturkinsaat.com'],
+ ]) {
+  const s=setup();await s.auth.signInWithPassword(identifier,' fixture-password. ')
+  assert.deepEqual(s.calls[0].signIn,{email,password:' fixture-password. '})
+ }
+})
 test('Başarısız giriş profil RPC çalıştırmaz',async()=>{
- const s=setup({loginError:true});await assert.rejects(s.auth.signInWithPassword('test@example.invalid','bad'),/reddedildi/)
+ const s=setup({loginError:true});await assert.rejects(s.auth.signInWithPassword('test@example.invalid','bad'),/Kullanıcı adı, e-posta veya parola doğrulanamadı/)
  assert.equal(s.calls.some(c=>c.profileRead),false)
+})
+test('Parola girişi bağlantı, doğrulama ve hız sınırı sorunlarını ayırır', async () => {
+ for (const [passwordError, code] of [
+  [{name:'AuthRetryableFetchError',status:0},'sign_in_unavailable'],
+  [{code:'email_not_confirmed',status:400},'email_not_confirmed'],
+  [{status:429},'request_rate_limited'],
+ ] as const) {
+  const s=setup({passwordError})
+  await assert.rejects(s.auth.signInWithPassword('qa@example.invalid','fixture-password'), {code})
+ }
 })
 test('Kod isteği yeni kullanıcı oluşturmaz veya istemciden rol atamaz',async()=>{
  const s=setup();await s.auth.requestCode(' test@example.invalid ')

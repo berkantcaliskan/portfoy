@@ -38,12 +38,14 @@ function setup(options:any={}) {
     META_TEST_ONLY:'false',META_WORKER_SECRET:'isolated-worker-key',META_DATASET_ID:'123',META_CAPI_ACCESS_TOKEN:'isolated-capi-key',META_GRAPH_VERSION:'v99.0',META_TEST_EVENT_CODE:'ISOLATED',META_ALLOWED_ORIGINS:'https://crm.invalid',...options.env}
   let table=''
   let outcome:any={id:'event-id',lead_id:'lead',revision:1,state:'pending',event_name:'QualifiedLead'}
-  const query:any={select(){return this},eq(){return this},order(){return this},limit(){return this},update(){return this},
+  const query:any={select(){return this},eq(){return this},order(){return this},limit(){return this},update(){return this},is(){return this},in(){return this},gt(){return this},gte(){return this},
+    then(resolve:any,reject:any){return Promise.resolve({data:table==='leads'?options.pendingRows||[]:options.pendingEvents||[],error:null}).then(resolve,reject)},
     async single(){return {data:table==='meta_settings'?settings:outcome,error:null}},
     async maybeSingle(){return {data:options.member===undefined?{can_send:true,is_admin:true}:options.member,error:null}}}
   const client:any={auth:{async getUser(token:string){calls.push({auth:token});return {data:{user:token==='valid-user'?{id:'user-id'}:null},error:null}}},
     from(name:string){table=name;calls.push({table});return query},
     async rpc(name:string,args:any){calls.push({rpc:name,args});
+      if(name==='meta_list_sources')return {data:options.sources||[{leadgen_id:'111',submitted_at:'2026-11-19T08:00:00Z',context:{formName:'Form'}}],error:null}
       if(name==='meta_enqueue_checked') return {data:'event-id',error:null}
       if(name==='meta_claim') return {data:options.jobs||[],error:null}
       if(name==='meta_set_stage') return {data:{meta_revision:2,updated_at:new Date().toISOString()},error:null}
@@ -60,6 +62,38 @@ test('Geçersiz kullanıcı JWT reddedilir',async()=>{const s=setup();assert.equ
 test('Üyeliği olmayan kullanıcı reddedilir',async()=>{const s=setup({member:null});assert.equal((await s.handler(s.req({action:'enqueue'},'valid-user'))).status,403)})
 test('Gönderim yetkisi olmayan kullanıcı reddedilir',async()=>{const s=setup({member:{can_send:false,is_admin:false}});assert.equal((await s.handler(s.req({action:'enqueue'},'valid-user'))).status,403)})
 test('CORS izin listesi dışındaki origin reddedilir',async()=>{const s=setup();assert.equal((await s.handler(s.req({action:'connection'},'valid-user','https://other.invalid'))).status,403)})
+
+test('18 Kasım öncesi kaynak canlı gönderim kuyruğuna alınmaz',async()=>{
+ const s=setup({settings:{enabled:true},sources:[{leadgen_id:'111',submitted_at:'2026-11-17T20:59:59Z'}]})
+ const r=await s.handler(s.req({action:'enqueue',leadId:'lead',revision:1,eventName:'QualifiedLead'},'valid-user'))
+ assert.equal(r.status,409);assert.equal(s.calls.some(c=>c.rpc==='meta_enqueue_checked'),false);assert.equal(s.fetchCount(),0)
+})
+test('Sunucu bekleyenleri listelerken kabul edilmiş aynı sonucu çıkarır',async()=>{
+ const lead={id:'lead',full_name:'İzole',stage:'QUALIFIED',is_qualified:true,meta_revision:2}
+ for(const sent of [false,true]){
+  const s=setup({pendingRows:[lead],pendingEvents:sent?[{state:'sent',meta_leadgen_id:'111'}]:[]})
+  const r=await s.handler(s.req({action:'pending'},'valid-user'));assert.equal(r.status,200)
+  assert.equal((await r.json()).records.length,sent?0:1);assert.equal(s.fetchCount(),0)
+ }
+})
+test('Sunucu 18 Kasım öncesi kaynakları ve yönetici olmayanın toplu erişimini dışlar',async()=>{
+ const s=setup({pendingRows:[{id:'lead',stage:'CONTACTED',meta_revision:1}],sources:[{leadgen_id:'111',submitted_at:'2026-11-17T20:00:00Z'}]})
+ assert.equal((await(await s.handler(s.req({action:'pending'},'valid-user'))).json()).records.length,0)
+ const denied=setup({member:{can_send:true,is_admin:false}})
+ assert.equal((await denied.handler(denied.req({action:'pending'},'valid-user'))).status,403)
+})
+
+test('Masaüstü null origin ön isteği geçer; JWT ve Meta üyeliği zorunlu kalır',async()=>{
+ const s=setup()
+ const preflight=await s.handler(new Request('https://isolated.invalid',{method:'OPTIONS',headers:{Origin:'null'}}))
+ assert.equal(preflight.status,200);assert.equal(preflight.headers.get('Access-Control-Allow-Origin'),'null')
+ assert.equal((await s.handler(s.req({action:'status'},'','null'))).status,401)
+ assert.equal((await s.handler(s.req({action:'status'},'invalid-token','null'))).status,401)
+ const valid=await s.handler(s.req({action:'status'},'valid-user','null'))
+ assert.equal(valid.status,200);assert.equal(valid.headers.get('Access-Control-Allow-Origin'),'null')
+ const denied=setup({member:null})
+ assert.equal((await denied.handler(denied.req({action:'status'},'valid-user','null'))).status,403)
+})
 test('Bozuk istek şekli 400 döndürür',async()=>{const s=setup();assert.equal((await s.handler(s.req(null))).status,400);assert.equal((await s.handler(s.req([]))).status,400)})
 test('Demo yetkili workerı da durdurur; arka planda claim veya Meta çağrısı yoktur',async()=>{const s=setup();assert.equal((await s.handler(s.req({action:'process'},'isolated-worker-key'))).status,409);assert.equal(s.calls.some(x=>x.rpc==='meta_claim'),false);assert.equal(s.fetchCount(),0)})
 test('Yanlış worker sırrı Auth kontrolünü atlayamaz',async()=>{const s=setup();assert.equal((await s.handler(s.req({action:'process'},'wrong-worker'))).status,401);assert.equal(s.calls.some(x=>x.rpc==='meta_claim'),false)})

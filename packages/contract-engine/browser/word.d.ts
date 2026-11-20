@@ -1,0 +1,1 @@
+export function renderAsync(data:Uint8Array,body:HTMLElement,styles:HTMLElement,options:{inWrapper:boolean;useBase64URL:boolean;renderAltChunks:boolean;ignoreLastRenderedPageBreak:boolean}):Promise<unknown>

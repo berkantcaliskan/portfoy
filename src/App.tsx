@@ -1,9 +1,16 @@
 import { teamOperationsStore } from '@/services/teamOperationsStore'
+import { googleAdsStore } from '@/services/googleAdsStore'
 import { brandKitStore } from '@/services/brandKitStore'
 import { calendarStore } from '@/services/calendarStore'
 import { contactStore } from '@/services/contactStore'
 import { creativeStore } from '@/services/creativeStore'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useCallback, useSyncExternalStore } from 'react'
+import { frontOfficeStore } from '@/services/frontOfficeStore'
+import { FRONT_OFFICE_MENU } from '@/types/frontOffice'
+import { AccountingArchive } from '@/components/accounting/AccountingArchive'
+import { ContractProvider, ContractsPage, CustomerContractButton } from '@/components/contracts/ContractWorkspace'
+import { ModalHeaderAccessory } from '@/components/ui/GlassModal'
+import { FrontOfficeView } from '@/components/frontoffice/FrontOfficeView'
 import { BackendStatusBanner } from '@/components/common/BackendStatusBanner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Navbar, NavTab } from '@/components/layout/Navbar'
@@ -13,6 +20,7 @@ import { LeadDetailModal } from '@/components/crm/LeadDetailModal'
 import { LeadAddModal } from '@/components/crm/LeadAddModal'
 import { ContactsView } from '@/components/contacts/ContactsView'
 import { AddPropertyModal } from '@/components/portfolio/AddPropertyModal'
+import { PropertyListingsView } from '@/components/portfolio/PropertyListingsView'
 import { ProjectsView } from '@/components/projects/ProjectsView'
 import { SharedFilesView } from '@/components/shared/SharedFilesView'
 import { SalesTeamView } from '@/components/sales/SalesTeamView'
@@ -21,7 +29,11 @@ import { LoginModal } from '@/components/auth/LoginModal'
 import { SettingsModal, applyAccentColorChoice } from '@/components/settings/SettingsModal'
 import { MailWorkspaceModal } from '@/components/mail/MailWorkspaceModal'
 import { AuthScreen } from '@/components/auth/AuthScreen'
+import { FirstLoginPasswordScreen } from '@/components/auth/FirstLoginPasswordScreen'
 import { OpeningAnimation } from '@/components/common/OpeningAnimation'
+import { IdleScreenSaver } from '@/components/common/IdleScreenSaver'
+import { ApplicationLock } from '@/components/common/ApplicationLock'
+import { applicationLockStore } from '@/services/applicationLockStore'
 import { AmbientSceneOverlay } from '@/components/common/AmbientSceneOverlay'
 import { mailService } from '@/services/mailService'
 import { formatPhoneNumber } from '@/utils/formatters'
@@ -61,18 +73,35 @@ import { PortfolioItem } from '@/types/portfolio'
 import {
   DEPARTMENT_MENU_CONFIG,
   Department,
-  NavPageId,
   getDepartmentForPage,
 } from '@/types/department'
 import { notificationStore } from '@/services/notificationStore'
 import { SearchResultItem, normalizeTr } from '@/services/departmentSearchService'
 
+const screenSaverDisabledKey = 'demirturk_screensaver_disabled'
+
 export function App() {
+  const [screenSaverDisabled, setScreenSaverDisabled] = useState(() => {
+    try { return localStorage.getItem(screenSaverDisabledKey) === 'true' } catch { return false }
+  })
+  const changeScreenSaverPreference = (disabled: boolean) => {
+    setScreenSaverDisabled(disabled)
+    try { localStorage.setItem(screenSaverDisabledKey, String(disabled)) } catch { /* Applies for this session. */ }
+  }
+  const office = useSyncExternalStore(frontOfficeStore.subscribe, frontOfficeStore.getSnapshot)
+  useEffect(() => frontOfficeStore.start(), [])
   const [projectSync, setProjectSync] = useState(projectStore.getSyncState())
   useEffect(() => projectStore.subscribe(() => setProjectSync(projectStore.getSyncState())), [])
   const [showOpening, setShowOpening] = useState(false)
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
+  const applicationLock = useSyncExternalStore(applicationLockStore.subscribe, applicationLockStore.getSnapshot)
+  useLayoutEffect(() => applicationLockStore.start(currentUser && !currentUser.mustChangePassword ? currentUser.id : null),
+    [currentUser?.id, currentUser?.mustChangePassword])
   useEffect(()=>{userStore.startServerAuth()},[])
+  useEffect(() => {
+    if (!userStore.centralAuthEnabled || !currentUser?.id || currentUser.mustChangePassword) return
+    return leadStore.connectCentralFeed(currentUser.id)
+  }, [currentUser?.id, currentUser?.mustChangePassword])
   useEffect(() => {
     if (!userStore.centralAuthEnabled) return
     const refresh = () => { void appointmentStore.refreshFromBackend() }
@@ -95,7 +124,9 @@ export function App() {
     brandKitStore.setAccount(currentUser?.id ?? null)
     messageStore.setAccount(currentUser?.id ?? null)
     teamOperationsStore.setAccount(currentUser?.id ?? null)
+    googleAdsStore.setAccount(currentUser?.id ?? null)
     const refresh = () => {
+      void leadStore.refreshFromSupabase()
       void requestStore.refreshFromSupabase()
       void accountingStore.refreshFromBackend()
       void approvalStore.refreshFromBackend()
@@ -108,11 +139,14 @@ export function App() {
       void brandKitStore.refreshFromBackend()
       void messageStore.refreshFromBackend()
       void teamOperationsStore.refreshFromBackend()
+      void googleAdsStore.refreshFromBackend()
     }
     refresh()
     window.addEventListener('focus', refresh)
-    const timer=setInterval(()=>{if(document.visibilityState==='visible')void messageStore.refreshFromBackend()},15000)
-    return () => { window.removeEventListener('focus', refresh);clearInterval(timer) }
+    window.addEventListener('crm:refresh-requested', refresh)
+    const timer=setInterval(()=>{if(document.visibilityState==='visible')void teamOperationsStore.refreshFromBackend()},15000)
+    const messageTimer=setInterval(()=>{if(document.visibilityState==='visible')void messageStore.refreshFromBackend()},2000)
+    return () => { window.removeEventListener('focus', refresh);window.removeEventListener('crm:refresh-requested', refresh);clearInterval(timer);clearInterval(messageTimer) }
   }, [currentUser?.id])
   const [activeTab, setActiveTabState] = useState<NavTab>(() => {
     const raw = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : 'dashboard'
@@ -138,16 +172,21 @@ export function App() {
     notificationStore.markTabAsViewed(activeTab)
   }, [])
 
-  const setActiveTab = (tab: NavTab) => {
+  const setActiveTab = useCallback((tab: NavTab) => {
     const cleanTab = (tab || '').replace(/^#\/?/, '') as NavTab
-    const finalTab = cleanTab || 'dashboard'
-
-    // Auto-sync department if navigating to a page owned by another department
-    const targetDept = getDepartmentForPage(finalTab as NavPageId)
-    const activeDept = currentUser?.department || 'Pazarlama'
-
-    if (targetDept && targetDept !== activeDept) {
-      userStore.switchDepartment(targetDept)
+    let finalTab = cleanTab || 'dashboard'
+    const account = userStore.getCurrentUser()
+    const officeState = frontOfficeStore.getSnapshot()
+    const sharedContractPage = !officeState.active && (account?.department === 'Muhasebe' || account?.department === 'Yönetim')
+    const officePage = finalTab === 'office-visitors' || (finalTab === 'office-contracts' && !sharedContractPage)
+    if (officePage) {
+      if (!officeState.canAccess || !frontOfficeStore.activate(true)) finalTab = 'dashboard'
+    } else if (officeState.active && !FRONT_OFFICE_MENU.some(page => page.id === finalTab)) {
+      frontOfficeStore.activate(false)
+    }
+    if (account && !officePage && finalTab !== 'contacts' && !DEPARTMENT_MENU_CONFIG[account.department].some(page => page.id === finalTab)) {
+      const targetDept = getDepartmentForPage(finalTab)
+      if (!targetDept || !userStore.switchDepartment(targetDept).success) finalTab = 'dashboard'
     }
 
     notificationStore.markTabAsViewed(finalTab)
@@ -157,7 +196,7 @@ export function App() {
         window.location.hash = finalTab
       }
     }
-  }
+  }, [])
 
   useEffect(() => {
     const handleHash = () => {
@@ -168,7 +207,7 @@ export function App() {
     }
     window.addEventListener('hashchange', handleHash)
     return () => window.removeEventListener('hashchange', handleHash)
-  }, [activeTab, currentUser?.department])
+  }, [activeTab, setActiveTab])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTool, setActiveTool] = useState<ToolType | null>(null)
@@ -204,6 +243,12 @@ export function App() {
   const [isLeadDetailOpen, setIsLeadDetailOpen] = useState(false)
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false)
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false)
+  useEffect(() => {
+    if (!applicationLock.locked) return
+    setActiveTabState('dashboard')
+    setIsLeadDetailOpen(false); setSelectedLead(null); setIsAddLeadOpen(false); setIsAddPropertyOpen(false)
+    setIsSettingsModalOpen(false)
+  }, [applicationLock.locked])
 
   // Global F5 and Ctrl+R / Cmd+R instant page reload support
   useEffect(() => {
@@ -302,6 +347,10 @@ export function App() {
       if (selectedLead) {
         const updated = leadStore.getById(selectedLead.id, userStore.getCurrentUser())
         if (updated) setSelectedLead(updated)
+        else {
+          setSelectedLead(null)
+          setIsLeadDetailOpen(false)
+        }
       }
     })
 
@@ -327,24 +376,13 @@ export function App() {
   useEffect(() => {
     if (!currentUser) return
     const activeDept: Department = currentUser.department || 'Pazarlama'
-    const allowedPages = DEPARTMENT_MENU_CONFIG[activeDept] || []
+    if ((activeTab === 'office-visitors' || activeTab === 'office-contracts') && office.loading) return
+    const allowedPages = office.active && office.canAccess ? FRONT_OFFICE_MENU : DEPARTMENT_MENU_CONFIG[activeDept] || []
     const isAllowed =
       activeTab === 'contacts' || allowedPages.some((p) => p.id === activeTab)
 
-    if (!isAllowed) {
-      const targetDept = getDepartmentForPage(activeTab as NavPageId)
-      const canSwitch =
-        targetDept &&
-        (currentUser.role === 'ADMIN' ||
-          (currentUser.isManager && currentUser.departments?.includes(targetDept)))
-
-      if (canSwitch && targetDept) {
-        userStore.switchDepartment(targetDept)
-      } else {
-        setActiveTab('dashboard')
-      }
-    }
-  }, [currentUser?.department, activeTab])
+    if (!isAllowed) setActiveTab(activeTab)
+  }, [currentUser, activeTab, setActiveTab, office.active, office.canAccess, office.loading])
 
   // Filter leads based on search query
   const filteredLeads = leads.filter((l) => {
@@ -359,7 +397,9 @@ export function App() {
   })
 
   const handleSelectLead = (lead: Lead) => {
-    setSelectedLead(lead)
+    const visible = leadStore.getById(lead.id, userStore.getCurrentUser())
+    if (!visible) return
+    setSelectedLead(visible)
     setIsLeadDetailOpen(true)
   }
 
@@ -434,7 +474,11 @@ export function App() {
 
   // Not logged in: Show dedicated modern Sign In & Sign Up screen
   if (currentUser?.mustChangePassword) {
-    return <main className="p-8"><h1>İlk girişte parolanızı değiştirin</h1><p>Geçici parolanızla hesabınızı doğrulayıp yeni parolanızı belirleyin.</p><a href="/?workspace=backend">Hesap güvenliği ekranını aç</a></main>
+    return (
+      <FirstLoginPasswordScreen key={currentUser.id} centralAuth={userStore.centralAuthEnabled}
+        onSave={(currentPassword, newPassword) => userStore.finishFirstLoginPassword(currentPassword, newPassword)}
+        onBack={() => userStore.logout()} />
+    )
   }
   if (!currentUser) {
     return (
@@ -453,7 +497,8 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f2] text-[#292d2b] relative selection:bg-[#657a72]/25 selection:text-[#292d2b] pb-6 font-sans overflow-x-hidden">
+    <ContractProvider key={currentUser.id} account={currentUser} enabled={!applicationLock.locked && (office.active && office.canAccess || ['Ön Ofis', 'Muhasebe', 'Satış', 'Yönetim'].includes(currentUser.department) || currentUser.role === 'ADMIN')}>
+    <div inert={applicationLock.locked || undefined} aria-hidden={applicationLock.locked || undefined} className="min-h-screen bg-[#f5f5f2] text-[#292d2b] relative selection:bg-[#657a72]/25 selection:text-[#292d2b] pb-6 font-sans overflow-x-hidden">
       <AnimatePresence>
         {showOpening && <OpeningAnimation onComplete={() => setShowOpening(false)} />}
       </AnimatePresence>
@@ -563,7 +608,7 @@ export function App() {
               />
             )}
             {activeTab === 'followups-appointments' && (
-              <AppointmentsView
+              <AppointmentsView sourceColumns
                 pageTitle="Takip ve Randevular"
                 subtitle="Müşteri geri arama takipleri ve satış ekibine yönlendirilen randevular."
                 leads={filteredLeads}
@@ -582,6 +627,9 @@ export function App() {
             {activeTab === 'collections' && <CollectionsView />}
             {activeTab === 'payments' && <PaymentsView />}
             {activeTab === 'financial-reports' && <FinancialReportsView />}
+            {activeTab === 'office-visitors' && office.canAccess && <FrontOfficeView />}
+            {activeTab === 'office-contracts' && <ContractsPage />}
+            {activeTab === 'accounting-archive' && currentUser.department === 'Muhasebe' && <AccountingArchive key={currentUser.id}/>}
 
             {/* YÖNETİM SAYFALARI */}
             {activeTab === 'team-permissions' && <TeamPermissionsView />}
@@ -603,6 +651,7 @@ export function App() {
             {activeTab === 'projects' && (
               <ProjectsView onNavigateToPortfolio={() => setActiveTab('portfolio')} />
             )}
+            {activeTab === 'property-listings' && <PropertyListingsView />}
 
             {/* Dock / Başlat Menüsü: Kişiler */}
             {activeTab === 'contacts' && <ContactsView />}
@@ -611,6 +660,7 @@ export function App() {
       </main>
 
       {/* Modals */}
+      <ModalHeaderAccessory.Provider value={selectedLead ? <CustomerContractButton lead={selectedLead} onOpen={() => setIsLeadDetailOpen(false)} /> : null}>
       <LeadDetailModal
         lead={selectedLead}
         isOpen={isLeadDetailOpen}
@@ -618,12 +668,15 @@ export function App() {
         onStageChange={handleStageChange}
       />
 
+      </ModalHeaderAccessory.Provider>
+
       <LeadAddModal
         isOpen={isAddLeadOpen}
         onClose={() => setIsAddLeadOpen(false)}
-        onAdd={(newLead) => {
-          leadStore.add(newLead)
+        onAdd={async (newLead, requestId) => {
+          const saved = await leadStore.addManual(newLead, requestId)
           setLeads(leadStore.getAll(userStore.getCurrentUser()))
+          window.dispatchEvent(new CustomEvent('demirturk:manual-lead-saved', { detail: saved }))
         }}
       />
 
@@ -660,7 +713,11 @@ export function App() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         currentUser={currentUser}
+        screenSaverDisabled={screenSaverDisabled}
+        onScreenSaverDisabledChange={changeScreenSaverPreference}
       />
+      {!screenSaverDisabled && !applicationLock.locked && <IdleScreenSaver key={currentUser.id} />}
+      <ApplicationLock />
 
       {/* Ambient Animated Background & Bottom Edge Scene */}
       <AmbientSceneOverlay sidebarCollapsed={isSidebarCollapsed} />
@@ -684,6 +741,7 @@ export function App() {
         currentUser={currentUser}
       />
     </div>
+    </ContractProvider>
   )
 }
 

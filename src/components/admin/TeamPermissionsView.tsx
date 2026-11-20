@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Users,
@@ -28,6 +28,7 @@ import {
   generateUsername,
 } from '@/services/userStore'
 import { CANONICAL_DEPARTMENTS } from '@/types/department'
+import { FrontOfficeAccessPanel } from '@/components/frontoffice/FrontOfficeAccessPanel'
 
 export const TeamPermissionsView: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
@@ -35,6 +36,9 @@ export const TeamPermissionsView: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [selectedUserToEdit, setSelectedUserToEdit] = useState<AppUser | null>(null)
   const [createdInfo, setCreatedInfo] = useState<{ username: string; pass: string } | null>(null)
+  const [editError, setEditError] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const editRequest = useRef(false)
 
   // Add Form
   const [fullName, setFullName] = useState('')
@@ -96,6 +100,7 @@ export const TeamPermissionsView: React.FC = () => {
   }
 
   const handleOpenEdit = (user: AppUser) => {
+    setEditError('')
     setSelectedUserToEdit(user)
     setDepartment(user.department)
     setSelectedDepts(user.departments || [user.department])
@@ -106,18 +111,27 @@ export const TeamPermissionsView: React.FC = () => {
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedUserToEdit) return
+    if (!selectedUserToEdit || editRequest.current) return
+    editRequest.current = true
+    setSavingEdit(true)
+    setEditError('')
 
-    const result = await userStore.updateUser(selectedUserToEdit.id, {
-      department,
-      departments: selectedDepts,
-      role,
-      scope,
-      permissions,
-    })
-
-    if (!result.success) { window.alert(result.error); return }
-    setSelectedUserToEdit(null)
+    try {
+      const result = await userStore.updateUser(selectedUserToEdit.id, {
+        department,
+        departments: role === 'ADMIN' ? [...CANONICAL_DEPARTMENTS] : Array.from(new Set([department, ...selectedDepts])),
+        role,
+        scope: role === 'ADMIN' ? 'ALL' : scope,
+        permissions,
+      }, selectedUserToEdit.serverRevision)
+      if (!result.success) { setEditError(result.error || 'Yetki değişikliği kaydedilemedi.'); return }
+      setSelectedUserToEdit(null)
+    } catch {
+      setEditError('Yetki değişikliği kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.')
+    } finally {
+      editRequest.current = false
+      setSavingEdit(false)
+    }
   }
 
   const handleDelete = async (userId: string) => {
@@ -159,6 +173,7 @@ export const TeamPermissionsView: React.FC = () => {
         </GlassButton>
       </div>
 
+      <FrontOfficeAccessPanel users={users} />
       {/* Created Member Alert */}
       {createdInfo && (
         <div className="p-4 rounded-[16px] bg-emerald-500/10 border border-emerald-500/30 text-xs text-[#f3efe9] flex items-center justify-between">
@@ -243,13 +258,13 @@ export const TeamPermissionsView: React.FC = () => {
 
                   <td className="py-3 px-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button
+                      {(!userStore.centralAuthEnabled || (currentUser?.role === 'ADMIN' && user.role !== 'ADMIN' && user.id !== currentUser.id)) && <button
                         onClick={() => handleOpenEdit(user)}
                         className="p-1.5 rounded-[8px] bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] border border-[#4a443f] cursor-pointer"
                         title="Yetkileri Düzenle"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                      </button>}
                       {user.id !== currentUser?.id && (
                         <button
                           onClick={() => handleDelete(user.id)}
@@ -331,10 +346,12 @@ export const TeamPermissionsView: React.FC = () => {
       {/* YETKİ DÜZENLE MODALI */}
       <GlassModal
         isOpen={selectedUserToEdit !== null}
-        onClose={() => setSelectedUserToEdit(null)}
+        onClose={() => { if (!editRequest.current) setSelectedUserToEdit(null) }}
         title={`Yetkileri Düzenle - ${selectedUserToEdit?.fullName}`}
       >
-        <form onSubmit={handleSaveEdit} className="space-y-4">
+        <form onSubmit={handleSaveEdit} className="space-y-4" aria-busy={savingEdit}>
+          {editError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{editError}</p>}
+          <fieldset disabled={savingEdit} className="min-w-0 space-y-4">
           {userStore.centralAuthEnabled && selectedUserToEdit && <button type="button" onClick={async () => {
             if (!window.confirm('Personelin parolasını yenileyip ilk girişte değiştirmesini zorunlu kılmak istiyor musunuz?')) return
             try {
@@ -367,7 +384,14 @@ export const TeamPermissionsView: React.FC = () => {
               </label>
               <CustomSelect
                 value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
+                onChange={(e) => {
+                  const next = e.target.value as UserRole
+                  setRole(next)
+                  if (next === 'ADMIN') {
+                    setScope('ALL')
+                    setSelectedDepts([...CANONICAL_DEPARTMENTS])
+                  }
+                }}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
                 <option value="REPRESENTATIVE">Temsilci / Danışman</option>
@@ -383,6 +407,7 @@ export const TeamPermissionsView: React.FC = () => {
               </label>
               <CustomSelect
                 value={scope}
+                disabled={role === 'ADMIN'}
                 onChange={(e) => setScope(e.target.value as AccessScope)}
                 className="w-full px-3 py-2 rounded-[14px] bg-[#24211f] border border-[#4a443f] text-xs text-white focus:outline-none focus:border-[#b99881]"
               >
@@ -403,6 +428,7 @@ export const TeamPermissionsView: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={selectedDepts.includes(d)}
+                    disabled={role === 'ADMIN'}
                     onChange={() => handleDeptCheckbox(d)}
                     className="rounded border-[#4a443f] text-[#b99881] focus:ring-0"
                   />
@@ -421,9 +447,10 @@ export const TeamPermissionsView: React.FC = () => {
               Vazgeç
             </button>
             <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
-              Değişiklikleri Kaydet
+              {savingEdit ? 'Kaydediliyor…' : 'Değişiklikleri Kaydet'}
             </GlassButton>
           </div>
+          </fieldset>
         </form>
       </GlassModal>
     </div>

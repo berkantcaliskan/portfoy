@@ -3,10 +3,12 @@ import {
   DEPARTMENT_MENU_CONFIG,
   NavPageId,
 } from '@/types/department'
+import { isTeamDirectoryMember, teamDepartmentLabel } from '@/types/teamDirectory'
 import { STAGE_CONFIGS, CALL_STATUS_OPTIONS, isLeadHandedOverToSales } from '@/types/lead'
 import { AppUser, userStore } from '@/services/userStore'
 import { leadStore } from '@/services/leadStore'
 import { projectStore } from '@/services/projectStore'
+import { portfolioStore } from '@/services/portfolioStore'
 import { creativeStore } from '@/services/creativeStore'
 import { appointmentStore } from '@/services/appointmentStore'
 import { requestStore } from '@/services/requestStore'
@@ -236,6 +238,16 @@ function buildPageCandidates(
     })
   }
 
+  if (pageId === 'property-listings') {
+    add('page', 'Portföyler', 'Satış portföyleri ve fiyat bilgileri', 'gayrimenkul daire arsa fiyat vade kredi danışman')
+    for (const property of portfolioStore.getAll().filter(item => item.entryKind === 'EXTERNAL')) {
+      add(property.id, property.title, [property.type, property.location, property.consultant].filter(Boolean).join(' · '),
+        [property.floor, property.description, property.loan, property.installmentTerms].filter(Boolean).join(' '),
+        formatCurrency(property.price, property.currency), true)
+    }
+    return results
+  }
+
   // ---------------------------------------------------------------------------
   // 1. BAŞLANGIÇ (dashboard)
   // ---------------------------------------------------------------------------
@@ -448,9 +460,9 @@ function buildPageCandidates(
       )
       add(
         'kpi-planned-pay',
-        'Planlanan Şantiye & Komisyon Ödemeleri',
-        'Yaklaşan tedarikçi, şantiye hakediş ve satış primi ödemeleri',
-        'planlanan ödemeler şantiye komisyon gider',
+        'Planlanan Ödemeler',
+        'Yaklaşan tedarikçi, şantiye hakediş ve ofis ödemeleri',
+        'planlanan ödemeler şantiye gider',
         `${payments.length} Ödeme`
       )
     } else if (activeDept === 'Yönetim') {
@@ -997,16 +1009,9 @@ function buildPageCandidates(
       formatCurrency(totalVolume)
     )
     add(
-      'sp-commission',
-      'Tahakkuk Eden Satış Primi (%2 Danışman Primi)',
-      `Toplam tahakkuk eden komisyon: ${formatCurrency(Math.round(totalVolume * 0.02))}`,
-      'tahakkuk eden prim komisyon hakediş danışman primi yüzde 2',
-      formatCurrency(Math.round(totalVolume * 0.02))
-    )
-    add(
       'sp-leaderboard',
       'Danışman Satış Sıralaması (Leaderboard)',
-      'Satış kadrosu kota gerçekleşmesi, satılan ünite ve prim sıralaması',
+      'Gerçekleşen satış adedine göre danışmanların satış payı',
       'danışman satış sıralaması leaderboard skor tablosu aktif danışman',
       'Skor Tablosu'
     )
@@ -1060,13 +1065,13 @@ function buildPageCandidates(
     add(
       'pay-overview',
       'Ödemeler & Kurumsal Gider Yönetimi',
-      `Şantiye hakedişleri, satış komisyonları, reklam bütçesi ve ofis giderleri (${payments.length} kayıt)`,
-      'ödemeler giderler şantiye inşaat komisyon pazarlama reklam ofis vergi fatura',
+      `Şantiye hakedişleri, operasyon ve ofis giderleri (${payments.length} kayıt)`,
+      'ödemeler giderler şantiye inşaat ofis vergi fatura',
       `${payments.length} Ödeme`
     )
 
     const catLabels: Record<string, string> = {
-      COMMISSION: 'Satış Komisyonu',
+      COMMISSION: 'Diğer giderler',
       CONSTRUCTION: 'Şantiye & İnşaat',
       MARKETING: 'Pazarlama & Reklam',
       OFFICE: 'Ofis & Genel Gider',
@@ -1108,15 +1113,15 @@ function buildPageCandidates(
     add(
       'fin-receivables',
       'Bekleyen Vadeli Alacaklar & Öngörülen Borçlar',
-      'Sözleşmeli peşinat/taksit alacakları ve yaklaşan şantiye/komisyon ödemeleri',
+      'Sözleşmeli peşinat/taksit alacakları ve yaklaşan ödemeler',
       'bekleyen vadeli alacaklar öngörülen borçlar giderler peşinat taksit hakediş',
       'Vade Dengesi'
     )
     add(
       'fin-expenses',
       'Gider Dağılım Kalemleri',
-      'Şantiye ve İnşaat Hakedişleri (%68), Satış Başarı Komisyonları (%18), Meta & Dijital Reklam (%10), Ofis (%4)',
-      'gider dağılım kalemleri şantiye inşaat hakediş satış komisyon meta reklam bütçesi ofis yönetim',
+      'Gerçekleşen giderlerin kategori dağılımı',
+      'gider dağılım kalemleri şantiye inşaat hakediş ofis yönetim',
       'Gider Analizi'
     )
     add(
@@ -1205,7 +1210,15 @@ function buildPageCandidates(
   // 18. EKİPLER (teams)
   // ---------------------------------------------------------------------------
   if (pageId === 'teams') {
-    const allUsers = userStore.getAllUsers()
+    const allUsers = userStore.getAllUsers().filter(isTeamDirectoryMember)
+    if (currentUser?.role !== 'ADMIN') {
+      for (const member of allUsers) {
+        const department = teamDepartmentLabel(member)
+        add(`team-member-${member.id}`, member.fullName, `${department} • @${member.username}`,
+          `ekip personel ${member.fullName} ${member.username} ${department}`, undefined, true)
+      }
+      return results
+    }
     const assets = teamOperationsStore.getAssets()
     const leaves = teamOperationsStore.getLeaves()
 
@@ -1243,10 +1256,10 @@ function buildPageCandidates(
       add(
         `team-member-${u.id}`,
         `${u.fullName} — ${meta.label}`,
-        `${u.department} • @${u.username}${pres?.locationNote ? ` • Konum: ${pres.locationNote}` : ''}${
+        `${teamDepartmentLabel(u)} • @${u.username}${pres?.locationNote ? ` • Konum: ${pres.locationNote}` : ''}${
           pres?.returnTime ? ` • Dönüş: ${pres.returnTime}` : ''
         }`,
-        `ekip personel ${u.fullName} ${u.username} ${u.department} ${meta.label} ${meta.shortLabel} ${pres?.locationNote || ''}`,
+        `ekip personel ${u.fullName} ${u.username} ${teamDepartmentLabel(u)} ${meta.label} ${meta.shortLabel} ${pres?.locationNote || ''}`,
         meta.shortLabel,
         true,
         { subTab: 'presence' }

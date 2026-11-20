@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
+export const ModalHeaderAccessory = React.createContext<React.ReactNode>(null)
+
 interface GlassModalProps {
   isOpen: boolean
   onClose: () => void
@@ -12,6 +14,7 @@ interface GlassModalProps {
   children: React.ReactNode
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full'
   className?: string
+  scrollable?: boolean
 }
 
 export const GlassModal: React.FC<GlassModalProps> = ({
@@ -22,7 +25,9 @@ export const GlassModal: React.FC<GlassModalProps> = ({
   children,
   maxWidth = 'xl',
   className,
+  scrollable = true,
 }) => {
+  const headerAccessory = React.useContext(ModalHeaderAccessory)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -56,7 +61,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-y-auto">
+        <div className={cn('fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8', scrollable ? 'overflow-y-auto' : 'overflow-hidden')}>
           {/* Backdrop Blur Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -92,18 +97,19 @@ export const GlassModal: React.FC<GlassModalProps> = ({
                     <p className="text-xs text-[#a69f99] mt-0.5">{description}</p>
                   )}
                 </div>
+                <div className="flex items-center gap-2">{headerAccessory}
                 <button
                   onClick={onClose}
                   className="rounded-full p-1.5 text-[#a69f99] hover:text-white hover:bg-black/5 transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-5 h-5" />
-                </button>
+                </button></div>
               </div>
             )}
 
             {/* Content */}
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-1 py-1">
-              {children}
+            <div className={cn('flex-1 min-h-0 px-1 py-1', scrollable ? 'overflow-y-auto no-scrollbar' : 'overflow-hidden')}>
+              <ModalHeaderAccessory.Provider value={null}>{children}</ModalHeaderAccessory.Provider>
             </div>
           </motion.div>
         </div>

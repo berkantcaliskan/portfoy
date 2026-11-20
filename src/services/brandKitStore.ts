@@ -32,6 +32,7 @@ export const brandKitStore = {
   state() { return { dirty, saving: Boolean(saving), error: error || backend.getError() } },
   async refreshFromBackend() { if (!dirty && !saving) await backend.refresh() },
   save(value: Record<string, unknown>) {
+    if (userStore.getCurrentUser()?.role !== 'ADMIN') throw Error('Marka Rehberi yalnızca admin tarafından düzenlenebilir.')
     if (!account || userStore.getCurrentUser()?.id !== account) throw Error('Sunucu oturumu gerekli.')
     draft = structuredClone({ ...value, id: 'brand-kit' }); dirty = true; version++
     if (timer) clearTimeout(timer)

@@ -12,6 +12,7 @@ export interface CustomSelectProps {
   style?: React.CSSProperties
   disabled?: boolean
   required?: boolean
+  triggerLabel?: string
   title?: string
   name?: string
   id?: string
@@ -71,6 +72,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   style,
   disabled = false,
   title,
+  triggerLabel,
   name,
   id,
 }) => {
@@ -205,7 +207,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
         } ${cleanedClassName || 'bg-[#282522] border border-[#4a443f] rounded-full px-3.5 py-2 text-xs text-white'}`}
       >
-        <span className="truncate flex-1">{selectedOption.label}</span>
+        <span className="truncate flex-1">{triggerLabel ?? selectedOption.label}</span>
         {!hasExternalChevron && (
           <ChevronDown
             className={`w-3.5 h-3.5 text-[#a69f99] shrink-0 transition-transform duration-200 ${

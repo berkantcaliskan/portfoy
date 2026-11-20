@@ -447,9 +447,13 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
     // If associated with a Lead, also advance or sync lead stage
     if (item.lead) {
       if (newStatus === 'İşlemde' && item.lead.stage === 'NEW') {
-        leadStore.updateStage(item.lead.id, 'CONTACTED', currentUser)
+        if (!(await leadStore.updateStage(item.lead.id, 'CONTACTED', currentUser))) {
+          setRequestError('Talep kaydedildi. Müşteri aşaması sunucuda doğrulanamadı.')
+        }
       } else if (newStatus === 'Çözüldü' && (item.lead.stage === 'NEW' || item.lead.stage === 'CONTACTED')) {
-        leadStore.updateStage(item.lead.id, 'QUALIFIED', currentUser)
+        if (!(await leadStore.updateStage(item.lead.id, 'QUALIFIED', currentUser))) {
+          setRequestError('Talep kaydedildi. Müşteri aşaması sunucuda doğrulanamadı.')
+        }
       }
     }
     } catch (error) {
@@ -469,7 +473,9 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       await requestStore.deleteRequest(item.id)
     }
     if (item.leadId) {
-      leadStore.delete(item.leadId)
+      if (!(await leadStore.delete(item.leadId))) {
+        throw new Error(leadStore.getReadError() || 'Müşteri çöp kutusuna taşınamadı. İşlemi yeniden deneyin.')
+      }
     }
     setRequests(requestStore.getAll())
     setAllLeads(leadStore.getAllRaw())

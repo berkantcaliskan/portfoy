@@ -24,6 +24,7 @@ export interface Appointment {
   createdByUserId: string
   createdByDepartment: Department
   projectName?: string
+  source?: string
   notes?: string
   outcomeNote?: string
   createdAt: string
@@ -248,6 +249,7 @@ class AppointmentStore {
       assignedToUserId?: string
       assignedToUserName: string
       projectName?: string
+      source?: string
       notes?: string
     },
     user: AppUser
@@ -267,6 +269,7 @@ class AppointmentStore {
       createdByUserId: user.id,
       createdByDepartment: user.department,
       projectName: data.projectName,
+      source: data.source,
       notes: data.notes,
       createdAt: new Date().toISOString(),
     }

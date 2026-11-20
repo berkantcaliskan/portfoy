@@ -1,4 +1,9 @@
-import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
+import { Archive as ArchiveIcon } from 'lucide-react'
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
+import { AccountSwitchPanel } from './AccountSwitchPanel'
+import { frontOfficeStore } from '@/services/frontOfficeStore'
+import { FRONT_OFFICE_MENU } from '@/types/frontOffice'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search,
@@ -27,6 +32,7 @@ import {
   Award,
   Wallet,
   ArrowUpRight,
+  TurkishLira,
   ShieldCheck,
   FileText,
   CheckSquare,
@@ -39,11 +45,13 @@ import {
   Headphones,
   Palette,
   Sparkles,
+  DoorOpen,
+  House,
 } from 'lucide-react'
-import { AppUser, userStore } from '@/services/userStore'
+import { AppUser, userStore, canOfferAccountSwitch } from '@/services/userStore'
 import {
   Department,
-  CANONICAL_DEPARTMENTS,
+  getAccessibleDepartments,
   DEPARTMENT_MENU_CONFIG,
   NavPageId,
   getPrimaryPageForDepartment,
@@ -53,6 +61,7 @@ import {
   SearchResultItem,
 } from '@/services/departmentSearchService'
 import { BookLogo, BrandLogoLockup } from '@/components/common/BookLogo'
+import { teamDepartmentLabel } from '@/types/teamDirectory'
 import { ToolType } from '@/components/tools/QuickToolsModal'
 import { WindowControls } from '@/components/common/WindowControls'
 import { MessagingPanel, IosChatBubbleIcon } from '@/components/chat/MessagingPanel'
@@ -68,8 +77,17 @@ import {
 
 export type NavTab = NavPageId
 
+function ProfileAnchor({ anchor, children }: { anchor: Element | null; children: React.ReactNode }) {
+  return anchor ? createPortal(children, anchor) : children
+}
+
 export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?: string; strokeWidth?: number }> {
   switch (id) {
+    case 'office-visitors':
+      return DoorOpen
+    case 'accounting-archive': return ArchiveIcon
+    case 'office-contracts':
+      return FileText
     case 'dashboard':
       return LayoutDashboard
     case 'portfolio':
@@ -88,6 +106,8 @@ export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?:
       return Cloud
     case 'projects':
       return Building2
+    case 'property-listings':
+      return House
     case 'crm':
       return TrendingUp
     case 'appointments':
@@ -101,7 +121,7 @@ export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?:
     case 'collections':
       return Wallet
     case 'payments':
-      return ArrowUpRight
+      return TurkishLira
     case 'team-permissions':
       return ShieldCheck
     case 'approvals':
@@ -122,6 +142,7 @@ export function getNavPageIcon(id: NavPageId): React.ComponentType<{ className?:
 }
 
 export function getDepartmentIcon(dept: Department | string): React.ComponentType<{ className?: string; strokeWidth?: number }> {
+  if (dept === 'Ön Ofis') return DoorOpen
   switch (dept) {
     case 'Pazarlama':
       return Megaphone
@@ -171,9 +192,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMessagesOpen, setIsMessagesOpen] = useState(messageStore.isPanelOpen())
   const [messagingMode, setMessagingMode] = useState(messageStore.getDisplayMode())
   const [messagingSidebarWidth, setMessagingSidebarWidth] = useState(messageStore.getSidebarWidth())
+  const [unreadMessages, setUnreadMessages] = useState(() => currentUser ? messageStore.getTotalUnreadCount(currentUser.id) : 0)
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false)
   const [isAppMenuOpen, setIsAppMenuOpen] = useState(false)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const [showAccounts, setShowAccounts] = useState(false)
+  const [mobileProfile, setMobileProfile] = useState(false)
+  const mobileProfileRef = useRef<HTMLDivElement>(null)
+  const allowAccountSwitch = canOfferAccountSwitch(currentUser)
 
   // Collapsible Left Sidebar State & Right-Click Context Menu
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -198,13 +224,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   }
 
   useEffect(() => {
-    const unsub = messageStore.subscribe(() => {
+    const update = () => {
       setIsMessagesOpen(messageStore.isPanelOpen())
       setMessagingMode(messageStore.getDisplayMode())
       setMessagingSidebarWidth(messageStore.getSidebarWidth())
-    })
+      setUnreadMessages(currentUser ? messageStore.getTotalUnreadCount(currentUser.id) : 0)
+    }
+    update()
+    const unsub = messageStore.subscribe(update)
     return unsub
-  }, [])
+  }, [currentUser?.id])
 
   // Dock Enabled state (determines whether 9-dot app menu appears in navbar)
   const [dockEnabled, setDockEnabled] = useState<boolean>(() => {
@@ -328,25 +357,20 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   }, [])
 
+  const showTeamOperations = currentUser?.role === 'ADMIN'
   const myPresence = currentUser ? teamOperationsStore.getUserPresence(currentUser.id) : null
   const myPresenceMeta = getPresenceMeta(myPresence?.status)
 
   // Current active department workspace
   const activeDept: Department = currentUser?.department || 'Pazarlama'
+  const office = useSyncExternalStore(frontOfficeStore.subscribe, frontOfficeStore.getSnapshot)
+  const workspaceName = office.active ? 'Ön Ofis' : activeDept
 
   // Available departments user can switch between (yetkisi olmayan kullanıcı diğer departmanları göremez)
-  const authorizedDepts: Department[] =
-    currentUser?.role === 'ADMIN'
-      ? CANONICAL_DEPARTMENTS
-      : Array.isArray(currentUser?.departments) && currentUser.departments.length > 0
-      ? CANONICAL_DEPARTMENTS.filter((d) => currentUser.departments.includes(d))
-      : [activeDept]
-
-  // Yalnızca ADMIN veya birden fazla departman yetkisi verilenler departman seçicisini açabilir
-  const isManagement = currentUser?.role === 'ADMIN' || authorizedDepts.length > 1
+  const authorizedDepts: Department[] = [...(office.canAccess ? ['Ön Ofis' as const] : []), ...(currentUser ? getAccessibleDepartments(currentUser) : [activeDept]).filter(dept => dept !== 'Ön Ofis')]
 
   // Exact 6 pages for this active department
-  const navItems = DEPARTMENT_MENU_CONFIG[activeDept] || DEPARTMENT_MENU_CONFIG['Pazarlama']
+  const navItems = office.active ? FRONT_OFFICE_MENU : DEPARTMENT_MENU_CONFIG[activeDept] || DEPARTMENT_MENU_CONFIG['Pazarlama']
 
   // Departman alanındaki tüm sayfalarda canlı arama sonuçları (Önce en alakalı başlıksız, sonra sayfasına göre)
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false)
@@ -443,7 +467,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       }
       if (
         profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target as Node)
+        !profileMenuRef.current.contains(event.target as Node) &&
+        !mobileProfileRef.current?.contains(event.target as Node)
       ) {
         setIsProfileMenuOpen(false)
       }
@@ -561,7 +586,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const handleSwitchWorkspace = (dept: Department) => {
+  const handleSwitchWorkspace = (dept: Department | 'Ön Ofis') => {
+    if (dept === 'Ön Ofis') {
+      if (!frontOfficeStore.activate(true)) return
+      setIsWorkspaceMenuOpen(false)
+      onTabChange(FRONT_OFFICE_MENU.some(page => page.id === activeTab) ? activeTab : 'office-visitors')
+      return
+    }
+    frontOfficeStore.activate(false)
     const res = userStore.switchDepartment(dept)
     if (res.success) {
       setIsWorkspaceMenuOpen(false)
@@ -728,7 +760,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <input
                     ref={searchInputRef}
                     type="text"
-                    placeholder={`${activeDept} sayfalarında ara...`}
+                    placeholder={`${workspaceName} sayfalarında ara...`}
                     value={searchQuery}
                     onFocus={() => {
                       if (searchQuery.trim().length > 0) {
@@ -806,7 +838,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       Sonuç bulunamadı
                     </div>
                     <div className="text-[11px] text-[#8c857f]">
-                      {activeDept} çalışma alanındaki sayfalarda &ldquo;{searchQuery}&rdquo; ile eşleşen içerik bulunamadı.
+                      {workspaceName} çalışma alanındaki sayfalarda &ldquo;{searchQuery}&rdquo; ile eşleşen içerik bulunamadı.
                     </div>
                   </div>
                 ) : (
@@ -1008,10 +1040,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {[
                     { id: 'notepad' as ToolType, label: 'Not Defteri' },
                     { id: 'calculator' as ToolType, label: 'Hesap Mak.' },
-                    { id: 'commission' as ToolType, label: 'Satış Primi' },
                     { id: 'currency' as ToolType, label: 'Döviz & Kur' },
                     { id: 'mortgage' as ToolType, label: 'Konut Kredisi' },
-                    { id: 'deedFee' as ToolType, label: 'Tapu Harcı' },
                     { id: 'sqmPrice' as ToolType, label: 'm² Fiyat' },
                     { id: 'whatsapp' as ToolType, label: 'WhatsApp' },
                   ].map((t) => (
@@ -1093,6 +1123,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 return
               }
               const nextState = !isProfileMenuOpen
+              setMobileProfile(false)
+              setShowAccounts(false)
               setIsProfileMenuOpen(nextState)
               if (nextState) {
                 setIsNotificationsOpen(false)
@@ -1105,9 +1137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="top-utility-pill group h-10 flex items-center gap-2.5 pl-1.5 pr-3.5 rounded-full bg-white border border-[#4a443f]/60 hover:border-[#b99881]/50 transition-all cursor-pointer active:scale-[0.98]"
             title={
               currentUser
-                ? `${currentUser.fullName} (@${currentUser.username}) • ${myPresenceMeta.label}${
-                    myPresence?.locationNote ? ` — ${myPresence.locationNote}` : ''
-                  }`
+                ? `${currentUser.fullName} (@${currentUser.username})`
                 : 'Giriş Yap'
             }
           >
@@ -1157,17 +1187,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Kompakt Profil & Hızlı Durum Açılır Menüsü (Popup) */}
           <AnimatePresence>
-            {isProfileMenuOpen && currentUser && (
+            {isProfileMenuOpen && currentUser && <ProfileAnchor anchor={mobileProfile ? mobileProfileRef.current : null}>
               <motion.div
                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.98 }}
                 transition={{ duration: 0.14, ease: 'easeOut' }}
-                className="dropdown-panel absolute right-0 top-full mt-2.5 w-72 rounded-[24px] shadow-2xl p-3.5 z-50 border border-[#4a443f] space-y-3"
+                className="dropdown-panel fixed bottom-5 right-16 md:absolute md:bottom-auto md:right-0 md:top-full md:mt-2.5 w-72 max-w-[calc(100vw-4.5rem)] max-h-[80dvh] overflow-y-auto rounded-[24px] shadow-2xl p-3.5 z-50 border border-[#4a443f] space-y-3"
               >
+                {showAccounts && allowAccountSwitch ? <AccountSwitchPanel key={currentUser.id} onBack={() => setShowAccounts(false)} /> : <>
                 {/* 1. Kullanıcı Kimlik Özeti */}
                 <div className="flex items-center gap-3 px-1 pb-2.5 border-b border-[#4a443f]/60">
-                  <div className="relative w-10 h-10 rounded-full bg-[#282522] border border-[#b99881]/50 flex items-center justify-center shrink-0">
+                  <div className="relative size-12 rounded-full bg-[#282522] border border-[#b99881]/50 flex items-center justify-center shrink-0">
                     {currentUser.avatarUrl ? (
                       <img
                         src={currentUser.avatarUrl}
@@ -1175,7 +1206,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
-                      <span className="text-xs font-bold text-[#b99881]">
+                      <span className="text-sm font-bold text-[#b99881]">
                         {currentUser.fullName
                           .trim()
                           .split(/\s+/)
@@ -1185,22 +1216,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                           .toUpperCase()}
                       </span>
                     )}
-                    <span
+                    {currentUser && <span
                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-white ${myPresenceMeta.dotClass}`}
-                    />
+                    />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-white truncate">
                       {currentUser.fullName}
                     </div>
                     <div className="text-[11px] text-[#8c857f] truncate">
-                      @{currentUser.username} • {currentUser.department}
+                      @{currentUser.username} • {teamDepartmentLabel(currentUser)}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-[#8c857f]">
+                      <span
+                        aria-hidden="true"
+                        className="h-3 w-4 shrink-0 bg-[var(--accent-color)]"
+                        style={{ mask: `url("${import.meta.env.BASE_URL}demirturk-emblem.png") center / contain no-repeat` }}
+                      />
+                      <span className="truncate">Demirtürk İnşaat</span>
                     </div>
                   </div>
                 </div>
 
                 {/* 2. Tek Tıkla Hızlı Durum Seçimi */}
-                <div className="space-y-1.5">
+                {currentUser && <div className="space-y-1.5">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8c857f]">
                       Durumum
@@ -1210,19 +1249,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {PRESENCE_STATUS_OPTIONS.slice(0, 6).map((opt) => {
+                    {PRESENCE_STATUS_OPTIONS.map((opt) => {
                       const isSelected = (myPresence?.status || 'OFISTE') === opt.id
                       return (
                         <button
                           key={opt.id}
                           type="button"
-                          onClick={() => {
-                            teamOperationsStore.updateUserPresence(currentUser.id, {
+                          onClick={async () => {
+                            try { await teamOperationsStore.updateUserPresence(currentUser.id, {
                               status: opt.id as PresenceStatusType,
                               locationNote: opt.id === 'OFISTE' ? '' : myPresence?.locationNote || '',
                               returnTime: opt.id === 'OFISTE' ? '' : myPresence?.returnTime || '',
                               updatedBy: currentUser.id,
-                            })
+                            }) } catch (error) { window.alert(error instanceof Error ? error.message : 'Durum kaydedilemedi.') }
                           }}
                           className={`flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-all cursor-pointer ${
                             isSelected
@@ -1249,24 +1288,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <input
                       type="text"
                       placeholder="Kısa konum / not ekle..."
-                      value={myPresence.locationNote || ''}
-                      onChange={(e) => {
-                        teamOperationsStore.updateUserPresence(currentUser.id, {
-                          status: myPresence.status,
-                          locationNote: e.target.value,
-                          returnTime: myPresence.returnTime || '',
-                          updatedBy: currentUser.id,
-                        })
-                      }}
-                      onBlur={(e) => {
+                      key={myPresence.status + myPresence.updatedAt}
+                      defaultValue={myPresence.locationNote || ''}
+                      onBlur={async (e) => {
                         const trimmed = e.target.value.trim()
                         if (trimmed !== (myPresence.locationNote || '')) {
-                          teamOperationsStore.updateUserPresence(currentUser.id, {
+                          try { await teamOperationsStore.updateUserPresence(currentUser.id, {
                             status: myPresence.status,
                             locationNote: trimmed,
                             returnTime: myPresence.returnTime || '',
                             updatedBy: currentUser.id,
-                          })
+                          }) } catch (error) { window.alert(error instanceof Error ? error.message : 'Konum kaydedilemedi.') }
                         }
                       }}
                       onKeyDown={(e) => {
@@ -1275,11 +1307,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-full mt-1 px-3 py-1.5 rounded-full text-xs border border-[#4a443f] focus:outline-none"
                     />
                   )}
-                </div>
+                </div>}
 
                 {/* 3. Kompakt Menü Aksiyonları */}
                 <div className="pt-2 border-t border-[#4a443f]/60 space-y-1">
-                  <button
+                  {mobileProfile && <button type="button" onClick={() => { setIsProfileMenuOpen(false); onOpenProfile() }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-medium">
+                    <User size={14} /> Profilim
+                  </button>}
+                  {allowAccountSwitch && <button type="button" onClick={() => setShowAccounts(true)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-medium text-[#a69f99] hover:bg-[#4a443f]/30 hover:text-white">
+                    <UserCheck className="w-3.5 h-3.5 text-[#b99881] shrink-0" /> Şu hesaba geç…
+                  </button>}
+                  {showTeamOperations && <button
                     type="button"
                     onClick={() => {
                       setIsProfileMenuOpen(false)
@@ -1289,7 +1329,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <Users className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
                     <span>Ekipler & Durum Panosu</span>
-                  </button>
+                  </button>}
 
                   <button
                     type="button"
@@ -1315,9 +1355,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Çıkış Yap</span>
                   </button>
                 </div>
+                </>}
               </motion.div>
-            )}
+            </ProfileAnchor>}
           </AnimatePresence>
+          <WindowControls className="absolute left-full ml-0.5 lg:ml-1.5 top-1/2 -translate-x-px -translate-y-1/2" compact />
         </div>
         </div>
       </div>
@@ -1338,8 +1380,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="hidden md:block absolute top-0 inset-x-0 h-3.5 z-10"
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         />
-        {/* Sağ Alt Köşe Pencere Kontrolleri */}
-        <WindowControls />
 
         {/* Sağ Tık Bağlam Menüsü (Daralt / Genişlet) */}
         <AnimatePresence>
@@ -1408,7 +1448,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <motion.nav
-              key={activeDept}
+              key={workspaceName}
               initial={false}
               animate={{ opacity: 1 }}
               className={`flex flex-col gap-1 ${isSidebarCollapsed ? 'w-[40px] items-center' : 'w-full'}`}
@@ -1485,7 +1525,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             {/* Çalışma Alanı / Departman Seçicisi (Alttaki ikonların hemen üstünde, 40x40px sabit ikon yuvalı) */}
-            {isManagement && authorizedDepts.length > 1 ? (
+            {authorizedDepts.length > 1 ? (
               <div ref={workspaceRef} className="relative">
                 <button
                   type="button"
@@ -1493,12 +1533,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className={`flex items-center justify-start h-[40px] min-h-[40px] p-0 ${
                     isSidebarCollapsed ? 'w-[40px] min-w-[40px] max-w-[40px]' : 'w-full'
                   } rounded-full bg-[#282522] hover:bg-[#3d3733] border border-[#4a443f] text-xs text-[#d6beae] hover:text-white transition-[width,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer select-none overflow-hidden shrink-0`}
-                  title={`Departman / Çalışma Alanı: ${activeDept}`}
+                  title={`Departman / Çalışma Alanı: ${workspaceName}`}
                 >
                   {/* Sabit 40x40px İkon Yuvası: Daraltıldığında aktif departman ikonu tam merkezde durur */}
                   <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
                     {(() => {
-                      const ActiveDeptIcon = getDepartmentIcon(activeDept)
+                      const ActiveDeptIcon = getDepartmentIcon(workspaceName)
                       return <ActiveDeptIcon className="w-4 h-4 text-[#b99881] shrink-0" />
                     })()}
                   </div>
@@ -1515,7 +1555,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       isSidebarCollapsed ? 'w-0 pr-0 flex-none' : 'flex-1 pr-3'
                     }`}
                   >
-                    <span className="font-semibold text-white truncate">{activeDept}</span>
+                    <span className="font-semibold text-white truncate">{workspaceName}</span>
                     <ChevronDown
                       className={`w-3.5 h-3.5 text-[#a69f99] shrink-0 ml-1 transition-transform duration-200 ${
                         isWorkspaceMenuOpen ? 'rotate-180' : ''
@@ -1538,7 +1578,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </div>
                       <div className="space-y-1 mt-0.5">
                         {authorizedDepts.map((dept) => {
-                          const isCurrent = dept === activeDept
+                          const isCurrent = dept === workspaceName
                           const DeptIcon = getDepartmentIcon(dept)
                           return (
                             <button
@@ -1568,11 +1608,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className={`flex items-center justify-start h-[40px] min-h-[40px] p-0 ${
                   isSidebarCollapsed ? 'w-[40px] min-w-[40px] max-w-[40px]' : 'w-full'
                 } rounded-full bg-[#282522]/60 border border-[#4a443f]/60 text-xs select-none overflow-hidden shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
-                title={`Çalışma Alanı: ${activeDept}`}
+                title={`Çalışma Alanı: ${workspaceName}`}
               >
                 <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
                   {(() => {
-                    const ActiveDeptIcon = getDepartmentIcon(activeDept)
+                    const ActiveDeptIcon = getDepartmentIcon(workspaceName)
                     return <ActiveDeptIcon className="w-4 h-4 text-[#b99881] shrink-0" />
                   })()}
                 </div>
@@ -1587,7 +1627,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     isSidebarCollapsed ? 'w-0 pr-0 flex-none' : 'pr-3'
                   }`}
                 >
-                  {activeDept}
+                  {workspaceName}
                 </motion.span>
               </div>
             )}
@@ -1647,8 +1687,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="sidebar-pill-item relative w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <IosChatBubbleIcon className="w-[18px] h-[18px] shrink-0" />
-                  {currentUser && messageStore.getTotalUnreadCount(currentUser.id) > 0 && (
-                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#34302c]" />
+                  {unreadMessages > 0 && (
+                    <span aria-label={`${unreadMessages} okunmamış mesaj`} className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-[var(--card-surface)]">{unreadMessages}</span>
                   )}
                 </button>
 
@@ -1674,15 +1714,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             slideDistance={20}
             onClick={() => onTabChange('dashboard')}
           />
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#282522] border border-[#4a443f] text-xs">
+          <div className="flex min-w-0 items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#282522] border border-[#4a443f] text-xs">
             <Layers className="w-3.5 h-3.5 text-[#b99881]" />
-            <span className="font-semibold text-white">{activeDept}</span>
+            {authorizedDepts.length > 1 ? (
+              <select aria-label="Departman / Çalışma Alanı" value={workspaceName}
+                onChange={event => handleSwitchWorkspace(event.target.value as Department)}
+                className="min-w-0 truncate bg-transparent font-semibold text-white">
+                {authorizedDepts.map(department => <option key={department} value={department}>{department}</option>)}
+              </select>
+            ) : <span className="font-semibold text-white">{workspaceName}</span>}
           </div>
         </div>
 
         {/* Mobil Görünüm Navigasyon: Yalnızca İkonlar Olarak, Header Bar Altında */}
         <motion.div
-          key={`mobile-${activeDept}`}
+          key={`mobile-${workspaceName}`}
           variants={{
             initial: {},
             animate: {
@@ -1748,7 +1794,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Search className="w-4 h-4 text-[#b99881] shrink-0" />
                   <input
                     type="text"
-                    placeholder={`${activeDept} sayfalarında ara...`}
+                    placeholder={`${workspaceName} sayfalarında ara...`}
                     value={searchQuery}
                     onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
                     onKeyDown={(e) => {
@@ -1952,8 +1998,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           title="Yazışmalar"
         >
           <IosChatBubbleIcon className="w-4 h-4" />
-          {currentUser && messageStore.getTotalUnreadCount(currentUser.id) > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#b99881]" />
+          {unreadMessages > 0 && (
+            <span aria-label={`${unreadMessages} okunmamış mesaj`} className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadMessages}</span>
           )}
         </button>
 
@@ -1973,13 +2019,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         {/* 6. Profil Simgesi */}
+        <div ref={mobileProfileRef}>
         <button
           type="button"
-          onClick={onOpenProfile}
+          onClick={() => {
+            if (!allowAccountSwitch) return onOpenProfile()
+            setShowAccounts(false)
+            setMobileProfile(true)
+            setIsProfileMenuOpen(open => !open)
+          }}
           className="w-9 h-9 rounded-full bg-[#282522] border-2 border-[#b99881] shadow-md flex items-center justify-center transition-all cursor-pointer overflow-hidden shrink-0 hover:scale-105 active:scale-95 ring-1 ring-[#b99881]/30"
           title={
             currentUser
-              ? `${currentUser.fullName} (@${currentUser.username}) - ${activeDept}`
+              ? `${currentUser.fullName} (@${currentUser.username}) - ${workspaceName}`
               : 'Giriş Yap'
           }
         >
@@ -2005,6 +2057,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
       </div>
 
+        </div>
       {/* Mobil Popover ve Paneller (Masaüstü gizlendiğinde mobilde görünmelerini sağlar) */}
       <div className="md:hidden">
         {isNotificationsOpen && (
@@ -2107,10 +2160,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   { id: 'calendar' as ToolType, label: 'Takvim' },
                   { id: 'notepad' as ToolType, label: 'Not Defteri' },
                   { id: 'calculator' as ToolType, label: 'Hesap Mak.' },
-                  { id: 'commission' as ToolType, label: 'Satış Primi' },
                   { id: 'currency' as ToolType, label: 'Döviz & Kur' },
                   { id: 'mortgage' as ToolType, label: 'Konut Kredisi' },
-                  { id: 'deedFee' as ToolType, label: 'Tapu Harcı' },
                   { id: 'whatsapp' as ToolType, label: 'WhatsApp' },
                 ].map((t) => (
                   <button

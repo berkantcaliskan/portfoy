@@ -4,3 +4,7 @@ verify_jwt = false
 # Kullanıcı JWT'si handler içinde getUser ile doğrulanır. Worker gönderimi kilitlidir.
 [functions.meta-capi]
 verify_jwt = false
+
+# Sunucuda Vault tokenı ile doğrulanan, yalnızca müşteri alan zamanlayıcı.
+[functions.meta-daily-intake]
+verify_jwt = false

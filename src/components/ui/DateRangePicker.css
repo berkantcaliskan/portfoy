@@ -1,0 +1,9 @@
+.date-range-popover{box-sizing:border-box;width:min(704px,calc(100vw - 20px));overflow:auto;overscroll-behavior:contain;z-index:220;border:1px solid var(--border-color,#504a45);border-radius:20px}
+.calendar-presets{width:120px;padding:18px 10px}
+.calendar-shortcuts{display:grid;gap:4px}
+.calendar-shortcuts button{min-height:30px;padding:4px 8px;border-radius:8px}
+.calendar-months{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.calendar-month+.calendar-month{border-left:1px solid var(--border-color,#504a45);padding-left:12px}
+@media(max-width:767px){.calendar-presets{width:100%;padding:8px 12px}.calendar-shortcuts{grid-template-columns:repeat(3,minmax(0,1fr))}.calendar-shortcuts button{justify-content:center}.calendar-month+.calendar-month{padding-left:0;border:0}}
+@media(max-width:560px){.calendar-months{grid-template-columns:1fr}.calendar-month:first-child{display:none}.date-range-popover{width:min(360px,calc(100vw - 20px))}}
+@media(max-width:560px){.calendar-footer{display:grid;grid-template-columns:auto 1fr;align-items:center}.calendar-footer>div:first-child{white-space:normal}.calendar-footer>div:last-child{justify-self:end}.calendar-month .grid{row-gap:1px}}

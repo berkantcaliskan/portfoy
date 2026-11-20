@@ -1,5 +1,8 @@
 import { leadStore } from './leadStore'
 import { Lead, LeadStage } from '@/types/lead'
+import { userStore } from './userStore'
+import { isCentralCrm } from './crmRuntime'
+import { createCompanyRepository, type CompanyDocumentKind } from './companyRepository'
 
 export interface GoogleAdsConfig {
   customerId: string           // e.g. 482-910-3321
@@ -9,6 +12,7 @@ export interface GoogleAdsConfig {
   webhookUrl: string
   autoSyncConversions: boolean
   isConnected: boolean
+  hasWebhookKey?: boolean
 }
 
 export interface GoogleCampaignItem {
@@ -42,12 +46,21 @@ const STORAGE_KEY_GOOGLE_LOGS = 'demirturk_google_conversion_logs_v1'
 type Listener = () => void
 
 class GoogleAdsStore {
+  private account: string | null = null
+  private serverLoaded = false
+  private serverBusy = false
+  private serverError = ''
+  private serverGeneration = 0
+  private revisions = new Map<CompanyDocumentKind, number>()
+  private pending = new Map<CompanyDocumentKind, { key: string; revision: number; requestId: string }>()
+  private pendingCampaign: { key: string; item: GoogleCampaignItem } | null = null
   private config: GoogleAdsConfig
   private customCampaigns: GoogleCampaignItem[] = []
   private conversionLogs: GoogleConversionLog[] = []
   private listeners: Set<Listener> = new Set()
 
   constructor() {
+    if (isCentralCrm()) { this.config = { ...this.getDefaultConfig(), webhookKey: '', webhookUrl: '', autoSyncConversions: false }; return }
     this.config = this.loadConfig()
     this.customCampaigns = this.loadCampaigns()
     this.conversionLogs = this.loadLogs()
@@ -60,6 +73,72 @@ class GoogleAdsStore {
         this.notify()
       })
     }
+  }
+
+  public setAccount(id: string | null) {
+    if (this.account === id) return
+    this.account = id; this.serverGeneration++; this.serverLoaded = false; this.serverError = ''; this.revisions.clear(); this.pending.clear(); this.pendingCampaign = null
+    this.config = { ...this.getDefaultConfig(), webhookKey: '', webhookUrl: '', autoSyncConversions: false }
+    this.customCampaigns = []; this.conversionLogs = []; this.notify()
+  }
+  public getReadError() { return this.serverError }
+  public async refreshFromBackend() {
+    if (!isCentralCrm() || !this.account || this.serverBusy) return
+    const user = userStore.getCurrentUser(), client = userStore.getServerClient()
+    if (!user || !client || (user.role !== 'ADMIN' && user.department !== 'Pazarlama' && !user.departments.includes('Pazarlama'))) return
+    const generation = ++this.serverGeneration
+    try {
+      const repository = createCompanyRepository(client)
+      const documents = await Promise.all((['google_config', 'google_campaigns', 'google_logs'] as const).map(kind => repository.get(kind)))
+      if (generation !== this.serverGeneration || user.id !== userStore.getCurrentUser()?.id) return
+      for (const document of documents) {
+        this.revisions.set(document.kind, document.revision)
+        if (document.kind === 'google_config') this.config = { ...this.getDefaultConfig(), ...document.payload, webhookKey: '', webhookUrl: '', autoSyncConversions: false, isConnected: false }
+        if (document.kind === 'google_campaigns') this.customCampaigns = document.payload.items || []
+        if (document.kind === 'google_logs') this.conversionLogs = document.payload.items || []
+      }
+      this.serverLoaded = true; this.serverError = ''
+    } catch (e) { if (generation === this.serverGeneration) this.serverError = e instanceof Error ? e.message : 'Google kayıtları okunamadı.' }
+    this.notify()
+  }
+  private async writeDocument(kind: CompanyDocumentKind, payload: Record<string, unknown>) {
+    if (this.serverBusy) throw Error('Önceki Google kayıt işlemi sürüyor.')
+    if (!this.serverLoaded) await this.refreshFromBackend()
+    const client = userStore.getServerClient(), actor = userStore.getCurrentUser()?.id
+    if (!this.serverLoaded || !client || actor !== this.account) throw Error(this.serverError || 'Google kayıtları için sunucu oturumu gerekli.')
+    this.serverBusy = true; this.serverGeneration++
+    const key = JSON.stringify(payload)
+    const revision = this.revisions.get(kind) || 0
+    if (this.pending.get(kind)?.key !== key || this.pending.get(kind)?.revision !== revision) this.pending.set(kind, { key, revision, requestId: crypto.randomUUID() })
+    try {
+      const saved = await createCompanyRepository(client).save(kind, revision, payload, this.pending.get(kind)!.requestId)
+      if (actor !== this.account) throw Error('Kayıt sırasında oturum değişti.')
+      this.revisions.set(kind, saved.revision); this.pending.delete(kind); this.serverError = ''
+      if (kind === 'google_config') this.config = { ...this.getDefaultConfig(), ...saved.payload, webhookKey: '', webhookUrl: '', autoSyncConversions: false, isConnected: false }
+      if (kind === 'google_campaigns') this.customCampaigns = saved.payload.items || []
+      if (kind === 'google_logs') this.conversionLogs = saved.payload.items || []
+      return saved
+    } catch (e) { this.serverError = e instanceof Error ? e.message : 'Google kaydı tamamlanamadı.'; throw e }
+    finally { this.serverBusy = false; this.notify() }
+  }
+
+  public localRecordCount() {
+    try { const config = JSON.parse(localStorage.getItem(STORAGE_KEY_GOOGLE_CONFIG) || '{}'); return (config.customerId || config.conversionId ? 1 : 0) + [STORAGE_KEY_GOOGLE_CAMPAIGNS, STORAGE_KEY_GOOGLE_LOGS].reduce((sum, key) => { const values = JSON.parse(localStorage.getItem(key) || '[]'); return sum + (Array.isArray(values) ? values.length : 0) }, 0) } catch { return 0 }
+  }
+  public async importLocalRecords() {
+    const campaigns = JSON.parse(localStorage.getItem(STORAGE_KEY_GOOGLE_CAMPAIGNS) || '[]')
+    const logs = JSON.parse(localStorage.getItem(STORAGE_KEY_GOOGLE_LOGS) || '[]')
+    if (!Array.isArray(campaigns) || !Array.isArray(logs)) throw Error('Yerel kayıt biçimi geçersiz.')
+    await this.refreshFromBackend()
+    const oldConfig = JSON.parse(localStorage.getItem(STORAGE_KEY_GOOGLE_CONFIG) || '{}')
+    if (!this.config.customerId && !this.config.conversionId && (oldConfig.customerId || oldConfig.conversionId)) await this.saveConfig(oldConfig)
+    const mergedCampaigns = new Map(campaigns.filter(row => row?.id && row?.name).map(row => [row.id, row]))
+    for (const row of this.customCampaigns) mergedCampaigns.set(row.id, row)
+    await this.writeDocument('google_campaigns', { items: [...mergedCampaigns.values()] })
+    const mergedLogs = new Map(logs.filter(row => row?.id).map(row => [row.id, { ...row, status: 'QUEUED' }]))
+    for (const row of this.conversionLogs) mergedLogs.set(row.id, row)
+    await this.writeDocument('google_logs', { items: [...mergedLogs.values()] })
+    return { campaigns: mergedCampaigns.size, logs: mergedLogs.size }
   }
 
   private loadConfig(): GoogleAdsConfig {
@@ -88,7 +167,8 @@ class GoogleAdsStore {
     return { ...this.config }
   }
 
-  public saveConfig(updates: Partial<GoogleAdsConfig>): GoogleAdsConfig {
+  public async saveConfig(updates: Partial<GoogleAdsConfig>): Promise<GoogleAdsConfig> {
+    if (isCentralCrm()) { await this.writeDocument('google_config', { ...this.config, ...updates }); return this.getConfig() }
     this.config = {
       ...this.config,
       ...updates,
@@ -216,13 +296,15 @@ class GoogleAdsStore {
     return Array.from(byName.values())
   }
 
-  public addCampaign(data: {
+  public async addCampaign(data: {
     name: string
     campaignType: GoogleCampaignItem['campaignType']
     formName: string
-  }): GoogleCampaignItem {
-    const item: GoogleCampaignItem = {
-      id: `gcamp-${Date.now()}`,
+  }): Promise<GoogleCampaignItem> {
+    const key = JSON.stringify(data)
+    if (isCentralCrm() && this.pendingCampaign && this.pendingCampaign.key !== key) throw Error('Sonucu belirsiz kampanyayı önce aynı bilgilerle yeniden deneyin veya sunucudan kontrol edin.')
+    const item: GoogleCampaignItem = this.pendingCampaign?.item || {
+      id: isCentralCrm() ? 'gcamp-' + crypto.randomUUID() : `gcamp-${Date.now()}`,
       name: data.name.trim(),
       campaignType: data.campaignType,
       formName: data.formName.trim() || data.name.trim(),
@@ -231,19 +313,28 @@ class GoogleAdsStore {
       conversionRate: 0,
       lastLeadAt: new Date().toISOString(),
     }
+    if (isCentralCrm()) {
+      this.pendingCampaign = { key, item }
+      if (!this.serverLoaded) await this.refreshFromBackend()
+      const existing = this.customCampaigns.find(row => row.id === item.id)
+      if (existing) { this.pendingCampaign = null; return existing }
+      await this.writeDocument('google_campaigns', { items: [item, ...this.customCampaigns] }); this.pendingCampaign = null; return item
+    }
     this.customCampaigns = [item, ...this.customCampaigns]
     this.saveCampaigns()
     return item
   }
 
-  public toggleCampaignStatus(id: string) {
+  public async toggleCampaignStatus(id: string) {
+    if (isCentralCrm()) { await this.writeDocument('google_campaigns', { items: this.customCampaigns.map(c => c.id === id ? { ...c, status: c.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' } : c) }); return }
     this.customCampaigns = this.customCampaigns.map((c) =>
       c.id === id ? { ...c, status: c.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' } : c
     )
     this.saveCampaigns()
   }
 
-  public deleteCampaign(id: string) {
+  public async deleteCampaign(id: string) {
+    if (isCentralCrm()) { await this.writeDocument('google_campaigns', { items: this.customCampaigns.filter(c => c.id !== id) }); return }
     this.customCampaigns = this.customCampaigns.filter((c) => c.id !== id)
     this.saveCampaigns()
   }
@@ -253,6 +344,7 @@ class GoogleAdsStore {
   }
 
   public recordStageConversion(lead: Lead, stage: LeadStage) {
+    if (isCentralCrm()) return // Gerçek sunucu teslimatı olmadan SENT kaydı oluşturulmaz.
     const isGoogle =
       lead.source === 'GOOGLE_ADS' ||
       lead.channel?.toLowerCase().includes('google') ||
@@ -294,7 +386,11 @@ class GoogleAdsStore {
     this.saveLogs()
   }
 
-  public sendTestConversion(): GoogleConversionLog {
+  public async sendTestConversion(): Promise<GoogleConversionLog> {
+    if (isCentralCrm()) {
+      const log: GoogleConversionLog = { id: 'gcheck-' + crypto.randomUUID(), leadId: '', leadName: 'Bağlantı kayıt kontrolü', phone: '', conversionAction: 'QualifiedLead', signalLabel: 'Sunucu kayıt kontrolü; Google teslimatı yapılmadı', stage: '', sentAt: new Date().toISOString(), status: 'QUEUED' }
+      await this.writeDocument('google_logs', { items: [log, ...this.conversionLogs] }); return log
+    }
     const log: GoogleConversionLog = {
       id: `gconv-test-${Date.now()}`,
       leadId: 'test-google-lead',
@@ -313,6 +409,7 @@ class GoogleAdsStore {
   }
 
   public flushQueuedConversions(): number {
+    if (isCentralCrm()) throw Error('Google dönüşüm gönderimi doğrulanmış bir sağlayıcıya bağlı değil. Kayıtlar kuyrukta korunuyor; gönderilmiş sayılmadı.')
     if (!this.config.conversionId) return 0
     let count = 0
     this.conversionLogs = this.conversionLogs.map((l) => {
@@ -337,6 +434,7 @@ class GoogleAdsStore {
     searchKeyword?: string
     gclid?: string
   }): Lead {
+    if (isCentralCrm()) throw Error('Canlı kullanımda örnek müşteri oluşturulmaz.')
     const gclid = data.gclid || `EAIaIQobChMI_${Date.now().toString(36)}`
     const metaAnswers: { question: string; answer: string }[] = [
       { question: 'Google Kampanya Tipi', answer: data.campaignType || 'Arama Ağı (Search)' },
@@ -368,6 +466,7 @@ class GoogleAdsStore {
    * Import Google Ads Lead Form Extension CSV / TSV export
    */
   public importLeadsFromGoogleCsvText(rawText: string): { newCount: number; mergedCount: number } {
+    if (isCentralCrm()) throw Error('Google CSV aktarımı için doğrulanmış sunucu aktarımı gerekli. Dosyadan henüz müşteri kaydedilmedi.')
     const lines = rawText
       .replace(/^\uFEFF/, '')
       .split(/\r?\n/)

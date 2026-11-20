@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
+import { LeadChannelIcon, manualChannels } from './LeadChannelIcon'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { GlassButton } from '@/components/ui/GlassButton'
@@ -6,11 +7,12 @@ import { GlassInput } from '@/components/ui/GlassInput'
 import { PhoneInput } from '@/components/common/PhoneInput'
 import { Lead, LeadStage, CallCenterStatus, CALL_STATUS_OPTIONS } from '@/types/lead'
 import { userStore } from '@/services/userStore'
+import { ManualLeadValidationError } from '@/services/manualLeadRepository'
 
 interface LeadAddModalProps {
   isOpen: boolean
   onClose: () => void
-  onAdd: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onAdd: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>, requestId: string) => Promise<void>
 }
 
 const STAGES: { stage: LeadStage; label: string }[] = [
@@ -38,6 +40,8 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   onAdd,
 }) => {
   const allUsers = userStore.getAllUsers()
+  const currentUser = userStore.getCurrentUser()
+  const selfAssigned = currentUser?.department === 'Müşteri İlişkileri' && currentUser.role !== 'ADMIN'
   const customerRelationsUsers = allUsers.filter(
     (u) =>
       (u.department === 'Müşteri İlişkileri' ||
@@ -47,6 +51,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
 
   const [formData, setFormData] = useState({
     fullName: '',
+    channel: 'Direkt',
     phone: '',
     callStatus: 'WAITING' as CallCenterStatus,
     stage: 'NEW' as LeadStage,
@@ -59,10 +64,15 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
     fullName?: string
     phone?: string
   }>({})
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const request = useRef<{ key: string; id: string } | null>(null)
+  const saveLock = useRef(false)
 
   const resetForm = () => {
     setFormData({
       fullName: '',
+      channel: 'Direkt',
       phone: '',
       callStatus: 'WAITING',
       stage: 'NEW',
@@ -71,15 +81,18 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       notes: '',
     })
     setErrors({})
+    setSaveError('')
   }
 
   const handleClose = () => {
-    resetForm()
+    if (saveLock.current) return
+    if (!request.current) resetForm()
     onClose()
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (saveLock.current) return
 
     const newErrors: { fullName?: string; phone?: string } = {}
 
@@ -97,17 +110,17 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       return
     }
 
-    const assignedUser = customerRelationsUsers.find(
+    const assignedUser = selfAssigned ? currentUser : customerRelationsUsers.find(
       (u) => u.id === formData.assignedUserId
     )
 
-    onAdd({
+    const payload: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'> = {
       fullName: formData.fullName.trim(),
       phone: formData.phone.trim(),
       whatsappPhone: formData.phone.trim(),
       source: 'DIRECT',
       formName: 'Manuel Kayıt',
-      channel: 'Manuel Kayıt',
+      channel: formData.channel,
       stage: formData.stage,
       callStatus: formData.callStatus,
       isQualified: formData.stage === 'QUALIFIED',
@@ -117,10 +130,24 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       preferredHousingType: formData.preferredHousingType,
       tags: [formData.preferredHousingType, 'Manuel Kayıt'].filter(Boolean),
       notes: formData.notes.trim() || undefined,
-    })
+    }
+    const key = JSON.stringify(payload)
+    if (request.current && request.current.key !== key) {
+      setSaveError('Önceki işlemi aynı bilgilerle tekrar doğrulayın. Kayıt sonucu alındıktan sonra bilgileri düzenleyebilirsiniz.')
+      return
+    }
+    request.current ??= { key, id: crypto.randomUUID() }
+    saveLock.current = true; setSaving(true); setSaveError('')
 
-    resetForm()
-    onClose()
+    try {
+      await onAdd(payload, request.current.id)
+      request.current = null
+      resetForm()
+      onClose()
+    } catch (error) {
+      if (error instanceof ManualLeadValidationError) request.current = null
+      setSaveError(error instanceof Error ? error.message : 'Müşteri kaydedilemedi.')
+    } finally { saveLock.current = false; setSaving(false) }
   }
 
   return (
@@ -131,6 +158,9 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <fieldset><legend className="text-xs font-semibold mb-2">Kanal</legend><div className="flex gap-2 flex-wrap">{manualChannels.map(channel=><label key={channel} className="flex items-center gap-1.5 text-xs cursor-pointer"><input type="radio" name="lead-channel" checked={formData.channel===channel} onChange={()=>setFormData(d=>({...d,channel}))}/><LeadChannelIcon label={channel}/>{channel}</label>)}</div></fieldset>
+        {saveError && <p role="alert" className="text-sm text-rose-400">{saveError}</p>}
+        <fieldset disabled={saving} className="space-y-4">
         {/* Adı ve Soyadı */}
         <GlassInput
           label="Adı ve Soyadı *"
@@ -197,7 +227,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
 
         {/* Danışman Ata & Konut Tipi Tercihi */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
+          {!selfAssigned && <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-[#f3efe9]">
               Danışman Ata
             </label>
@@ -215,7 +245,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
                 </option>
               ))}
             </CustomSelect>
-          </div>
+          </div>}
 
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-[#f3efe9]">
@@ -257,9 +287,10 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             İptal
           </GlassButton>
           <GlassButton variant="gold" size="sm" type="submit" className="px-5 font-bold">
-            Müşteriyi Kaydet
+            {saving ? 'Kaydediliyor…' : 'Müşteriyi Kaydet'}
           </GlassButton>
         </div>
+        </fieldset>
       </form>
     </GlassModal>
   )

@@ -9,8 +9,9 @@ import { leadStore } from '@/services/leadStore'
 import { STAGE_CONFIGS } from '@/types/lead'
 import { stageEvent } from '../../../supabase/functions/_shared/meta-core'
 import { getMetaSourceChoices } from '@/services/metaSources'
+import { isCentralCrm } from '@/services/crmRuntime'
 
-export function MetaBackendPanel() {
+export function MetaBackendPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const [status, setStatus] = useState<Record<string, any> | null>(null)
   const [message, setMessage] = useState('Sunucu bağlantısı ve canlı webhook teslimi henüz doğrulanmadı.')
   const [email, setEmail] = useState('')
@@ -19,6 +20,7 @@ export function MetaBackendPanel() {
   const [sourceId, setSourceId] = useState('')
   const [busy, setBusy] = useState(false)
   const canManage = permissionService.canManageMetaConfig(userStore.getCurrentUser())
+  const central = userStore.centralAuthEnabled || isCentralCrm()
   const testLeads = leadStore.getAllRaw().filter(l => l.metaRevision !== undefined && stageEvent[l.stage] &&
     (l.metaLeadId || l.inquiries?.some(i => i.metaLeadgenId)))
   const testSources = getMetaSourceChoices(testLeads.find(l=>l.id===leadId))
@@ -30,14 +32,14 @@ export function MetaBackendPanel() {
   }
   const refresh = async () => { const data = await metaStore.refreshStatus(); setStatus(data); setMessage('Sunucu ayarları okundu. Meta eşleşme, atıf ve optimizasyon sonuçları ayrıca doğrulanmalıdır.') }
   const classes = 'w-full px-3 py-2 rounded-xl bg-[#1e1c1a] border border-[#4a443f] text-xs text-white'
-  return <GlassCard className="space-y-4 p-5">
+  const Container = embedded ? 'div' : GlassCard
+  return <Container className={embedded ? 'space-y-4' : 'space-y-4 p-5'}>
     <h3 className="text-sm font-bold text-white">Meta güvenli sunucu bağlantısı</h3>
-    <p className="text-xs text-slate-300">CAPI ve sayfa anahtarları Supabase sunucu sırlarında yönetilir. Tarayıcıya girilmez. Yerel CRM girişi Meta gönderim yetkisi sağlamaz.</p>
-    <p className="text-xs text-amber-300">{message}</p>
+    <p className="text-xs text-slate-300">Meta bağlantısı açık uygulama hesabınızla doğrulanır. Sayfa anahtarları sunucuda korunur.</p>
     <label className="block text-xs text-slate-300">Webhook adresi
       <input readOnly className={classes} value={metaStore.getConfig().webhookUrl || 'VITE_SUPABASE_URL yapılandırılmalı'} />
     </label>
-    <div className="space-y-3">
+    {central ? <p className="text-xs text-slate-400">Uygulama oturumunuz kullanılıyor; ayrıca e-posta koduyla giriş yapmanız gerekmez.</p> : <div className="space-y-3">
       <p className="text-xs text-slate-400">Supabase Auth e-posta kodu ile oturum açın. Kullanıcının Meta yetkisi ayrıca yönetici tarafından atanmalıdır.</p>
       <input aria-label="Supabase Auth e-posta" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} className={classes} placeholder="Yetkili e-posta" />
       <GlassButton disabled={busy || !email} onClick={()=>run(async()=>{
@@ -61,7 +63,7 @@ export function MetaBackendPanel() {
         if (error) throw new Error('Oturum kapatılamadı.')
         setStatus(null); setMessage('Meta sunucu oturumu kapatıldı.')
       })}>Sunucu oturumunu kapat</GlassButton>
-    </div>
+    </div>}
     <div className="flex flex-wrap gap-2">
       <GlassButton disabled={busy} onClick={()=>run(refresh)}>Durumu ve geçmişi yenile</GlassButton>
       {canManage && <GlassButton disabled={busy} onClick={()=>run(async()=>{
@@ -96,5 +98,5 @@ export function MetaBackendPanel() {
         const result = await metaStore.sendTestCapiEvent(undefined, leadId, selectedSourceId); setMessage(result.message); if (result.success) await refresh()
       })}>Yalnızca Test Events'e gönder</GlassButton>
     </div>}
-  </GlassCard>
+  </Container>
 }

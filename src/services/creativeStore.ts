@@ -1,6 +1,8 @@
 import { userStore } from './userStore'
 import { isCentralCrm } from './crmRuntime'
 import { createCrmServerCollection } from './crmServerCollection'
+import { sharedFileStore } from './sharedFileStore'
+import { CrmBackendError } from './crmBackendRepository'
 export type ScheduleCategory =
   | 'OZEL_GUN'
   | 'RESMI_BAYRAM'
@@ -37,6 +39,7 @@ export type CreativeStatus =
   | 'YAYINDA'
 
 export type CreativeFormat =
+  | 'Düşey' | 'Yatay' | 'Gönderi' | 'Yatay gönderi' | 'Özel'
   | 'Reels / Video'
   | 'Story (9:16)'
   | 'Post / Kare (1:1)'
@@ -51,12 +54,16 @@ export interface CreativeAssetItem {
   title: string
   project: string
   format: CreativeFormat
+  customFormat?: string
+  mediaType?: 'VIDEO' | 'PHOTO' | 'GIF' | 'AUDIO' | 'PDF' | 'OTHER'
+  mediaFileName?: string
+  previewFileId?: string
   platform: string
   status: CreativeStatus
   designer: string
   dueDate: string
   version: string
-  aspectRatio: '9:16' | '1:1' | '4:5' | '16:9'
+  aspectRatio: '9:16' | '1:1' | '4:5' | '16:9' | '1.91:1'
   accentGradient: string
   previewImageUrl?: string
   headline: string
@@ -137,11 +144,13 @@ const PURGED_MOCK_CREATIVE_IDS = new Set([
 type Listener = () => void
 
 class CreativeStore {
+  private createBusy = false
+  private pendingCreative: { key: string; value: CreativeAssetItem; mediaReady: boolean } | null = null
   private scheduleBackend = createCrmServerCollection<CreativeScheduleItem>('creative_schedule', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
   private creativesBackend = createCrmServerCollection<CreativeAssetItem>('creative_assets', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
   private commentsBackend = createCrmServerCollection<CreativeCommentItem>('creative_comments', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
   private briefsBackend = createCrmServerCollection<CreativeBriefItem>('creative_briefs', () => { const user=userStore.getCurrentUser(),client=userStore.getServerClient(); return user&&client?{id:user.id,client}:null })
-  public setAccount(id: string|null) { this.scheduleBackend.setAccount(id); this.schedule=[]; this.creativesBackend.setAccount(id); this.creatives=[]; this.commentsBackend.setAccount(id); this.comments=[]; this.briefsBackend.setAccount(id); this.briefs=[]; this.notify() }
+  public setAccount(id: string|null) { this.pendingCreative=null; this.scheduleBackend.setAccount(id); this.schedule=[]; this.creativesBackend.setAccount(id); this.creatives=[]; this.commentsBackend.setAccount(id); this.comments=[]; this.briefsBackend.setAccount(id); this.briefs=[]; this.notify() }
   public async refreshFromBackend() { await Promise.all([this.scheduleBackend.refresh(),this.creativesBackend.refresh(),this.commentsBackend.refresh(),this.briefsBackend.refresh()]) }
   public getReadError() { return [this.scheduleBackend.getError(),this.creativesBackend.getError(),this.commentsBackend.getError(),this.briefsBackend.getError()].filter(Boolean).join(' · ') }
 
@@ -152,6 +161,7 @@ class CreativeStore {
   private listeners: Set<Listener> = new Set()
 
   constructor() {
+ sharedFileStore.subscribe(() => this.notify())
  this.scheduleBackend.subscribe(() => { if(isCentralCrm()) { this.schedule=this.scheduleBackend.getAll(); this.notify() } })
 this.creativesBackend.subscribe(() => { if(isCentralCrm()) { this.creatives=this.creativesBackend.getAll(); this.notify() } })
 this.commentsBackend.subscribe(() => { if(isCentralCrm()) { this.comments=this.commentsBackend.getAll(); this.notify() } })
@@ -323,22 +333,60 @@ this.briefsBackend.subscribe(() => { if(isCentralCrm()) { this.briefs=this.brief
 
   // --- CREATIVES ---
   getCreatives(): CreativeAssetItem[] {
-    return [...this.creatives].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    const user = userStore.getCurrentUser()
+    return this.creatives.map(item => item.previewFileId ? { ...item, previewImageUrl: sharedFileStore.getById(item.previewFileId, user)?.fileDataUrl } : { ...item })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  }
+
+  private async storeMedia(item: CreativeAssetItem): Promise<CreativeAssetItem> {
+    if (!item.previewImageUrl?.startsWith('data:')) return item
+    const user = userStore.getCurrentUser()
+    if (!user) throw Error('Dosya yüklemek için giriş yapın.')
+    const blob = await (await fetch(item.previewImageUrl)).blob()
+    const kind = item.mediaType || (blob.type === 'image/gif' ? 'GIF' : blob.type.startsWith('video/') ? 'VIDEO' : blob.type.startsWith('image/') ? 'PHOTO' : blob.type.startsWith('audio/') ? 'AUDIO' : blob.type === 'application/pdf' ? 'PDF' : 'OTHER')
+    const file = await sharedFileStore.uploadFile({
+      name: item.mediaFileName || item.title, notes: 'Kreatif dosyası', fileDataUrl: item.previewImageUrl,
+      mimeType: blob.type, size: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
+      type: kind === 'VIDEO' ? 'video' : kind === 'PHOTO' || kind === 'GIF' ? 'image' : kind === 'AUDIO' ? 'audio' : kind === 'PDF' ? 'pdf' : 'other',
+      shareTarget: 'DEPARTMENTS', targetDepartments: ['Kreatif','Pazarlama','Yönetim'],
+      permissions: { canView: true, canEdit: false, canReshare: false },
+    }, user)
+    const saved = { ...item, mediaType: kind, previewFileId: file.id }
+    delete saved.previewImageUrl
+    return saved
   }
 
   async addCreative(
     data: Omit<CreativeAssetItem, 'id' | 'code' | 'createdAt' | 'updatedAt'>
   ): Promise<CreativeAssetItem> {
-    const nextNum = 101 + this.creatives.length
+    if (this.createBusy) throw Error('Önceki kreatif yüklemesi sürüyor.')
+    const actor = userStore.getCurrentUser()?.id
+    const key = JSON.stringify([actor, data])
+    if (this.pendingCreative && this.pendingCreative.key !== key) throw Error('Sonucu belirsiz kreatifi aynı bilgilerle yeniden deneyin.')
+    const nextNum = 1 + this.creatives.length
     const nowIso = new Date().toISOString()
     const newItem: CreativeAssetItem = {
       ...data,
       id: isCentralCrm()?crypto.randomUUID():'crt-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      code: `KRT-${nextNum}`,
+      code: isCentralCrm() ? '' : `KRE/${new Date().getFullYear()}${String(nextNum).padStart(6,'0')}${({VIDEO:'V',PHOTO:'F',GIF:'G',AUDIO:'A',PDF:'P',OTHER:'D'} as const)[data.mediaType || 'OTHER']}`,
       createdAt: nowIso,
       updatedAt: nowIso,
     }
-    if(isCentralCrm())return this.creativesBackend.save(JSON.stringify(newItem),newItem)
+    if (isCentralCrm()) {
+      const pending = this.pendingCreative ?? { key, value: newItem, mediaReady: false }
+      this.pendingCreative = pending; this.createBusy = true
+      try {
+        if (!pending.mediaReady) { pending.value = await this.storeMedia(pending.value); pending.mediaReady = true }
+        if (actor !== userStore.getCurrentUser()?.id) throw Error('Yükleme sırasında oturum değişti.')
+        const saved = await this.creativesBackend.save(key, pending.value)
+        if (this.pendingCreative === pending) this.pendingCreative = null
+        void sharedFileStore.refreshFromBackend()
+        return saved
+      } catch (error) {
+        if (error instanceof CrmBackendError && !['request_failed','invalid_response'].includes(error.code) && this.pendingCreative === pending) this.pendingCreative = null
+        throw error
+      } finally { this.createBusy = false }
+    }
     this.creatives.unshift(newItem)
     this.saveCreatives()
     return newItem
@@ -354,7 +402,7 @@ this.briefsBackend.subscribe(() => { if(isCentralCrm()) { this.briefs=this.brief
   }
 
   async updateCreative(id: string, updates: Partial<CreativeAssetItem>) {
-    if(isCentralCrm()) { const prior=this.creatives.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value={...prior,...updates,id}; await this.creativesBackend.save(JSON.stringify([value,false]),value,false); return }
+      if(isCentralCrm()) { const prior=this.creatives.find(row=>row.id===id); if(!prior)throw Error('Kayıt bulunamadı.'); const value=await this.storeMedia({...prior,...updates,id}); await this.creativesBackend.save(JSON.stringify([value,false]),value,false); void sharedFileStore.refreshFromBackend(); return }
     const nowIso = new Date().toISOString()
     this.creatives = this.creatives.map((c) =>
       c.id === id ? { ...c, ...updates, updatedAt: nowIso } : c

@@ -1,3 +1,4 @@
+import {usePersonalTools} from '@/services/personalToolWorkspace'
 import React, { useState, useEffect } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import { createPortal } from 'react-dom'
@@ -57,10 +58,8 @@ export type ToolType =
   | 'payments'
   | 'notepad'
   | 'calculator'
-  | 'commission'
   | 'currency'
   | 'mortgage'
-  | 'deedFee'
   | 'whatsapp'
   | 'sqmPrice'
   | 'roi'
@@ -155,18 +154,10 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // ÖDEMELER (PAYMENTS) STATE & LOGIC
   // ==========================================
-  const [payments, setPayments] = useState<PaymentRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_PAYMENTS)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed)) return parsed
-      }
-    } catch {
-      // ignore
-    }
-    return DEFAULT_PAYMENTS
-  })
+  const currentUser=userStore.getCurrentUser()
+  const tools=usePersonalTools(currentUser?.id||'',isOpen)
+  const field=tools.field
+  const [payments,setPayments]=field<PaymentRecord[]>('payments',[])
 
   const [newPaymentItem, setNewPaymentItem] = useState('')
   const [newPaymentAmount, setNewPaymentAmount] = useState('')
@@ -179,7 +170,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     if (!newPaymentItem.trim() || isNaN(amountNum) || amountNum <= 0) return
 
     const newRecord: PaymentRecord = {
-      id: 'pay-' + Date.now(),
+      id: 'pay-' + crypto.randomUUID(),
       item: newPaymentItem.trim(),
       amount: amountNum,
       date: newPaymentDate || new Date().toISOString().slice(0, 10),
@@ -187,7 +178,6 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
 
     const updated = [newRecord, ...payments]
     setPayments(updated)
-    localStorage.setItem(STORAGE_KEY_PAYMENTS, JSON.stringify(updated))
 
     setNewPaymentItem('')
     setNewPaymentAmount('')
@@ -196,7 +186,6 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   const handleDeletePayment = (id: string) => {
     const updated = payments.filter((p) => p.id !== id)
     setPayments(updated)
-    localStorage.setItem(STORAGE_KEY_PAYMENTS, JSON.stringify(updated))
   }
 
   const totalPaymentsAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
@@ -204,69 +193,16 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 1. NOT DEFTERİ (NOTEPAD) STATE & LOGIC
   // ==========================================
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => userStore.getCurrentUser())
-  const [allUsers, setAllUsers] = useState<AppUser[]>(() => userStore.getAll())
-
-  useEffect(() => {
-    const syncUsers = () => {
-      setCurrentUser(userStore.getCurrentUser())
-      setAllUsers(userStore.getAll())
-    }
-    return userStore.subscribe(syncUsers)
-  }, [])
-
-  const [notes, setNotes] = useState<NoteItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_NOTES)
-      if (saved) return JSON.parse(saved)
-    } catch {
-      // ignore
-    }
-    return []
-  })
-
-  // Kullanıcının kendi notları + kendisiyle / departmanıyla / tüm şirketle paylaşılan notlar
-  const visibleNotes = notes.filter((n) => {
-    if (!n.ownerId || !currentUser || n.ownerId === currentUser.id) return true
-    if (n.shareScope === 'COMPANY') return true
-    if (
-      n.shareScope === 'DEPARTMENTS' &&
-      n.sharedDepartments?.some(
-        (d) => d === currentUser.department || (currentUser.departments || []).includes(d)
-      )
-    ) {
-      return true
-    }
-    if (n.shareScope === 'USERS' && n.sharedUserIds?.includes(currentUser.id)) {
-      return true
-    }
-    return false
-  })
-
+  const [notes,setNotes]=field<NoteItem[]>('notes',[])
+  const visibleNotes=notes
   const [selectedNoteId, setSelectedNoteId] = useState<string>(visibleNotes[0]?.id || notes[0]?.id || '')
   const activeNote = visibleNotes.find((n) => n.id === selectedNoteId) || visibleNotes[0]
 
-  // Not Paylaşım Paneli State
-  const [isNoteShareOpen, setIsNoteShareOpen] = useState(false)
-  const [shareTab, setShareTab] = useState<'USERS' | 'DEPARTMENTS' | 'COMPANY'>('USERS')
-  const [selectedShareUsers, setSelectedShareUsers] = useState<string[]>([])
-  const [selectedShareDepts, setSelectedShareDepts] = useState<Department[]>([])
-  const [shareUserSearch, setShareUserSearch] = useState('')
-  const [shareSavedFeedback, setShareSavedFeedback] = useState(false)
-
-  useEffect(() => {
-    setIsNoteShareOpen(false)
-    setShareUserSearch('')
-  }, [activeNote?.id])
-
-  const saveNotesToStorage = (updatedNotes: NoteItem[]) => {
-    setNotes(updatedNotes)
-    localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(updatedNotes))
-  }
+  const saveNotesToStorage=setNotes
 
   const handleCreateNote = () => {
     const newNote: NoteItem = {
-      id: 'note-' + Date.now(),
+      id: 'note-' + crypto.randomUUID(),
       title: 'Yeni Not',
       content: '',
       updatedAt: 'Az önce',
@@ -280,7 +216,6 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     const updated = [newNote, ...notes]
     saveNotesToStorage(updated)
     setSelectedNoteId(newNote.id)
-    setIsNoteShareOpen(false)
   }
 
   const handleUpdateActiveNote = (updates: Partial<NoteItem>) => {
@@ -299,143 +234,16 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     if (selectedNoteId === id && updated.length > 0) {
       setSelectedNoteId(updated[0].id)
     }
-    setIsNoteShareOpen(false)
   }
 
-  const handleToggleNoteShare = () => {
-    if (!activeNote) return
-    if (!isNoteShareOpen) {
-      const currentScope = activeNote.shareScope
-      if (currentScope === 'COMPANY') {
-        setShareTab('COMPANY')
-      } else if (currentScope === 'DEPARTMENTS') {
-        setShareTab('DEPARTMENTS')
-      } else {
-        setShareTab('USERS')
-      }
-      setSelectedShareUsers(activeNote.sharedUserIds || [])
-      setSelectedShareDepts(
-        activeNote.sharedDepartments && activeNote.sharedDepartments.length > 0
-          ? activeNote.sharedDepartments
-          : currentUser?.department
-          ? [currentUser.department]
-          : ['Satış']
-      )
-      setShareUserSearch('')
-    }
-    setIsNoteShareOpen((prev) => !prev)
-  }
-
-  const toggleShareUser = (userId: string) => {
-    setSelectedShareUsers((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    )
-  }
-
-  const toggleShareDept = (dept: Department) => {
-    setSelectedShareDepts((prev) =>
-      prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]
-    )
-  }
-
-  const handleApplyNoteShare = () => {
-    if (!activeNote) return
-    const nowTime = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-    const baseOwner = {
-      ownerId: activeNote.ownerId || currentUser?.id,
-      ownerName: activeNote.ownerName || currentUser?.fullName || 'Kullanıcı',
-      ownerDepartment: activeNote.ownerDepartment || currentUser?.department,
-      sharedAt: `Bugün ${nowTime}`,
-    }
-
-    if (shareTab === 'COMPANY') {
-      handleUpdateActiveNote({
-        ...baseOwner,
-        shareScope: 'COMPANY',
-        sharedDepartments: [...CANONICAL_DEPARTMENTS],
-        sharedUserIds: [],
-      })
-    } else if (shareTab === 'DEPARTMENTS') {
-      if (selectedShareDepts.length === 0) {
-        handleUpdateActiveNote({
-          ...baseOwner,
-          shareScope: 'PRIVATE',
-          sharedDepartments: [],
-          sharedUserIds: [],
-        })
-      } else {
-        handleUpdateActiveNote({
-          ...baseOwner,
-          shareScope: 'DEPARTMENTS',
-          sharedDepartments: selectedShareDepts,
-          sharedUserIds: [],
-        })
-      }
-    } else if (shareTab === 'USERS') {
-      if (selectedShareUsers.length === 0) {
-        handleUpdateActiveNote({
-          ...baseOwner,
-          shareScope: 'PRIVATE',
-          sharedUserIds: [],
-          sharedDepartments: [],
-        })
-      } else {
-        handleUpdateActiveNote({
-          ...baseOwner,
-          shareScope: 'USERS',
-          sharedUserIds: selectedShareUsers,
-          sharedDepartments: [],
-        })
-      }
-    }
-
-    setShareSavedFeedback(true)
-    setTimeout(() => {
-      setShareSavedFeedback(false)
-      setIsNoteShareOpen(false)
-    }, 650)
-  }
-
-  const handleRemoveNoteShare = () => {
-    if (!activeNote) return
-    handleUpdateActiveNote({
-      shareScope: 'PRIVATE',
-      sharedUserIds: [],
-      sharedDepartments: [],
-      sharedAt: undefined,
-    })
-    setSelectedShareUsers([])
-    setSelectedShareDepts([])
-    setIsNoteShareOpen(false)
-  }
-
-  const getNoteShareSummary = (note: NoteItem): string | null => {
-    if (!note.shareScope || note.shareScope === 'PRIVATE') return null
-    if (note.shareScope === 'COMPANY') return 'Tüm Şirket'
-    if (note.shareScope === 'DEPARTMENTS') {
-      const depts = note.sharedDepartments || []
-      if (depts.length === 0) return null
-      return depts.length <= 2 ? depts.join(', ') : `${depts.length} Departman`
-    }
-    if (note.shareScope === 'USERS') {
-      const ids = note.sharedUserIds || []
-      if (ids.length === 0) return null
-      const names = ids
-        .map((id) => allUsers.find((u) => u.id === id)?.fullName)
-        .filter(Boolean) as string[]
-      if (names.length === 0) return `${ids.length} Kişi`
-      return names.length <= 2 ? names.join(', ') : `${names.length} Kişi`
-    }
-    return null
-  }
 
   // ==========================================
   // 2. HESAP MAKİNESİ (CALCULATOR) STATE & LOGIC
   // ==========================================
-  const [calcInput, setCalcInput] = useState<string>('0')
-  const [calcPrev, setCalcPrev] = useState<string>('')
-  const [calcOp, setCalcOp] = useState<string | null>(null)
-  const [calcResetOnNext, setCalcResetOnNext] = useState<boolean>(false)
+  const [calcInput, setCalcInput] = field<string>('calcInput', '0')
+  const [calcPrev, setCalcPrev] = field<string>('calcPrev', '')
+  const [calcOp, setCalcOp] = field<string | null>('calcOp', null)
+  const [calcResetOnNext, setCalcResetOnNext] = field<boolean>('calcResetOnNext', false)
 
   const handleCalcDigit = (digit: string) => {
     if (calcResetOnNext || calcInput === '0') {
@@ -499,21 +307,10 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   }
 
   // ==========================================
-  // 3. KOMİSYON & PRİM STATE & LOGIC
-  // ==========================================
-  const [commSalePrice, setCommSalePrice] = useState<number>(0)
-  const [commRate, setCommRate] = useState<number>(2) // 2%
-  const [commAgencyRate, setCommAgencyRate] = useState<number>(4) // 4%
-
-  const totalAgencyFee = Math.round((commSalePrice * commAgencyRate) / 100)
-  const repCommission = Math.round((commSalePrice * commRate) / 100)
-  const companyShare = totalAgencyFee - repCommission
-
-  // ==========================================
   // 4. DÖVİZ & KUR ÇEVİRİCİ STATE & LOGIC
   // ==========================================
-  const [currencyAmount, setCurrencyAmount] = useState<number>(0)
-  const [baseCurrency, setBaseCurrency] = useState<'TRY' | 'USD' | 'EUR' | 'GBP'>('USD')
+  const [currencyAmount, setCurrencyAmount] = field<number>('currencyAmount', 0)
+  const [baseCurrency, setBaseCurrency] = field<'TRY' | 'USD' | 'EUR' | 'GBP'>('baseCurrency', 'USD')
   const [rates] = useState({
     USD: 38.5,
     EUR: 42.1,
@@ -533,9 +330,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 5. KONUT KREDİSİ STATE & LOGIC
   // ==========================================
-  const [mortgageLoan, setMortgageLoan] = useState<number>(0)
-  const [mortgageRate, setMortgageRate] = useState<number>(2.89) // Aylık %2.89
-  const [mortgageMonths, setMortgageMonths] = useState<number>(120) // 120 ay
+  const [mortgageLoan, setMortgageLoan] = field<number>('mortgageLoan', 0)
+  const [mortgageRate, setMortgageRate] = field('mortgageRate',2.89) // Aylık %2.89
+  const [mortgageMonths, setMortgageMonths] = field('mortgageMonths',120) // 120 ay
 
   // Aylık taksit hesabı
   const r = mortgageRate / 100
@@ -546,23 +343,12 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   const totalInterest = totalRepayment - mortgageLoan
 
   // ==========================================
-  // 6. TAPU HARCI STATE & LOGIC
-  // ==========================================
-  const [deedPrice, setDeedPrice] = useState<number>(0)
-  const [deedPayer, setDeedPayer] = useState<'split' | 'buyerOnly'>('split')
-  const revolvingFundFee = deedPrice > 0 ? 3850 : 0
-
-  const buyerDeedFee = Math.round(deedPrice * 0.02)
-  const sellerDeedFee = Math.round(deedPrice * 0.02)
-  const totalDeedCost = buyerDeedFee + sellerDeedFee + revolvingFundFee
-
-  // ==========================================
   // 7. WHATSAPP ŞABLONLARI STATE & LOGIC
   // ==========================================
-  const [waClientName, setWaClientName] = useState('')
-  const [waProperty, setWaProperty] = useState('')
-  const [waPrice, setWaPrice] = useState('')
-  const [waTemplateType, setWaTemplateType] = useState<'sunum' | 'randevu' | 'teklif' | 'kapora'>('sunum')
+  const [waClientName, setWaClientName] = field('waClientName', '')
+  const [waProperty, setWaProperty] = field('waProperty', '')
+  const [waPrice, setWaPrice] = field('waPrice', '')
+  const [waTemplateType, setWaTemplateType] = field<'sunum' | 'randevu' | 'teklif' | 'kapora'>('waTemplateType', 'sunum')
 
   const generateWaText = () => {
     switch (waTemplateType) {
@@ -580,9 +366,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 8. METREKARE & BİRİM FİYAT STATE & LOGIC
   // ==========================================
-  const [sqmPriceTotal, setSqmPriceTotal] = useState<number>(0)
-  const [sqmGross, setSqmGross] = useState<number>(0)
-  const [sqmNet, setSqmNet] = useState<number>(0)
+  const [sqmPriceTotal, setSqmPriceTotal] = field<number>('sqmPriceTotal', 0)
+  const [sqmGross, setSqmGross] = field<number>('sqmGross', 0)
+  const [sqmNet, setSqmNet] = field<number>('sqmNet', 0)
 
   const grossUnit = sqmGross > 0 ? Math.round(sqmPriceTotal / sqmGross) : 0
   const netUnit = sqmNet > 0 ? Math.round(sqmPriceTotal / sqmNet) : 0
@@ -591,9 +377,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 9. ROI & KİRA AMORTİSMANI
   // ==========================================
-  const [roiPrice, setRoiPrice] = useState<number>(0)
-  const [roiRent, setRoiRent] = useState<number>(0)
-  const [roiDues, setRoiDues] = useState<number>(0)
+  const [roiPrice, setRoiPrice] = field<number>('roiPrice', 0)
+  const [roiRent, setRoiRent] = field<number>('roiRent', 0)
+  const [roiDues, setRoiDues] = field<number>('roiDues', 0)
   const roiYearlyNet = Math.max(0, (roiRent - roiDues) * 12)
   const roiYears = roiPrice > 0 && roiYearlyNet > 0 ? (roiPrice / roiYearlyNet).toFixed(1) : '0'
   const roiYield = roiPrice > 0 ? ((roiYearlyNet / roiPrice) * 100).toFixed(2) : '0'
@@ -601,18 +387,18 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 10. PAZARLIK & İNDİRİM MARJI
   // ==========================================
-  const [bargainListed, setBargainListed] = useState<number>(0)
-  const [bargainOffer, setBargainOffer] = useState<number>(0)
+  const [bargainListed, setBargainListed] = field<number>('bargainListed', 0)
+  const [bargainOffer, setBargainOffer] = field<number>('bargainOffer', 0)
   const bargainDiscount = Math.max(0, bargainListed - bargainOffer)
   const bargainRate = bargainListed > 0 ? ((bargainDiscount / bargainListed) * 100).toFixed(1) : '0'
 
   // ==========================================
   // 11. PEŞİNAT & ARA ÖDEME
   // ==========================================
-  const [downTotal, setDownTotal] = useState<number | ''>(0)
-  const [downRate, setDownRate] = useState<number | ''>(0)
-  const [downInterimAmount, setDownInterimAmount] = useState<number | ''>(0)
-  const [downMonths, setDownMonths] = useState<number | ''>(0)
+  const [downTotal, setDownTotal] = field<number | ''>('downTotal', 0)
+  const [downRate, setDownRate] = field<number | ''>('downRate', 0)
+  const [downInterimAmount, setDownInterimAmount] = field<number | ''>('downInterimAmount', 0)
+  const [downMonths, setDownMonths] = field<number | ''>('downMonths', 0)
 
   const activeDownTotal = Math.max(0, typeof downTotal === 'number' ? downTotal : 0)
   const activeDownRate = Math.max(0, Math.min(100, typeof downRate === 'number' ? downRate : 0))
@@ -627,99 +413,84 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 12. TKGM PARSEL & İMAR
   // ==========================================
-  const [parselCity, setParselCity] = useState('')
-  const [parselDistrict, setParselDistrict] = useState('')
-  const [parselNeighborhood, setParselNeighborhood] = useState('')
-  const [parselAda, setParselAda] = useState('')
-  const [parselNo, setParselNo] = useState('')
-  const [parselKaks, setParselKaks] = useState(0)
-  const [parselTaks, setParselTaks] = useState(0)
-  const [parselArea, setParselArea] = useState(0)
+  const [parselCity, setParselCity] = field('parselCity', '')
+  const [parselDistrict, setParselDistrict] = field('parselDistrict', '')
+  const [parselNeighborhood, setParselNeighborhood] = field('parselNeighborhood', '')
+  const [parselAda, setParselAda] = field('parselAda', '')
+  const [parselNo, setParselNo] = field('parselNo', '')
+  const [parselKaks, setParselKaks] = field('parselKaks', 0)
+  const [parselTaks, setParselTaks] = field('parselTaks', 0)
+  const [parselArea, setParselArea] = field('parselArea', 0)
 
   // ==========================================
   // 13. COMPASS (GÜNEŞ & CEPHE)
   // ==========================================
-  const [compassDir, setCompassDir] = useState<'guney' | 'dogu' | 'bati' | 'kuzey'>('guney')
+  const [compassDir, setCompassDir] = field<'guney' | 'dogu' | 'bati' | 'kuzey'>('compassDir', 'guney')
 
   // ==========================================
   // 14. VALUATION (EKSPERTİZ)
   // ==========================================
-  const [valSqm, setValSqm] = useState(0)
-  const [valGross, setValGross] = useState(0)
-  const [valAge, setValAge] = useState<'0' | '1-5' | '6-15' | '16+'>('0')
-  const [valFloor, setValFloor] = useState<'ara' | 'giris' | 'dubleks'>('ara')
+  const [valSqm, setValSqm] = field('valSqm', 0)
+  const [valGross, setValGross] = field('valGross', 0)
+  const [valAge, setValAge] = field<'0' | '1-5' | '6-15' | '16+'>('valAge', '0')
+  const [valFloor, setValFloor] = field<'ara' | 'giris' | 'dubleks'>('valFloor', 'ara')
 
   // ==========================================
   // 15. CONTRACTS (HAZIR SÖZLEŞMELER)
   // ==========================================
-  const [contractType, setContractType] = useState<'yerGosterme' | 'yetki' | 'kapora'>('yerGosterme')
-  const [contractClient, setContractClient] = useState('')
-  const [contractAddress, setContractAddress] = useState('')
-  const [contractPrice, setContractPrice] = useState('')
+  const [contractType, setContractType] = field<'yerGosterme' | 'yetki' | 'kapora'>('contractType', 'yerGosterme')
+  const [contractClient, setContractClient] = field('contractClient', '')
+  const [contractAddress, setContractAddress] = field('contractAddress', '')
+  const [contractPrice, setContractPrice] = field('contractPrice', '')
 
   // ==========================================
   // 16. TARGET (SATIŞ HEDEFİ)
   // ==========================================
-  const [targetQuota, setTargetQuota] = useState(0)
-  const [targetRealized, setTargetRealized] = useState(0)
+  const [targetQuota, setTargetQuota] = field('targetQuota', 0)
+  const [targetRealized, setTargetRealized] = field('targetRealized', 0)
 
   // ==========================================
   // 17. REMINDERS (HATIRLATICILAR)
   // ==========================================
-  const [reminders, setReminders] = useState<{ id: string; text: string; done: boolean }[]>([])
-  const [newReminderText, setNewReminderText] = useState('')
+  const [reminders, setReminders] = field<{ id: string; text: string; done: boolean }[]>('reminders', [])
+  const [newReminderText, setNewReminderText] = field('newReminderText', '')
 
   // ==========================================
   // 18. QR KARTVİZİT
   // ==========================================
-  const [qrName, setQrName] = useState('')
-  const [qrPhone, setQrPhone] = useState('')
+  const [qrName, setQrName] = field('qrName', '')
+  const [qrPhone, setQrPhone] = field('qrPhone', '')
 
-  // ==========================================
-  // 20. CALENDAR (RANDEVULAR)
-  // ==========================================
-  const [events, setEvents] = useState<{ id: string; title: string; time: string; date: string }[]>([])
-  const [newEventTitle, setNewEventTitle] = useState('')
-  const [newEventTime, setNewEventTime] = useState('')
 
   // ==========================================
   // 21. DASK
   // ==========================================
-  const [daskArea, setDaskArea] = useState(0)
+  const [daskArea, setDaskArea] = field('daskArea', 0)
 
   // ==========================================
   // 22. TAX INCOME (KİRA GELİR VERGİSİ)
   // ==========================================
-  const [taxYearlyRent, setTaxYearlyRent] = useState(0)
+  const [taxYearlyRent, setTaxYearlyRent] = field('taxYearlyRent', 0)
 
   // ==========================================
   // 23. AİDAT DAĞITICI
   // ==========================================
-  const [aidatTotal, setAidatTotal] = useState(0)
-  const [aidatUnits, setAidatUnits] = useState(0)
+  const [aidatTotal, setAidatTotal] = field('aidatTotal', 0)
+  const [aidatUnits, setAidatUnits] = field('aidatUnits', 0)
 
   // ==========================================
   // 24. WEATHER (SAHA HAVA DURUMU)
   // ==========================================
-  const [weatherCity, setWeatherCity] = useState('İstanbul')
+  const [weatherCity, setWeatherCity] = field('weatherCity', 'İstanbul')
 
   // ==========================================
   // 25. TIMER (KRONOMETRE)
   // ==========================================
-  const [timerSeconds, setTimerSeconds] = useState(0)
-  const [isTimerRunning, setIsTimerRunning] = useState(false)
-
-  useEffect(() => {
-    let interval: any = null
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev + 1)
-      }, 1000)
-    } else if (!isTimerRunning && timerSeconds !== 0) {
-      clearInterval(interval)
-    }
-    return () => clearInterval(interval)
-  }, [isTimerRunning, timerSeconds])
+  const [timer,setTimer]=field('timer',{started:0,elapsed:0})
+  const [clock,setClock]=useState(Date.now)
+  const isTimerRunning=Boolean(timer.started)
+  const timerSeconds=timer.elapsed+(timer.started?Math.max(0,Math.floor((clock-timer.started)/1000)):0)
+  useEffect(()=>{if(!isTimerRunning||!isOpen)return;setClock(Date.now());const interval=setInterval(()=>setClock(Date.now()),500);return ()=>clearInterval(interval)},[isTimerRunning,isOpen])
 
   // ==========================================
   // TOOLS NAVIGATION CONFIG (26 ÇALIŞAN ARAÇ)
@@ -729,10 +500,8 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     { id: 'payments', label: 'Ödemeler', icon: Wallet },
     { id: 'notepad', label: 'Not Defteri', icon: FileText },
     { id: 'calculator', label: 'Hesap Makinesi', icon: Calculator },
-    { id: 'commission', label: 'Satış Primi', icon: TurkishLira },
     { id: 'currency', label: 'Döviz & Kur', icon: ArrowRightLeft },
     { id: 'mortgage', label: 'Konut Kredisi', icon: TrendingUp },
-    { id: 'deedFee', label: 'Tapu Harcı', icon: PieChart },
     { id: 'whatsapp', label: 'WhatsApp Şablon', icon: WhatsAppIcon },
     { id: 'sqmPrice', label: 'm² Birim Fiyat', icon: Layers },
     { id: 'roi', label: 'Kira Amortismanı', icon: Scale },
@@ -835,8 +604,11 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 </button>
               </div>
 
+              {tools.state.error&&<div role="alert" className="px-6 py-2 text-sm">{tools.state.error} {tools.state.conflict?<><button onClick={()=>void tools.resolve(false)}>Sunucudakini kullan</button> · <button onClick={()=>void tools.resolve(true)}>Düzenlememi kaydet</button></>:<button onClick={tools.retry}>Tekrar dene</button>}</div>}
+              {!tools.state.ready&&!tools.state.error&&<p role="status" className="px-6">Araç verileri yükleniyor…</p>}
+              {tools.state.saving&&<small role="status" className="px-6">Kaydediliyor…</small>}
               {/* Right Content Area */}
-              <div className="flex-1 p-7 pt-4 overflow-y-auto space-y-4">
+              <div hidden={!tools.state.ready} inert={!tools.state.ready||tools.state.conflict||undefined} className="flex-1 p-7 pt-4 overflow-y-auto space-y-4">
 
                 {/* ---------------------------------------------------- */}
                 {/* TOOL 0: ÖDEMELER (PAYMENTS & EXPENSE TRACKER)        */}
@@ -1029,9 +801,6 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
 
                 <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
                   {visibleNotes.map((note) => {
-                    const shareSummary = getNoteShareSummary(note)
-                    const isSharedWithMe =
-                      note.ownerId && currentUser && note.ownerId !== currentUser.id
                     return (
                       <div
                         key={note.id}
@@ -1046,20 +815,10 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                           <h5 className="text-sm font-bold truncate">
                             {note.title || 'Başlıksız Not'}
                           </h5>
-                          {shareSummary && (
-                            <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-[#b99881]/15 border border-[#b99881]/35 text-[10px] font-semibold text-[#d6beae] truncate max-w-[92px]">
-                              {shareSummary}
-                            </span>
-                          )}
                         </div>
                         <p className="text-xs text-[#8c857f] truncate mt-0.5">
                           {note.content || 'İçerik boş...'}
                         </p>
-                        {isSharedWithMe && note.ownerName && (
-                          <div className="text-[10px] text-[#b99881] mt-1 truncate">
-                            {note.ownerName} tarafından paylaşıldı
-                          </div>
-                        )}
                       </div>
                     )
                   })}
@@ -1067,7 +826,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </div>
 
               <span className="text-xs text-[#8c857f] block text-center">
-                Notlar tarayıcınıza otomatik kaydedilir.
+                Notlarınız kişisel hesabınıza kaydedilir.
               </span>
             </div>
 
@@ -1084,32 +843,6 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                       className="w-full bg-transparent text-sm font-bold text-white focus:outline-none placeholder-[#8c857f]"
                     />
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {/* En solda: Apple stili yarım kutu ve yukarı ok ikonu (sadece ikon) */}
-                      <button
-                        type="button"
-                        onClick={handleToggleNoteShare}
-                        className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer ${
-                          isNoteShareOpen ||
-                          (activeNote.shareScope && activeNote.shareScope !== 'PRIVATE')
-                            ? 'bg-[#b99881]/20 border border-[#b99881]/50 text-[#b99881]'
-                            : 'bg-[#34302d] hover:bg-white/10 text-[#d6beae]'
-                        }`}
-                        title="Paylaş"
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="w-3.5 h-3.5 shrink-0"
-                        >
-                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                          <polyline points="16 6 12 2 8 6" />
-                          <line x1="12" y1="2" x2="12" y2="15" />
-                        </svg>
-                      </button>
 
                       <button
                         onClick={() => copyToClipboard(activeNote.content, 'note')}
@@ -1132,272 +865,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Paylaşım Durumu Özeti Bandı */}
-                  {activeNote.shareScope && activeNote.shareScope !== 'PRIVATE' && !isNoteShareOpen && (
-                    <div
-                      onClick={handleToggleNoteShare}
-                      className="px-3 py-1.5 rounded-xl bg-[#1c1a18]/80 border border-[#b99881]/35 flex items-center justify-between gap-2 text-xs cursor-pointer hover:border-[#b99881]/60 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 min-w-0 text-[#d6beae]">
-                        {activeNote.shareScope === 'COMPANY' ? (
-                          <Globe className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                        ) : activeNote.shareScope === 'DEPARTMENTS' ? (
-                          <Building2 className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                        ) : (
-                          <Users className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
-                        )}
-                        <span className="truncate">
-                          Paylaşıldı:{' '}
-                          <strong className="text-white">{getNoteShareSummary(activeNote)}</strong>
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-[#b99881] font-semibold shrink-0">
-                        Düzenle
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Not Paylaşım Seçenekleri Paneli (Kişilerle, Departmanlarla, Şirket) */}
-                  {isNoteShareOpen && (
-                    <div className="p-3.5 rounded-2xl bg-[#1c1a18] border border-[#b99881]/45 space-y-3 shadow-xl">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="w-3.5 h-3.5 text-[#b99881]"
-                          >
-                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                            <polyline points="16 6 12 2 8 6" />
-                            <line x1="12" y1="2" x2="12" y2="15" />
-                          </svg>
-                          Notu Paylaş
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsNoteShareOpen(false)}
-                          className="p-1 rounded-lg text-[#8c857f] hover:text-white hover:bg-white/5 cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* 3 Ana Paylaşım Seçeneği: Kişilerle | Departmanlarla | Şirket */}
-                      <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#282522] border border-[#4a443f]">
-                        <button
-                          type="button"
-                          onClick={() => setShareTab('USERS')}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            shareTab === 'USERS'
-                              ? 'bg-[#b99881] text-[#1c1a18] font-bold shadow-sm'
-                              : 'text-[#d6beae] hover:text-white hover:bg-white/5'
-                          }`}
-                        >
-                          <Users className="w-3.5 h-3.5 shrink-0" />
-                          <span>Kişilerle</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setShareTab('DEPARTMENTS')}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            shareTab === 'DEPARTMENTS'
-                              ? 'bg-[#b99881] text-[#1c1a18] font-bold shadow-sm'
-                              : 'text-[#d6beae] hover:text-white hover:bg-white/5'
-                          }`}
-                        >
-                          <Building2 className="w-3.5 h-3.5 shrink-0" />
-                          <span>Departmanlarla</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setShareTab('COMPANY')}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            shareTab === 'COMPANY'
-                              ? 'bg-[#b99881] text-[#1c1a18] font-bold shadow-sm'
-                              : 'text-[#d6beae] hover:text-white hover:bg-white/5'
-                          }`}
-                        >
-                          <Globe className="w-3.5 h-3.5 shrink-0" />
-                          <span>Şirket</span>
-                        </button>
-                      </div>
-
-                      {/* SEÇENEK 1: KİŞİLERLE PAYLAŞ */}
-                      {shareTab === 'USERS' && (
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={shareUserSearch}
-                            onChange={(e) => setShareUserSearch(e.target.value)}
-                            placeholder="Kişi veya departman ara..."
-                            className="w-full bg-[#282522] border border-[#4a443f] focus:border-[#b99881] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none placeholder-[#8c857f]"
-                          />
-                          <div className="max-h-[135px] overflow-y-auto space-y-1 pr-1">
-                            {allUsers
-                              .filter((u) => {
-                                if (!shareUserSearch.trim()) return true
-                                const q = shareUserSearch.toLowerCase()
-                                return (
-                                  u.fullName.toLowerCase().includes(q) ||
-                                  u.department.toLowerCase().includes(q)
-                                )
-                              })
-                              .map((u) => {
-                                const isSelected = selectedShareUsers.includes(u.id)
-                                return (
-                                  <button
-                                    key={u.id}
-                                    type="button"
-                                    onClick={() => toggleShareUser(u.id)}
-                                    className={`w-full px-2.5 py-1.5 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                                      isSelected
-                                        ? 'bg-[#b99881]/20 border-[#b99881] text-white'
-                                        : 'bg-[#282522]/70 border-[#4a443f]/60 text-[#d6beae] hover:border-[#b99881]/40'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <span className="w-5 h-5 rounded-full bg-[#34302d] border border-[#b99881]/40 flex items-center justify-center text-[10px] font-bold text-[#b99881] shrink-0">
-                                        {u.fullName
-                                          .split(/\s+/)
-                                          .map((p) => p[0])
-                                          .join('')
-                                          .slice(0, 2)
-                                          .toUpperCase()}
-                                      </span>
-                                      <span className="text-xs font-semibold truncate">
-                                        {u.fullName}
-                                      </span>
-                                      <span className="text-[10px] text-[#8c857f] shrink-0">
-                                        • {u.department}
-                                      </span>
-                                    </div>
-                                    <div
-                                      className={`w-4 h-4 rounded-md flex items-center justify-center border shrink-0 ${
-                                        isSelected
-                                          ? 'bg-[#b99881] border-[#b99881] text-[#1c1a18]'
-                                          : 'border-[#4a443f]'
-                                      }`}
-                                    >
-                                      {isSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
-                                    </div>
-                                  </button>
-                                )
-                              })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* SEÇENEK 2: DEPARTMANLARLA PAYLAŞ */}
-                      {shareTab === 'DEPARTMENTS' && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {CANONICAL_DEPARTMENTS.map((dept) => {
-                            const isSelected = selectedShareDepts.includes(dept)
-                            return (
-                              <button
-                                key={dept}
-                                type="button"
-                                onClick={() => toggleShareDept(dept)}
-                                className={`px-2.5 py-2 rounded-xl border text-xs font-semibold flex items-center justify-between gap-1.5 transition-colors cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-[#b99881]/20 border-[#b99881] text-white'
-                                    : 'bg-[#282522]/70 border-[#4a443f]/60 text-[#d6beae] hover:border-[#b99881]/40'
-                                }`}
-                              >
-                                <span className="truncate">{dept}</span>
-                                <div
-                                  className={`w-4 h-4 rounded-md flex items-center justify-center border shrink-0 ${
-                                    isSelected
-                                      ? 'bg-[#b99881] border-[#b99881] text-[#1c1a18]'
-                                      : 'border-[#4a443f]'
-                                  }`}
-                                >
-                                  {isSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      {/* SEÇENEK 3: ŞİRKET İLE PAYLAŞ */}
-                      {shareTab === 'COMPANY' && (
-                        <div className="p-3 rounded-xl bg-[#282522] border border-[#4a443f] flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-[#b99881]/15 border border-[#b99881]/40 flex items-center justify-center text-[#b99881] shrink-0">
-                            <Globe className="w-4.5 h-4.5" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-xs font-bold text-white">
-                              Tüm Şirket İle Paylaş
-                            </div>
-                            <div className="text-[11px] text-[#a69f99]">
-                              Bu not tüm departmanlardaki şirket çalışanlarının not listesinde görünür olur.
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Alt Aksiyon Butonları */}
-                      <div className="flex items-center justify-between gap-2 pt-1">
-                        {activeNote.shareScope && activeNote.shareScope !== 'PRIVATE' ? (
-                          <button
-                            type="button"
-                            onClick={handleRemoveNoteShare}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#282522] hover:bg-rose-500/15 border border-[#4a443f] hover:border-rose-500/40 text-[11px] font-semibold text-[#a69f99] hover:text-rose-300 flex items-center gap-1 transition-colors cursor-pointer"
-                          >
-                            <Lock className="w-3 h-3" />
-                            <span>Paylaşımı Kaldır</span>
-                          </button>
-                        ) : (
-                          <span className="text-[11px] text-[#8c857f]">
-                            {shareTab === 'USERS'
-                              ? `${selectedShareUsers.length} kişi seçildi`
-                              : shareTab === 'DEPARTMENTS'
-                              ? `${selectedShareDepts.length} departman seçildi`
-                              : 'Tüm şirket seçildi'}
-                          </span>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={handleApplyNoteShare}
-                          className="px-4 py-1.5 rounded-xl bg-[#b99881] hover:bg-[#c7a892] text-[#1c1a18] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ml-auto"
-                        >
-                          {shareSavedFeedback ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                              <span>Paylaşıldı</span>
-                            </>
-                          ) : (
-                            <>
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="w-3.5 h-3.5"
-                              >
-                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                                <polyline points="16 6 12 2 8 6" />
-                                <line x1="12" y1="2" x2="12" y2="15" />
-                              </svg>
-                              <span>Paylaş</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
 
                   <textarea
-                    rows={isNoteShareOpen ? 5 : 8}
+                    rows={8}
                     value={activeNote.content}
                     onChange={(e) => handleUpdateActiveNote({ content: e.target.value })}
                     placeholder="Müşteri talepleri, telefonlar, hatırlatmalar ve portföy bilgileri..."
@@ -1432,21 +902,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             </div>
 
             {/* Quick Real Estate Presets */}
-            <div className="grid grid-cols-4 gap-1.5">
-              <button
-                onClick={() => handleCalcQuickPercentage(0.02)}
-                className="py-2 rounded-xl bg-[#34302d] hover:bg-[#b99881] hover:text-[#1c1a18] text-sm font-bold text-[#b99881] transition-colors"
-                title="Yüzde 2 Danışman Primi"
-              >
-                %2 Prim
-              </button>
-              <button
-                onClick={() => handleCalcQuickPercentage(0.04)}
-                className="py-2 rounded-xl bg-[#34302d] hover:bg-[#b99881] hover:text-[#1c1a18] text-sm font-bold text-[#b99881] transition-colors"
-                title="Yüzde 4 Tapu Harcı"
-              >
-                %4 Tapu
-              </button>
+            <div className="grid grid-cols-2 gap-1.5">
+
+
               <button
                 onClick={() => handleCalcQuickPercentage(0.2)}
                 className="py-2 rounded-xl bg-[#34302d] hover:bg-[#b99881] hover:text-[#1c1a18] text-sm font-bold text-[#b99881] transition-colors"
@@ -1488,81 +946,6 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               <button onClick={() => handleCalcDigit('0')} className="p-3 rounded-xl col-span-2 bg-[#2e2a27] text-white hover:bg-[#3d3733]">0</button>
               <button onClick={() => handleCalcDigit('.')} className="p-3 rounded-xl bg-[#2e2a27] text-white hover:bg-[#3d3733]">,</button>
               <button onClick={handleCalcEquals} className="p-3 rounded-xl bg-[#b99881] text-[#1c1a18] font-bold hover:bg-[#d6beae]">=</button>
-            </div>
-          </div>
-        )}
-
-        {/* ---------------------------------------------------- */}
-        {/* TOOL 3: SATIŞ PRİMİ & KOMİSYON                       */}
-        {/* ---------------------------------------------------- */}
-        {activeTool === 'commission' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Satış Bedeli (₺)</label>
-                <input
-                  type="number"
-                  step="100000"
-                  value={commSalePrice}
-                  onChange={(e) => setCommSalePrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Hizmet Bedeli Oranı (%)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={commAgencyRate}
-                  onChange={(e) => setCommAgencyRate(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Danışman Prim Oranı (%)</label>
-                <input
-                  type="number"
-                  step="0.25"
-                  value={commRate}
-                  onChange={(e) => setCommRate(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-              <div className="p-4 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#c4bcb5]">Toplam Hizmet Bedeli</span>
-                <p className="text-xl font-bold text-white mt-1">{formatCurrency(totalAgencyFee)}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">% {commAgencyRate} brüt komisyon</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-[#282522] border border-[#b99881]/40">
-                <span className="text-sm font-medium text-[#c4bcb5]">Hak Edilen Satış Primi</span>
-                <p className="text-xl font-bold text-emerald-400 mt-1">{formatCurrency(repCommission)}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">% {commRate} danışman payı</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#c4bcb5]">Şirket / Ofis Net Payı</span>
-                <p className="text-xl font-bold text-[#b99881] mt-1">{formatCurrency(companyShare)}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">Hizmet bedeli farkı</span>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <GlassButton
-                variant="gold"
-                size="sm"
-                icon={copied === 'comm' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                onClick={() =>
-                  copyToClipboard(
-                    `Satış Bedeli: ${formatCurrency(commSalePrice)}\nToplam Komisyon: ${formatCurrency(totalAgencyFee)}\nDanışman Primi: ${formatCurrency(repCommission)}`,
-                    'comm'
-                  )
-                }
-                className="rounded-full px-4"
-              >
-                {copied === 'comm' ? 'Kopyalandı' : 'Raporu Kopyala'}
-              </GlassButton>
             </div>
           </div>
         )}
@@ -1678,55 +1061,6 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 <span className="text-sm font-medium text-[#c4bcb5]">Toplam Faiz Yükü</span>
                 <p className="text-xl font-bold text-amber-400 mt-1">{formatCurrency(totalInterest)}</p>
                 <span className="text-xs sm:text-sm text-[#8c857f]">Vade boyunca ödenecek faiz</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ---------------------------------------------------- */}
-        {/* TOOL 6: TAPU HARCI & MASRAF HESABI                   */}
-        {/* ---------------------------------------------------- */}
-        {activeTool === 'deedFee' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Gayrimenkul Satış Bedeli (₺)</label>
-                <input
-                  type="number"
-                  step="50000"
-                  value={deedPrice}
-                  onChange={(e) => setDeedPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Harç Ödeme Dağılımı</label>
-                <CustomSelect
-                  value={deedPayer}
-                  onChange={(e) => setDeedPayer(e.target.value as any)}
-                  className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
-                >
-                  <option value="split">Yarı Yarıya (%2 Alıcı + %2 Satıcı - Yasal Standart)</option>
-                  <option value="buyerOnly">Tümü Alıcı Tarafından (%4 Alıcı Tarafından)</option>
-                </CustomSelect>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div className="p-3.5 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#c4bcb5]">Alıcı Tapu Harcı (%2)</span>
-                <p className="text-xl font-bold text-white mt-1">{formatCurrency(buyerDeedFee)}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">Resmi tapu harcı</span>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#c4bcb5]">Satıcı Tapu Harcı (%2)</span>
-                <p className="text-xl font-bold text-white mt-1">{formatCurrency(sellerDeedFee)}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">Resmi tapu harcı</span>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-[#282522] border border-[#b99881]/40">
-                <span className="text-sm font-medium text-[#c4bcb5]">Toplam Tapu Masrafı</span>
-                <p className="text-xl font-bold text-[#b99881] mt-1">{formatCurrency(totalDeedCost)}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">+{formatCurrency(revolvingFundFee)} Döner sermaye dahil</span>
               </div>
             </div>
           </div>
@@ -1946,7 +1280,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <div className="p-4 rounded-2xl bg-[#282522] border border-[#4a443f]">
                 <span className="text-sm font-medium text-[#c4bcb5]">İskonto Tutarı</span>
                 <p className="text-xl font-bold text-rose-400 mt-1">{formatCurrency(bargainDiscount)}</p>
@@ -1957,11 +1291,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 <p className="text-xl font-bold text-[#b99881] mt-1">%{bargainRate}</p>
                 <span className="text-xs sm:text-sm text-[#8c857f]">Liste fiyatına oranla</span>
               </div>
-              <div className="p-4 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#c4bcb5]">Danışman Prim Farkı (%2)</span>
-                <p className="text-xl font-bold text-white mt-1">{formatCurrency(Math.round(bargainDiscount * 0.02))}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">İndirim kaynaklı prim değişimi</span>
-              </div>
+
             </div>
           </div>
         )}
@@ -2172,7 +1502,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </h4>
               <p className="text-xs text-[#c4bcb5] leading-relaxed">
                 {compassDir === 'guney' &&
-                  'Günün en verimli saatlerinde (11:00 - 17:00) kesintisiz doğal güneş ışığı. Isınma maliyetlerinde %30\'a varan tasarruf sağlar. Salon ve ebeveyn yatak odası için piyasada en çok talep gören ve prim yapan yöndür.'}
+                  'Günün en verimli saatlerinde (11:00 - 17:00) kesintisiz doğal güneş ışığı. Isınma maliyetlerinde %30\'a varan tasarruf sağlar. Salon ve ebeveyn yatak odası için piyasada en çok talep gören ve değeri artan yöndür.'}
                 {compassDir === 'dogu' &&
                   'Sabahın erken saatlerinde aydınlık ve ferah başlangıç. Yaz aylarında öğleden sonra serin ve konforludur. Mutfak ve çocuk odası için en ideal ışık açısına sahiptir.'}
                 {compassDir === 'bati' &&
@@ -2494,7 +1824,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
         {/* ---------------------------------------------------- */}
         {/* TOOL 20: CALENDAR (KURUMSAL & ORTAK TAKVİM)          */}
         {/* ---------------------------------------------------- */}
-        {activeTool === 'calendar' && <CalendarWorkspaceTool />}
+        {activeTool === 'calendar' && <CalendarWorkspaceTool payments={payments} />}
 
         {/* ---------------------------------------------------- */}
         {/* TOOL 21: DASK                                        */}
@@ -2517,7 +1847,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
                 <span className="text-xs sm:text-sm text-[#8c857f]">6.500 ₺/m² birim maliyet</span>
               </div>
               <div className="p-4 rounded-2xl bg-[#282522] border border-[#b99881]/40">
-                <span className="text-sm font-medium text-[#c4bcb5]">Tahmini Yıllık DASK Primi</span>
+                <span className="text-sm font-medium text-[#c4bcb5]">Tahmini Yıllık DASK Bedeli</span>
                 <p className="text-xl font-bold text-emerald-400 mt-1">{formatCurrency(Math.round(daskArea * 14.5))} / Yıl</p>
                 <span className="text-xs sm:text-sm text-[#8c857f]">1. Derece Deprem Bölgesi</span>
               </div>
@@ -2640,7 +1970,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
             </div>
             <div className="flex justify-center gap-3">
               <button
-                onClick={() => setIsTimerRunning(!isTimerRunning)}
+                onClick={() => {setClock(Date.now());setTimer({elapsed:timerSeconds,started:isTimerRunning?0:Date.now()})}}
                 className={`px-6 py-2 rounded-full font-bold text-xs transition-colors ${
                   isTimerRunning ? 'bg-rose-500 text-white' : 'bg-[#b99881] text-[#1c1a18]'
                 }`}
@@ -2649,8 +1979,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
               </button>
               <button
                 onClick={() => {
-                  setIsTimerRunning(false)
-                  setTimerSeconds(0)
+                  setTimer({started:0,elapsed:0})
                 }}
                 className="px-6 py-2 rounded-full bg-[#34302d] text-[#a69f99] hover:text-white font-bold text-xs"
               >
@@ -2669,4 +1998,3 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     document.body
   )
 }
-

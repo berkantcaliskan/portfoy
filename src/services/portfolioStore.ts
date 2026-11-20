@@ -81,6 +81,24 @@ class PortfolioStore {
     }
   }
 
+  public async update(id: string, updates: Partial<Omit<PortfolioItem, 'id' | 'createdAt'>>): Promise<PortfolioItem> {
+    const prior = this.getAll().find(property => property.id === id)
+    if (!prior) throw Error('Portföy kaydı bulunamadı. Listeyi yenileyin.')
+    const value = { ...prior, ...updates }
+    if (isCentralCrm()) return this.backend.save(JSON.stringify(value), value)
+    this.properties = this.properties.map(property => property.id === id ? value : property)
+    this.saveToStorage()
+    return value
+  }
+
+  public async delete(id: string): Promise<void> {
+    const prior = this.getAll().find(property => property.id === id)
+    if (!prior) throw Error('Portföy kaydı bulunamadı. Listeyi yenileyin.')
+    if (isCentralCrm()) { await this.backend.save(JSON.stringify(['archive', id]), prior, true); return }
+    this.properties = this.properties.filter(property => property.id !== id)
+    this.saveToStorage()
+  }
+
   public matchPropertiesForLead(lead: Lead): PortfolioItem[] {
     return this.getAll().filter(p => {
       if (p.status === 'SOLD') return false

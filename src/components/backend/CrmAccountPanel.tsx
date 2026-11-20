@@ -1,8 +1,10 @@
-import React,{useMemo,useState,useEffect} from 'react'
+import React,{useMemo,useState,useEffect,type FormEvent} from 'react'
 import type {SupabaseClient} from '@supabase/supabase-js'
 import {createCrmAccountService} from '../../services/crmAccountService'
 import {createCrmAuthService,type CrmAuthProfile} from '../../services/crmAuthService'
 import {createBackendPreviewClient,hasBackendInvitationCallback} from '../../services/crmBackendClient'
+
+const inviteDepartments = ['Müşteri İlişkileri', 'Satış', 'Pazarlama', 'Kreatif', 'Muhasebe', 'Yönetim']
 
 export function CrmAccountPanel({client,profile,borrowed,onAuthenticated}:{client:SupabaseClient;profile:CrmAuthProfile|null;borrowed:boolean;onAuthenticated:(client:SupabaseClient,profile:CrmAuthProfile)=>void}){
  const account=useMemo(()=>createCrmAccountService(client),[client])
@@ -12,15 +14,29 @@ export function CrmAccountPanel({client,profile,borrowed,onAuthenticated}:{clien
  const [pendingProbe,setPendingProbe]=useState<{id:string;revision:number;note:string}|null>(null)
  const [isRecovery,setIsRecovery]=useState(false)
  const [invitationCompleted,setInvitationCompleted]=useState(false)
+ const [newInvite,setNewInvite]=useState('')
  const isInvitation=hasBackendInvitationCallback(client)&&!invitationCompleted
  const returnUrl=()=>{const u=new URL(window.location.pathname,window.location.origin);u.searchParams.set('workspace','backend');return u.href}
 
- useEffect(()=>{setProbe(null);setProbeNote('');setPendingProbe(null)},[client])
+ useEffect(()=>{setProbe(null);setProbeNote('');setPendingProbe(null);setNewInvite('')},[client,profile?.authUserId])
  useEffect(()=>{const {data}=client.auth.onAuthStateChange(event=>{if(event==='PASSWORD_RECOVERY')setIsRecovery(true);else if(event==='SIGNED_OUT')setIsRecovery(false)});return()=>data.subscription.unsubscribe()},[client])
  const run=async(fn:()=>Promise<void>)=>{if(busy)return;setBusy(true);try{await fn()}catch(e){setMessage(e instanceof Error?e.message:'İşlem tamamlanamadı.')}finally{setBusy(false);setPassword('');setNewPassword('');setConfirmation('')}}
  const checkConfirmation=()=>{if(newPassword!==confirmation)throw Error('Yeni parola ve tekrarı eşleşmiyor.')}
  const button='border rounded-xl px-4 py-2 disabled:opacity-40'
  const input='block w-full border rounded-xl p-3 mt-1'
+ const createInvite = (event: FormEvent<HTMLFormElement>) => {
+  event.preventDefault()
+  const fields = new FormData(event.currentTarget)
+  setNewInvite('')
+  void run(async () => {
+   const invite = await account.createInvite({
+    email: String(fields.get('email')), fullName: String(fields.get('name')),
+    department: String(fields.get('department')), role: 'MEMBER', scope: String(fields.get('scope')),
+   })
+   setNewInvite(invite.token)
+   setMessage('Davet oluşturuldu. Kodu yalnızca davet ettiğiniz kişiyle paylaşın.')
+  })
+ }
  return <section className="bg-white border rounded-3xl p-6 space-y-5">
   <h2 className="font-bold">Hesap güvenliği ve kalıcılık</h2>
   {!profile&&<div className="space-y-3">
@@ -47,6 +63,22 @@ export function CrmAccountPanel({client,profile,borrowed,onAuthenticated}:{clien
    {probe&&<p className="text-sm">Sunucu kaydı: {probe.note} · Sürüm {probe.revision} · {probe.updated_at}</p>}
   </div>}
   {profile?.role === 'ADMIN' && <p>Personel hesaplarını ana uygulamadaki Ekip ve Yetkiler ekranından yönetebilirsiniz.</p>}
+  {profile?.role === 'ADMIN' && !profile.mustChangePassword && !borrowed && (
+   <form className="space-y-3" onSubmit={createInvite}>
+    <h3 className="font-semibold">Personel kayıt daveti</h3>
+    <label className="block">Ad soyad<input className={input} name="name" required minLength={2} maxLength={150}/></label>
+    <label className="block">Personel e-postası<input className={input} name="email" required type="email" maxLength={254}/></label>
+    <label className="block">Departman<select className={input} name="department">{inviteDepartments.map(department => <option key={department}>{department}</option>)}</select></label>
+    <label className="block">Erişim kapsamı
+     <select className={input} name="scope" defaultValue="ASSIGNED_ONLY">
+      <option value="ASSIGNED_ONLY">Yalnızca atanan kayıtlar</option>
+      <option value="DEPARTMENT">Departman kayıtları</option>
+     </select>
+    </label>
+    <button className={button} disabled={busy}>Davet kodu oluştur</button>
+    {newInvite && <code className="block break-all select-all">{newInvite}</code>}
+   </form>
+  )}
   <p role="status" aria-live="polite" className="text-sm text-[#705432]">{busy?'İşlem sürüyor…':message}</p>
  </section>
 }

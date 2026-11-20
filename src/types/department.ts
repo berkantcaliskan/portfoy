@@ -1,4 +1,5 @@
 export type Department =
+  | 'Ön Ofis'
   | 'Satış'
   | 'Kreatif'
   | 'Müşteri İlişkileri'
@@ -7,6 +8,7 @@ export type Department =
   | 'Yönetim'
 
 export const CANONICAL_DEPARTMENTS: Department[] = [
+  'Ön Ofis',
   'Satış',
   'Kreatif',
   'Müşteri İlişkileri',
@@ -17,6 +19,17 @@ export const CANONICAL_DEPARTMENTS: Department[] = [
 
 export type UserRole = 'ADMIN' | 'MANAGER' | 'SPECIALIST' | 'REPRESENTATIVE' | 'MEMBER'
 export type AccessScope = 'ALL' | 'DEPARTMENT' | 'ASSIGNED_ONLY'
+
+export function getAccessibleDepartments(user: {
+  role: UserRole
+  department: Department
+  departments?: readonly Department[]
+}): Department[] {
+  const assigned = new Set([user.department, ...(user.departments ?? [])])
+  return CANONICAL_DEPARTMENTS.filter(department =>
+    user.role === 'ADMIN' || assigned.has(department),
+  )
+}
 
 export interface UserPermissions {
   canPullLeads?: boolean
@@ -34,6 +47,8 @@ export interface UserPermissions {
 }
 
 export type NavPageId =
+  | 'office-visitors'
+  | 'office-contracts'
   | 'dashboard'
   // Pazarlama
   | 'portfolio'
@@ -53,6 +68,7 @@ export type NavPageId =
   | 'followups-appointments'
   | 'requests'
   // Muhasebe
+  | 'accounting-archive'
   | 'collections'
   | 'payments'
   | 'financial-reports'
@@ -64,6 +80,7 @@ export type NavPageId =
   | 'teams'
   | 'shared'
   | 'projects'
+  | 'property-listings'
   // Dock / Başlat menüsü öğeleri
   | 'contacts'
 
@@ -80,17 +97,27 @@ export interface DepartmentPageConfig {
  * Ekipler (teams) -> Paylaşılanlar'dan hemen önce
  * Paylaşılanlar (shared)
  * Projeler (projects)
+ * Portföyler (property-listings)
  */
 export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> = {
+  'Ön Ofis': [
+    { id: 'dashboard', label: 'Başlangıç' },
+    { id: 'office-visitors', label: 'Gelen Müşteriler' },
+    { id: 'office-contracts', label: 'Sözleşmeler' },
+    { id: 'teams', label: 'Ekipler' },
+    { id: 'shared', label: 'Paylaşılanlar' },
+    { id: 'projects', label: 'Projeler' },
+    { id: 'property-listings', label: 'Portföyler' },
+  ],
   'Satış': [
     { id: 'dashboard', label: 'Başlangıç' },
     { id: 'crm', label: 'Satış' },
     { id: 'appointments', label: 'Randevular' },
-    { id: 'requests', label: 'Talepler' },
     { id: 'sales-performance', label: 'Performans' },
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
+    { id: 'property-listings', label: 'Portföyler' },
   ],
   'Kreatif': [
     { id: 'dashboard', label: 'Başlangıç' },
@@ -101,6 +128,7 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
+    { id: 'property-listings', label: 'Portföyler' },
   ],
   'Müşteri İlişkileri': [
     { id: 'dashboard', label: 'Başlangıç' },
@@ -110,15 +138,19 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
+    { id: 'property-listings', label: 'Portföyler' },
   ],
   'Muhasebe': [
     { id: 'dashboard', label: 'Başlangıç' },
     { id: 'collections', label: 'Tahsilatlar' },
     { id: 'payments', label: 'Ödemeler' },
     { id: 'financial-reports', label: 'Finansal Raporlar' },
+    { id: 'accounting-archive', label: 'Arşiv' },
+    { id: 'office-contracts', label: 'Sözleşmeler' },
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
+    { id: 'property-listings', label: 'Portföyler' },
   ],
   'Pazarlama': [
     { id: 'dashboard', label: 'Başlangıç' },
@@ -128,21 +160,25 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
+    { id: 'property-listings', label: 'Portföyler' },
   ],
   'Yönetim': [
     { id: 'dashboard', label: 'Başlangıç' },
     { id: 'team-permissions', label: 'Ekip ve Yetkiler' },
     { id: 'executive-reports', label: 'Raporlar' },
     { id: 'approvals', label: 'Onaylar' },
+    { id: 'office-contracts', label: 'Sözleşmeler' },
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },
+    { id: 'property-listings', label: 'Portföyler' },
   ],
 }
 
 export function normalizeDepartmentName(dept: string): Department {
   if (!dept) return 'Yönetim'
   const clean = dept.trim().toLowerCase()
+  if (clean === 'ön ofis' || clean === 'on ofis') return 'Ön Ofis'
   if (clean.includes('satış') || clean.includes('satis')) return 'Satış'
   if (clean.includes('pazarlama')) return 'Pazarlama'
   if (clean.includes('kreatif') || clean.includes('tasarım') || clean.includes('tasarim') || clean.includes('creative')) {
@@ -157,12 +193,15 @@ export function normalizeDepartmentName(dept: string): Department {
 }
 
 export const PAGE_TO_DEPARTMENT_MAP: Record<NavPageId, Department | 'ALL'> = {
+  'office-visitors': 'ALL',
+  'office-contracts': 'ALL',
   dashboard: 'ALL',
   teams: 'ALL',
   shared: 'ALL',
   projects: 'ALL',
+  'property-listings': 'ALL',
   contacts: 'ALL',
-  requests: 'ALL', // Ortak Talepler (Satış & Müşteri İlişkileri)
+  requests: 'Müşteri İlişkileri',
 
   // Pazarlama
   portfolio: 'Pazarlama',
@@ -185,6 +224,7 @@ export const PAGE_TO_DEPARTMENT_MAP: Record<NavPageId, Department | 'ALL'> = {
   'followups-appointments': 'Müşteri İlişkileri',
 
   // Muhasebe
+  'accounting-archive': 'Muhasebe',
   collections: 'Muhasebe',
   payments: 'Muhasebe',
   'financial-reports': 'Muhasebe',
@@ -203,6 +243,8 @@ export function getDepartmentForPage(pageId: NavPageId): Department | null {
 
 export function getPrimaryPageForDepartment(dept: Department): NavPageId {
   switch (dept) {
+    case 'Ön Ofis':
+      return 'office-visitors'
     case 'Satış':
       return 'crm'
     case 'Pazarlama':

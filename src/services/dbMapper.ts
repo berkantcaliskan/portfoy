@@ -107,6 +107,7 @@ export function rowToLead(r: any): Lead {
     formName: r.form_name || 'Genel İletişim',
     channel: r.channel || 'Web',
     stage: r.stage || 'NEW',
+    callStatus: r.call_status || undefined,
     owner: r.owner || 'Atanmamış',
     tags: Array.isArray(r.tags) ? r.tags : [],
     budget: r.budget ? Number(r.budget) : undefined,

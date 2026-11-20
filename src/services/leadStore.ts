@@ -22,6 +22,8 @@ import { normalizePhone } from '../../supabase/functions/_shared/meta-core'
 import { playNewLeadChime } from '@/utils/audioAlert'
 import { formatSentenceNote } from '@/utils/formatters'
 import { trashStore } from './trashStore'
+import { createManualLead } from './manualLeadRepository'
+import { createLeadArchiveRepository, LeadArchiveError } from './leadArchiveRepository'
 import { isWebsiteRecord, allowManualWebsiteDelete } from './zeroStatePurge'
 
 const STORAGE_KEY_LEADS = 'demirturk_leads_v2'
@@ -31,6 +33,10 @@ const STORAGE_KEY_COMPANY_LEAD_SEQ = 'demirturk_company_lead_seq_v1'
 const STORAGE_KEY_COMPANY_LEAD_MAP = 'demirturk_company_lead_map_v1'
 
 type Listener = () => void
+type LeadWorkChange = Partial<Pick<Lead, 'notes' | 'callStatus' | 'stage' | 'isQualified'>>
+  & { assignedToUserId?: string | null; salesTarget?: string | null; salesNote?: string;
+    fullName?: string; phone?: string; secondaryPhone?: string | null; whatsappPhone?: string | null;
+    email?: string | null; budget?: number | null; preferredHousingType?: string | null }
 
 function cleanPhoneNumber(phone?: string | null): string {
   if (!phone || typeof phone !== 'string') return ''
@@ -44,6 +50,8 @@ class LeadStore {
     this.saveToStorage()
   }
   public acceptMetaServerLead(incoming: Lead) {
+    // Central screens only accept the RLS-filtered feed, including archive and ownership rules.
+    if (userStore.centralAuthEnabled) return
     const current = this.leads.find(l => l.id === incoming.id)
     // Yerel daha yeni değişiklikleri körlemesine ezmeyin; çakışma kullanıcıya yansıtılır.
     if (current && Date.parse(current.updatedAt) > Date.parse(incoming.updatedAt)) {
@@ -59,8 +67,19 @@ class LeadStore {
   private listeners: Set<Listener> = new Set()
   private realtimeChannel: any = null
   private pollInterval: any = null
+  private centralReadError = ''
+  private centralWriteError = ''
+  private centralWrites = new Map<string, string>()
+  private pendingWork = new Map<string, { requestId: string; key: string; expected: string }>()
+  private centralRefresh: (() => Promise<number>) | null = null
+  private centralFeedGeneration = 0
+  private centralManualWriteVersion = 0
+  private pendingTransfers = new Map<string, { requestId: string; targetId: string; expected: string }>()
+  private pendingArchive: { ids: string[]; records: { id: string; expected: string }[]; requestId: string } | null = null
+  private archiving = false
 
   constructor() {
+    if (userStore.centralAuthEnabled) return
     this.loadFromStorage()
     this.initRealtime()
     this.initFastPolling()
@@ -541,18 +560,6 @@ class LeadStore {
       return l
     })
 
-    // Migrate any cached leads before Oct 3 from NEW to CONTACTED (moved from İletişim to Tümü)
-    const oct3Cutoff = new Date('2026-10-02T21:00:00.000Z').getTime()
-    this.leads = this.leads.map((l) => {
-      if (l.stage === 'NEW' && new Date(l.createdAt).getTime() < oct3Cutoff) {
-        return {
-          ...l,
-          stage: 'CONTACTED' as LeadStage,
-        }
-      }
-      return l
-    })
-
     this.repairMetaCsvLeads()
     this.ensureSequentialNumbersForLeads()
 
@@ -562,6 +569,10 @@ class LeadStore {
   }
 
   private saveToStorage(_syncCloud = true) {
+    if (userStore.centralAuthEnabled) {
+      this.notify()
+      return
+    }
     this.ensureSequentialNumbersForLeads()
     try {
       localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(this.leads))
@@ -583,10 +594,188 @@ class LeadStore {
     }
   }
 
+  public getReadError() {
+    return this.centralWriteError || this.centralReadError
+  }
+
+  private async saveCentralLeadWork(id: string, change: LeadWorkChange | { timelineNote: string }): Promise<boolean> {
+    const account = userStore.getCurrentUser()?.id
+    const client = userStore.getServerClient()
+    const lead = this.getById(id)
+    if (!account || !client || !lead) return false
+    if (this.centralWrites.has(id)) {
+      this.centralWriteError = 'Bu müşteri için önceki işlem sürüyor.'
+      this.notify()
+      return false
+    }
+
+    const key = JSON.stringify(change)
+    let pendingWork = this.pendingWork.get(id)
+    if (pendingWork && pendingWork.key !== key) {
+      this.centralWriteError = 'Önceki değişikliği aynı bilgilerle yeniden doğrulayın.'
+      this.notify()
+      return false
+    }
+    pendingWork ??= { requestId: crypto.randomUUID(), key, expected: lead.updatedAt }
+    this.pendingWork.set(id, pendingWork)
+    const requestId = pendingWork.requestId
+    this.centralWrites.set(id, requestId)
+    const isCurrent = () => userStore.getCurrentUser()?.id === account && this.centralWrites.get(id) === requestId
+    try {
+      const timelineNote = 'timelineNote' in change
+      const operation = timelineNote
+        ? client.rpc('crm_add_lead_note', { p_request: requestId, p_id: id, p_note: change.timelineNote })
+        : client.rpc('crm_update_lead_work', {
+          p_request: requestId, p_id: id, p_expected: pendingWork.expected, p_change: change,
+        })
+      const { data, error } = await operation.abortSignal(AbortSignal.timeout(15000))
+      if (!isCurrent()) return false
+      if (error || (timelineNote ? data !== 'crm-note-' + requestId : data?.id !== id)) {
+        if (error && ['40001', '42501', '22023'].includes(error.code)) this.pendingWork.delete(id)
+        this.centralWriteError = error?.code === '40001'
+          ? 'Müşteri kaydı başka bir işlemle değişti. Güncel kaydı açıp tekrar deneyin.'
+          : 'Müşteri değişikliği sunucuda doğrulanamadı. Yetkiyi ve güncel kaydı kontrol edin.'
+        void this.centralRefresh?.()
+        return false
+      }
+      if (!timelineNote) {
+        this.centralManualWriteVersion++
+        const updated = data.updated_at ? rowToLead(data) : undefined
+        this.leads = this.leads.filter(item => item.id !== id)
+        if (updated) this.leads.push(updated)
+        else delete this.activities[id]
+      }
+      this.centralWriteError = ''
+      this.pendingWork.delete(id)
+      void this.centralRefresh?.()
+      return true
+    } catch {
+      if (isCurrent()) {
+        this.centralWriteError = 'Sunucudan yazım onayı alınamadı. Güncel kaydı tekrar kontrol edin.'
+        void this.centralRefresh?.()
+      }
+      return false
+    } finally {
+      if (isCurrent()) {
+        this.centralWrites.delete(id)
+        this.notify()
+      }
+    }
+  }
+
+  public connectCentralFeed(accountId: string) {
+    const client = userStore.getServerClient()
+    if (!client || userStore.getCurrentUser()?.id !== accountId) return
+
+    const lifetime = new AbortController()
+    const isCurrent = () => !lifetime.signal.aborted && userStore.getCurrentUser()?.id === accountId
+    let pending: Promise<number> | undefined
+    let changedDuringRead = false
+    let loaded = false
+
+    const readTable = async (table: 'leads' | 'lead_activities') => {
+      const rows: Record<string, unknown>[] = []
+      let after: string | undefined
+      while (true) {
+        const signal = AbortSignal.any([lifetime.signal, AbortSignal.timeout(15000)])
+        let query = client.from(table).select('*').order('id', { ascending: true }).limit(100)
+        if (after !== undefined) query = query.gt('id', after)
+        const { data, error } = await query.abortSignal(signal)
+        if (error || !data || !isCurrent()) throw new Error('Müşteri kayıtları okunamadı.')
+        rows.push(...data)
+        if (data.length < 100) return rows
+        const last = data.at(-1)?.id
+        if (typeof last !== 'string' || last === after) throw new Error('Müşteri listesi doğrulanamadı.')
+        after = last
+      }
+    }
+
+    const refresh = (): Promise<number> => {
+      if (!isCurrent()) return Promise.resolve(0)
+      if (pending) {
+        changedDuringRead = true
+        return pending
+      }
+      pending = (async () => {
+        const writeVersion = this.centralManualWriteVersion
+        try {
+          const [rows, activityRows] = await Promise.all([readTable('leads'), readTable('lead_activities')])
+          if (!isCurrent()) return 0
+          if (writeVersion !== this.centralManualWriteVersion) {
+            changedDuringRead = true
+            return this.leads.length
+          }
+          const previousIds = new Set(this.leads.map(lead => lead.id))
+          this.leads = rows.map(rowToLead)
+          this.activities = Object.create(null)
+          const activities = activityRows.map(rowToActivity).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+          for (const activity of activities) {
+            ;(this.activities[activity.leadId] ??= []).push(activity)
+          }
+          this.centralReadError = ''
+          const arrivals = loaded ? this.leads.filter(lead => !previousIds.has(lead.id)) : []
+          loaded = true
+          if (arrivals.length === 1) this.triggerNewLeadAlert(arrivals[0])
+          if (arrivals.length > 1) this.triggerBulkLeadAlert(arrivals)
+          this.notify()
+          return this.leads.length
+        } catch {
+          if (isCurrent()) {
+            this.centralReadError = 'Müşteri kayıtları sunucudan yenilenemedi.'
+            this.notify()
+          }
+          return 0
+        }
+      })().finally(() => {
+        pending = undefined
+        if (changedDuringRead) {
+          changedDuringRead = false
+          void refresh()
+        }
+      })
+      return pending
+    }
+
+    const refreshVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    this.centralRefresh = refresh
+    void refresh()
+    const channel = client.channel('crm-leads:' + ++this.centralFeedGeneration)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => void refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_activities' }, () => void refresh())
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') void refresh()
+      })
+    const interval = window.setInterval(refreshVisible, 2000)
+    window.addEventListener('online', refreshVisible)
+    window.addEventListener('focus', refreshVisible)
+    document.addEventListener('visibilitychange', refreshVisible)
+    return () => {
+      lifetime.abort()
+      window.clearInterval(interval)
+      window.removeEventListener('online', refreshVisible)
+      window.removeEventListener('focus', refreshVisible)
+      document.removeEventListener('visibilitychange', refreshVisible)
+      void client.removeChannel(channel)
+      this.centralRefresh = null
+      this.centralReadError = ''
+      this.centralWriteError = ''
+      this.centralWrites.clear()
+      this.pendingWork.clear()
+      this.pendingTransfers.clear()
+      this.pendingArchive = null
+      this.leads = []
+      this.activities = {}
+      this.notify()
+    }
+  }
+
   /**
    * Directly refresh all leads from Supabase cloud database
    */
   public async refreshFromSupabase(): Promise<number> {
+    if (userStore.centralAuthEnabled) return this.centralRefresh?.() ?? 0
     if (!isSupabaseConfigured()) return 0
     try {
       const { data: dbLeads, error } = await supabase
@@ -622,28 +811,60 @@ class LeadStore {
     error?: string
   }> {
     const endDate = options?.endDate || new Date()
-    const startDate = options?.startDate || new Date(Date.now() - 48 * 60 * 60 * 1000)
+    let startDate = options?.startDate
+    const pullingAccount = userStore.getCurrentUser()?.id
+    if (userStore.centralAuthEnabled) {
+      try {
+        options?.onProgress?.('Sunucu ve Meta okuma bağlantısı doğrulanıyor…')
+        const connection = await metaStore.testConnection()
+        if (!connection.success) throw Error(connection.error || 'Meta okuma bağlantısı doğrulanamadı.')
+        const client = userStore.getServerClient()
+        if (!client || !pullingAccount || pullingAccount !== userStore.getCurrentUser()?.id) throw Error('Uygulama oturumu değişti. Yeniden deneyin.')
+        if (!startDate) {
+          const { data, error } = await client.from('leads').select('created_at')
+            .or('meta_lead_id.not.is.null,source.in.(META_ADS,FACEBOOK,INSTAGRAM)')
+            .lte('created_at', endDate.toISOString()).order('created_at', { ascending: false }).limit(1)
+            .abortSignal(AbortSignal.timeout(15000))
+          if (error || !Array.isArray(data)) throw Error('Son Meta kaydının tarihi sunucudan okunamadı. Yeniden deneyin.')
+          const latest = data[0]?.created_at ? Date.parse(data[0].created_at) : NaN
+          // A short overlap makes boundary deliveries safe; source IDs prevent duplicates.
+          startDate = Number.isFinite(latest) ? new Date(latest - 60000) : new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000)
+          options?.onProgress?.(Number.isFinite(latest) ? 'Sunucudaki son Meta kaydından itibaren alınıyor…' : 'İlk alım: son 7 gün kontrol ediliyor…')
+        }
+      } catch (error) { return { newCount: 0, updatedCount: 0, error: error instanceof Error ? error.message : 'Sunucu bağlantısı doğrulanamadı.' } }
+    }
+    startDate ??= new Date(Date.now() - 48 * 60 * 60 * 1000)
 
     const beforeIds = new Set(this.leads.map((l) => l.id))
     const beforeSnapshot = new Map(this.leads.map((l) => [l.id, l.updatedAt]))
 
     try {
       const winAny = typeof window !== 'undefined' ? (window as any) : null
-      if (winAny && typeof winAny.__demirturkPullCloudDb === 'function') {
+      if (!userStore.centralAuthEnabled && winAny && typeof winAny.__demirturkPullCloudDb === 'function') {
         await winAny.__demirturkPullCloudDb()
         this.reloadFromCloudMirror()
         this.notify()
       }
     } catch {}
 
-    // Meta Graph API üzerinden seçili tarih aralığındaki (varsayılan son 48 saat) form başvurularını çek
+    // Read the requested history window, or continue from the latest central Meta record.
     let metaResult: { newCount: number; mergedCount: number; needsPageToken?: boolean; error?: string } = {
       newCount: 0,
       mergedCount: 0,
     }
     try {
       metaResult = await metaStore.fetchLeadsFromMeta(startDate, endDate, options?.onProgress)
-    } catch {}
+    } catch (error) { metaResult.error = error instanceof Error ? error.message : 'Meta verileri alınamadı.' }
+
+    if (userStore.centralAuthEnabled) {
+      if (!pullingAccount || pullingAccount !== userStore.getCurrentUser()?.id) return { newCount: 0, updatedCount: 0, error: 'Veri alımı sırasında oturum değişti. Yeniden deneyin.' }
+      if (!this.centralRefresh) return { newCount: metaResult.newCount, updatedCount: metaResult.mergedCount, error: metaResult.error || 'Müşteri listesi bağlantısı hazır değil. Yeniden deneyin.' }
+      await this.centralRefresh()
+      if (pullingAccount !== userStore.getCurrentUser()?.id) return { newCount: 0, updatedCount: 0, error: 'Veri alımı sırasında oturum değişti. Yeniden deneyin.' }
+      const newCount = this.leads.filter(lead => !beforeIds.has(lead.id)).length
+      const updatedCount = this.leads.filter(lead => beforeSnapshot.has(lead.id) && beforeSnapshot.get(lead.id) !== lead.updatedAt).length
+      return { newCount: Math.max(newCount, metaResult.newCount), updatedCount: Math.max(updatedCount, metaResult.mergedCount), latestTime: new Date().toISOString(), error: metaResult.error || this.centralReadError || undefined }
+    }
 
     if (!isSupabaseConfigured()) {
       let newCount = 0
@@ -993,7 +1214,22 @@ class LeadStore {
   /**
    * Add a new lead (manual entry) with full property support and instant storage update
    */
+  public async addManual(leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>, requestId: string): Promise<Lead> {
+    if (!userStore.centralAuthEnabled) return this.add(leadData)
+    const account = userStore.getCurrentUser()?.id
+    const client = userStore.getServerClient()
+    if (!account || !client) throw Error('Müşteri kaydı için sunucu oturumu gerekli.')
+    const saved = await createManualLead(client, requestId, leadData)
+    if (userStore.getCurrentUser()?.id !== account) throw Error('Kayıt sırasında oturum değişti.')
+    // Discard any read started before this confirmed write.
+    this.centralManualWriteVersion++
+    this.leads = [saved, ...this.leads.filter(lead => lead.id !== saved.id)]
+    this.notify()
+    return saved
+  }
+
   public add(leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>): Lead {
+    if (userStore.centralAuthEnabled) throw Error('Müşteriyi sunucu onaylı kayıt işlemiyle ekleyin.')
     const activeCompany = leadData.companyName || userStore.getCurrentUser()?.companyName || 'Demirtürk İnşaat'
     const seqNumber = this.allocateLeadNumber(activeCompany)
     const newId = `lead-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`
@@ -1098,6 +1334,18 @@ class LeadStore {
     if (index === -1) return undefined
 
     const oldLead = this.leads[index]
+    if (userStore.centralAuthEnabled && typeof updates.fullName === 'string' && typeof updates.phone === 'string') {
+      const change: LeadWorkChange = {
+        fullName: updates.fullName, phone: updates.phone, whatsappPhone: updates.whatsappPhone ?? null,
+        secondaryPhone: updates.secondaryPhone ?? null, email: updates.email ?? null, budget: updates.budget ?? null,
+        preferredHousingType: updates.preferredHousingType ?? null,
+      }
+      if ('assignedToUserId' in updates && updates.assignedToUserId !== oldLead.assignedToUserId) {
+        change.assignedToUserId = updates.assignedToUserId ?? null
+      }
+      void this.saveCentralLeadWork(id, change)
+      return oldLead
+    }
     const updatedLead: Lead = {
       ...oldLead,
       ...updates,
@@ -1191,26 +1439,26 @@ class LeadStore {
     return log
   }
 
-  public updateStage(id: string, newStage: LeadStage, changedByUser?: AppUser | null): void {
+  public async updateStage(id: string, newStage: LeadStage, changedByUser?: AppUser | null): Promise<boolean> {
     const isQual =
       newStage === 'QUALIFIED'
         ? true
         : newStage === 'LOST' || newStage === 'NO_INTENT' || newStage === 'NEW' || newStage === 'CONTACTED'
         ? false
         : undefined
-    this.update(
+    const change = { stage: newStage, ...(isQual !== undefined ? { isQualified: isQual } : {}) }
+    if (userStore.centralAuthEnabled) return this.saveCentralLeadWork(id, change)
+    return Boolean(this.update(
       id,
-      {
-        stage: newStage,
-        ...(isQual !== undefined ? { isQualified: isQual } : {}),
-      },
+      change,
       changedByUser
-    )
+    ))
   }
 
-  public updateCallStatus(id: string, callStatus: CallCenterStatus | string, changedByUser?: AppUser | null): void {
+  public async updateCallStatus(id: string, callStatus: CallCenterStatus | string, changedByUser?: AppUser | null): Promise<boolean> {
+    if (userStore.centralAuthEnabled) return this.saveCentralLeadWork(id, { callStatus })
     const lead = this.getById(id)
-    if (!lead) return
+    if (!lead) return false
     const label = CALL_STATUS_OPTIONS.find((o) => o.id === callStatus)?.label || String(callStatus)
     this.update(id, { callStatus }, changedByUser)
     this.addActivity(
@@ -1219,6 +1467,7 @@ class LeadStore {
       `Çağrı / Bilgi durumu güncellendi: ${label}`,
       changedByUser?.fullName || 'Danışman'
     )
+    return true
   }
 
   /**
@@ -1258,20 +1507,21 @@ class LeadStore {
   }
 
   /**
-   * Müşteri İlişkileri, Pazarlama veya Yönetim tarafından kaydın manuel olarak Satışa iletilmesi ("Satışa İlet").
+   * Müşteri İlişkileri, Pazarlama veya Yönetim tarafından kaydın manuel olarak Satışa iletilmesi ("Satışa Devret").
    * Bu işlem yapılmadan hiçbir veri (Potansiyel müşteri, Web sitesi, Google, Meta vb.) Satışa devredilmez.
    */
-  public assignToSales(
+  public async assignToSales(
     id: string,
     salesUser: AppUser | null | undefined,
     assignedByUser: AppUser,
     note?: string
-  ): Lead | undefined {
+  ): Promise<boolean> {
     if (!permissionService.canHandOverToSales(assignedByUser)) {
-      return undefined
+      return false
     }
+    if (userStore.centralAuthEnabled) return this.saveCentralLeadWork(id, { salesTarget: salesUser?.id ?? 'ALL_SALES', salesNote: note })
     const lead = this.getById(id)
-    if (!lead) return undefined
+    if (!lead) return false
 
     const nowIso = new Date().toISOString()
     const targetId = salesUser ? salesUser.id : 'ALL_SALES'
@@ -1299,13 +1549,6 @@ class LeadStore {
         handedOverToSalesByDepartment: assignedByUser.department,
         salesRepUserId: salesUser ? salesUser.id : undefined,
         salesRepUserName: salesUser ? salesUser.fullName : undefined,
-        ...(salesUser
-          ? {
-              assignedToUserId: salesUser.id,
-              assignedToUserName: salesUser.fullName,
-              owner: salesUser.fullName,
-            }
-          : {}),
         assignmentHistory: [assignmentEntry, ...(lead.assignmentHistory || [])],
         ...(note
           ? {
@@ -1320,22 +1563,23 @@ class LeadStore {
       id,
       'ASSIGNMENT',
       salesUser
-        ? `Müşteri ${assignedByUser.department} (${assignedByUser.fullName}) tarafından manuel olarak Satışa iletildi (Danışman: ${salesUser.fullName}).`
-        : `Müşteri ${assignedByUser.department} (${assignedByUser.fullName}) tarafından manuel olarak Satış departmanına iletildi.`,
+        ? `Müşteri ${assignedByUser.department} (${assignedByUser.fullName}) tarafından manuel olarak Satışa devredildi (Danışman: ${salesUser.fullName}).`
+        : `Müşteri ${assignedByUser.department} (${assignedByUser.fullName}) tarafından manuel olarak Satış departmanına devredildi.`,
       assignedByUser.fullName
     )
-    return updated
+    return Boolean(updated)
   }
 
   /**
    * Satışa iletilmiş bir kaydın satış devrini geri çeker (Müşteri İlişkileri, Pazarlama veya Yönetim).
    */
-  public revokeSalesHandover(id: string, revokedByUser: AppUser): Lead | undefined {
+  public async revokeSalesHandover(id: string, revokedByUser: AppUser): Promise<boolean> {
     if (!permissionService.canHandOverToSales(revokedByUser)) {
-      return undefined
+      return false
     }
+    if (userStore.centralAuthEnabled) return this.saveCentralLeadWork(id, { salesTarget: null })
     const lead = this.getById(id)
-    if (!lead) return undefined
+    if (!lead) return false
 
     const nowIso = new Date().toISOString()
     const revokeEntry: AssignmentHistoryEntry = {
@@ -1367,22 +1611,22 @@ class LeadStore {
     this.addActivity(
       id,
       'ASSIGNMENT',
-      `Satışa iletim ${revokedByUser.department} (${revokedByUser.fullName}) tarafından manuel olarak geri çekildi.`,
+      `Satış devri ${revokedByUser.department} (${revokedByUser.fullName}) tarafından manuel olarak geri çekildi.`,
       revokedByUser.fullName
     )
-    return updated
+    return Boolean(updated)
   }
 
   /**
    * Quick toggle qualified status directly from table toggle button
    */
-  public toggleLeadQualified(
+  public async toggleLeadQualified(
     id: string,
     isQualified: boolean,
     changedByUser?: AppUser | null
-  ): Lead | undefined {
+  ): Promise<boolean> {
     const lead = this.getById(id)
-    if (!lead) return undefined
+    if (!lead) return false
 
     const updates: Partial<Lead> = {
       isQualified,
@@ -1396,6 +1640,7 @@ class LeadStore {
       updates.stage = 'CONTACTED'
     }
 
+    if (userStore.centralAuthEnabled) return this.saveCentralLeadWork(id, { isQualified, stage: updates.stage })
     const updated = this.update(id, updates, changedByUser)
 
     // Not: Nitelikli durumunda Meta'ya otomatik veri gönderilmez; Pazarlama > Kampanyalar > "Veriyi Gönder" ile manuel gönderilir.
@@ -1408,18 +1653,19 @@ class LeadStore {
         : `Müşteri 'Nitelikli' durumu kaldırıldı.`,
       changedByUser?.fullName || 'Danışman'
     )
-    return updated
+    return Boolean(updated)
   }
 
   /**
    * Update lead notes / explanation from table or modal
    */
-  public updateNotes(
+  public async updateNotes(
     id: string,
     notes: string,
     changedByUser?: AppUser | null
-  ): Lead | undefined {
+  ): Promise<boolean> {
     const cleanNotes = formatSentenceNote(notes)
+    if (userStore.centralAuthEnabled) return this.saveCentralLeadWork(id, { notes: cleanNotes })
     const updated = this.update(id, { notes: cleanNotes }, changedByUser)
     if (updated) {
       this.addActivity(
@@ -1429,7 +1675,7 @@ class LeadStore {
         changedByUser?.fullName || 'Danışman'
       )
     }
-    return updated
+    return Boolean(updated)
   }
 
   /**
@@ -1464,7 +1710,15 @@ class LeadStore {
    * Distribute leads equally across Call Center agents (Round-Robin)
    * Only real non-admin staff in Müşteri İlişkileri can be assigned. If empty, does nothing.
    */
-  public autoAssignCallCenterLeads(callCenterUsers: AppUser[]): void {
+  public async autoAssignCallCenterLeads(callCenterUsers: AppUser[]): Promise<void> {
+    if (userStore.centralAuthEnabled) {
+      const client = userStore.getServerClient()
+      if (!client) throw Error('Sunucu oturumu gerekli.')
+      const { error } = await client.rpc('crm_assign_pending_meta_leads').abortSignal(AbortSignal.timeout(15000))
+      if (error) throw Error('Dağıtım sunucuda tamamlanamadı. Sunucu kurulumunu ve yetkinizi kontrol edin.')
+      await this.centralRefresh?.()
+      return
+    }
     const eligibleStaff = (callCenterUsers || []).filter(
       (u) =>
         (u.department === 'Müşteri İlişkileri' || u.departments?.includes('Müşteri İlişkileri')) &&
@@ -1511,12 +1765,14 @@ class LeadStore {
   /**
    * Directly assign or re-assign lead to any user
    */
-  public assignLeadToUser(
+  public async assignLeadToUser(
     leadId: string,
     targetUser: AppUser,
     assignedByUser?: AppUser | null
-  ): Lead | undefined {
-    return this.update(
+  ): Promise<boolean> {
+    if (assignedByUser?.role !== 'ADMIN' && assignedByUser?.department === 'Müşteri İlişkileri') return false
+    if (userStore.centralAuthEnabled) return this.saveCentralLeadWork(leadId, { assignedToUserId: targetUser.id })
+    return Boolean(this.update(
       leadId,
       {
         assignedToUserId: targetUser.id,
@@ -1524,7 +1780,50 @@ class LeadStore {
         owner: targetUser.fullName,
       },
       assignedByUser
-    )
+    ))
+  }
+
+  public async transferToRepresentative(leadId: string, targetId: string): Promise<boolean> {
+    const actor = userStore.getCurrentUser()
+    const client = userStore.getServerClient()
+    const lead = this.getById(leadId)
+    if (!actor || !client || !lead || lead.assignedToUserId !== actor.id || targetId === actor.id) return false
+    if (this.centralWrites.has(leadId)) return false
+    let pending = this.pendingTransfers.get(leadId)
+    if (pending && pending.targetId !== targetId) {
+      this.centralWriteError = 'Önceki devri aynı temsilciyle tekrar doğrulayın.'
+      this.notify()
+      return false
+    }
+    pending ??= { requestId: crypto.randomUUID(), targetId, expected: lead.updatedAt }
+    this.pendingTransfers.set(leadId, pending)
+    this.centralWrites.set(leadId, pending.requestId)
+    try {
+      const { data, error } = await client.rpc('crm_transfer_lead', {
+        p_request: pending.requestId, p_id: leadId, p_expected: pending.expected, p_target: targetId,
+      }).abortSignal(AbortSignal.timeout(15000))
+      if (userStore.getCurrentUser()?.id !== actor.id) return false
+      if (error) {
+        if (error.code === '40001' || String(error.message).includes('crm_transfer_forbidden') || String(error.message).includes('crm_transfer_invalid')) {
+          this.pendingTransfers.delete(leadId)
+          void this.centralRefresh?.()
+        }
+        throw Error(error.code === '40001' ? 'Müşteri kaydı değişmiş. Listeyi yenileyip tekrar deneyin.' : 'Devir sunucuda doğrulanamadı. Aynı temsilciyle yeniden deneyin.')
+      }
+      if (data?.id !== leadId || data.transferred !== true) throw Error('Devir sonucu doğrulanamadı. Aynı temsilciyle yeniden deneyin.')
+      this.centralManualWriteVersion++
+      this.leads = this.leads.filter(item => item.id !== leadId)
+      delete this.activities[leadId]
+      this.pendingTransfers.delete(leadId)
+      this.centralWriteError = ''
+      void this.centralRefresh?.()
+      return true
+    } catch (error) {
+      if (userStore.getCurrentUser()?.id === actor.id) this.centralWriteError = error instanceof Error ? error.message : 'Devir onayı alınamadı. Aynı işlemle yeniden deneyin.'
+      return false
+    } finally {
+      if (userStore.getCurrentUser()?.id === actor.id) { this.centralWrites.delete(leadId); this.notify() }
+    }
   }
 
   /**
@@ -1558,7 +1857,49 @@ class LeadStore {
     return updated
   }
 
-  public delete(id: string): boolean {
+  public async archiveLeads(ids: string[]): Promise<boolean> {
+    if (!userStore.centralAuthEnabled) return ids.every(id => this.deleteLegacy(id))
+    const actor = userStore.getCurrentUser()
+    const client = userStore.getServerClient()
+    const unique = [...new Set(ids)].sort()
+    if (!actor || !client || this.archiving || unique.length === 0 || unique.length > 100) return false
+    if (!permissionService.canDeleteCustomer(actor)) return false
+    if (unique.some(id => this.centralWrites.has(id))) return false
+    if (this.pendingArchive && JSON.stringify(this.pendingArchive.ids) !== JSON.stringify(unique)) {
+      this.centralWriteError = 'Önceki silme işlemini aynı müşterilerle yeniden doğrulayın.'
+      this.notify()
+      return false
+    }
+    if (!this.pendingArchive) {
+      const records = unique.map(id => this.getById(id, actor))
+      if (records.some(lead => !lead)) return false
+      this.pendingArchive = { ids: unique, records: records.map(lead => ({ id: lead!.id, expected: lead!.updatedAt })), requestId: crypto.randomUUID() }
+    }
+    this.archiving = true
+    try {
+      await createLeadArchiveRepository(client).archive(this.pendingArchive.requestId, this.pendingArchive.records)
+      if (userStore.getCurrentUser()?.id !== actor.id) return false
+      this.centralManualWriteVersion++
+      this.leads = this.leads.filter(lead => !unique.includes(lead.id))
+      for (const id of unique) delete this.activities[id]
+      this.pendingArchive = null
+      this.centralWriteError = ''
+      void this.centralRefresh?.()
+      return true
+    } catch (error) {
+      if (userStore.getCurrentUser()?.id === actor.id) {
+        if (error instanceof LeadArchiveError && error.definitive) { this.pendingArchive = null; void this.centralRefresh?.() }
+        this.centralWriteError = error instanceof Error ? error.message : 'Silme sonucu alınamadı.'
+      }
+      return false
+    } finally { this.archiving = false; this.notify() }
+  }
+
+  public async delete(id: string): Promise<boolean> {
+    return this.archiveLeads([id])
+  }
+
+  private deleteLegacy(id: string): boolean {
     const target = this.leads.find((l) => l.id === id)
     allowManualWebsiteDelete(id)
     const idsToMarkDeleted = [id]
@@ -1605,6 +1946,10 @@ class LeadStore {
     content: string,
     author = 'Danışman'
   ): void {
+    if (userStore.centralAuthEnabled && type === 'NOTE') {
+      void this.saveCentralLeadWork(leadId, { timelineNote: content })
+      return
+    }
     const act: LeadActivity = {
       id: 'act-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       leadId,

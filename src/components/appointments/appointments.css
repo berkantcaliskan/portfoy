@@ -1,0 +1,4 @@
+.appointment-source-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);align-items:start;gap:12px;overflow-x:auto;padding-bottom:8px}
+.appointment-source-column{display:grid;gap:8px;align-content:start;min-width:0}
+.appointment-source-column>h3{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px;padding:6px 10px;border-bottom:1px solid var(--glass-border)}
+.appointment-source-column>h3 small{opacity:.7}

@@ -33,6 +33,7 @@ export default function BackendTransitionView(){
     <button disabled={busy} onClick={()=>void action(async()=>{const redirect=new URL(window.location.pathname,window.location.origin);redirect.searchParams.set('workspace','backend');await auth.requestCode(email,redirect.href);setMessage('Hesap uygunsa giriş e-postası gönderildi. E-postadaki Sign in bağlantısını aynı tarayıcıda açın; kod geldiyse aşağıya girin. Yeni hesap oluşturulmaz.')})} className="bg-[#6468c8] text-white rounded-xl px-4 py-2">Giriş bağlantısı / kodu iste</button>
     <p className="text-sm">E-postada “Sign in” bağlantısı varsa ona tıklayın; kod alanını boş bırakabilirsiniz. Giriş bağlantısı sizi bu geçiş ekranına döndürmelidir.</p>
     <button disabled={busy} className="border rounded-xl px-4 py-2" onClick={()=>void action(async()=>{setProfile(await auth.getProfile());setMessage('Sunucu kimliği doğrulandı.')})}>Oturumu kontrol et</button>
+    <p><a className="underline" href="/?workspace=register">CRM davetini kabul et</a></p>
     <label className="block">Yalnızca e-postada sayısal kod geldiyse<input autoComplete="one-time-code" value={code} onChange={e=>setCode(e.target.value)} className="block border rounded-xl p-3 w-full mt-1"/></label>
     <button disabled={busy} onClick={()=>void action(async()=>{const p=await auth.verifyCode(email,code);setProfile(p);setCode('');setMessage('Sunucu personel profili doğrulandı.')})} className="bg-[#6468c8] text-white rounded-xl px-4 py-2">Kimliği doğrula</button>
    </div>}

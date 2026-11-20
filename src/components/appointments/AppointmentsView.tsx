@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
   Calendar,
@@ -13,10 +14,13 @@ import {
   User,
   Phone,
   Filter,
+  Pencil,
+  Trash2,
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import './appointments.css'
 import { GlassModal } from '@/components/ui/GlassModal'
 import { OverflowTabs } from '@/components/ui/OverflowTabs'
 import {
@@ -30,7 +34,9 @@ import { Lead } from '@/types/lead'
 import { PhoneInput } from '@/components/common/PhoneInput'
 import { formatAppointmentDate, toTitleCase } from '@/utils/formatters'
 
+const sources=['Tur','Ofis ziyareti','Telefon görüşmesi','Çevrim içi görüşme'] as const
 interface AppointmentsViewProps {
+  sourceColumns?: boolean
   pageTitle?: string
   subtitle?: string
   leads?: Lead[]
@@ -40,13 +46,18 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   pageTitle = 'Randevular',
   subtitle = 'Müşteri görüşmeleri, proje sunumları ve şantiye ziyaretleri takvimi.',
   leads = [],
+  sourceColumns = false,
 }) => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(userStore.getCurrentUser())
   const [appointments, setAppointments] = useState<Appointment[]>(() => appointmentStore.getAll(currentUser))
+  const [source,setSource]=useState(''),[sourceFilter,setSourceFilter]=useState('')
   const [filterType, setFilterType] = useState<string>('ALL')
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; appointment: Appointment } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Appointment | null>(null)
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -67,6 +78,53 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   const [notes, setNotes] = useState('')
 
   const allUsers = userStore.getAllUsers()
+
+  useEffect(() => {
+    setContextMenu(null); setDeleteTarget(null); setEditingId(null)
+    setIsAddModalOpen(false); setIsOutcomeModalOpen(false); setSaveError('')
+  }, [currentUser?.id])
+
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') close() }
+    window.addEventListener('click', close)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    window.addEventListener('keydown', key)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+      window.removeEventListener('keydown', key)
+    }
+  }, [contextMenu])
+
+  const openForm = (appointment?: Appointment) => {
+    setEditingId(appointment?.id ?? null)
+    setCustomerName(appointment?.customerName ?? '')
+    setCustomerPhone(appointment?.customerPhone ?? '')
+    setDate(appointment?.date ?? new Date().toISOString().split('T')[0])
+    setTime(appointment?.time ?? '14:00')
+    setLocation(appointment?.location ?? 'Demirtürk Panorama Satış Ofisi')
+    setSource(appointment?.source || '')
+    setType(appointment?.type ?? 'ON_SITE')
+    setProjectName(appointment?.projectName ?? '')
+    setAssignedToUserName(appointment?.assignedToUserName ?? currentUser?.fullName ?? '')
+    setNotes(appointment?.notes ?? '')
+    setSaveError(''); setContextMenu(null); setIsAddModalOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget || saving) return
+    setSaving(true); setSaveError('')
+    try {
+      if (!await appointmentStore.deleteAppointment(deleteTarget.id)) throw Error('Randevu bulunamadı. Listeyi yenileyin.')
+      setDeleteTarget(null)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Randevu silinemedi.')
+    } finally { setSaving(false) }
+  }
 
   useEffect(() => {
     const unsub = appointmentStore.subscribe(() => {
@@ -100,20 +158,25 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       return
     }
 
+    if(sourceColumns&&!source){setSaveError('Görüşmenin kaynağını seçin.');return}
     setSaving(true)
     try {
-      await appointmentStore.createAppointment({
+      const values = {
         customerName,
         customerPhone,
         date,
         time,
         location,
         type,
+        ...(sourceColumns?{source}:{}),
         assignedToUserId: allUsers.find(user => user.fullName === assignedToUserName)?.id,
         assignedToUserName,
         projectName,
         notes,
-      }, effectiveUser)
+      }
+      if (editingId) {
+        if (!await appointmentStore.updateAppointment(editingId, values)) throw Error('Randevu bulunamadı. Listeyi yenileyin.')
+      } else await appointmentStore.createAppointment(values, effectiveUser)
       setIsAddModalOpen(false)
       setCustomerName('')
       setCustomerPhone('')
@@ -173,7 +236,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           variant="gold"
           size="sm"
           icon={<Plus className="w-3.5 h-3.5" />}
-          onClick={() => { setSaveError(''); setIsAddModalOpen(true) }}
+          onClick={() => openForm()}
           className="rounded-full px-4 text-xs font-semibold"
         >
           Randevu Oluştur
@@ -208,6 +271,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       </div>
 
       {/* Randevu Kartları */}
+      {sourceColumns&&<div className="flex items-center flex-wrap gap-1" aria-label="Görüşme kaynağı">{['',...sources,...(appointments.some(a=>!a.source)?['Belirtilmedi']:[])].map(s=><button type="button" key={s} aria-pressed={s===sourceFilter} className={'tab-pill-btn px-3 py-1 rounded-full text-xs '+(s===sourceFilter?'is-active-tab-pill':'')} onClick={()=>setSourceFilter(s)}>{s||'Tümü'}</button>)}</div>}
       {filtered.length === 0 ? (
         <div className="py-20 text-center flex flex-col items-center justify-center">
           <Calendar className="w-10 h-10 text-[#8c857f] mx-auto mb-3 opacity-40" />
@@ -217,14 +281,20 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((apt) => {
+        <div className={sourceColumns?'appointment-source-board':'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'}>
+          {(sourceColumns?(sourceFilter?[sourceFilter]:[...sources,...(filtered.some(a=>!a.source)?['Belirtilmedi']:[])]):['']).map(group=><div key={group} className={sourceColumns?'appointment-source-column':'contents'}>
+          {sourceColumns&&<h3>{group}<small>{filtered.filter(a=>(a.source||'Belirtilmedi')===group).length}</small></h3>}
+          {filtered.filter(a=>!sourceColumns||(a.source||'Belirtilmedi')===group).map((apt) => {
             const isDone = apt.status === 'COMPLETED'
             const isCancelled = apt.status === 'CANCELLED'
 
             return (
               <div
                 key={apt.id}
+                onContextMenu={event => {
+                  event.preventDefault()
+                  setContextMenu({ x: event.clientX, y: event.clientY, appointment: apt })
+                }}
                 className={`p-5 rounded-[20px] border transition-all duration-200 flex flex-col justify-between space-y-3 ${
                   isDone
                     ? 'bg-[#24211f] border-emerald-500/20 opacity-80'
@@ -303,16 +373,35 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               </div>
             )
           })}
+          </div>)}
         </div>
       )}
 
       {/* YENİ RANDEVU MODALI */}
+      {contextMenu && createPortal(<div role="menu" aria-label="Randevu işlemleri"
+        onClick={event => event.stopPropagation()}
+        className="dropdown-panel context-menu fixed z-[99999] min-w-[180px] rounded-[22px] border border-[#4a443f] p-2 shadow-xl"
+        style={{ left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 200)), top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 110)) }}>
+        <button role="menuitem" type="button" onClick={() => openForm(contextMenu.appointment)}
+          className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-left text-xs hover:bg-white/5"><Pencil size={13} />Düzenle</button>
+        <button role="menuitem" type="button" onClick={() => { setDeleteTarget(contextMenu.appointment); setSaveError(''); setContextMenu(null) }}
+          className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-left text-xs text-rose-400 hover:bg-white/5"><Trash2 size={13} />Girdiyi sil</button>
+      </div>, document.body)}
+      <GlassModal isOpen={!!deleteTarget} onClose={() => { if (!saving) setDeleteTarget(null) }} title="Girdiyi sil" maxWidth="sm">
+        <p className="text-sm">{deleteTarget?.customerName} için randevu kaydını silmek istiyor musunuz?</p>
+        {saveError && <p role="alert" className="mt-3 text-sm text-rose-400">{saveError}</p>}
+        <div className="mt-5 flex justify-end gap-2">
+          <GlassButton variant="subtle" size="sm" disabled={saving} onClick={() => setDeleteTarget(null)}>Vazgeç</GlassButton>
+          <GlassButton variant="gold" size="sm" disabled={saving} onClick={handleDelete}>{saving ? 'Siliniyor…' : 'Girdiyi sil'}</GlassButton>
+        </div>
+      </GlassModal>
       <GlassModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Yeni Randevu ve Görüşme Planla"
+        onClose={() => { if (!saving) setIsAddModalOpen(false) }}
+        title={editingId ? 'Randevuyu Düzenle' : 'Yeni Randevu ve Görüşme Planla'}
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
+          {sourceColumns&&<label className="block text-xs">Kaynak<select className="block w-full rounded-xl p-2 mt-1 border" value={source} required onChange={e=>setSource(e.target.value)}><option value="">Kaynak seçin</option>{sources.map(s=><option key={s}>{s}</option>)}</select></label>}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
@@ -442,6 +531,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           <div className="pt-2 flex justify-end gap-2">
             <button
               type="button"
+              disabled={saving}
               onClick={() => setIsAddModalOpen(false)}
               className="px-4 py-2 rounded-full text-xs text-[#a69f99] hover:text-white cursor-pointer"
             >

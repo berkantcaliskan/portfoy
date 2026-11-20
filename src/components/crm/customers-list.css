@@ -1,0 +1,12 @@
+.customer-records-table { min-width:1130px }
+.customer-records-table :is(td,th) { padding-inline:8px }
+.customer-note-lines { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; white-space:normal; overflow-wrap:anywhere; line-height:1.45 }
+.customer-stage-tabs { border:1px solid var(--glass-border); background:var(--surface-subtle,rgba(128,128,128,.06)); border-radius:24px; padding:3px 6px }
+.customer-stage-tabs .tab-pill-btn:not(.is-active-tab-pill),.customer-stage-tabs .card-action-btn { background:transparent!important; border-color:transparent!important; box-shadow:none!important }
+.lead-channel-icon,.lead-phone-link,.lead-handover {display:inline-flex;align-items:center;justify-content:center}
+.lead-channel-icon {color:var(--text-muted,currentColor);line-height:1;margin-top:2px}
+.lead-channel-icon b {font-family:Arial,sans-serif;background:#f4d943;color:#302619;border-radius:3px;padding:1px 4px}
+.lead-phone-link {margin-left:auto;min-width:25px;min-height:25px;border-radius:50%}
+.lead-handover {width:31px;height:31px;border:1px solid var(--glass-border);border-radius:50%;gap:0}
+.lead-handover:hover,.lead-handover:focus-visible {color:#e4b84a!important;border-color:currentColor}
+.lead-move-menu {position:absolute;top:0;min-width:115px;max-width:170px;max-height:145px;overflow:auto;border-radius:16px;padding:5px}

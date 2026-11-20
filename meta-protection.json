@@ -7,7 +7,8 @@
     "supabase/functions/_shared",
     "supabase/functions/meta-webhook",
     "supabase/functions/meta-capi",
-    "src/components/meta"
+    "src/components/meta",
+    "supabase/functions/meta-daily-intake"
   ],
   "files": [
     {
@@ -44,15 +45,15 @@
     },
     {
       "path": "src/components/crm/LeadDetailModal.tsx",
-      "sha256": "6590ba987d77d1e25c624a07088b7fb28ee72e14c563d0dd21692d03a7f17dd1"
+      "sha256": "d326f421671cad184a74858035a326162b37ee5107d2e924f07e07ab5fa270b6"
     },
     {
       "path": "src/components/marketing/MarketingCampaignsView.tsx",
-      "sha256": "fff87f9843b5bef0688a31a3b97d589880e03f7ce3993aaf32ce731fb44cf6ec"
+      "sha256": "8fc6c51dfb07e0f1d7c173f188605763aab70875d9357e5b5439506f14a7652a"
     },
     {
       "path": "src/components/meta/MetaBackendPanel.tsx",
-      "sha256": "6fe04e801f57ca32b524ed75c8b866a8537aa6454cd0fad66ada6a6da3cbe5de"
+      "sha256": "e5b736aabc3b3a73990025796469f025bbafaa14f84cdcd4fe523c3b336f99a1"
     },
     {
       "path": "src/components/meta/MetaIntegrationView.tsx",
@@ -68,7 +69,7 @@
     },
     {
       "path": "src/services/metaStore.ts",
-      "sha256": "61a5ceedd4a5403a71daee4e07f7ae2938e96a36432171e762cecb5f4cce4cbd"
+      "sha256": "ab36a6fb6b31077bc88af12628ba0a771263e4cb905bdb76462b785ae1354dc7"
     },
     {
       "path": "src/types/meta.ts",
@@ -76,15 +77,15 @@
     },
     {
       "path": "supabase/config.toml",
-      "sha256": "7cc641ca59f2126654ae4484af568df2f9a4ac90ccfc4ebacee026f906b8aa4e"
+      "sha256": "a101d703445b40314368450b837847fa8741442e1c180d13b31e327b7f163809"
     },
     {
       "path": "supabase/functions/_shared/meta-capi-handler.ts",
-      "sha256": "9ff11cc0908ab6c42bf6489ae871c2a0cebb0225a9cf37456f4a6b0aacef34fe"
+      "sha256": "090c56873f93686200b7b629d3c8b438cc2ef7313868dbea4a099699e3cbc751"
     },
     {
       "path": "supabase/functions/_shared/meta-core.ts",
-      "sha256": "2abdb2213a8983428fa858d7e94613606a0430b0c0d377aa210214eaa0ac7187"
+      "sha256": "80fade84429b4fa50456fc0dc6dd94034b806d8e7de8771fd88ee5d959045fc2"
     },
     {
       "path": "supabase/functions/_shared/meta-page-access.ts",
@@ -116,7 +117,7 @@
     },
     {
       "path": "tests/meta-capi-handler.test.ts",
-      "sha256": "410191ce0612d5d561765584f569ad6ac3980bfe914469c06223a8d477ec7d61"
+      "sha256": "fa8cac68d6f99e220329bfc95036cddfa8c0b854323cb2ece5f996e3ace2873f"
     },
     {
       "path": "tests/meta-core.test.ts",
@@ -140,7 +141,7 @@
     },
     {
       "path": "tests/meta-store.test.ts",
-      "sha256": "e94bdb8f191688d6286a2168cef5e7f8ad321cfbbab88c764a7e05abcd196809"
+      "sha256": "be6d23f0bac85cfde5ef84de99ec80735553d613e1f09d92a2ba37eaacff54e6"
     },
     {
       "path": "verification/sql/check.mjs",
@@ -169,6 +170,26 @@
     {
       "path": "docs/META_KAPANIS_20261105.md",
       "sha256": "fe81f0fd060728c77ce70d41d7b957f8208dbf6e5f6664643e2164c2e3d5d05e"
+    },
+    {
+      "path": "src/components/crm/MetaSendButton.tsx",
+      "sha256": "c929b6473dac77f48ff7b6b4de22479927fc352efa56ddf799c1dba54d1d2719"
+    },
+    {
+      "path": "supabase/functions/_shared/meta-daily-intake.ts",
+      "sha256": "8054ac77bc3a72ad3b0735fc5dc1580d41844e77a7de720f95865b223797abf1"
+    },
+    {
+      "path": "supabase/functions/meta-daily-intake/index.ts",
+      "sha256": "d06a845c2d4e4c71a896caf221fa0cc8b5e89083480c2c428f22dbcf7806cdfc"
+    },
+    {
+      "path": "supabase/migrations/20261120111846_meta_daily_intake_10am.sql",
+      "sha256": "8d45727994f98e47f8dba0dfc8878b64d91df5649895f32d27badb7f22199b65"
+    },
+    {
+      "path": "tests/meta-daily-intake.test.ts",
+      "sha256": "765190d882448c397f75cc9a5063d4a0d80e1b1510caec32b3683f4a0eb62230"
     }
   ],
   "finalizationNote": "5 Kasım demo/staging kabulü: 211 izole kontrol, 23 DB ve 11 HTTP kontrolü geçti. Gerçek form alımı ve test API teslimi doğrulandı; panel UUID mutabakatı ve tüm hesap mutabakatı sınırlı. Üretim/otomatik gönderim kapalı. META_KAPANIS_20261105.md kapsamı geçerlidir."

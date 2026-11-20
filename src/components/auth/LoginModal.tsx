@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { AppUser, Department, generateUsername, userStore } from '@/services/userStore'
+import { teamDepartmentLabel } from '@/types/teamDirectory'
 import {
   teamOperationsStore,
   PRESENCE_STATUS_OPTIONS,
@@ -84,7 +85,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [statusSavedToast, setStatusSavedToast] = useState(false)
 
   useEffect(() => {
-    if (!currentUser || !isOpen) return
+    if (currentUser?.role !== 'ADMIN' || !isOpen) return
     const syncPresence = () => {
       const rec = teamOperationsStore.getUserPresence(currentUser.id)
       setPresenceStatus(rec.status)
@@ -254,10 +255,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                           currentUser.fullName.slice(0, 2).toUpperCase()
                         )}
                       </div>
-                      <span
+                      {currentUser.role === 'ADMIN' && <span
                         className={`absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full border-2 border-[#34302d] ${activeMeta.dotClass}`}
                         title={activeMeta.label}
-                      />
+                      />}
                     </div>
 
                     <div className="min-w-0">
@@ -265,21 +266,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                         {currentUser.fullName}
                       </h3>
                       <p className="text-xs text-[#a69f99] truncate">
-                        @{currentUser.username} • {currentUser.department} Departmanı
+                        @{currentUser.username} • {teamDepartmentLabel(currentUser)}
                       </p>
-                      <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold bg-[#282522] border-[#4a443f]">
+                      {currentUser.role === 'ADMIN' && <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold bg-[#282522] border-[#4a443f]">
                         <span className={`w-2 h-2 rounded-full ${activeMeta.dotClass}`} />
                         <span className={activeMeta.colorClass}>{activeMeta.label}</span>
                         {returnTime && presenceStatus !== 'OFISTE' && (
                           <span className="text-[#a69f99] font-normal">• Dönüş: {returnTime}</span>
                         )}
-                      </div>
+                      </div>}
                     </div>
                   </div>
                 </div>
 
                 {/* Live Status Selector ("Şu An Neredeyim?") */}
-                <div className="space-y-3 bg-[#282522]/90 border border-[#4a443f]/70 rounded-2xl p-4">
+                {currentUser.role === 'ADMIN' && <div className="space-y-3 bg-[#282522]/90 border border-[#4a443f]/70 rounded-2xl p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-[#d6beae] flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-[#b99881]" />
@@ -418,12 +419,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       Durumumu Güncelle
                     </GlassButton>
                   </div>
-                </div>
+                </div>}
 
                 {/* Bottom Action Buttons */}
                 <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2">
-                    {onOpenTeams && (
+                    {currentUser.role === 'ADMIN' && onOpenTeams && (
                       <GlassButton
                         variant="outline"
                         size="sm"

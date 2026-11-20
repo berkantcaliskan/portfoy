@@ -1082,7 +1082,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {formatCurrency(pendingPaymentsTotal)}
             </div>
             <div className="text-[11.5px] font-normal text-[#a69f99] mt-1 truncate">
-              Komisyon & Şantiye
+              Planlanan giderler
             </div>
           </GlassCard>
         </div>
@@ -1131,7 +1131,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <GlassCard className="p-4 sm:p-5 bg-[#282522] border-[#4a443f]">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[14px] font-medium text-white">
-                Planlanan Şantiye & Komisyon Ödemeleri
+                Planlanan Ödemeler
               </h3>
               <span className="text-[12px] font-mono font-medium text-[#a69f99]">
                 {payments.length} Ödeme

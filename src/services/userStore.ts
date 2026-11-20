@@ -4,6 +4,7 @@ import {
   AccessScope,
   UserPermissions,
   CANONICAL_DEPARTMENTS,
+  getAccessibleDepartments,
   normalizeDepartmentName,
 } from '@/types/department'
 import { supabase, isSupabaseConfigured } from './supabaseClient'
@@ -12,12 +13,27 @@ import { rowToUser } from './dbMapper'
 import {isCentralCrm} from './crmRuntime'
 import {createBackendPreviewClient} from './crmBackendClient'
 import {createCrmAuthService,type CrmAuthProfile} from './crmAuthService'
+import {createCrmAccountService} from './crmAccountService'
 import {createCrmMainSession} from './crmMainSession'
 
 export type { Department, UserRole, AccessScope, UserPermissions }
 
+export interface SwitchTarget {
+  id: string
+  fullName: string
+  username: string
+  department: string
+  available: boolean
+}
+
+export function canOfferAccountSwitch(user?: AppUser | null) {
+  return Boolean(user?.authUserId && !user.mustChangePassword && user.role === 'ADMIN'
+    && ['berkant', 'murat'].includes(user.username.toLowerCase()))
+}
+
 export interface AppUser {
   id: string
+  authUserId?: string
   fullName: string
   username: string
   password: string // Stored representation
@@ -98,6 +114,7 @@ class UserStore {
   }
   private serverAuthStarted=false
   private serverLoginPending=false
+  private switchingAccount = false
   private staffCreationBusy = false
   private pendingStaffCreation: { key: string; requestId: string; username: string } | null = null
   private users: AppUser[] = []
@@ -132,9 +149,7 @@ class UserStore {
         const activeWorkspaceDept = this.currentUser.department
         const updatedCurrent = this.users.find((u) => u.id === this.currentUser?.id)
         if (updatedCurrent) {
-          const canKeepWorkspace =
-            updatedCurrent.role === 'ADMIN' ||
-            updatedCurrent.departments.includes(activeWorkspaceDept)
+          const canKeepWorkspace = getAccessibleDepartments(updatedCurrent).includes(activeWorkspaceDept)
           this.currentUser = {
             ...updatedCurrent,
             department: canKeepWorkspace ? activeWorkspaceDept : updatedCurrent.department,
@@ -241,7 +256,7 @@ class UserStore {
         : Array.isArray(user.departments) && user.departments.length > 0
         ? user.departments
         : [normalizedDept]
-    const departments: Department[] = Array.from(new Set(rawDepts.map(normalizeDepartmentName)))
+    const departments: Department[] = Array.from(new Set([normalizedDept, ...rawDepts.map(normalizeDepartmentName)]))
 
     const isManager = Boolean(user.isManager || user.role === 'ADMIN' || user.role === 'MANAGER')
     const role: UserRole = user.role === 'ADMIN' ? 'ADMIN' : (user.role || (isManager ? 'MANAGER' : 'REPRESENTATIVE'))
@@ -332,7 +347,7 @@ class UserStore {
           if (matched) {
             const norm = this.normalizeUser(matched)
             const savedDept = parsed.department ? normalizeDepartmentName(parsed.department) : norm.department
-            const canKeep = norm.role === 'ADMIN' || norm.departments.includes(savedDept)
+            const canKeep = getAccessibleDepartments(norm).includes(savedDept)
             this.currentUser = { ...norm, department: canKeep ? savedDept : norm.department }
           } else {
             this.currentUser = null
@@ -394,9 +409,15 @@ class UserStore {
     if (this.currentUser?.id !== profile?.id) this.pendingStaffCreation = null
     // Parola, yerel kullanıcı listesi ve eski rol önbelleği bu oturumda kullanılmaz.
     const workspace=this.currentUser?.id===profile?.id?this.currentUser?.department:undefined
-    const canKeepWorkspace=profile&&workspace&&(profile.role==='ADMIN'||profile.departments.includes(workspace))
-    this.currentUser=profile?{...profile,department:canKeepWorkspace?workspace:profile.department,password:'',mustChangePassword:profile.mustChangePassword===true}:null
-    this.users=this.currentUser?[this.currentUser]:[]
+    const canKeepWorkspace = profile && workspace && getAccessibleDepartments(profile).includes(workspace)
+    this.currentUser = profile ? {
+      ...profile,
+      department: canKeepWorkspace ? workspace : profile.department,
+      departments: Array.from(new Set([profile.department, ...profile.departments])),
+      password: '',
+      mustChangePassword: profile.mustChangePassword === true,
+    } : null
+    this.users=this.currentUser?(this.users.some(user=>user.id===this.currentUser!.id)?this.users.map(user=>user.id===this.currentUser!.id?this.currentUser!:user):[this.currentUser]):[]
     this.notify()
     if (profile && this.serverClient) void this.refreshStaffDirectory().catch(() => {})
   }
@@ -408,6 +429,52 @@ class UserStore {
     if (error || !Array.isArray(data) || this.currentUser?.id !== actor) return
     this.users = data.map(row => ({ ...this.normalizeUser(row), password: '' }))
     this.notify()
+  }
+
+  async listSwitchTargets(): Promise<SwitchTarget[]> {
+    const actor = this.currentUser
+    if (!this.serverClient || !canOfferAccountSwitch(actor)) throw new Error('Bu işlem için admin girişi gerekli.')
+    const { data, error } = await this.serverClient.rpc('crm_account_switch_directory').abortSignal(AbortSignal.timeout(15000))
+    if (error || !Array.isArray(data) || this.currentUser?.authUserId !== actor?.authUserId)
+      throw new Error('Şirket hesapları alınamadı. Oturumunuzu ve bağlantınızı kontrol edin.')
+    return data
+  }
+
+  async switchStaffAccount(userId: string) {
+    const client = this.serverClient
+    const actor = this.currentUser
+    if (!client || !actor || !canOfferAccountSwitch(actor) || this.switchingAccount || userId === actor.id)
+      throw new Error('Hesap geçişi başlatılamadı.')
+    this.switchingAccount = true
+    try {
+      const { data: current } = await client.auth.getSession()
+      const previous = current.session
+      if (!previous || previous.user.id !== actor.authUserId) throw new Error('Admin oturumunuzu yeniden açın.')
+      const { data, error } = await client.functions.invoke('crm-account-switch', {
+        body: { userId, requestId: crypto.randomUUID() }, headers: { Authorization: 'Bearer ' + previous.access_token }, timeout: 30000,
+      })
+      if (error || data?.userId !== userId || !data.authId || !data.access_token || !data.refresh_token)
+        throw new Error('Seçilen hesaba geçilemedi. Hesabın durumunu kontrol edip tekrar deneyin.')
+      const verified = await client.auth.getUser(data.access_token)
+      if (verified.error || verified.data.user?.id !== data.authId || this.currentUser?.authUserId !== actor.authUserId)
+        throw new Error('Hesap geçişi sırasında oturum değişti. Tekrar deneyin.')
+      // A separate legacy session must never survive a change of operator on a shared computer.
+      const legacy = await supabase.auth.getSession()
+      if (legacy.error || (legacy.data.session && (await supabase.auth.signOut({ scope: 'local' })).error))
+        throw new Error('Önceki oturum kapatılamadı. Tekrar deneyin.')
+      const latest = await client.auth.getSession()
+      if (this.currentUser?.authUserId !== actor.authUserId || latest.data.session?.user.id !== actor.authUserId)
+        throw new Error('Admin oturumu değişti. Tekrar deneyin.')
+      this.serverLoginPending = true
+      const result = await client.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token })
+      if (result.error || result.data.user?.id !== data.authId) throw new Error('Yeni oturum açılamadı.')
+      this.serverSession?.invalidate()
+      window.history.replaceState(null, '', '#dashboard')
+      window.location.reload()
+    } finally {
+      this.serverLoginPending = false
+      this.switchingAccount = false
+    }
   }
 
   async resetStaffPassword(userId: string) {
@@ -427,15 +494,18 @@ class UserStore {
     const client=createBackendPreviewClient()
     this.serverClient = client
     this.serverSession=createCrmMainSession(createCrmAuthService(client),p=>this.publishServerProfile(p))
-    client.auth.onAuthStateChange(event=>{
+    client.auth.onAuthStateChange((event,session)=>{
       if(event==='SIGNED_OUT')this.serverSession?.invalidate()
-      else if(event==='SIGNED_IN'&&!this.serverLoginPending){this.serverSession?.invalidate();setTimeout(()=>void this.serverSession?.restore(),0)}
+      else if(event==='SIGNED_IN'&&!this.serverLoginPending){
+        if(this.currentUser && this.currentUser.authUserId!==session?.user.id)this.serverSession?.invalidate()
+        setTimeout(()=>void this.serverSession?.restore(),0)
+      }
       // SDK Auth kilidi dışında sunucuda profil kontrolü yap.
-      else if(event==='TOKEN_REFRESHED'||event==='USER_UPDATED')setTimeout(()=>void this.serverSession?.restore(),0)
+      else if(!this.serverLoginPending&&(event==='TOKEN_REFRESHED'||event==='USER_UPDATED'))setTimeout(()=>void this.serverSession?.restore(),0)
     })
     if(typeof window!=='undefined'){
-      window.addEventListener('focus',()=>void this.serverSession?.restore())
-      window.addEventListener('online',()=>void this.serverSession?.restore())
+      window.addEventListener('focus',()=>{if(!this.serverLoginPending)void this.serverSession?.restore()})
+      window.addEventListener('online',()=>{if(!this.serverLoginPending)void this.serverSession?.restore()})
     }
     void this.serverSession.restore()
   }
@@ -447,6 +517,31 @@ class UserStore {
     try{await this.serverSession!.login(email,password)}finally{this.serverLoginPending=false}
     if(!this.currentUser)throw Error('Sunucu oturumu doğrulanamadı.')
     return this.currentUser
+  }
+
+  async finishFirstLoginPassword(currentPassword: string, newPassword: string) {
+    const user = this.currentUser
+    if (!user?.mustChangePassword) throw new Error('İlk giriş oturumu doğrulanamadı. Tekrar giriş yapın.')
+    if (!this.centralAuthEnabled) {
+      const result = this.changePassword(user.id, newPassword)
+      if (!result.success) throw new Error(result.error)
+      return
+    }
+
+    const client = this.serverClient
+    const session = this.serverSession
+    if (!client || !session || this.serverLoginPending) throw new Error('Oturum henüz hazır değil. Tekrar deneyin.')
+    this.serverLoginPending = true
+    try {
+      await createCrmAccountService(client).changePassword(currentPassword, newPassword, user.id)
+      if (this.currentUser?.id !== user.id) throw new Error('Oturum değişti. Yeni parolanızla giriş yapın.')
+      await session.restore()
+      if (this.currentUser?.id !== user.id || this.currentUser.mustChangePassword) {
+        throw new Error('İlk giriş tamamlanamadı. Yeni parolanızla tekrar giriş yapın.')
+      }
+    } finally {
+      this.serverLoginPending = false
+    }
   }
 
   hasAdmin(): boolean {
@@ -657,14 +752,11 @@ class UserStore {
   switchDepartment(targetDept: Department): { success: boolean; error?: string } {
     if (!this.currentUser) return { success: false, error: 'Oturum açılmamış.' }
 
-    const normalized = normalizeDepartmentName(targetDept)
-    if (this.currentUser.department === normalized) {
+    if (this.currentUser.department === targetDept) {
       return { success: true }
     }
 
-    const isAllowed =
-      this.currentUser.role === 'ADMIN' ||
-      this.currentUser.departments.includes(normalized)
+    const isAllowed = getAccessibleDepartments(this.currentUser).includes(targetDept)
 
     if (!isAllowed) {
       return {
@@ -675,7 +767,7 @@ class UserStore {
 
     this.currentUser = {
       ...this.currentUser,
-      department: normalized,
+      department: targetDept,
     }
 
     try {
@@ -687,15 +779,26 @@ class UserStore {
 
   async updateUser(
     userId: string,
-    updates: Partial<Omit<AppUser, 'id' | 'createdAt'>>
+    updates: Partial<Omit<AppUser, 'id' | 'createdAt'>>,
+    expectedRevision?: number
   ): Promise<{ success: boolean; error?: string }> {
     if (this.centralAuthEnabled) {
       if (!this.serverClient) return { success: false, error: 'Sunucu oturumu gerekli.' }
       const ownProfile = userId === this.currentUser?.id
       const { error } = ownProfile
         ? await this.serverClient.rpc('crm_update_own_profile', { p_updates: updates })
-        : await this.serverClient.rpc('crm_manage_staff', { p_id: userId, p_updates: { ...updates, _revision: this.users.find(user => user.id === userId)?.serverRevision }, p_disable: false })
-      if (error) return { success: false, error: 'Profil veya yetki değişikliği sunucuda reddedildi.' }
+        : await this.serverClient.rpc('crm_manage_staff', { p_id: userId, p_updates: { ...updates, _revision: expectedRevision ?? this.users.find(user => user.id === userId)?.serverRevision }, p_disable: false })
+      if (error) {
+        if (error.message?.includes('crm_revision_conflict')) {
+          await this.refreshStaffDirectory()
+          return { success: false, error: 'Personel bilgileri güncellenmiş. Düzenleme penceresini kapatıp güncel kaydı yeniden açın.' }
+        }
+        if (error.message?.includes('crm_forbidden')) return { success: false, error: 'Bu işlem için ADMIN hesabıyla giriş yapın. Kendi hesabınızın veya mevcut bir ADMIN hesabının yetkileri bu ekrandan değiştirilemez.' }
+        if (error.message?.includes('crm_invalid_input')) return { success: false, error: updates.role === 'ADMIN'
+          ? 'Sunucudaki yetki işlemi ADMIN yükseltmesini kabul etmiyor. ADMIN yükseltme güncellemesi uygulanmalı.'
+          : 'Seçilen rol, departman veya özel yetkiler sunucu tarafından kabul edilmedi.' }
+        return { success: false, error: 'Yetki değişikliği kaydedilemedi. Oturumu ve sunucu bağlantısını kontrol edin.' }
+      }
       await this.serverSession?.restore()
       await this.refreshStaffDirectory()
       return { success: true }

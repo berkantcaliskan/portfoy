@@ -1,3 +1,4 @@
+import { userStore } from './userStore'
 // 30-Day Cross-Department Trash Bin Store (Çöp Kutusu)
 // Retains deleted items from all departments and pages for 30 days before permanent removal.
 
@@ -457,6 +458,7 @@ export const trashStore = {
   },
 
   deletePermanently(trashId: string): void {
+    if (userStore.getCurrentUser()?.role !== 'ADMIN') return
     if (typeof window === 'undefined' || !window.localStorage) return
     const list = readRawTrash()
     const remaining = list.filter((x) => x.trashId !== trashId)
@@ -465,6 +467,7 @@ export const trashStore = {
   },
 
   emptyTrash(): void {
+    if (userStore.getCurrentUser()?.role !== 'ADMIN') return
     if (typeof window === 'undefined' || !window.localStorage) return
     window.localStorage.setItem(TRASH_STORAGE_KEY, '[]')
     notifyListeners()

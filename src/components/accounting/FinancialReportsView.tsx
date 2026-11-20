@@ -101,7 +101,7 @@ export const FinancialReportsView: React.FC = () => {
           <div className="text-2xl font-bold text-amber-400 mt-1">
             {formatCurrency(projectedOutflow)}
           </div>
-          <div className="text-[11px] text-[#8c857f] mt-1">Yaklaşan hakediş ve komisyonlar</div>
+          <div className="text-[11px] text-[#8c857f] mt-1">Yaklaşan ödemeler</div>
         </GlassCard>
       </div>
 
@@ -160,24 +160,25 @@ export const FinancialReportsView: React.FC = () => {
             {[
               {
                 label: 'Şantiye ve İnşaat Hakedişleri',
-                pct: payments.length > 0 ? 68 : 0,
+                pct: totalOutflow ? Math.round(payments.filter(payment => payment.status === 'PAID' && payment.category === 'CONSTRUCTION').reduce((sum, payment) => sum + payment.amount, 0) / totalOutflow * 100) : 0,
                 barColor: 'var(--accent-color, #5c6ac4)',
               },
               {
-                label: 'Satış Başarı Komisyonları',
-                pct: payments.length > 0 ? 18 : 0,
+                label: 'Diğer giderler',
+                pct: totalOutflow ? Math.round(payments.filter(payment => payment.status === 'PAID' && payment.category === 'COMMISSION').reduce((sum, payment) => sum + payment.amount, 0) / totalOutflow * 100) : 0,
                 barColor: 'color-mix(in srgb, #689f94 80%, var(--accent-color, #5c6ac4))',
               },
               {
                 label: 'Meta & Dijital Reklam Bütçesi',
-                pct: payments.length > 0 ? 10 : 0,
+                pct: totalOutflow ? Math.round(payments.filter(payment => payment.status === 'PAID' && payment.category === 'MARKETING').reduce((sum, payment) => sum + payment.amount, 0) / totalOutflow * 100) : 0,
                 barColor: 'color-mix(in srgb, #6a92b5 80%, var(--accent-color, #5c6ac4))',
               },
               {
                 label: 'Ofis ve Genel Yönetim',
-                pct: payments.length > 0 ? 4 : 0,
+                pct: totalOutflow ? Math.round(payments.filter(payment => payment.status === 'PAID' && payment.category === 'OFFICE').reduce((sum, payment) => sum + payment.amount, 0) / totalOutflow * 100) : 0,
                 barColor: 'color-mix(in srgb, #9482ba 80%, var(--accent-color, #5c6ac4))',
               },
+              { label: 'Vergi', pct: totalOutflow ? Math.round(payments.filter(payment => payment.status === 'PAID' && payment.category === 'TAX').reduce((sum, payment) => sum + payment.amount, 0) / totalOutflow * 100) : 0, barColor: 'var(--accent-color)' },
             ].map((item) => (
               <div key={item.label} className="space-y-1">
                 <div className="flex justify-between text-xs text-[#f3efe9]">

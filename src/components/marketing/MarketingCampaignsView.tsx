@@ -42,11 +42,13 @@ import { getMetaSourceChoices } from '@/services/metaSources'
 import { MetaFormSummary, MetaCapiEventLog } from '@/types/meta'
 import { Lead } from '@/types/lead'
 import { BookLogo } from '@/components/common/BookLogo'
+import { isCentralCrm } from '@/services/crmRuntime'
 
 type CampaignPlatformTab = 'all' | 'meta' | 'google' | 'web'
 
 export const MarketingCampaignsView: React.FC = () => {
   const [activePlatform, setActivePlatform] = useState<CampaignPlatformTab>('all')
+  const [showTestView, setShowTestView] = useState(false)
 
   // Meta State
   const [forms, setForms] = useState<MetaFormSummary[]>(() => metaStore.getForms())
@@ -69,16 +71,22 @@ export const MarketingCampaignsView: React.FC = () => {
   const [isGoogleConfigOpen, setIsGoogleConfigOpen] = useState(false)
   const [isAddGoogleCampOpen, setIsAddGoogleCampOpen] = useState(false)
   const googleCsvInputRef = useRef<HTMLInputElement>(null)
+  const [googleError, setGoogleError] = useState('')
+  const [googleBusy, setGoogleBusy] = useState(false)
+  const googleOperation = useRef(false)
+  const runGoogle = async (action: () => Promise<void>) => {
+    if (googleOperation.current) return
+    googleOperation.current = true; setGoogleBusy(true); setGoogleError('')
+    try { await action() }
+    catch (e) { setGoogleError(e instanceof Error ? e.message : 'Google kaydı tamamlanamadı.') }
+    finally { googleOperation.current = false; setGoogleBusy(false) }
+  }
 
   // All Leads State (for Web & Digital channels + combined stats)
   const [allLeads, setAllLeads] = useState<Lead[]>(() => leadStore.getAllRaw())
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  const [isSendingToMeta, setIsSendingToMeta] = useState(false)
-  const [sendingSingleLeadId, setSendingSingleLeadId] = useState<string | null>(null)
-  const [metaSourceSelections, setMetaSourceSelections] = useState<Record<string,string>>({})
-  const [sendBtnContextMenu, setSendBtnContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     const handleSearchSelect = (e: Event) => {
@@ -90,47 +98,6 @@ export const MarketingCampaignsView: React.FC = () => {
     window.addEventListener('demirturk:search-select', handleSearchSelect)
     return () => window.removeEventListener('demirturk:search-select', handleSearchSelect)
   }, [])
-
-  useEffect(() => {
-    if (!sendBtnContextMenu) return
-    const close = () => setSendBtnContextMenu(null)
-    window.addEventListener('click', close)
-    return () => window.removeEventListener('click', close)
-  }, [sendBtnContextMenu])
-
-  const pendingMetaLeads = allLeads.filter((l) => isLeadPendingMetaSync(l))
-
-  const handleManualSendToMeta = async (leadIds?: string[]) => {
-    if (isSendingToMeta) return
-    if (leadIds && leadIds.length === 1) {
-      setSendingSingleLeadId(leadIds[0])
-    } else {
-      setIsSendingToMeta(true)
-    }
-    try {
-      const res = await metaStore.syncLeadsToMetaManual(leadIds, metaSourceSelections)
-      setCapiLogs(metaStore.getCapiLogs())
-      setAllLeads(leadStore.getAllRaw())
-      if (res.totalCount === 0) {
-        showToast('Gönderilecek müşteri kaydı bulunamadı.')
-      } else if (res.sentCount > 0) {
-        showToast(
-          `Meta API ${res.sentCount} olayı kabul etti; ${res.failedCount} başarısız, ${res.queuedCount} bekliyor. Eşleşme ve atıf ayrıca doğrulanmalıdır.`
-        )
-      } else if (res.queuedCount > 0) {
-        showToast(
-          `${res.queuedCount} kayıt bekliyor. Otomatik gönderim yok; aynı kaydı uygun zamanda elle yeniden deneyin.`
-        )
-      } else {
-        showToast(
-          `Meta'ya veri gönderilirken hata oluştu (${res.failedCount} başarısız). Dataset ID ve CAPI anahtarını kontrol edin.`
-        )
-      }
-    } catch (error) { showToast((error as Error).message) } finally {
-      setIsSendingToMeta(false)
-      setSendingSingleLeadId(null)
-    }
-  }
 
   const showToast = (msg: string) => {
     setSuccessMsg(msg)
@@ -264,7 +231,8 @@ export const MarketingCampaignsView: React.FC = () => {
   const handleAddGoogleCampaign = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newGCampName.trim()) return
-    googleAdsStore.addCampaign({
+    void runGoogle(async () => {
+    await googleAdsStore.addCampaign({
       name: newGCampName.trim(),
       campaignType: newGCampType,
       formName: newGCampFormName.trim() || newGCampName.trim(),
@@ -272,21 +240,23 @@ export const MarketingCampaignsView: React.FC = () => {
     setNewGCampName('')
     setNewGCampFormName('')
     setIsAddGoogleCampOpen(false)
-    showToast('Yeni Google Ads kampanyası ve form uzantısı tanımlandı.')
+    showToast('Google kampanya kaydı sunucuya kaydedildi.')
+    })
   }
 
   const handleSaveGoogleConfig = (e: React.FormEvent) => {
     e.preventDefault()
-    googleAdsStore.saveConfig({
+    void runGoogle(async () => {
+    await googleAdsStore.saveConfig({
       customerId: cfgCustomerId.trim(),
       conversionId: cfgConversionId.trim(),
       conversionLabel: cfgConversionLabel.trim(),
       webhookKey: cfgWebhookKey.trim(),
       autoSyncConversions: cfgAutoSync,
     })
-    googleAdsStore.flushQueuedConversions()
     setIsGoogleConfigOpen(false)
-    showToast('Google Ads CRM ve Gelişmiş Dönüşüm (OCI) ayarları kaydedildi.')
+    showToast('Google ayarları sunucuda saklandı. Google bağlantısı ve gönderimi ayrıca doğrulanmalıdır.')
+    })
   }
 
   const handleMetaCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,12 +277,12 @@ export const MarketingCampaignsView: React.FC = () => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = () => { void runGoogle(async () => {
       const res = googleAdsStore.importLeadsFromGoogleCsvText(String(reader.result || ''))
       showToast(
         `Google Ads CSV dosyasından ${res.newCount} yeni potansiyel müşteri (${res.mergedCount} güncelleme) aktarıldı.`
       )
-    }
+    }) }
     reader.readAsText(file, 'utf-8')
     e.target.value = ''
   }
@@ -383,63 +353,6 @@ export const MarketingCampaignsView: React.FC = () => {
 
         {/* Dynamic Platform Action Buttons */}
         <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap relative">
-          {(activePlatform === 'all' || activePlatform === 'meta') && (
-            <>
-              <div
-                onContextMenu={(e) => {
-                  e.preventDefault()
-                  setSendBtnContextMenu({ x: e.clientX, y: e.clientY })
-                }}
-                className="relative inline-flex"
-              >
-                <GlassButton
-                  variant="gold"
-                  size="sm"
-                  icon={
-                    isSendingToMeta ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Send className="w-3.5 h-3.5" />
-                    )
-                  }
-                  disabled={isSendingToMeta || allLeads.length === 0}
-                  onClick={() => { setActivePlatform('meta'); showToast('Toplu geçmiş aktarımı kapalı. Listeden bir müşteriyi seçerek gönderin.') }}
-                  className="rounded-full px-3.5 text-xs font-semibold whitespace-nowrap shrink-0"
-                  title="Göndereceğiniz müşteriyi listeden seçin; otomatik geri bildirim kapalıdır"
-                >
-                  {isSendingToMeta
-                    ? "Meta'ya Gönderiliyor..."
-                    : pendingMetaLeads.length > 0
-                    ? `Veriyi Gönder (${pendingMetaLeads.length})`
-                    : 'Veriyi Gönder'}
-                </GlassButton>
-              </div>
-
-              <span className="text-[11px] text-amber-300">Meta geri bildirimi: yalnızca elle gönderim</span>
-              <GlassButton
-                variant="subtle"
-                size="sm"
-                icon={<Upload className="w-3.5 h-3.5" />}
-                onClick={() => metaCsvInputRef.current?.click()}
-                className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
-              >
-                Meta CSV Yükle
-              </GlassButton>
-              <GlassButton
-                variant="subtle"
-                size="sm"
-                icon={<Zap className="w-3.5 h-3.5" />}
-                onClick={() => {
-                  if (!selectedFormName && forms[0]?.name) setSelectedFormName(forms[0].name)
-                  setIsSimulateOpen(true)
-                }}
-                className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
-              >
-                Meta Webhook Simülasyonu
-              </GlassButton>
-            </>
-          )}
-
           {(activePlatform === 'all' || activePlatform === 'google') && (
             <>
               {activePlatform === 'google' && (
@@ -478,6 +391,8 @@ export const MarketingCampaignsView: React.FC = () => {
                 size="sm"
                 icon={<Search className="w-3.5 h-3.5" />}
                 onClick={() => setIsGoogleSimulateOpen(true)}
+                disabled={isCentralCrm()}
+                title={isCentralCrm() ? 'Canlı kullanımda örnek müşteri oluşturulmaz.' : undefined}
                 className="rounded-full px-3.5 text-xs font-semibold whitespace-nowrap shrink-0"
               >
                 Google Webhook Simülasyonu
@@ -607,47 +522,6 @@ export const MarketingCampaignsView: React.FC = () => {
             </GlassCard>
           </div>
 
-          {/* Meta'ya Veri Gönderimi Kısa Kontrol Kartı */}
-          <GlassCard className="p-4 bg-[#282522] border-[#4a443f] flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Send className="w-3.5 h-3.5 text-[#b99881]" />
-                  <span>Meta'ya Veri Gönderimi</span>
-                </span>
-              </div>
-              <p className="text-xs text-[#a69f99]">
-                Müşteri aşama ve durum güncellemelerini Meta Conversions API'ye iletin.
-              </p>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs text-[#d6beae]">
-                Gönderim Bekleyen:{' '}
-                <strong className="text-white">{pendingMetaLeads.length}</strong> müşteri
-              </span>
-              <GlassButton
-                variant="gold"
-                size="sm"
-                icon={
-                  isSendingToMeta ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Send className="w-3.5 h-3.5" />
-                  )
-                }
-                disabled={isSendingToMeta || allLeads.length === 0}
-                onClick={() => { setActivePlatform('meta'); showToast('Toplu geçmiş aktarımı kapalı. Listeden bir müşteriyi seçerek gönderin.') }}
-                className="rounded-full px-4 text-xs font-semibold"
-              >
-                {isSendingToMeta
-                  ? 'Gönderiliyor...'
-                  : pendingMetaLeads.length > 0
-                  ? `Veriyi Gönder (${pendingMetaLeads.length})`
-                  : 'Veriyi Gönder'}
-              </GlassButton>
-            </div>
-          </GlassCard>
-
           {/* All Active Forms & Campaigns */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -759,7 +633,6 @@ export const MarketingCampaignsView: React.FC = () => {
          ===================================================================== */}
       {activePlatform === 'meta' && (
         <div className="space-y-6">
-          <MetaBackendPanel />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
               <div className="text-xs text-[#a69f99]">Toplam Meta Kampanya Lead'i</div>
@@ -776,190 +649,11 @@ export const MarketingCampaignsView: React.FC = () => {
             </GlassCard>
 
             <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
-              <div className="text-xs text-sky-400">Meta Dönüşümler API (CAPI) Durumu</div>
-              <div className="text-sm font-semibold text-white mt-2 flex items-center gap-2">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    'bg-amber-400'
-                  }`}
-                />
-                {metaConfig.datasetId
-                  ? `Yapılandırılmış Dataset: ${metaConfig.datasetId} (teslim doğrulanmadı)`
-                  : 'Dataset ID Bekleniyor (Ayarlar > Meta)'}
-              </div>
-              <div className="text-[11px] text-[#8c857f] mt-1">
-                {capiLogs.length} CAPI Sinyali • Sunucuda SHA-256 ile eşleştirme
-              </div>
+              <div className="text-xs text-sky-400">Meta Formları</div>
+              <div className="text-2xl font-bold text-white mt-1">{forms.length}</div>
+              <div className="text-[11px] text-[#8c857f] mt-1">CRM'de başvurusu bulunan formlar</div>
             </GlassCard>
           </div>
-
-          {/* Meta'ya Veri Gönderimi & Dönüşümler API (CAPI) Sinyalleri */}
-          <GlassCard className="p-5 bg-[#282522] border-[#4a443f] space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Send className="w-4 h-4 text-[#b99881]" />
-                    <span>Meta'ya Veri Gönderimi</span>
-                  </h3>
-                </div>
-                <p className="text-xs text-[#a69f99]">
-                  Müşteri aşama ve durum güncellemelerini Meta Conversions API'ye iletin.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {capiLogs.some((l) => l.status === 'QUEUED') && (
-                  <GlassButton
-                    variant="subtle"
-                    size="sm"
-                    onClick={async () => { try { await metaStore.flushQueuedCapiEvents() } catch (error) { showToast((error as Error).message) } }}
-                    className="rounded-full px-3.5 text-xs font-semibold"
-                  >
-                    Teslim durumunu yenile
-                  </GlassButton>
-                )}
-                <GlassButton
-                  variant="gold"
-                  size="sm"
-                  icon={
-                    isSendingToMeta ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Send className="w-3.5 h-3.5" />
-                    )
-                  }
-                  disabled={isSendingToMeta || allLeads.length === 0}
-                  onClick={() => { setActivePlatform('meta'); showToast('Toplu geçmiş aktarımı kapalı. Listeden bir müşteriyi seçerek gönderin.') }}
-                  className="rounded-full px-4 text-xs font-semibold"
-                >
-                  {isSendingToMeta
-                    ? "Meta'ya Gönderiliyor..."
-                    : pendingMetaLeads.length > 0
-                    ? `Veriyi Gönder (${pendingMetaLeads.length} Müşteri)`
-                    : 'Geçmiş toplu aktarımı kapalı'}
-                </GlassButton>
-              </div>
-            </div>
-
-            {/* Gönderim Bekleyen Müşteri Durumları */}
-            <div className="p-3.5 rounded-2xl bg-[#24211f] border border-[#4a443f] space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-white">
-                  Meta'ya Gönderilmeyi Bekleyen Güncel Aşama & Durumlar ({pendingMetaLeads.length})
-                </span>
-                <span className="text-[11px] text-[#a69f99]">
-                  Toplam CRM Adayı: {allLeads.length}
-                </span>
-              </div>
-
-              {pendingMetaLeads.length === 0 ? (
-                <div className="py-3 text-xs text-emerald-400 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>
-                    Bu görünümde gönderime uygun bekleyen müşteri yok. Sunucu geçmişini yenileyerek API teslim sonuçlarını kontrol edin.
-                  </span>
-                </div>
-              ) : (
-                <div className="divide-y divide-[#4a443f]/50 max-h-[210px] overflow-y-auto pr-1">
-                  {pendingMetaLeads.slice(0, 25).map((lead) => {
-                    const target = getLeadTargetMetaEvent(lead)
-                    const isRowSending = sendingSingleLeadId === lead.id
-                    const sources = getMetaSourceChoices(lead)
-                    const sourceId = metaSourceSelections[lead.id] || (sources.length === 1 ? sources[0].id : '')
-                    return (
-                      <div
-                        key={lead.id}
-                        className="py-2 flex flex-wrap items-center justify-between gap-2 text-xs"
-                      >
-                        <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          <span className="font-bold text-white truncate">{lead.fullName}</span>
-                          <span className="text-[11px] text-[#8c857f] font-mono">{lead.phone}</span>
-                          <span className="text-[#8c857f]">➔</span>
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#34302d] text-[#d6beae] border border-[#4a443f]">
-                            {target.signalLabel} ({target.eventName})
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={isSendingToMeta || isRowSending || !sourceId}
-                          onClick={() => void handleManualSendToMeta([lead.id])}
-                          className="px-3 py-1 rounded-full bg-[#b99881]/15 hover:bg-[#b99881] text-[#d6beae] hover:text-white border border-[#b99881]/40 text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Send className="w-3 h-3" />
-                          <span>{isRowSending ? 'Gönderiliyor...' : 'Veriyi Gönder'}</span>
-                        </button>
-                        <select aria-label={`${lead.fullName} için Meta başvurusu`} value={sourceId}
-                          onChange={e=>setMetaSourceSelections(old=>({...old,[lead.id]:e.target.value}))}
-                          className="w-full px-3 py-1.5 rounded-xl bg-[#1e1c1a] border border-[#4a443f] text-xs text-white">
-                          <option value="">Sonucun ait olduğu form / başvuruyu seçin</option>
-                          {sources.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
-                        </select>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            {capiLogs.length === 0 ? (
-              <div className="py-5 text-center text-xs text-[#8c857f] border border-dashed border-[#4a443f] rounded-2xl">
-                Henüz Meta'ya gönderilmiş bir dönüşüm sinyali yok. Yukarıdaki{' '}
-                <strong>Veriyi Gönder</strong> butonuna tıkladığınızda müşteri durumu ve aşaması Meta'ya iletilir ve burada listelenir.
-              </div>
-            ) : (
-              <div className="divide-y divide-[#4a443f]/50 max-h-[220px] overflow-y-auto pr-1">
-                {capiLogs.slice(0, 15).map((log) => (
-                  <div
-                    key={log.id}
-                    className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
-                          log.eventName === 'QualifiedLead' || log.eventName === 'Purchase'
-                            ? 'bg-emerald-500/12 text-emerald-400 border-emerald-500/30'
-                            : log.eventName === 'DisqualifiedLead'
-                            ? 'bg-rose-500/12 text-rose-400 border-rose-500/30'
-                            : 'bg-sky-500/12 text-sky-300 border-sky-500/30'
-                        }`}
-                      >
-                        {log.eventName}
-                      </span>
-                      <span className="font-bold text-white truncate">{log.leadName}</span>
-                      <span className="text-[#8c857f]">•</span>
-                      <span className="text-[#d6beae] font-medium">{log.signalLabel}</span>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[11px] text-[#8c857f] font-mono">
-                        {new Date(log.sentAt).toLocaleTimeString('tr-TR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          log.status === 'SENT'
-                            ? 'bg-emerald-500/15 text-emerald-400'
-                            : log.status === 'QUEUED'
-                            ? 'bg-amber-500/15 text-amber-300'
-                            : 'bg-rose-500/15 text-rose-400'
-                        }`}
-                        title={log.errorMessage || ''}
-                      >
-                        {log.status === 'SENT'
-                          ? "Meta'ya İletildi"
-                          : log.status === 'QUEUED'
-                          ? 'Kuyrukta'
-                          : 'Hata'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
 
           {/* Meta Kampanya ve Form Kartları */}
           {forms.length === 0 ? (
@@ -1025,6 +719,9 @@ export const MarketingCampaignsView: React.FC = () => {
          ===================================================================== */}
       {activePlatform === 'google' && (
         <div className="space-y-6">
+          {(googleError || googleAdsStore.getReadError()) && <p role="alert" className="rounded-xl border border-rose-400/30 p-3 text-sm text-rose-400">{googleError || googleAdsStore.getReadError()} <button className="underline" onClick={() => { setGoogleError(''); void googleAdsStore.refreshFromBackend() }}>Sunucudan yenile</button></p>}
+          {googleBusy && <p role="status" className="text-sm">Sunucuya kaydediliyor…</p>}
+          {googleAdsStore.localRecordCount() > 0 && <button disabled={googleBusy} className="rounded-full border border-[#4a443f] px-4 py-2 text-xs" onClick={() => void runGoogle(async () => { const count = await googleAdsStore.importLocalRecords(); showToast(`${count.campaigns} kampanya ve ${count.logs} kuyruk kaydı sunucuda birleştirildi. Yerel kopyalar korundu.`) })}>Bu bilgisayardaki Google kayıtlarını sunucuyla birleştir ({googleAdsStore.localRecordCount()})</button>}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <GlassCard className="p-4 bg-[#282522] border-[#4a443f]">
               <div className="text-xs text-[#a69f99]">Toplam Google Ads Lead'i</div>
@@ -1051,12 +748,12 @@ export const MarketingCampaignsView: React.FC = () => {
               <div className="text-sm font-semibold text-white mt-2 flex items-center gap-2">
                 <span
                   className={`w-2.5 h-2.5 rounded-full ${
-                    googleConfig.conversionId ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                    googleConfig.isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
                   }`}
                 />
-                {googleConfig.conversionId
+                {googleConfig.isConnected
                   ? `Hesap: ${googleConfig.customerId || googleConfig.conversionId}`
-                  : 'Webhook Hazır • Conversion ID Bekleniyor'}
+                  : `Bağlantı doğrulanmadı${googleConfig.customerId ? ' · ' + googleConfig.customerId : ''}`}
               </div>
               <div className="text-[11px] text-[#8c857f] mt-1">
                 {googleLogs.length} Dönüşüm Sinyali • GCLID & SHA-256 Eşleştirme
@@ -1075,7 +772,7 @@ export const MarketingCampaignsView: React.FC = () => {
                   </span>
                 </h3>
                 <p className="text-xs text-[#a69f99] mt-0.5">
-                  Google Ads kampanya ayarlarındaki <strong>Potansiyel Müşteri Formu Uzantısı &gt; Webhook Entegrasyonu</strong> bölümüne aşağıdaki URL ve anahtarı yapıştırarak Google reklamlarından gelen formları anında CRM'e düşürebilirsiniz.
+                  Kampanya ve bağlantı ayarları şirket sunucusunda saklanır. Otomatik form alımı ve dönüşüm gönderimi, gerçek Google bağlantısı doğrulandıktan sonra etkinleştirilmelidir.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1083,12 +780,11 @@ export const MarketingCampaignsView: React.FC = () => {
                   variant="subtle"
                   size="sm"
                   onClick={() => {
-                    googleAdsStore.sendTestConversion()
-                    showToast('Google Ads test dönüşüm sinyali (QualifiedLead + GCLID) oluşturuldu.')
+                    void runGoogle(async () => { await googleAdsStore.sendTestConversion(); showToast('Kontrol kaydı sunucuda saklandı. Google’a dönüşüm gönderilmedi.') })
                   }}
                   className="rounded-full px-3.5 text-xs font-semibold"
                 >
-                  Test Sinyali Gönder
+                  Sunucu Kaydını Kontrol Et
                 </GlassButton>
                 <GlassButton
                   variant="gold"
@@ -1170,8 +866,7 @@ export const MarketingCampaignsView: React.FC = () => {
                   variant="subtle"
                   size="sm"
                   onClick={() => {
-                    const c = googleAdsStore.flushQueuedConversions()
-                    showToast(`${c} Google Ads dönüşüm sinyali gönderildi.`)
+                    void runGoogle(async () => { const c = googleAdsStore.flushQueuedConversions(); showToast(`${c} Google Ads dönüşüm sinyali gönderildi.`) })
                   }}
                   className="rounded-full px-3.5 text-xs font-semibold"
                 >
@@ -1267,11 +962,12 @@ export const MarketingCampaignsView: React.FC = () => {
                       >
                         {camp.status === 'ACTIVE' ? 'Aktif' : 'Duraklatıldı'}
                       </GlassBadge>
-                      {camp.id.startsWith('gcamp-1') && (
+                      {camp.id.startsWith('gcamp-') && (
                         <>
                           <button
                             type="button"
-                            onClick={() => googleAdsStore.toggleCampaignStatus(camp.id)}
+                            disabled={googleBusy}
+                            onClick={() => void runGoogle(async () => { await googleAdsStore.toggleCampaignStatus(camp.id) })}
                             className="p-1 rounded-lg hover:bg-[#34302d] text-[#8c857f] hover:text-white cursor-pointer"
                             title={camp.status === 'ACTIVE' ? 'Duraklat' : 'Etkinleştir'}
                           >
@@ -1283,7 +979,8 @@ export const MarketingCampaignsView: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => googleAdsStore.deleteCampaign(camp.id)}
+                            disabled={googleBusy}
+                            onClick={() => void runGoogle(async () => { await googleAdsStore.deleteCampaign(camp.id) })}
                             className="p-1 rounded-lg hover:bg-rose-500/15 text-[#8c857f] hover:text-rose-500 cursor-pointer"
                             title="Kampanyayı Sil"
                           >
@@ -1469,6 +1166,38 @@ export const MarketingCampaignsView: React.FC = () => {
           </GlassCard>
         </div>
       )}
+
+      {(activePlatform === 'meta' || activePlatform === 'all') && <section className="pt-2">
+        <button type="button" aria-expanded={showTestView} aria-controls="campaign-test-view"
+          onClick={() => setShowTestView(value => !value)}
+          className="text-xs text-[var(--tertiary-white)] underline-offset-4 hover:underline">Test Görünümü</button>
+        {showTestView && <div id="campaign-test-view" className="mt-5 space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+              <GlassButton
+                variant="subtle"
+                size="sm"
+                icon={<Upload className="w-3.5 h-3.5" />}
+                onClick={() => metaCsvInputRef.current?.click()}
+                className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
+              >
+                Meta CSV Yükle
+              </GlassButton>
+              <GlassButton
+                variant="subtle"
+                size="sm"
+                icon={<Zap className="w-3.5 h-3.5" />}
+                onClick={() => {
+                  if (!selectedFormName && forms[0]?.name) setSelectedFormName(forms[0].name)
+                  setIsSimulateOpen(true)
+                }}
+                className="rounded-full px-3 text-xs font-semibold whitespace-nowrap shrink-0"
+              >
+                Meta Webhook Simülasyonu
+              </GlassButton>
+          </div>
+          <MetaBackendPanel embedded />
+        </div>}
+      </section>}
 
       {/* =====================================================================
           MODALS (Meta Simulate, Google Simulate, Google Config, Add Google Camp)
@@ -1746,9 +1475,9 @@ export const MarketingCampaignsView: React.FC = () => {
         onClose={() => setIsGoogleConfigOpen(false)}
         title="Google Ads CRM Bağlantısı: Webhook & Dönüşüm Ayarları"
       >
-        <form onSubmit={handleSaveGoogleConfig} className="space-y-4">
+        <form onSubmit={handleSaveGoogleConfig} className="space-y-4"><fieldset disabled={googleBusy} className="space-y-4">{googleError && <p role="alert" className="text-sm text-rose-400">{googleError}</p>}
           <p className="text-xs text-[#a69f99]">
-            Google Ads hesabınızı CRM'e bağlayarak hem Potansiyel Müşteri Formu Uzantılarından gelen verileri otomatik alabilir hem de GCLID ile Çevrimdışı Dönüşüm (Offline Conversion Import) gönderebilirsiniz.
+            Google Ads hesap bilgilerinizi şirket sunucusunda saklayın. Bu form tek başına Google bağlantısını veya dönüşüm teslimatını doğrulamaz. Kayıtlı gizli anahtar tarayıcıya geri gönderilmez; boş bırakılırsa korunur.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1810,6 +1539,7 @@ export const MarketingCampaignsView: React.FC = () => {
             <input
               type="checkbox"
               checked={cfgAutoSync}
+              disabled={isCentralCrm()}
               onChange={(e) => setCfgAutoSync(e.target.checked)}
               className="rounded border-[#4a443f]"
             />
@@ -1835,7 +1565,7 @@ export const MarketingCampaignsView: React.FC = () => {
               Kaydet
             </GlassButton>
           </div>
-        </form>
+        </fieldset></form>
       </GlassModal>
 
       {/* ADD GOOGLE CAMPAIGN MODAL */}
@@ -1844,7 +1574,7 @@ export const MarketingCampaignsView: React.FC = () => {
         onClose={() => setIsAddGoogleCampOpen(false)}
         title="Yeni Google Ads Kampanyası Tanımla"
       >
-        <form onSubmit={handleAddGoogleCampaign} className="space-y-4">
+        <form onSubmit={handleAddGoogleCampaign} className="space-y-4"><fieldset disabled={googleBusy} className="space-y-4">{googleError && <p role="alert" className="text-sm text-rose-400">{googleError}</p>}
           <div>
             <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
               Kampanya Adı *
@@ -1907,7 +1637,7 @@ export const MarketingCampaignsView: React.FC = () => {
               Kampanya Oluştur
             </GlassButton>
           </div>
-        </form>
+        </fieldset></form>
       </GlassModal>
     </div>
   )

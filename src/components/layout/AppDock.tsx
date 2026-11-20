@@ -75,7 +75,8 @@ const STORAGE_KEY_DOCK_ENABLED = 'demirturk_dock_enabled'
 const STORAGE_KEY_QUICK_ACCESS = 'demirturk_start_quick_access_v3'
 const STORAGE_KEY_QUICK_CALENDAR_SEEDED = 'demirturk_quick_calendar_seeded_v1'
 
-const DEFAULT_QUICK_ACCESS_IDS = ['calendar', 'contacts', 'payments', 'notepad', 'calculator', 'commission']
+const DEFAULT_QUICK_ACCESS_IDS = ['calendar', 'contacts', 'payments', 'notepad', 'calculator']
+const RETIRED_TOOL_IDS = new Set(['commission', 'deedFee'])
 
 export interface StartMenuItem {
   id: string
@@ -102,10 +103,8 @@ const START_MENU_ITEMS: StartMenuItem[] = [
   { id: 'payments', name: 'Ödemeler', icon: Wallet, type: 'tool', toolId: 'payments' },
   { id: 'notepad', name: 'Not Defteri', icon: FileText, type: 'tool', toolId: 'notepad' },
   { id: 'calculator', name: 'Hesap Makinesi', icon: Calculator, type: 'tool', toolId: 'calculator' },
-  { id: 'commission', name: 'Satış Primi', icon: TurkishLira, type: 'tool', toolId: 'commission' },
   { id: 'currency', name: 'Döviz & Kur', icon: ArrowRightLeft, type: 'tool', toolId: 'currency' },
   { id: 'mortgage', name: 'Konut Kredisi', icon: TrendingUp, type: 'tool', toolId: 'mortgage' },
-  { id: 'deedFee', name: 'Tapu Harcı', icon: PieChart, type: 'tool', toolId: 'deedFee' },
   { id: 'whatsapp', name: 'WhatsApp', icon: WhatsAppIcon, type: 'tool', toolId: 'whatsapp' },
   { id: 'sqmPrice', name: 'm² Birim Fiyat', icon: Layers, type: 'tool', toolId: 'sqmPrice' },
   { id: 'roi', name: 'Kira Amortisman', icon: Scale, type: 'tool', toolId: 'roi' },
@@ -189,6 +188,7 @@ export const AppDock: React.FC<AppDockProps> = ({
             .filter(
               (d) =>
                 !d.tab &&
+                !RETIRED_TOOL_IDS.has(d.toolId || '') &&
                 d.id !== 'dock-portfolio' &&
                 d.id !== 'dock-crm' &&
                 d.id !== 'dock-shared' &&
@@ -395,7 +395,8 @@ export const AppDock: React.FC<AppDockProps> = ({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const distFromBottom = window.innerHeight - e.clientY
-      const distFromCenter = Math.abs(e.clientX - window.innerWidth / 2)
+      const sidebarWidth = window.innerWidth >= 768 ? (isSidebarCollapsed ? 68 : 216) : 0
+      const distFromCenter = Math.abs(e.clientX - (window.innerWidth + sidebarWidth) / 2)
       // Only reveal dock when cursor enters the narrow centered trigger zone around the dock line
       if (distFromBottom <= 18 && distFromCenter <= 110) {
         setIsVisible(true)
@@ -405,7 +406,7 @@ export const AppDock: React.FC<AppDockProps> = ({
 
     window.addEventListener('mousemove', handleMouseMove)
     return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [isStartMenuOpen])
+  }, [isStartMenuOpen, isSidebarCollapsed])
 
   // Initial timer on mount
   useEffect(() => {
@@ -707,7 +708,7 @@ export const AppDock: React.FC<AppDockProps> = ({
           setIsVisible(true)
           resetHideTimer()
         }}
-        className={`fixed bottom-1.5 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 cursor-pointer group py-1 px-2 ${
+        className={`fixed bottom-1.5 left-1/2 ${isSidebarCollapsed ? 'md:left-[calc(50%+34px)]' : 'md:left-[calc(50%+108px)]'} -translate-x-1/2 z-40 transition-all duration-300 cursor-pointer group py-1 px-2 ${
           isVisible ? 'opacity-0 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'
         }`}
         title="Görev Çubuğunu Göster"
@@ -741,7 +742,7 @@ export const AppDock: React.FC<AppDockProps> = ({
         ref={dockRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`fixed bottom-3.5 left-1/2 -translate-x-1/2 ${
+        className={`fixed bottom-3.5 left-1/2 -translate-x-1/2 ${isSidebarCollapsed ? 'md:left-[calc(50%+34px)]' : 'md:left-[calc(50%+108px)]'} ${
           isStartMenuOpen ? 'z-50' : 'z-40'
         } transition-all duration-300 ease-out transform ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'
@@ -762,7 +763,8 @@ export const AppDock: React.FC<AppDockProps> = ({
                 duration: 0.28,
                 ease: [0.16, 1, 0.3, 1],
               }}
-              className={`dropdown-panel absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 w-[calc(100vw-24px)] ${
+              style={{left:'50%',translate:'-50% 0'}}
+              className={`start-menu-panel dropdown-panel absolute bottom-full mb-3.5 w-[calc(100vw-24px)] ${
                 startMenuGrid === '4x5'
                   ? 'sm:w-[440px]'
                   : startMenuGrid === '5x5'
@@ -1009,7 +1011,7 @@ export const AppDock: React.FC<AppDockProps> = ({
             }}
           >
             <button
-              type="button"
+              type="button" aria-label="Başlat" aria-expanded={isStartMenuOpen}
               onClick={() => {
                 setHoveredTooltipId(null)
                 if (typeof document !== 'undefined' && document.activeElement) {

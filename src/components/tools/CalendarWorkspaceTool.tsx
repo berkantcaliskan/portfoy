@@ -24,11 +24,9 @@ import {
   calendarStore,
   CalendarEvent,
   CalendarEventCategory,
-  CalendarVisibilityScope,
   CATEGORY_META,
 } from '@/services/calendarStore'
 import { userStore, AppUser } from '@/services/userStore'
-import { CANONICAL_DEPARTMENTS, Department } from '@/types/department'
 import { GlassButton } from '@/components/ui/GlassButton'
 
 const MONTH_NAMES_TR = [
@@ -48,13 +46,11 @@ const MONTH_NAMES_TR = [
 
 const WEEKDAYS_TR = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 
-type ScopeFilter = 'ALL' | 'MY_DEPT' | 'INTER_DEPT' | 'COMPANY' | 'PERSONAL_GROUP' | 'AUTO_SYNCED'
 
-export const CalendarWorkspaceTool: React.FC = () => {
+export function CalendarWorkspaceTool({payments}:{payments: {id:string;item:string;amount:number;date:string}[]}) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => userStore.getCurrentUser())
-  const [allUsers, setAllUsers] = useState<AppUser[]>(() => userStore.getAll())
   const [events, setEvents] = useState<CalendarEvent[]>(() =>
-    calendarStore.getVisibleEvents(userStore.getCurrentUser())
+    calendarStore.getPersonalEvents(userStore.getCurrentUser())
   )
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), [])
@@ -63,8 +59,6 @@ export const CalendarWorkspaceTool: React.FC = () => {
     return new Date(d.getFullYear(), d.getMonth(), 1)
   })
   const [selectedDateIso, setSelectedDateIso] = useState<string | null>(null)
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('ALL')
-  const [deptFilter, setDeptFilter] = useState<Department | 'ALL'>('ALL')
 
   // Oluşturma / Düzenleme Modal-Panel Durumu
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -77,20 +71,19 @@ export const CalendarWorkspaceTool: React.FC = () => {
   const [formTime, setFormTime] = useState('14:00')
   const [formEndTime, setFormEndTime] = useState('15:00')
   const [formLocation, setFormLocation] = useState('')
-  const [formCategory, setFormCategory] = useState<CalendarEventCategory>('DEPARTMENT_PLAN')
-  const [formVisibility, setFormVisibility] = useState<CalendarVisibilityScope>('DEPARTMENT')
-  const [formDepartments, setFormDepartments] = useState<Department[]>(() =>
-    currentUser?.department ? [currentUser.department] : ['Satış']
-  )
-  const [formUserIds, setFormUserIds] = useState<string[]>([])
+  const [formCategory, setFormCategory] = useState<CalendarEventCategory>('TASK')
+
+  useEffect(() => {
+    calendarStore.setToolPayments(currentUser?.id || '',payments)
+  },[currentUser?.id,payments])
 
   useEffect(() => {
     const refresh = () => {
       const u = userStore.getCurrentUser()
       setCurrentUser(u)
-      setAllUsers(userStore.getAll())
-      setEvents(calendarStore.getVisibleEvents(u))
+      setEvents(calendarStore.getPersonalEvents(u))
     }
+    refresh()
     const unsubCal = calendarStore.subscribe(refresh)
     const unsubUsr = userStore.subscribe(refresh)
     return () => {
@@ -99,6 +92,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
     }
   }, [])
 
+  const filteredEvents = events
   const year = viewMonthDate.getFullYear()
   const month = viewMonthDate.getMonth()
 
@@ -118,7 +112,6 @@ export const CalendarWorkspaceTool: React.FC = () => {
 
   // Yeni Plan Ekleme Formunu Aç
   const handleOpenNewForm = (presetDate?: string) => {
-    const defaultDept: Department = currentUser?.department || 'Satış'
     setEditingEvent(null)
     setFormTitle('')
     setFormDescription('')
@@ -126,10 +119,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
     setFormTime('14:00')
     setFormEndTime('15:00')
     setFormLocation('')
-    setFormCategory('DEPARTMENT_PLAN')
-    setFormVisibility('DEPARTMENT')
-    setFormDepartments([defaultDept])
-    setFormUserIds(currentUser ? [currentUser.id] : [])
+    setFormCategory('TASK')
     setIsFormOpen(true)
   }
 
@@ -143,85 +133,17 @@ export const CalendarWorkspaceTool: React.FC = () => {
     setFormEndTime(ev.endTime || '')
     setFormLocation(ev.location || '')
     setFormCategory(ev.category)
-    setFormVisibility(ev.visibilityScope)
-    setFormDepartments(
-      ev.sharedDepartments && ev.sharedDepartments.length > 0
-        ? [...ev.sharedDepartments]
-        : [currentUser?.department || 'Satış']
-    )
-    setFormUserIds(
-      ev.sharedUserIds && ev.sharedUserIds.length > 0
-        ? [...ev.sharedUserIds]
-        : currentUser
-        ? [currentUser.id]
-        : []
-    )
     setIsFormOpen(true)
   }
 
-  const toggleDepartmentSelection = (dept: Department) => {
-    setFormDepartments((prev) => {
-      if (prev.includes(dept)) {
-        if (prev.length === 1) return prev // En az 1 departman kalsın
-        return prev.filter((d) => d !== dept)
-      }
-      return [...prev, dept]
-    })
-  }
-
-  const toggleUserSelection = (userId: string) => {
-    setFormUserIds((prev) => {
-      if (prev.includes(userId)) {
-        return prev.filter((id) => id !== userId)
-      }
-      return [...prev, userId]
-    })
-  }
 
   const [calendarSaving, setCalendarSaving] = useState(false)
   const [calendarError, setCalendarError] = useState('')
 
   const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formTitle.trim() || calendarSaving) return
+    if (!formTitle.trim() || calendarSaving || !currentUser) return
     setCalendarError('')
-
-    // Seçilen kullanıcıların isimlerini bul
-    const selectedUsers = allUsers.filter((u) => formUserIds.includes(u.id))
-    const sharedUserNames = selectedUsers.map((u) => u.fullName)
-
-    // Kategori ve görünürlük uyumunu sağla
-    let finalCategory = formCategory
-    if (formVisibility === 'COMPANY' && formCategory === 'DEPARTMENT_PLAN') {
-      finalCategory = 'COMPANY_EVENT'
-    } else if (
-      formVisibility === 'DEPARTMENT' &&
-      formDepartments.length > 1 &&
-      formCategory === 'DEPARTMENT_PLAN'
-    ) {
-      finalCategory = 'INTER_DEPARTMENT'
-    }
-
-    const finalDepts: Department[] =
-      formVisibility === 'COMPANY'
-        ? [...CANONICAL_DEPARTMENTS]
-        : formVisibility === 'DEPARTMENT'
-        ? formDepartments
-        : []
-
-    const finalUserIds =
-      formVisibility === 'PERSONAL'
-        ? currentUser
-          ? [currentUser.id]
-          : []
-        : formUserIds
-
-    const finalUserNames =
-      formVisibility === 'PERSONAL'
-        ? currentUser
-          ? [currentUser.fullName]
-          : []
-        : sharedUserNames
 
     if (editingEvent) {
       setCalendarSaving(true)
@@ -233,11 +155,11 @@ export const CalendarWorkspaceTool: React.FC = () => {
           time: formTime || '14:00',
           endTime: formEndTime || undefined,
           location: formLocation.trim(),
-          category: finalCategory,
-          visibilityScope: formVisibility,
-          sharedDepartments: finalDepts,
-          sharedUserIds: finalUserIds,
-          sharedUserNames: finalUserNames,
+          category: formCategory,
+          visibilityScope: 'PERSONAL',
+          sharedDepartments: [],
+          sharedUserIds: [currentUser.id],
+          sharedUserNames: [currentUser.fullName],
         })
       } catch (error) {
         setCalendarError(error instanceof Error ? error.message : 'Takvim kaydı güncellenemedi.')
@@ -246,6 +168,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
         setCalendarSaving(false)
       }
     } else {
+      setCalendarSaving(true)
       try {
       await calendarStore.addEvent(
         {
@@ -255,15 +178,15 @@ export const CalendarWorkspaceTool: React.FC = () => {
           time: formTime || '14:00',
           endTime: formEndTime || undefined,
           location: formLocation.trim(),
-          category: finalCategory,
-          visibilityScope: formVisibility,
-          sharedDepartments: finalDepts,
-          sharedUserIds: finalUserIds,
-          sharedUserNames: finalUserNames,
+          category: formCategory,
+          visibilityScope: 'PERSONAL',
+          sharedDepartments: [],
+          sharedUserIds: [currentUser.id],
+          sharedUserNames: [currentUser.fullName],
         },
         currentUser
       )
-      }catch(error){setCalendarError(error instanceof Error?error.message:"Takvim kaydı başarısız.");return}
+      }catch(error){setCalendarError(error instanceof Error?error.message:"Takvim kaydı başarısız.");return} finally {setCalendarSaving(false)}
     }
 
     setIsFormOpen(false)
@@ -288,38 +211,6 @@ export const CalendarWorkspaceTool: React.FC = () => {
     }
   }
 
-  // Filtrelenmiş etkinlikler
-  const filteredEvents = useMemo(() => {
-    return events.filter((ev) => {
-      if (scopeFilter === 'MY_DEPT') {
-        const myDept = currentUser?.department || 'Satış'
-        if (ev.visibilityScope !== 'DEPARTMENT' || !ev.sharedDepartments.includes(myDept)) {
-          return false
-        }
-      } else if (scopeFilter === 'INTER_DEPT') {
-        if (ev.visibilityScope !== 'DEPARTMENT' || ev.sharedDepartments.length < 2) {
-          return false
-        }
-      } else if (scopeFilter === 'COMPANY') {
-        if (ev.visibilityScope !== 'COMPANY') return false
-      } else if (scopeFilter === 'PERSONAL_GROUP') {
-        if (ev.visibilityScope !== 'PERSONAL' && ev.visibilityScope !== 'USERS') return false
-      } else if (scopeFilter === 'AUTO_SYNCED') {
-        if (!ev.isAutoSynced) return false
-      }
-
-      if (deptFilter !== 'ALL') {
-        if (
-          ev.visibilityScope !== 'COMPANY' &&
-          !ev.sharedDepartments.includes(deptFilter)
-        ) {
-          return false
-        }
-      }
-
-      return true
-    })
-  }, [events, scopeFilter, deptFilter, currentUser?.department])
 
   // Takvim Hücreleri
   const calendarDays = useMemo(() => {
@@ -361,91 +252,12 @@ export const CalendarWorkspaceTool: React.FC = () => {
     return filteredEvents.filter((ev) => ev.date.startsWith(monthPrefix))
   }, [filteredEvents, selectedDateIso, year, month])
 
-  const renderSharingBadge = (ev: CalendarEvent) => {
-    if (ev.visibilityScope === 'COMPANY') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-          <Globe className="w-2.5 h-2.5" />
-          <span>Tüm Şirket</span>
-        </span>
-      )
-    }
-    if (ev.visibilityScope === 'PERSONAL') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-          <Lock className="w-2.5 h-2.5" />
-          <span>Kişisel (Sadece Ben)</span>
-        </span>
-      )
-    }
-    if (ev.visibilityScope === 'USERS') {
-      const names =
-        ev.sharedUserNames && ev.sharedUserNames.length > 0
-          ? ev.sharedUserNames.join(', ')
-          : 'Seçili Kişi / Grup'
-      return (
-        <span
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 max-w-[220px] truncate"
-          title={`Paylaşılan Kişiler: ${names}`}
-        >
-          <Users className="w-2.5 h-2.5 shrink-0" />
-          <span className="truncate">Grup / Kişi: {names}</span>
-        </span>
-      )
-    }
-
-    // DEPARTMENT (Tekil veya Çoğul)
-    const depts = ev.sharedDepartments || []
-    if (depts.length > 1) {
-      return (
-        <span
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30"
-          title={`Departmanlar Arası: ${depts.join(', ')}`}
-        >
-          <Layers className="w-2.5 h-2.5 shrink-0" />
-          <span>Departmanlar Arası ({depts.join(' + ')})</span>
-        </span>
-      )
-    }
-
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/15 text-teal-300 border border-teal-500/30">
-        <Building2 className="w-2.5 h-2.5 shrink-0" />
-        <span>{depts[0] || ev.createdByDepartment} Departmanı</span>
-      </span>
-    )
-  }
 
   return (
     <div className="space-y-2.5">
       {calendarError && <p role="alert" className="text-sm text-red-500">{calendarError}</p>}
       {/* Üst Aksiyon ve Kapsam Filtre Barı */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {(
-            [
-              { id: 'ALL', label: 'Tümü' },
-              { id: 'MY_DEPT', label: `${currentUser?.department || 'Departman'} Planları` },
-              { id: 'INTER_DEPT', label: 'Departmanlar Arası' },
-              { id: 'COMPANY', label: 'Tüm Şirket' },
-              { id: 'PERSONAL_GROUP', label: 'Kişisel / Grup' },
-              { id: 'AUTO_SYNCED', label: 'Otomatik Kayıtlar' },
-            ] as { id: ScopeFilter; label: string }[]
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setScopeFilter(tab.id)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border ${
-                scopeFilter === tab.id
-                  ? 'bg-[#b99881] text-white border-[#b99881]'
-                  : 'bg-[#24211f] text-[#a69f99] border-[#4a443f] hover:text-white'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
 
         <GlassButton
           variant="gold"
@@ -456,38 +268,6 @@ export const CalendarWorkspaceTool: React.FC = () => {
         >
           Yeni Plan Oluştur
         </GlassButton>
-      </div>
-
-      {/* Departman Bazlı Hızlı Filtre Şeridi */}
-      <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
-        <div className="flex flex-wrap items-center gap-1">
-          <span className="text-[11px] font-semibold text-[#8c857f] mr-1">Departman:</span>
-          <button
-            type="button"
-            onClick={() => setDeptFilter('ALL')}
-            className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer border ${
-              deptFilter === 'ALL'
-                ? 'bg-[#b99881] text-white border-[#b99881] font-bold'
-                : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
-            }`}
-          >
-            Tüm Departmanlar
-          </button>
-          {CANONICAL_DEPARTMENTS.map((dept) => (
-            <button
-              key={dept}
-              type="button"
-              onClick={() => setDeptFilter(dept)}
-              className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer border ${
-                deptFilter === dept
-                  ? 'bg-[#b99881] text-white border-[#b99881] font-bold'
-                  : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
-              }`}
-            >
-              {dept}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* PLAN EKLEME / DÜZENLEME PANELİ */}
@@ -543,9 +323,6 @@ export const CalendarWorkspaceTool: React.FC = () => {
                 onChange={(e) => setFormCategory(e.target.value as CalendarEventCategory)}
                 className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white"
               >
-                <option value="DEPARTMENT_PLAN">Departman Planı</option>
-                <option value="INTER_DEPARTMENT">Departmanlar Arası Plan</option>
-                <option value="COMPANY_EVENT">Tüm Şirket Planı</option>
                 <option value="APPOINTMENT">Randevu</option>
                 <option value="MEETING">Görüşme / Toplantı</option>
                 <option value="FOLLOW_UP">Müşteri Takip / Arama</option>
@@ -604,162 +381,6 @@ export const CalendarWorkspaceTool: React.FC = () => {
             </div>
           </div>
 
-          {/* GÖRÜNÜRLÜK VE PAYLAŞIM SEÇİMİ (Departman Tekil/Çoğul, Kişisel/Grup, Tüm Şirket) */}
-          <div className="p-3.5 rounded-[18px] bg-transparent border border-[#4a443f] space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="block text-[11px] font-bold text-[#f3efe9]">
-                Görünürlük & Kimlerle Paylaşılacak?
-              </label>
-              <span className="text-[10px] text-[#8c857f]">
-                Departman (tekil/çoğul), kişisel/grup veya tüm şirket seçebilirsiniz
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <button
-                type="button"
-                onClick={() => setFormVisibility('DEPARTMENT')}
-                className={`px-3 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  formVisibility === 'DEPARTMENT'
-                    ? 'bg-[#b99881] text-white border-[#b99881]'
-                    : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
-                }`}
-              >
-                <Building2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Departman (Tekil/Çoğul)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFormVisibility('COMPANY')}
-                className={`px-3 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  formVisibility === 'COMPANY'
-                    ? 'bg-[#b99881] text-white border-[#b99881]'
-                    : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
-                }`}
-              >
-                <Globe className="w-3.5 h-3.5 shrink-0" />
-                <span>Tüm Şirket</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFormVisibility('USERS')}
-                className={`px-3 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  formVisibility === 'USERS'
-                    ? 'bg-[#b99881] text-white border-[#b99881]'
-                    : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5 shrink-0" />
-                <span>Belirli Kişiler / Grup</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFormVisibility('PERSONAL')}
-                className={`px-3 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  formVisibility === 'PERSONAL'
-                    ? 'bg-[#b99881] text-white border-[#b99881]'
-                    : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
-                }`}
-              >
-                <Lock className="w-3.5 h-3.5 shrink-0" />
-                <span>Kişisel (Sadece Ben)</span>
-              </button>
-            </div>
-
-            {/* Departman Seçimi (Tekil veya Departmanlar Arası Çoğul) */}
-            {formVisibility === 'DEPARTMENT' && (
-              <div className="space-y-2 pt-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold text-[#f3efe9]">
-                    Paylaşılacak Departmanlar ({formDepartments.length === 1 ? 'Tekil Departman' : `${formDepartments.length} Departman - Departmanlar Arası`}):
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormDepartments([currentUser?.department || 'Satış'])
-                      }
-                      className="text-[10px] px-2 py-0.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-white cursor-pointer"
-                    >
-                      Sadece Departmanım
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormDepartments(['Müşteri İlişkileri', 'Satış'])
-                      }
-                      className="text-[10px] px-2 py-0.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-white cursor-pointer"
-                    >
-                      Müşteri İlişkileri + Satış
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormDepartments([...CANONICAL_DEPARTMENTS])}
-                      className="text-[10px] px-2 py-0.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-white cursor-pointer"
-                    >
-                      Tümünü Seç
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {CANONICAL_DEPARTMENTS.map((dept) => {
-                    const isSelected = formDepartments.includes(dept)
-                    return (
-                      <button
-                        key={dept}
-                        type="button"
-                        onClick={() => toggleDepartmentSelection(dept)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-[#b99881] text-white border-[#b99881]'
-                            : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3 h-3 shrink-0" />}
-                        <span>{dept}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Belirli Kişiler / Grup Seçimi */}
-            {(formVisibility === 'USERS' || formVisibility === 'DEPARTMENT') && (
-              <div className="space-y-1.5 pt-1">
-                <span className="block text-[11px] font-semibold text-[#f3efe9]">
-                  {formVisibility === 'USERS'
-                    ? 'Paylaşılacak Kişiler / Grup Seçin (Tek kişi veya birden fazla kişi):'
-                    : 'İlgili Kişileri Etiketle (Opsiyonel):'}
-                </span>
-                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
-                  {allUsers.map((u) => {
-                    const isSelected = formUserIds.includes(u.id)
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => toggleUserSelection(u.id)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-[#b99881] text-white border-[#b99881] font-bold'
-                            : 'bg-transparent text-[#a69f99] border-[#4a443f] hover:text-white'
-                        }`}
-                      >
-                        <UserCheck className="w-3 h-3 shrink-0" />
-                        <span>{u.fullName}</span>
-                        <span className="opacity-75 text-[10px]">({u.department})</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
 
           <div>
             <label className="block text-[11px] font-semibold text-[#f3efe9] mb-1">
@@ -1072,7 +693,7 @@ export const CalendarWorkspaceTool: React.FC = () => {
                         )}
                       </div>
 
-                      {renderSharingBadge(ev)}
+                      
                     </div>
                   </div>
                 )

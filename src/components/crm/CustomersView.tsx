@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import { usePersonalTools } from '@/services/personalToolWorkspace'
+import { LeadChannelIcon, manualChannels } from './LeadChannelIcon'
+import './customers-list.css'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import { createPortal } from 'react-dom'
 import {
@@ -21,6 +24,7 @@ import {
   ArrowDown,
   ArrowUp,
   Bookmark,
+  Trash2,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -43,6 +47,13 @@ import { PaginationBar } from '@/components/common/PaginationBar'
 import { BookLogo } from '@/components/common/BookLogo'
 import { requestStore } from '@/services/requestStore'
 import { notificationStore } from '@/services/notificationStore'
+import { MetaSendButton } from './MetaSendButton'
+
+const rowMenuItemClass = 'flex w-full items-center gap-2 rounded-full bg-transparent px-3 py-1.5 text-left text-xs font-semibold focus-visible:outline-offset-1'
+
+const isFirstContact = (lead: Lead) => !lead.stage || lead.stage === 'NEW'
+// Eski UNDECIDED kayıtlarının Aşama alanı da İletişim olarak gösterilir.
+const isContacted = (lead: Lead) => lead.stage === 'CONTACTED' || lead.stage === 'UNDECIDED'
 
 function isCallAgainLead(l: Lead): boolean {
   if (
@@ -108,14 +119,15 @@ export function getLeadChannelLabel(lead: Lead): string {
   if (isGoogleLead(lead)) return 'Google'
   if (lead.source === 'WHATSAPP') return 'WhatsApp'
   if (lead.source === 'REFERRAL') return 'Referans'
-  if (lead.source === 'DIRECT') return 'Doğrudan'
+  if (lead.source === 'DIRECT') return manualChannels.find(channel=>channel===lead.channel) || 'Direkt'
   return 'Meta'
 }
 
 interface CustomTab {
   id: string
   name: string
-  criteriaType: 'STAGE' | 'KEYWORD'
+  criteriaType: 'STAGE' | 'KEYWORD' | 'MANUAL'
+  leadIds?: string[]
   criteriaValue: string
 }
 
@@ -156,20 +168,19 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   isMarketingView = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
-  // Pazarlama'da varsayılan "Tümü" (ALL), Müşteri İlişkileri'nde "İletişimde" (UNCONTACTED)
   const [filterStage, setFilterStage] = useState<string>(() =>
-    isMarketingView ? 'ALL' : 'UNCONTACTED'
+    isMarketingView ? 'ALL' : 'NEW'
   )
 
   useEffect(() => {
-    setFilterStage(isMarketingView ? 'ALL' : 'UNCONTACTED')
+    setFilterStage(isMarketingView ? 'ALL' : 'NEW')
   }, [isMarketingView])
 
   useEffect(() => {
     const handleSwitchTab = (e: Event) => {
       const customEv = e as CustomEvent<string>
       if (customEv.detail) {
-        setFilterStage(customEv.detail)
+        setFilterStage(customEv.detail === 'UNCONTACTED' ? 'NEW' : customEv.detail)
       }
     }
     window.addEventListener('demirturk:switch-customer-stage-tab', handleSwitchTab)
@@ -184,12 +195,33 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   const [pageSize, setPageSize] = useState<number>(20)
 
   // Persistent date range filter (retains selection even across app closes, dynamically adapts presets to today)
-  const [dateRange, setDateRangeState] = useState<DateRange>(() => loadSavedDateRange())
+  const [dateRange, setDateRangeState] = useState<DateRange>(() => isMarketingView ? loadSavedDateRange() : {startDate:null,endDate:null,presetKey:'ALL'})
 
   const setDateRange = (range: DateRange) => {
     setDateRangeState(range)
-    saveDateRange(range)
+    if (isMarketingView) saveDateRange(range)
   }
+
+  useEffect(() => {
+    const showSaved = (event: Event) => {
+      const saved = (event as CustomEvent<Lead>).detail
+      if (!saved?.createdAt) return
+      setFilterStage(!isMarketingView && isFirstContact(saved) ? 'NEW' : 'ALL')
+      setSearchQuery('')
+      setCurrentPage(1)
+      setSortOrder('NEWEST')
+      const date = new Date(saved.createdAt)
+      const start = dateRange.startDate ? new Date(dateRange.startDate).setHours(0, 0, 0, 0) : -Infinity
+      const end = dateRange.endDate ? new Date(dateRange.endDate).setHours(23, 59, 59, 999) : Infinity
+      if (date.getTime() < start || date.getTime() > end) setDateRange({
+        startDate: new Date(date.getFullYear(), date.getMonth(), 1),
+        endDate: new Date(date.getFullYear(), date.getMonth() + 1, 0),
+        presetKey: 'THIS_MONTH', presetLabel: 'Bu Ay',
+      })
+    }
+    window.addEventListener('demirturk:manual-lead-saved', showSaved)
+    return () => window.removeEventListener('demirturk:manual-lead-saved', showSaved)
+  }, [dateRange, isMarketingView])
 
   // Check if midnight passed while app was running to adapt 'Bugün' dynamically to the new day
   useEffect(() => {
@@ -197,7 +229,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       const rollover = checkDayRollover(dateRange)
       if (rollover) {
         setDateRangeState(rollover)
-        saveDateRange(rollover)
+        if (isMarketingView) saveDateRange(rollover)
       }
     }
     const interval = setInterval(handleCheckRollover, 30000)
@@ -206,16 +238,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       clearInterval(interval)
       window.removeEventListener('focus', handleCheckRollover)
     }
-  }, [dateRange])
+  }, [dateRange,isMarketingView])
 
   // Custom Tabs state
-  const [customTabs, setCustomTabs] = useState<CustomTab[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_TABS)
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
+  const preferences=usePersonalTools(currentUser?.id||'',!isMarketingView)
+  const [customTabs,setCustomTabs]=preferences.field<CustomTab[]>('customerTabs',()=>{
+    try { return (JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_TABS)||'[]') as CustomTab[]).filter(t=>t.criteriaType==='STAGE'||t.criteriaType==='KEYWORD').map(({id,name,criteriaType,criteriaValue})=>({id,name,criteriaType,criteriaValue})) }
+    catch { return [] }
   })
 
   // Dönüm (Son Kalınan Yer) İşaretleri ve Sağ Tık Bağlam Menüsü
@@ -227,11 +256,42 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       return []
     }
   })
+  const [moveMenu,setMoveMenu]=useState<{x:number;y:number}|null>(null)
   const [rowContextMenu, setRowContextMenu] = useState<{
     x: number
     y: number
     lead: Lead
   } | null>(null)
+  useEffect(()=>{setMoveMenu(null)},[rowContextMenu])
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [deleteTargets, setDeleteTargets] = useState<string[]>([])
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  useEffect(() => { setSelectedIds(new Set()); setSelectionMode(false); setRowContextMenu(null); setDeleteTargets([]); setDeleteError('') }, [currentUser?.id])
+  useEffect(() => {
+    const allowed = new Set(leads.map(lead => lead.id))
+    setSelectedIds(old => {
+      const next = new Set([...old].filter(id => allowed.has(id)))
+      return next.size === old.size ? old : next
+    })
+  }, [leads])
+  function toggleSelected(id: string) {
+    setSelectedIds(old => {
+      const next = new Set(old)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  async function confirmDelete() {
+    if (deleting) return
+    setDeleting(true); setDeleteError('')
+    try {
+      if (await leadStore.archiveLeads(deleteTargets)) {
+        setSelectedIds(new Set()); setSelectionMode(false); setDeleteTargets([])
+      } else setDeleteError(leadStore.getReadError() || 'Seçilen kayıtlar silinemedi. Listeyi kontrol edin.')
+    } finally { setDeleting(false) }
+  }
 
   useEffect(() => {
     const syncMilestones = () => {
@@ -280,7 +340,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   }
   const [isAddTabModalOpen, setIsAddTabModalOpen] = useState(false)
   const [newTabName, setNewTabName] = useState('')
-  const [newTabCriteriaType, setNewTabCriteriaType] = useState<'STAGE' | 'KEYWORD'>('STAGE')
+  const [newTabCriteriaType, setNewTabCriteriaType] = useState<'STAGE' | 'KEYWORD' | 'MANUAL'>('MANUAL')
   const [newTabCriteriaValue, setNewTabCriteriaValue] = useState<string>('CONTACTED')
 
   // Modals
@@ -290,6 +350,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
   const [selectedLeadForConsultantChange, setSelectedLeadForConsultantChange] = useState<Lead | null>(null)
   const [selectedConsultantUserId, setSelectedConsultantUserId] = useState<string>('')
+  const [transferring, setTransferring] = useState(false)
+  const [consultantChangeError, setConsultantChangeError] = useState('')
+  const representativeView = currentUser?.role !== 'ADMIN' && currentUser?.department === 'Müşteri İlişkileri'
 
   const [selectedInquiryHistoryLead, setSelectedInquiryHistoryLead] = useState<Lead | null>(null)
 
@@ -302,18 +365,37 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     setEditingNoteText(lead.notes ? formatSentenceNote(lead.notes) : '')
   }
 
-  const handleSaveNote = (e: React.FormEvent) => {
+  const handleSaveNote = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedLeadForNoteEdit) return
     const formatted = formatSentenceNote(editingNoteText)
-    leadStore.updateNotes(selectedLeadForNoteEdit.id, formatted, currentUser)
-    setSelectedLeadForNoteEdit(null)
+    const id = selectedLeadForNoteEdit.id
+    if (await leadStore.updateNotes(id, formatted, currentUser)) {
+      setSelectedLeadForNoteEdit(previous => previous?.id === id ? null : previous)
+    }
   }
 
-  // Manuel Verileri Al (Sol tık: Son 48 Saat, Sağ tık: Tarih Seçme Penceresi)
+  // Sol tık sunucudaki son Meta kaydından devam eder; sağ tık tarih seçimini açar.
   const [isPulling, setIsPulling] = useState(false)
+  const pullFeedbackTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (pullFeedbackTimer.current) clearTimeout(pullFeedbackTimer.current) }, [])
   const [pullFeedback, setPullFeedback] = useState<{ message: string; isNew: boolean } | null>(null)
   const [isPullDateModalOpen, setIsPullDateModalOpen] = useState(false)
+  const [assignmentStart, setAssignmentStart] = useState('')
+  useEffect(() => {
+    let active = true
+    setAssignmentStart('')
+    if (!isPullDateModalOpen) return
+    const client = userStore.getServerClient()
+    if (!client?.rpc) return
+    void (async () => {
+      try {
+        const { data, error } = await client.rpc('crm_meta_distribution_policy').abortSignal(AbortSignal.timeout(15000))
+        if (active && !error && data?.assignment_from && Number.isFinite(Date.parse(data.assignment_from))) setAssignmentStart(new Date(data.assignment_from).toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul', day: 'numeric', month: 'long', year: 'numeric' }))
+      } catch { /* Assignment limits are enforced on the server even if this hint cannot load. */ }
+    })()
+    return () => { active = false }
+  }, [isPullDateModalOpen, currentUser?.id])
   const [pullStartDate, setPullStartDate] = useState<string>(() => {
     const d = new Date(Date.now() - 48 * 60 * 60 * 1000)
     return d.toISOString().slice(0, 10)
@@ -325,14 +407,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
   const handlePullData = async (customRange?: { startDate: Date; endDate: Date; label?: string }) => {
     if (isPulling) return
+    if (pullFeedbackTimer.current) { clearTimeout(pullFeedbackTimer.current); pullFeedbackTimer.current = null }
     setIsPulling(true)
     const start = customRange?.startDate || new Date(Date.now() - 48 * 60 * 60 * 1000)
     const end = customRange?.endDate || new Date()
-    const rangeLabel = customRange?.label || 'Son 48 Saat'
+    const rangeLabel = customRange?.label || 'Son Meta kaydından itibaren'
 
     try {
       setPullFeedback({message:'Veri alımı başlatılıyor…',isNew:false})
-      const result = await leadStore.pullLatestLeads({ startDate: start, endDate: end,
+      const result = await leadStore.pullLatestLeads({ ...(customRange ? { startDate: start, endDate: end } : {}),
         onProgress:message=>setPullFeedback({message,isNew:false}) })
       // Yalnızca sağ tık ile özel tarih seçildiğinde tablo tarih filtresini o aralığa sabitle
       if (customRange) {
@@ -377,8 +460,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       })
     } finally {
       setIsPulling(false)
-      setTimeout(() => {
+      pullFeedbackTimer.current = setTimeout(() => {
         setPullFeedback(null)
+        pullFeedbackTimer.current = null
       }, 5500)
     }
   }
@@ -432,11 +516,12 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     (u) => u.department === 'Müşteri İlişkileri' && u.role !== 'ADMIN' && !u.isManager
   )
 
-  const handleManualAutoAssign = () => {
+  const handleManualAutoAssign = async () => {
     if (callCenterUsers.length === 0) {
       return
     }
-    leadStore.autoAssignCallCenterLeads(callCenterUsers)
+    try { await leadStore.autoAssignCallCenterLeads(callCenterUsers) }
+    catch (error) { setPullFeedback({ message: error instanceof Error ? error.message : 'Dağıtım tamamlanamadı.', isNew: false }) }
   }
 
   // Web sitesinden gelen müşteri talepleri (requestStore) varsa ve henüz lead olarak eklenmemişse Web Sitesi sekmesi için birleştir
@@ -472,8 +557,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         })
       }
     }
-    return merged
-  }, [leads, allRequests])
+    return merged.filter(lead => permissionService.canAccessLead(currentUser || null, lead))
+  }, [leads, allRequests, currentUser])
 
   // 1. Date Range Filter
   const dateFilteredLeads = leadsWithWebRequests.filter((l) => {
@@ -520,14 +605,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       if (!isGoogleLead(l)) return false
     } else if (filterStage === 'CHANNEL_WEB') {
       if (!isWebLead(l)) return false
-    } else if (filterStage === 'UNCONTACTED') {
-      // İletişim: 3 Ekim ve sonrası yeni (NEW) veya İletişim (CONTACTED / UNDECIDED) aşamasındakiler (Tekrar Ara ve Potansiyel olmayanlar hariç)
-      if (l.callStatus === 'NO_INTENT' || isCallAgainLead(l)) return false
-      const isNewAfterOct3 =
-        l.stage === 'NEW' &&
-        new Date(l.createdAt).getTime() >= new Date('2026-10-02T21:00:00.000Z').getTime()
-      const isContactedStage = l.stage === 'CONTACTED' || l.stage === 'UNDECIDED'
-      if (!isNewAfterOct3 && !isContactedStage) return false
+    } else if (filterStage === 'NEW') {
+      if (!isFirstContact(l)) return false
+    } else if (filterStage === 'CONTACTED') {
+      if (!isContacted(l)) return false
     } else if (filterStage === 'CALL_AGAIN') {
       // Tekrar Ara: Bilgi alanında "Tekrar ara" veya "Ulaşılamadı" seçilenler
       if (!isCallAgainLead(l)) return false
@@ -561,7 +642,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       if (!l.assignedToUserId) return false
     } else if (filterStage.startsWith('custom-')) {
       const customTab = customTabs.find((t) => t.id === filterStage)
-      if (customTab) {
+      const placed=customTabs.find(t=>t.leadIds?.includes(l.id))
+      if (placed && placed.id!==filterStage) return false
+      if (customTab && !placed) {
+        if (customTab.criteriaType === 'MANUAL' && !customTab.leadIds?.includes(l.id)) return false
         if (customTab.criteriaType === 'STAGE') {
           if (l.stage !== customTab.criteriaValue) return false
         } else if (customTab.criteriaType === 'KEYWORD') {
@@ -640,6 +724,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     }
   })
 
+  function moveToTab(id:string,leadId:string) {
+    const updated=customTabs.map(t=>({...t,leadIds:[...(t.leadIds||[]).filter(x=>x!==leadId),...(t.id===id?[leadId]:[])]}))
+    setCustomTabs(updated)
+    setRowContextMenu(null)
+  }
   // Add custom tab
   const handleCreateCustomTab = (e: React.FormEvent) => {
     e.preventDefault()
@@ -653,9 +742,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     }
     const updated = [...customTabs, newTab]
     setCustomTabs(updated)
-    try {
-      localStorage.setItem(STORAGE_KEY_CUSTOM_TABS, JSON.stringify(updated))
-    } catch {}
 
     setFilterStage(newTab.id)
     setIsAddTabModalOpen(false)
@@ -666,11 +752,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     e.stopPropagation()
     const updated = customTabs.filter((t) => t.id !== tabId)
     setCustomTabs(updated)
-    try {
-      localStorage.setItem(STORAGE_KEY_CUSTOM_TABS, JSON.stringify(updated))
-    } catch {}
     if (filterStage === tabId) {
-      setFilterStage('UNCONTACTED')
+      setFilterStage(isMarketingView ? 'ALL' : 'NEW')
     }
   }
 
@@ -688,14 +771,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     leadStore.toggleLeadQualified(lead.id, checked, currentUser)
   }
 
-  // Execute manual handover to sales ("Satışa İlet")
+  // Execute manual handover to sales ("Satışa Devret")
   const handleOpenAssign = (lead: Lead) => {
     setSelectedLeadForAssign(lead)
     setSelectedSalesUserId(lead.salesRepUserId || 'ALL_SALES')
     setAssignNote('')
   }
 
-  const handleExecuteAssign = (e: React.FormEvent) => {
+  const handleExecuteAssign = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedLeadForAssign || !currentUser) return
 
@@ -704,32 +787,42 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         ? allUsers.find((u) => u.id === selectedSalesUserId) || null
         : null
 
-    leadStore.assignToSales(selectedLeadForAssign.id, targetUser, currentUser, assignNote)
-    setSelectedLeadForAssign(null)
+    if (selectedSalesUserId !== 'ALL_SALES' && !targetUser) return
+    const id = selectedLeadForAssign.id
+    if (await leadStore.assignToSales(id, targetUser, currentUser, assignNote)) {
+      setSelectedLeadForAssign(previous => previous?.id === id ? null : previous)
+    }
   }
 
-  const handleRevokeSalesHandover = (lead: Lead) => {
+  const handleRevokeSalesHandover = async (lead: Lead) => {
     if (!currentUser) return
-    leadStore.revokeSalesHandover(lead.id, currentUser)
-    if (selectedLeadForAssign?.id === lead.id) {
-      setSelectedLeadForAssign(null)
+    if (await leadStore.revokeSalesHandover(lead.id, currentUser)) {
+      setSelectedLeadForAssign(previous => previous?.id === lead.id ? null : previous)
     }
   }
 
   // Re-assign consultant
   const handleOpenConsultantChange = (lead: Lead) => {
+    if (representativeView && lead.assignedToUserId !== currentUser?.id) return
     setSelectedLeadForConsultantChange(lead)
-    setSelectedConsultantUserId(lead.assignedToUserId || callCenterUsers[0]?.id || '')
+    setConsultantChangeError('')
+    setSelectedConsultantUserId(representativeView ? '' : lead.assignedToUserId || callCenterUsers[0]?.id || '')
   }
 
-  const handleExecuteConsultantChange = (e: React.FormEvent) => {
+  const handleExecuteConsultantChange = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedLeadForConsultantChange) return
+    if (transferring) return
     const targetUser = allUsers.find((u) => u.id === selectedConsultantUserId)
-    if (targetUser) {
-      leadStore.assignLeadToUser(selectedLeadForConsultantChange.id, targetUser, currentUser)
-    }
-    setSelectedLeadForConsultantChange(null)
+    const id = selectedLeadForConsultantChange.id
+    setTransferring(true)
+    try {
+      const success = targetUser && (representativeView
+        ? await leadStore.transferToRepresentative(id, targetUser.id)
+        : await leadStore.assignLeadToUser(id, targetUser, currentUser))
+      if (success) setSelectedLeadForConsultantChange(previous => previous?.id === id ? null : previous)
+      else setConsultantChangeError(leadStore.getReadError() || 'Devir tamamlanamadı. Kaydı yenileyip tekrar deneyin.')
+    } finally { setTransferring(false) }
   }
 
   const handleVerifyAi = (lead: Lead) => {
@@ -738,15 +831,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   }
 
   // Counts for tabs
-  const oct3Start = new Date('2026-10-02T21:00:00.000Z').getTime()
-  const uncontactedCount = dateFilteredLeads.filter(
-    (l) =>
-      l.callStatus !== 'NO_INTENT' &&
-      !isCallAgainLead(l) &&
-      ((l.stage === 'NEW' && new Date(l.createdAt).getTime() >= oct3Start) ||
-        l.stage === 'CONTACTED' ||
-        l.stage === 'UNDECIDED')
-  ).length
+  const firstContactCount = dateFilteredLeads.filter(isFirstContact).length
+  const contactedCount = dateFilteredLeads.filter(isContacted).length
   const callAgainCount = dateFilteredLeads.filter(isCallAgainLead).length
   const qualifiedCount = dateFilteredLeads.filter(
     (l) =>
@@ -769,6 +855,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {preferences.state.error&&!isMarketingView&&<p role="alert">{preferences.state.error} {preferences.state.conflict?<><button onClick={()=>preferences.resolve(false)}>Sunucudakini kullan</button> · <button onClick={()=>preferences.resolve(true)}>Düzenlememi kaydet</button></>:<button onClick={preferences.retry}>Tekrar dene</button>}</p>}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -778,9 +865,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               Müşteriler
             </h2>
           </div>
-          <p className="text-xs text-[#a69f99] mt-1">
+          {isMarketingView && <p className="text-xs text-[#a69f99] mt-1">
             Kişi kimliği, başvuru geçmişleri, çağrı merkezi eşit ataması, nitelik ve satış devir havuzu.
-          </p>
+          </p>}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -813,11 +900,12 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                 }}
                 disabled={isPulling}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm disabled:opacity-50 select-none"
-                title="Sol Tık: Son 48 saatin verisini al • Sağ Tık: Tarih aralığı seç"
+                title="Sol Tık: Sunucudaki son Meta kaydından itibaren al • Sağ Tık: Tarih aralığı seç"
               >
                 <DownloadCloud className={`w-3.5 h-3.5 text-[#b99881] ${isPulling ? 'animate-bounce text-amber-400' : ''}`} />
                 <span>{isPulling ? 'Veriler Alınıyor...' : 'Verileri Al'}</span>
               </button>
+              {isMarketingView && <MetaSendButton />}
 
               {callCenterUsers.length > 0 && (
                 <button
@@ -846,6 +934,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </div>
       </div>
 
+      {!isMarketingView&&preferences.state.error&&<p role="alert" className="text-xs mb-2">{preferences.state.error} {preferences.state.conflict?<><button onClick={()=>void preferences.resolve(false)}>Sunucudakini kullan</button> · <button onClick={()=>void preferences.resolve(true)}>Benim düzenlememi kullan</button></>:<button onClick={()=>void preferences.retry()}>Tekrar dene</button>}</p>}
       {/* Tabs & Search Bar (Katmansız, Pill Shape) */}
       <div className="relative z-30 flex items-center justify-between gap-3 min-w-0">
         {isMarketingView ? (
@@ -895,12 +984,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             ]}
           />
         ) : (
-          /* MÜŞTERİ İLİŞKİLERİ SEKMELERİ: İletişim (Varsayılan) -> Tekrar Ara -> Nitelikli -> Teklif -> Dönüşüm -> Diğer (Potansiyel Olmayanlar) -> Tümü -> Custom Tabs -> [+] */
           <OverflowTabs
+            className="customer-stage-tabs"
             activeId={filterStage}
             onSelect={(id) => setFilterStage(id as any)}
             tabs={[
-              { id: 'UNCONTACTED', label: `İletişim (${uncontactedCount})` },
+              { id: 'NEW', label: `İlk temas (${firstContactCount})` },
+              { id: 'CONTACTED', label: `İletişim (${contactedCount})` },
               {
                 id: 'CALL_AGAIN',
                 label: `Tekrar Ara (${callAgainCount})`,
@@ -923,7 +1013,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             ]}
             trailingElement={
               <button
-                onClick={() => setIsAddTabModalOpen(true)}
+                disabled={!preferences.state.ready} onClick={() => setIsAddTabModalOpen(true)}
                 className="card-action-btn flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#34302d] text-[#b99881] hover:text-white hover:bg-[#3d3733] border border-[#4a443f] text-xs font-bold cursor-pointer transition-colors shrink-0"
                 title="Yeni Özel Sekme Ekle"
               >
@@ -952,6 +1042,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           <div className="relative flex items-center">
             <ArrowUpDown className="w-3.5 h-3.5 text-[#b99881] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <CustomSelect
+              triggerLabel="Sırala"
               value={sortOrder}
               onChange={(e) =>
                 setSortOrder(e.target.value as 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC')
@@ -959,10 +1050,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               className="pl-8 pr-7 py-1.5 rounded-full bg-[#34302d] border border-[#4a443f] text-xs font-semibold text-white focus:outline-none focus:border-[#b99881] cursor-pointer transition-colors"
               title="Müşteri sıralama ölçütü"
             >
-              <option value="NEWEST">Sırala: Yeniden eskiye</option>
-              <option value="OLDEST">Sırala: Eskiden yeniye</option>
-              <option value="NAME_ASC">Sırala: İsim (A - Z)</option>
-              <option value="NAME_DESC">Sırala: İsim (Z - A)</option>
+              <option value="NEWEST">Yeniden eskiye</option>
+              <option value="OLDEST">Eskiden yeniye</option>
+              <option value="NAME_ASC">İsim (A - Z)</option>
+              <option value="NAME_DESC">İsim (Z - A)</option>
             </CustomSelect>
           </div>
 
@@ -999,6 +1090,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       )}
 
       {/* MÜŞTERİ TABLOSU: Günlere ve Dönümlere Göre Ayrı Beyaz Katmanlar & Arada Vurgu Rengi Çizgi */}
+      {(selectionMode || selectedIds.size > 0) && <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--accent-color)]/40 bg-[var(--card-surface)] px-4 py-3 text-xs" role="status">
+        <span className="font-semibold">{selectedIds.size} müşteri seçildi</span>
+        <button type="button" onClick={() => { setSelectedIds(new Set()); setSelectionMode(false) }} className="text-[#a69f99] hover:underline">Vazgeç</button>
+        {permissionService.canDeleteCustomer(currentUser || null) && <button type="button" disabled={selectedIds.size === 0 || selectedIds.size > 100} onClick={() => { setDeleteTargets([...selectedIds]); setDeleteError('') }}
+          className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-rose-400 border border-rose-400/30 disabled:opacity-50"><Trash2 size={13} />Seçilenleri sil</button>}
+        {selectedIds.size > 100 && <span>Tek seferde en fazla 100 müşteri taşıyabilirsiniz.</span>}
+      </div>}
       {filteredLeads.length === 0 ? (
         <div className="py-20 text-center flex flex-col items-center justify-center">
           <p className="text-sm font-semibold text-[#f3efe9]">
@@ -1015,22 +1113,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               {/* Her gün ve dönüm kendi beyaz katmanına sahiptir */}
               <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] overflow-hidden shadow-sm backdrop-blur-sm">
                 <div className="w-full overflow-x-auto">
-                  <table className="w-full table-fixed min-w-[1320px] text-xs text-left">
-                    <colgroup>
-                      <col className="w-[108px]" />
-                      <col className="w-[195px]" />
-                      <col className="w-[166px]" />
-                      <col className="w-[148px]" />
-                      <col className="w-[188px]" />
-                      <col className="w-[180px]" />
-                      <col className="w-[185px]" />
-                      <col className="w-[195px]" />
-                    </colgroup>
+                  <table className="customer-records-table w-full table-fixed text-xs text-left">
+                    <colgroup>{[75,180,192,130,155,150,undefined,66].map((w,i)=><col key={i} style={w?{width:w}:undefined}/>)}</colgroup>
                     {segIdx === 0 && (
                       <thead>
                         <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
                           {/* 1. Kolon: Tarih */}
-                          <th className="py-3 px-3 w-[108px]">
+                          <th className="py-3 px-3">
                             <button
                               type="button"
                               onClick={() =>
@@ -1052,7 +1141,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                             </button>
                           </th>
                           {/* 2. Kolon: Müşteri */}
-                          <th className="py-3 px-3 w-[195px]">
+                          <th className="py-3 px-3">
                             <button
                               type="button"
                               onClick={() =>
@@ -1072,17 +1161,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                             </button>
                           </th>
                           {/* 3. Kolon: İletişim */}
-                          <th className="py-3 px-3 w-[166px]">İletişim</th>
+                          <th className="py-3 px-3">İletişim</th>
                           {/* 4. Kolon: Atanan Danışman */}
-                          <th className="py-3 px-3 w-[148px]">Atanan Danışman</th>
+                          <th className="py-3 px-3">Atanan Danışman</th>
                           {/* 5. Kolon: Bilgi */}
-                          <th className="py-3 px-3 w-[188px]">Bilgi</th>
+                          <th className="py-3 px-3">Bilgi</th>
                           {/* 6. Kolon: Aşama */}
-                          <th className="py-3 px-3 w-[180px]">Aşama</th>
+                          <th className="py-3 px-3">Aşama</th>
                           {/* 7. Kolon: Açıklama */}
-                          <th className="py-3 px-3 w-[185px]">Açıklama</th>
+                          <th className="py-3 px-3">Açıklama</th>
                           {/* 8. Kolon: İşlemler */}
-                          <th className="py-3 px-3 w-[195px]">İşlemler</th>
+                          <th className="py-3 px-3">İşlemler</th>
                         </tr>
                       </thead>
                     )}
@@ -1093,6 +1182,11 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         return (
                           <tr
                             key={lead.id}
+                            aria-selected={selectedIds.has(lead.id)}
+                            onClickCapture={event => {
+                              if (!selectionMode && !event.ctrlKey && !event.metaKey) return
+                              event.preventDefault(); event.stopPropagation(); toggleSelected(lead.id)
+                            }}
                             onContextMenu={(e) => {
                               e.preventDefault()
                               setRowContextMenu({
@@ -1102,6 +1196,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                               })
                             }}
                             className="customer-table-row transition-colors border-b border-[#4a443f]/60 last:border-b-0"
+                            style={selectedIds.has(lead.id) ? { background: 'color-mix(in srgb, var(--accent-color) 13%, transparent)', boxShadow: 'inset 3px 0 var(--accent-color)' } : undefined}
                           >
                             {/* 1. Kolon: Tarih & Saat */}
                             <td className="py-3 px-3 text-[#d6beae] whitespace-nowrap">
@@ -1123,33 +1218,23 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                                 {lead.fullName}
                               </div>
                               <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
-                                <span className="text-[10px] text-[#8c857f] truncate">
-                                  {getLeadChannelLabel(lead)}
-                                </span>
-                                {inquiryCount > 1 && (
-                                  <button
-                                    onClick={() => setSelectedInquiryHistoryLead(lead)}
-                                    className="px-1.5 py-0.5 rounded-full bg-[#b99881]/20 text-[#b99881] text-[9px] font-bold hover:bg-[#b99881]/30 cursor-pointer shrink-0"
-                                    title="Tüm Başvuru Geçmişini Görüntüle"
-                                  >
-                                    {inquiryCount} Başvuru
-                                  </button>
-                                )}
+                                <LeadChannelIcon label={getLeadChannelLabel(lead)} />
                               </div>
                             </td>
 
                             {/* 3. Kolon: İletişim & WhatsApp İkonu */}
                             <td className="py-3 px-3 whitespace-nowrap">
-                              <div className="flex items-center justify-between w-[146px]">
+                              <div className="flex items-center gap-1">
                                 <span className="font-mono text-xs text-[#f3efe9] select-all tracking-wide">
                                   {formatPhoneDisplay(lead.phone)}
                                 </span>
+                                {lead.phone && <a className="lead-phone-link" href={`tel:${lead.phone}`} aria-label="Telefonla ara"><Phone size={14}/></a>}
                                 {lead.phone ? (
                                   <a
                                     href={generateWhatsAppUrl(lead.whatsappPhone || lead.phone, lead.fullName)}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 transition-colors flex items-center justify-center shrink-0 ml-2"
+                                    className="p-1.5 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/30 transition-colors flex items-center justify-center shrink-0"
                                     title="WhatsApp Mesajı Gönder"
                                   >
                                     <WhatsAppIcon className="w-3.5 h-3.5 shrink-0" />
@@ -1166,7 +1251,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                                 <div
                                   onClick={() => handleOpenConsultantChange(lead)}
                                   className="flex items-center gap-2 group cursor-pointer min-w-0"
-                                  title="Danışmanı Değiştir"
+                                  title={representativeView ? 'Müşteriyi devret' : 'Danışmanı Değiştir'}
                                 >
                                   <div className="w-6 h-6 rounded-full bg-[#b99881]/25 border border-[#b99881]/40 flex items-center justify-center text-[10px] font-bold text-white shrink-0 group-hover:border-[#b99881]">
                                     {lead.assignedToUserName.charAt(0)}
@@ -1178,6 +1263,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                               ) : (
                                 <span className="text-[#8c857f] text-xs font-mono select-none">-</span>
                               )}
+                              {representativeView && lead.assignedToUserId === currentUser?.id && <button type="button"
+                                className="mt-1 text-[10px] text-[var(--accent-color)] hover:underline" onClick={() => handleOpenConsultantChange(lead)}>Devret</button>}
                             </td>
 
                             {/* 5. Kolon: Bilgi (Call Center) */}
@@ -1204,7 +1291,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                                   className="group flex items-center gap-2 pl-1 cursor-pointer max-w-full min-w-0"
                                   title="Açıklamayı düzenlemek için tıklayın"
                                 >
-                                  <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] truncate transition-colors select-text">
+                                  <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] customer-note-lines transition-colors select-text">
                                     {formatSentenceNote(lead.notes)}
                                   </span>
                                   <Edit3 className="w-3 h-3 text-[#8c857f] group-hover:text-[#b99881] opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -1225,40 +1312,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                             {/* 8. Kolon: İşlemler */}
                             <td className="py-3 px-3 whitespace-nowrap">
                               <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                <a
-                                  href={`tel:${lead.phone}`}
-                                  className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors flex items-center justify-center shadow-sm shrink-0"
-                                  title="Telefonla Ara"
-                                >
-                                  <Phone className="w-3.5 h-3.5 text-[#b99881]" />
-                                </a>
-                                <button
-                                  onClick={() => setSelectedInquiryHistoryLead(lead)}
-                                  className="p-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-[#d6beae] hover:text-white transition-colors cursor-pointer flex items-center justify-center shadow-sm shrink-0"
-                                  title="Başvuru Geçmişi & Notlar"
-                                >
-                                  <Layers className="w-3.5 h-3.5 text-sky-400" />
-                                </button>
                                 {permissionService.canHandOverToSales(currentUser ?? null) && (
-                                  isLeadHandedOverToSales(lead) ? (
-                                    <button
-                                      onClick={() => handleOpenAssign(lead)}
-                                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/35 text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0"
-                                      title={`Satışa İletildi${lead.salesRepUserName ? ` (${lead.salesRepUserName})` : ''} — Değiştirmek veya geri çekmek için tıklayın`}
-                                    >
-                                      <Check className="w-3 h-3 text-emerald-400 shrink-0" />
-                                      <span>Satışa İletildi</span>
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleOpenAssign(lead)}
-                                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#34302d] hover:bg-[#3d3733] text-[#d6beae] hover:text-white border border-[#4a443f] hover:border-[#b99881]/60 text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0"
-                                      title="Manuel olarak Satış departmanına ilet"
-                                    >
-                                      <UserPlus className="w-3 h-3 text-amber-400 shrink-0" />
-                                      <span>Satışa İlet</span>
-                                    </button>
-                                  )
+                                  <button type="button" aria-label={isLeadHandedOverToSales(lead)?'Satışa Devredildi':'Satışa Devret'} className="lead-handover" onClick={()=>handleOpenAssign(lead)}>
+                                    {isLeadHandedOverToSales(lead)?<UserCheck size={15}/>:<><Users size={13}/><ArrowRight size={10}/></>}
+                                  </button>
                                 )}
                               </div>
                             </td>
@@ -1321,16 +1378,33 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           <div
             style={{
               position: 'fixed',
-              top: `${Math.min(rowContextMenu.y, window.innerHeight - 90)}px`,
-              left: `${Math.min(rowContextMenu.x, window.innerWidth - 220)}px`,
+              top: `${Math.max(8, Math.min(rowContextMenu.y, window.innerHeight - 322))}px`,
+              left: `${Math.max(8, Math.min(rowContextMenu.x, window.innerWidth - 220))}px`,
               zIndex: 99999,
             }}
             onClick={(e) => e.stopPropagation()}
-            className="dropdown-panel context-menu rounded-[22px] bg-[#282522] p-2 min-w-[195px] border border-[#4a443f] shadow-xl"
+            className="dropdown-panel context-menu flex w-[205px] max-w-[calc(100vw-16px)] flex-col gap-1.5 rounded-[22px] p-2"
           >
-            <div className="px-2.5 py-1 text-[10px] font-semibold text-[#8c857f] truncate border-b border-[#4a443f]/40 mb-1">
+            <div className="truncate border-b border-[var(--glass-border)] px-3 py-1 text-[10px] font-semibold opacity-75">
               {rowContextMenu.lead.fullName}
             </div>
+            <button type="button" onClick={() => {
+              setSelectionMode(true); setSelectedIds(new Set([rowContextMenu.lead.id])); setRowContextMenu(null)
+            }} className={rowMenuItemClass}>
+              <Check size={13} />Seç
+            </button>
+            {currentUser?.role==='ADMIN'&&<button type="button" className={rowMenuItemClass} onClick={()=>{setSelectedInquiryHistoryLead(rowContextMenu.lead);setRowContextMenu(null)}}><Layers size={13}/>Başvuru geçmişi</button>}
+            {!isMarketingView&&<div className="relative"><button type="button" className={rowMenuItemClass+' w-full'} aria-expanded={!!moveMenu} disabled={!preferences.state.ready} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMoveMenu(moveMenu?null:{x:Math.max(6,Math.min(innerWidth-174,r.right+174<=innerWidth?r.right+4:r.left-172)),y:Math.max(6,Math.min(innerHeight-152,r.top))})}}><FolderPlus size={13}/>Taşı <ArrowRight size={12}/></button>
+              {moveMenu&&createPortal(<div onClick={e=>e.stopPropagation()} role="menu" aria-label="Manuel sekmeler" className="lead-move-menu dropdown-panel" style={{position:'fixed',zIndex:100001,left:moveMenu.x,top:moveMenu.y,width:166}}>
+                {customTabs.map(tab=><button type="button" role="menuitem" className={rowMenuItemClass} key={tab.id} onClick={()=>moveToTab(tab.id,rowContextMenu.lead.id)}>{tab.name}</button>)}
+              </div>,document.body)}</div>}
+            {permissionService.canDeleteCustomer(currentUser || null) && <button type="button"
+              onClick={() => {
+                const ids = selectedIds.has(rowContextMenu.lead.id) ? [...selectedIds] : [rowContextMenu.lead.id]
+                setDeleteTargets(ids); setDeleteError(''); setRowContextMenu(null)
+              }} className={`${rowMenuItemClass} text-rose-400`}>
+              <Trash2 size={13} />Çöp kutusuna taşı
+            </button>}
             {permissionService.canHandOverToSales(currentUser ?? null) && (
               isLeadHandedOverToSales(rowContextMenu.lead) ? (
                 <button
@@ -1339,7 +1413,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     handleRevokeSalesHandover(rowContextMenu.lead)
                     setRowContextMenu(null)
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-rose-400 hover:bg-[#34302d] cursor-pointer transition-colors text-left"
+                  className={`${rowMenuItemClass} text-rose-400`}
                 >
                   <X className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                   <span>Satıştan Geri Çek</span>
@@ -1353,17 +1427,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                     }
                     setRowContextMenu(null)
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-emerald-400 hover:bg-[#34302d] cursor-pointer transition-colors text-left"
+                  className={`${rowMenuItemClass} text-emerald-400`}
                 >
                   <UserPlus className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Satışa İlet</span>
+                  <span>Satışa Devret</span>
                 </button>
               )
             )}
             <button
               type="button"
               onClick={() => handleToggleMilestone(rowContextMenu.lead.id)}
-              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white hover:bg-[#34302d] cursor-pointer transition-colors text-left"
+              className={rowMenuItemClass}
             >
               <Bookmark className="w-3.5 h-3.5 text-[#b99881] shrink-0" />
               <span>
@@ -1387,6 +1461,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           <p className="text-xs text-[#a69f99]">
             Hızlı aralık seçebilir veya özel başlangıç ve bitiş tarihi belirleyerek o döneme ait müşteri verilerini çekebilirsiniz.
           </p>
+          {assignmentStart && <p className="rounded-xl border border-[var(--glass-border)] p-3 text-xs leading-relaxed text-[var(--tertiary-white)]">
+            Otomatik temsilci dağıtımı: {assignmentStart} ve sonrası. Daha eski başvurular da kaydedilir; temsilciye otomatik atanmaz.
+          </p>}
 
           {/* Hızlı Tarih Seçenekleri */}
           <div className="flex flex-wrap gap-1.5">
@@ -1516,7 +1593,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
               Filtre Türü
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" aria-pressed={newTabCriteriaType==='MANUAL'} className="tab-pill-btn" onClick={()=>setNewTabCriteriaType('MANUAL')}>Manuel</button>
               <button
                 type="button"
                 onClick={() => setNewTabCriteriaType('STAGE')}
@@ -1542,7 +1620,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             </div>
           </div>
 
-          {newTabCriteriaType === 'STAGE' ? (
+          {newTabCriteriaType === 'MANUAL' ? null : newTabCriteriaType === 'STAGE' ? (
             <div>
               <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                 Aşama Seçin
@@ -1585,21 +1663,28 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       </GlassModal>
 
       {/* DANIŞMAN DEĞİŞTİR / ATA MODALI */}
+      <GlassModal isOpen={deleteTargets.length > 0} onClose={() => { if (!deleting) setDeleteTargets([]) }} title="Müşterileri çöp kutusuna taşı" maxWidth="sm">
+        <p className="text-sm">{deleteTargets.length} müşteri çöp kutusuna taşınacak. Daha sonra geri yükleyebilirsiniz.</p>
+        {deleteError && <p role="alert" className="mt-3 text-xs text-rose-400">{deleteError}</p>}
+        <div className="mt-5 flex justify-end gap-2"><GlassButton variant="subtle" size="sm" disabled={deleting} onClick={() => setDeleteTargets([])}>Vazgeç</GlassButton>
+          <GlassButton variant="danger" size="sm" disabled={deleting || deleteTargets.length > 100} onClick={() => void confirmDelete()}>{deleting ? 'Taşınıyor…' : 'Çöp kutusuna taşı'}</GlassButton></div>
+      </GlassModal>
       <GlassModal
         isOpen={selectedLeadForConsultantChange !== null}
-        onClose={() => setSelectedLeadForConsultantChange(null)}
-        title={`Danışman Ata / Değiştir - ${selectedLeadForConsultantChange?.fullName}`}
+        onClose={() => { if (!transferring) setSelectedLeadForConsultantChange(null) }}
+        title={`${representativeView ? 'Müşteriyi Devret' : 'Danışman Ata / Değiştir'} - ${selectedLeadForConsultantChange?.fullName}`}
       >
         <form onSubmit={handleExecuteConsultantChange} className="space-y-4">
+          {consultantChangeError && <p role="alert" className="text-sm text-rose-400">{consultantChangeError}</p>}
           <div>
             <GlassSelect
-              label="Atanacak Danışman (Çağrı Merkezi / Satış)"
+              label={representativeView ? 'Devredilecek temsilci' : 'Atanacak danışman'}
               value={selectedConsultantUserId}
               onChange={setSelectedConsultantUserId}
               placeholder="Danışman seçin..."
-              options={allUsers.map((u) => ({
+              options={allUsers.filter(u => !representativeView || (u.department === 'Müşteri İlişkileri' && u.role !== 'ADMIN' && u.id !== currentUser?.id)).map((u) => ({
                 value: u.id,
-                label: `${u.fullName} (${u.department} - ${u.role})`,
+                label: u.fullName,
               }))}
             />
           </div>
@@ -1612,8 +1697,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             >
               Vazgeç
             </button>
-            <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
-              Danışmanı Kaydet
+            <GlassButton type="submit" variant="gold" size="sm" disabled={transferring || !selectedConsultantUserId} className="rounded-full px-5 font-bold">
+              {transferring ? 'Kaydediliyor…' : representativeView ? 'Devret' : 'Danışmanı Kaydet'}
             </GlassButton>
           </div>
         </form>
@@ -1623,16 +1708,16 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       <GlassModal
         isOpen={selectedLeadForAssign !== null}
         onClose={() => setSelectedLeadForAssign(null)}
-        title={`Satışa İlet — ${selectedLeadForAssign?.fullName}`}
+        title={`Satışa Devret — ${selectedLeadForAssign?.fullName}`}
       >
         <form onSubmit={handleExecuteAssign} className="space-y-4">
           <p className="text-xs text-[#a69f99]">
-            Müşteri İlişkileri, Pazarlama veya Yönetim onayınızla bu kayıt manuel olarak Satış departmanına iletilir.
+            Müşteri İlişkileri, Pazarlama veya Yönetim onayınızla bu kayıt manuel olarak Satış departmanına devredilir.
           </p>
 
           <div>
             <GlassSelect
-              label="İletilecek Satış Birimi / Temsilcisi"
+              label="Satış ekibi veya danışmanı"
               value={selectedSalesUserId}
               onChange={setSelectedSalesUserId}
               placeholder="Satış birimi veya temsilcisi seçin..."
@@ -1648,7 +1733,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
           <div>
             <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-              İletim Notu (İsteğe Bağlı)
+              Devir notu (isteğe bağlı)
             </label>
             <textarea
               rows={3}
@@ -1681,8 +1766,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               </button>
               <GlassButton type="submit" variant="gold" size="sm" className="rounded-full px-5 font-bold">
                 {selectedLeadForAssign && isLeadHandedOverToSales(selectedLeadForAssign)
-                  ? 'Satış İletimini Güncelle'
-                  : 'Satışa İlet'}
+                  ? 'Satış Devrini Güncelle'
+                  : 'Satışa Devret'}
               </GlassButton>
             </div>
           </div>

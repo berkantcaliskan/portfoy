@@ -1,6 +1,6 @@
+import { CustomerContractButton } from '@/components/contracts/ContractWorkspace'
 import React, { useState } from 'react'
 import {
-  Calculator,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -14,11 +14,14 @@ import { Lead, LeadStage, STAGE_CONFIGS, isLeadHandedOverToSales } from '@/types
 import { GlassButton } from '@/components/ui/GlassButton'
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon'
 import { LuxurySelect } from '@/components/ui/LuxurySelect'
-import { CommissionCalculatorModal } from './CommissionCalculatorModal'
 import { formatCurrency, generateWhatsAppUrl } from '@/utils/formatters'
 
 import { getAllUsers, AppUser } from '@/services/userStore'
 import { getLeadChannelLabel } from '@/components/crm/CustomersView'
+import { projectStore } from '@/services/projectStore'
+import { userStore } from '@/services/userStore'
+import { useStoreUpdates } from '@/components/common/useStoreUpdates'
+import { buildSalesRanking } from '@/utils/salesPerformance'
 
 interface SalesTeamViewProps {
   leads: Lead[]
@@ -50,10 +53,10 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
   onOpenNewLead,
   currentUser: _currentUser,
 }) => {
+  useStoreUpdates(projectStore)
+  useStoreUpdates(userStore)
   const [selectedRep, setSelectedRep] = useState<string>('ALL')
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban')
-  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
-  const [calcAmount, setCalcAmount] = useState<number>(0)
 
   // Per-column pagination offsets (max 3 items shown at a time, newest to oldest)
   const [stageOffsets, setStageOffsets] = useState<Record<string, number>>({})
@@ -95,15 +98,12 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
     'OFFER',
     'WON',
   ]
-  const [activeStageCard, setActiveStageCard] = useState<LeadStage | null>(null)
-  const [hoveredStageCard, setHoveredStageCard] = useState<LeadStage | null>(null)
-  const focusedStage = hoveredStageCard ?? activeStageCard
+  const [focusedStage, setFocusedStage] = useState<LeadStage | null>(null)
   const focusedStageIndex = focusedStage ? salesDealStages.indexOf(focusedStage) : -1
 
   // Calculations for KPI
   const closedLeads = filteredLeads.filter((l) => l.stage === 'WON')
   const totalClosedRevenue = closedLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
-  const totalEarnedCommission = Math.round(totalClosedRevenue * 0.02) // 2% standard rep commission
   const activeOfferCount = filteredLeads.filter(
     (l) => l.stage === 'OFFER' || l.stage === 'PRESENTATION' || l.stage === 'APPOINTMENT'
   ).length
@@ -112,34 +112,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
     monthlyQuota > 0 ? Math.min(100, Math.round((totalClosedRevenue / monthlyQuota) * 100)) : 0
 
   // Rep leaderboard data dynamically calculated
-  const leaderboardData = allUsers
-    .filter(
-      (u: AppUser) =>
-        (u.id !== 'usr-berkant' || leads.length > 0) &&
-        (u.department === 'Satış' ||
-          u.department === 'Yönetim' ||
-          u.isManager ||
-          u.role === 'ADMIN')
-    )
-    .map((rep: AppUser) => {
-      const repLeads = salesHandedOverLeads.filter((l) => (l.owner === rep.fullName || l.salesRepUserName === rep.fullName) && l.stage === 'WON')
-      const closedVolume = repLeads.reduce((acc, l) => acc + (l.budget || 0), 0)
-      const earnedCommission = Math.round(closedVolume * 0.02)
-      return {
-        name: rep.fullName,
-        role: rep.isManager || rep.role === 'ADMIN' ? 'Yönetici' : `${rep.department} Danışmanı`,
-        closedCount: repLeads.length,
-        closedVolume,
-        earnedCommission,
-        rate: repLeads.length > 0 ? '100%' : '0%',
-      }
-    })
-
-  const handleOpenCalcForLead = (lead: Lead, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setCalcAmount(lead.budget || 0)
-    setIsCalculatorOpen(true)
-  }
+  const leaderboardData = buildSalesRanking(projectStore.getAll().flatMap(project => project.units || []), allUsers)
 
   return (
     <div className="space-y-6">
@@ -153,7 +126,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
             </h2>
           </div>
           <p className="text-xs text-[#a69f99] mt-1">
-            Satış hedefleri, teklif aşamaları, kapora süreçleri ve komisyon yönetimi.
+            Satış fırsatları, teklif aşamaları ve kapora süreçleri.
           </p>
         </div>
 
@@ -178,20 +151,6 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
             minWidth="w-64"
           />
 
-          {/* Commission Calculator Button */}
-          <GlassButton
-            variant="subtle"
-            size="sm"
-            icon={<Calculator className="w-3.5 h-3.5 text-[#b99881]" />}
-            onClick={() => {
-              setCalcAmount(6000000)
-              setIsCalculatorOpen(true)
-            }}
-            className="rounded-full px-4"
-          >
-            Prim Hesapla
-          </GlassButton>
-
           {/* New Deal Button */}
           <GlassButton
             variant="gold"
@@ -206,7 +165,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
       </div>
 
       {/* Sales Representative KPI Cards (Mobilde 2x2, Masaüstünde 4'lü) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
         {/* Card 1: Quota Progress */}
         <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
@@ -228,22 +187,6 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
               style={{ width: `${quotaAchievement}%` }}
             />
           </div>
-        </div>
-
-        {/* Card 2: Earned Commission */}
-        <div className="p-3.5 sm:p-5 rounded-[22px] sm:rounded-[28px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md flex flex-col justify-between space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs text-[#a69f99] truncate">Kazanılan Prim</span>
-            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold shrink-0">
-              %2
-            </span>
-          </div>
-          <div className="text-lg sm:text-2xl font-bold text-emerald-400 truncate">
-            {formatCurrency(totalEarnedCommission)}
-          </div>
-          <p className="text-[10px] sm:text-[11px] text-[#8c857f] truncate">
-            {closedLeads.length} satıştan hak edilen
-          </p>
         </div>
 
         {/* Card 3: Active Deals in Offer */}
@@ -301,7 +244,10 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
           </button>
 
           <button
-            onClick={() => setViewMode('table')}
+            onClick={() => {
+              setFocusedStage(null)
+              setViewMode('table')
+            }}
             className={`tab-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'table' ? 'is-active-tab-pill' : ''
             }`}
@@ -316,6 +262,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
       {viewMode === 'kanban' && (
         <div
           className="flex items-stretch overflow-x-auto lg:overflow-visible pt-4 pb-6 px-3 no-scrollbar select-none"
+          onPointerLeave={() => setFocusedStage(null)}
           style={{ perspective: '1300px' }}
         >
           {salesDealStages.map((stageKey, idx) => {
@@ -349,12 +296,10 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
             return (
               <div
                 key={stageKey}
-                onMouseEnter={() => setHoveredStageCard(stageKey)}
-                onMouseLeave={() => setHoveredStageCard(null)}
-                onClick={() =>
-                  setActiveStageCard((prev) => (prev === stageKey ? null : stageKey))
-                }
-                onTouchStart={() => setActiveStageCard(stageKey)}
+                onPointerEnter={event => {
+                  if (event.pointerType !== 'touch') setFocusedStage(stageKey)
+                }}
+                onPointerLeave={() => setFocusedStage(current => current === stageKey ? null : current)}
                 style={{
                   transform: cardTransform,
                   transformOrigin: 'left center',
@@ -401,11 +346,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                       </div>
                     ) : (
                       visibleStageLeads.map((lead) => {
-                        const estimatedCommission = lead.budget
-                          ? Math.round(lead.budget * 0.02)
-                          : 100000
-
-                        return (
+return (
                           <div
                             key={lead.id}
                             onClick={(e) => {
@@ -428,14 +369,6 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                               </span>
                             </div>
 
-                            {/* Commission Tag */}
-                            <div className="flex items-center justify-between text-[10px] pt-0.5">
-                              <span className="text-[#a69f99]">Tahmini Prim:</span>
-                              <span className="font-bold text-emerald-400">
-                                {formatCurrency(estimatedCommission)}
-                              </span>
-                            </div>
-
                             {/* Quick Action Buttons */}
                             <div className="flex items-center justify-between gap-1 pt-0.5">
                               <div className="flex items-center gap-1">
@@ -452,14 +385,6 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                                 >
                                   <WhatsAppIcon className="w-3 h-3" />
                                 </a>
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleOpenCalcForLead(lead, e)}
-                                  className="p-1.5 rounded-full bg-[#24211f] hover:bg-white/10 text-[#a69f99] hover:text-white transition-colors"
-                                  title="Komisyon Hesapla"
-                                >
-                                  <Calculator className="w-3 h-3" />
-                                </button>
                               </div>
 
                               {/* Stage Advance Button */}
@@ -480,6 +405,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                                 </button>
                               )}
                             </div>
+                            <CustomerContractButton lead={lead} />
                           </div>
                         )
                       })
@@ -554,7 +480,6 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                     <th className="py-3.5 px-4">Anlaşma Tutarı</th>
                     <th className="py-3.5 px-4">Satışçı</th>
                     <th className="py-3.5 px-4">Aşama</th>
-                    <th className="py-3.5 px-4">Tahmini Prim (%2)</th>
                     <th className="py-3.5 px-5 text-right">İşlemler</th>
                   </tr>
                 </thead>
@@ -591,11 +516,10 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                             {STAGE_CONFIGS[lead.stage]?.label || lead.stage}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-bold text-emerald-400">
-                          {formatCurrency(Math.round((lead.budget || 0) * 0.02))}
-                        </td>
+
                         <td className="py-3 px-5 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
+                            <CustomerContractButton lead={lead} />
                             <a
                               href={generateWhatsAppUrl(
                                 lead.phone,
@@ -607,12 +531,6 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                             >
                               <WhatsAppIcon className="w-3.5 h-3.5" />
                             </a>
-                            <button
-                              onClick={(e) => handleOpenCalcForLead(lead, e)}
-                              className="px-3 py-1 rounded-full bg-[#423c38] hover:bg-[#b99881] hover:text-[#1c1a18] text-xs font-semibold text-[#d6beae] transition-colors"
-                            >
-                              Hesapla
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -660,12 +578,12 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
         ))}
 
       {/* Sales Leaderboard (Satışçı Başarı Sıralaması — En Fazla 3 Gösterim) */}
-      <div className="p-6 rounded-[32px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md space-y-4">
+      {_currentUser?.role === 'ADMIN' && <div className="p-6 rounded-[32px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-[#b99881]" />
             <h3 className="text-sm font-bold text-white">
-              Satış Ekibi Başarı & Prim Tablosu
+              Satış Ekibi Başarı Tablosu
             </h3>
           </div>
           <span className="text-xs text-[#a69f99]">Bu Ayki Gerçekleşenler</span>
@@ -691,19 +609,14 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-white">{rep.name}</h4>
-                        <p className="text-[10px] text-[#8c857f]">{rep.role}</p>
                         <p className="text-[11px] font-bold text-[#b99881] mt-0.5">
-                          {formatCurrency(rep.closedVolume)} ({rep.closedCount} Satış)
+                          {rep.count} satış
                         </p>
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-[10px] text-[#8c857f] block">Hak Edilen Prim</span>
-                      <span className="text-xs font-bold text-emerald-400">
-                        {formatCurrency(rep.earnedCommission)}
-                      </span>
-                    </div>
+                    <div className="text-right"><span className="block text-[10px] text-[#8c857f]">Satış payı</span>
+                      <span className="text-sm font-semibold text-[#b99881]">%{rep.percentage.toLocaleString('tr', { maximumFractionDigits: 1 })}</span></div>
                   </div>
                 ))}
             </div>
@@ -740,14 +653,8 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
             )}
           </>
         )}
-      </div>
+      </div>}
 
-      {/* Commission Calculator Modal */}
-      <CommissionCalculatorModal
-        isOpen={isCalculatorOpen}
-        onClose={() => setIsCalculatorOpen(false)}
-        initialAmount={calcAmount}
-      />
     </div>
   )
 }

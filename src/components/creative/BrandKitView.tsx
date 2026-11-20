@@ -1,3 +1,4 @@
+import { userStore } from '@/services/userStore'
 import { brandKitStore } from '@/services/brandKitStore'
 import { isCentralCrm } from '@/services/crmRuntime'
 import React, { useState, useRef, useEffect } from 'react'
@@ -200,6 +201,7 @@ function loadBrandKit(): BrandKitData {
 }
 
 export function BrandKitView() {
+  const canEdit = userStore.getCurrentUser()?.role === 'ADMIN'
   const [syncState,setSyncState]=useState(brandKitStore.state())
   useEffect(()=>{if(!isCentralCrm())return;const update=()=>{const remote=brandKitStore.get();if(remote)setData(remote as unknown as BrandKitData);setSyncState(brandKitStore.state())};const unsub=brandKitStore.subscribe(update);void brandKitStore.refreshFromBackend();update();return unsub},[])
   const [data, setData] = useState<BrandKitData>(() => loadBrandKit())
@@ -210,6 +212,7 @@ export function BrandKitView() {
   const lightLogoInputRef = useRef<HTMLInputElement>(null)
 
   const saveAll = (next: BrandKitData) => {
+    if (!canEdit) return
     if(isCentralCrm()){try{brandKitStore.save(next as unknown as Record<string,unknown>)}catch(error){window.alert(error instanceof Error?error.message:"Marka kiti kaydedilemedi.")}return}
     setData(next)
     try {
@@ -258,6 +261,7 @@ export function BrandKitView() {
   }
 
   const toggleEdit = (section: 'colors' | 'typography' | 'logo' | 'formats') => {
+    if (!canEdit) return
     setEditingSection((prev) => (prev === section ? null : section))
   }
 
@@ -289,7 +293,7 @@ export function BrandKitView() {
                 HEX kodunu kopyalamak için ilgili renk sütununa tıklayın
               </p>
             </div>
-            <button
+            {canEdit && <button
               type="button"
               onClick={() => toggleEdit('colors')}
               title={editingSection === 'colors' ? 'Düzenlemeyi Tamamla' : 'Renk Paletini Düzenle'}
@@ -304,7 +308,7 @@ export function BrandKitView() {
               ) : (
                 <Pencil className="w-3.5 h-3.5" />
               )}
-            </button>
+            </button>}
           </div>
 
           {editingSection === 'colors' ? (
@@ -482,7 +486,7 @@ export function BrandKitView() {
               <Type className="w-4 h-4 text-[#b99881]" />
               <h2 className="text-sm font-bold text-white">Tipografi</h2>
             </div>
-            <button
+            {canEdit && <button
               type="button"
               onClick={() => toggleEdit('typography')}
               title={editingSection === 'typography' ? 'Düzenlemeyi Tamamla' : 'Tipografiyi Düzenle'}
@@ -497,7 +501,7 @@ export function BrandKitView() {
               ) : (
                 <Pencil className="w-3.5 h-3.5" />
               )}
-            </button>
+            </button>}
           </div>
 
           {editingSection === 'typography' ? (
@@ -660,7 +664,7 @@ export function BrandKitView() {
               <ImageIcon className="w-4 h-4 text-[#b99881]" />
               <h2 className="text-sm font-bold text-white">Logo</h2>
             </div>
-            <button
+            {canEdit && <button
               type="button"
               onClick={() => toggleEdit('logo')}
               title={editingSection === 'logo' ? 'Düzenlemeyi Tamamla' : 'Logoyu Düzenle'}
@@ -675,7 +679,7 @@ export function BrandKitView() {
               ) : (
                 <Pencil className="w-3.5 h-3.5" />
               )}
-            </button>
+            </button>}
           </div>
 
           <input
@@ -853,7 +857,7 @@ export function BrandKitView() {
                 Sosyal Medya & Meta Reklam Ölçü Standartları
               </h2>
             </div>
-            <button
+            {canEdit && <button
               type="button"
               onClick={() => toggleEdit('formats')}
               title={editingSection === 'formats' ? 'Düzenlemeyi Tamamla' : 'Ölçü Standartlarını Düzenle'}
@@ -868,7 +872,7 @@ export function BrandKitView() {
               ) : (
                 <Pencil className="w-3.5 h-3.5" />
               )}
-            </button>
+            </button>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 flex-1">

@@ -1,0 +1,56 @@
+.office-visitors-table {
+  --office-control-height: 36px;
+  width: 100%;
+  min-width: 1080px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.office-visitors-table th { padding: 10px 8px; font-size: 11px; font-weight: 600; text-align: left; }
+.office-visitors-table .office-actions-column { width: 88px; }
+.office-visitors-table .office-actions-heading { text-align: center; }
+.office-visitors-table [data-visitor-record] td { padding-inline: 8px; }
+.office-visitors-table .office-entry-row td { padding: 9px 8px; border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
+.office-entry-control { display: block; width: 100%; min-width: 0; height: var(--office-control-height); padding: 7px 9px; border: 1px solid var(--glass-border); border-radius: 9px; background: var(--card-surface); color: var(--tertiary-white); font: inherit; font-size: 12px; line-height: 20px; box-sizing: border-box; }
+.office-entry-control:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 1px; }
+.office-entry-control:disabled { opacity: .55; }
+.office-entry-row button.office-entry-control { display: flex; background: var(--card-surface) !important; color: var(--tertiary-white) !important; border: 1px solid var(--glass-border) !important; border-radius: 9px !important; }
+.office-entry-row button.office-entry-control span { color: inherit !important; }
+.office-entry-row input[type='date'] { color-scheme: light; }
+.office-people-trigger { display: flex; align-items: center; justify-content: space-between; gap: 4px; text-align: left; }
+.office-people-menu { position: fixed; z-index: 30000; padding: 6px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--bg-base); color: var(--tertiary-white); box-shadow: 0 8px 30px rgb(0 0 0 / 18%); font-size: 12px; }
+.office-people-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 8px; text-align: left; border-radius: 8px; cursor: pointer; }
+.office-people-option:hover { background: var(--card-surface); }
+.office-people-option input { flex-shrink: 0; accent-color: var(--accent-color); }
+html[data-theme-accent='night'] .office-entry-row input[type='date'] { color-scheme: dark; }
+.office-row-actions { display: flex; align-items: center; justify-content: center; gap: 4px; }
+.office-entry-add, .office-entry-cancel { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: var(--office-control-height); flex-shrink: 0; border-radius: 9px; cursor: pointer; }
+.office-entry-add { color: white; background: var(--accent-color); border: 0; }
+.office-entry-add svg { color: white !important; stroke: white !important; }
+.office-entry-add:disabled, .office-entry-cancel:disabled { opacity: .45; cursor: default; }
+.office-entry-cancel { border: 1px solid var(--glass-border); color: var(--tertiary-white); background: transparent; }
+
+.office-visitors-table [data-potential='green'] { --potential-color: #a7d4b1; --potential-tint: #72b887; }
+.office-visitors-table [data-potential='yellow'] { --potential-color: #f0d994; --potential-tint: #d3ac4a; }
+.office-visitors-table [data-potential='red'] { --potential-color: #e4a7aa; --potential-tint: #ce7d83; }
+.office-visitors-table tr[data-potential] { background-color: color-mix(in srgb, var(--potential-tint) 18%, transparent); }
+
+.office-entry-notes { display: flex; align-items: center; gap: 6px; }
+.office-entry-notes > input { flex: 1; }
+.office-potential-options { display: flex; flex-shrink: 0; gap: 4px; }
+.office-potential-option {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 1px solid rgb(0 0 0 / 18%);
+  border-radius: 50%;
+  background: var(--potential-color);
+  color: #242b26;
+}
+.office-potential-option:not(:disabled) { cursor: pointer; }
+.office-potential-option:focus-visible,
+.office-potential-option[aria-pressed='true'] { outline: 2px solid var(--tertiary-white); outline-offset: 1px; }
+.office-potential-option:disabled { opacity: .55; }
+.office-potential-option svg { color: #242b26 !important; }

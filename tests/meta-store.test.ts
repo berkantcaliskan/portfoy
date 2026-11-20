@@ -11,26 +11,103 @@ function setup(options:any={}) {
     .replaceAll('import.meta.env',"({ VITE_SUPABASE_URL: 'https://isolated.invalid' })")
   const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const calls:any[]=[]
+  const sessionSources:string[]=[],functionSources:string[]=[],headers:any[]=[]
+  let refreshCount=0
   let leads:any[]=options.leads||[]
   const leadStore:any={getAllRaw:()=>leads,getById:(id:string)=>leads.find(l=>l.id===id),
     updateMetaCapiStatus:(id:string,status:any)=>{leads=leads.map(l=>l.id===id?{...l,metaCapiStatus:status}:l)},
     ackMetaStage:()=>{},acceptMetaServerLead:(lead:any)=>{leads=[...leads.filter(l=>l.id!==lead.id),lead]}}
-  const supabase={auth:{getSession:async()=>({data:{session:{}}})},functions:{invoke:async(_name:string,{body}:any)=>{
+  const invoke=async(source:string,_name:string,{body}:any)=>{
+    functionSources.push(source)
     calls.push(body)
     if(options.invoke) return options.invoke(body)
     return {data:{datasetId:'123',events:options.events||[],autoSyncStages:body.autoSyncStages||false},error:null}
-  }}}
+  }
+  const makeClient=(source:string,session:any)=>({auth:{getSession:async()=>{sessionSources.push(source);return {data:{session}}},refreshSession:async()=>{refreshCount++;if(options.refresh)return options.refresh();return {data:{session:{...session,access_token:'refreshed-token'}},error:null}}},functions:{invoke:(name:string,args:any)=>{headers.push(args.headers);return invoke(source,name,args)}}})
+  const supabase=makeClient('legacy',options.legacySession===false?null:{user:{id:'legacy-auth'}})
+  const centralClient=options.noCentralClient?null:makeClient('central',options.centralSession===false?null:{user:{id:options.sessionUser||'central-auth'},access_token:'main-session-token'})
   const exported:any={}
   vm.runInNewContext(js,{exports:exported,require:(id:string)=>{
     if(id==='./leadStore')return {leadStore}
     if(id==='./supabaseClient')return {supabase,SUPABASE_URL:'https://isolated.invalid'}
+    if(id==='./crmRuntime')return {isCentralCrm:()=>!!options.central}
+    if(id==='./userStore')return {userStore:{centralAuthEnabled:!!options.mainCentral,getServerClient:()=>centralClient,getCurrentUser:()=>options.noUser?null:{authUserId:'central-auth'}}}
     if(id==='./dbMapper')return {rowToLead:(r:any)=>r}
     if(id==='./metaStageQueue')return {MetaStageQueue}
     if(id.includes('meta-core'))return core
     throw Error('Unexpected import: '+id)
   },localStorage:{removeItem:()=>{}},Response,crypto,console})
-  return {store:exported.metaStore,exported,calls,getLead:()=>leads[0]}
+  return {store:exported.metaStore,exported,calls,sessionSources,functionSources,headers,getRefreshCount:()=>refreshCount,getLead:()=>leads[0]}
 }
+test('Meta işlemi merkezi CRM oturumunu kullanır; eski ayrı oturum aranmaz',async()=>{
+ const s=setup({central:true,legacySession:false})
+ await s.exported.invokeMeta({action:'status'})
+ assert.deepEqual(s.sessionSources,['central']);assert.deepEqual(s.functionSources,['central'])
+ assert.equal(s.headers[0].Authorization,'Bearer main-session-token')
+})
+
+test('Gönderim listesi yerel önbellek yerine sunucunun bütün sayfalarından gelir',async()=>{
+ const s=setup({central:true,invoke:async(body:any)=>({data:{records:[{id:body.cursor?'second':'first'}],cursor:body.cursor?null:'next'},error:null})})
+ const rows=await s.store.getServerPendingResults()
+ assert.deepEqual(Array.from(rows,(r:any)=>r.id),['first','second'])
+ assert.equal(s.calls.every(c=>c.action==='pending'),true)
+})
+test('Sunucudan doğrulanan 30dan fazla sonuç açık tıklamayla aynı revision ve kaynakla gönderilir',async()=>{
+ const rows=Array.from({length:35},(_,i)=>({id:'lead-'+i,fullName:'İzole',stage:'QUALIFIED',revision:3,eventName:'QualifiedLead',retry:false,sources:[{id:String(100+i),label:'Form'}]}))
+ const s=setup({central:true,invoke:async(body:any)=>({data:{event:{id:body.leadId,lead_id:body.leadId,event_name:body.eventName,revision:body.revision,state:'sent',test_mode:false,events_received:1}},error:null})})
+ const result=await s.store.sendServerPendingResults(rows)
+ assert.equal(result.sent,35);assert.equal(result.failed,0)
+ assert.equal(s.calls.length,35);assert.equal(s.calls.every(c=>c.action==='enqueue'&&c.revision===3&&c.leadgenId),true)
+})
+test('Kısmi Meta hatası başarı sayılmaz ve seçilmemiş başvuru tahmin edilmez',async()=>{
+ const s=setup({central:true,invoke:async()=>({data:{event:{state:'rejected',test_mode:false,events_received:0}},error:null})})
+ const row={id:'lead',fullName:'İzole',stage:'QUALIFIED',revision:1,eventName:'QualifiedLead',sources:[{id:'111'},{id:'222'}]}
+ const result=await s.store.sendServerPendingResults([row])
+ assert.equal(result.sent,0);assert.equal(result.failed,1);assert.equal(s.calls.length,0)
+})
+
+test('Ana CRM oturumu etkinse eski çalışma modu ayrı Meta oturumuna düşüremez',async()=>{
+ const s=setup({mainCentral:true,legacySession:false})
+ await s.exported.invokeMeta({action:'connection'})
+ assert.deepEqual(s.functionSources,['central'])
+})
+
+test('Yetkisiz veri alımı aynı hesap yenilenerek yalnızca bir kez tekrar edilir',async()=>{
+ let attempts=0
+ const s=setup({central:true,invoke:async()=>++attempts===1?{error:{context:new Response('{}',{status:401})}}:{data:{forms:[]},error:null}})
+ await s.exported.invokeMeta({action:'pull',from:'2026-11-19',to:'2026-11-20'})
+ assert.equal(attempts,2);assert.equal(s.getRefreshCount(),1)
+ assert.equal(s.headers[1].Authorization,'Bearer refreshed-token')
+ assert.deepEqual(s.calls[0],s.calls[1])
+})
+
+test('Yenileme başka hesaba aitse veri alımı o hesapla sürdürülmez',async()=>{
+ const s=setup({central:true,invoke:async()=>({error:{context:new Response('{}',{status:401})}}),refresh:async()=>({data:{session:{user:{id:'other-auth'},access_token:'other-token'}},error:null})})
+ await assert.rejects(s.exported.invokeMeta({action:'pull'}),/tekrar giriş/)
+ assert.equal(s.calls.length,1)
+})
+
+test('İkinci yetkisiz cevap döngü oluşturmaz; gönderim aynı kimliklerle bir kez yenilenir',async()=>{
+ for(const action of ['pull','enqueue','stage','test','configure']){
+  const s=setup({central:true,invoke:async()=>({error:{context:new Response('{}',{status:401})}})})
+  await assert.rejects(s.exported.invokeMeta({action}))
+  assert.equal(s.calls.length,2)
+  assert.equal(s.getRefreshCount(),1)
+  assert.deepEqual(s.calls[0],s.calls[1])
+ }
+})
+test('Merkezi Meta oturumu eksikse veya başka hesaba aitse eski oturuma düşmez',async()=>{
+ for(const option of [{noCentralClient:true},{centralSession:false},{sessionUser:'other-account'},{noUser:true}]) {
+  const s=setup({central:true,...option})
+  await assert.rejects(s.exported.invokeMeta({action:'status'}))
+  assert.equal(s.functionSources.length,0);assert.equal(s.sessionSources.includes('legacy'),false)
+ }
+})
+test('Meta yanıtı gelmeden hesap kapanırsa sonuç yeni oturuma taşınmaz',async()=>{
+ const options:any={central:true,invoke:async()=>{options.noUser=true;return {data:{events:[]},error:null}}}
+ const s=setup(options)
+ await assert.rejects(s.exported.invokeMeta({action:'status'}),/oturum değişti/)
+})
 const lead={id:'isolated',stage:'QUALIFIED',isQualified:true,metaRevision:3,metaLeadId:'123',fullName:'İzole Test',phone:'',metaCapiStatus:{status:'SENT',lastEventName:'QualifiedLead',label:'Nitelikli',revision:3}}
 test('Alım ilerlemesi yalnızca dönen sayfa ve işlenen müşterileri bildirir',async()=>{
  const messages:string[]=[]

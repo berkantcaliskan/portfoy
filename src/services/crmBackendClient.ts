@@ -1,5 +1,6 @@
 import {createClient} from '@supabase/supabase-js'
 import {createExistingSessionCrmClient} from './crmExistingSession'
+import {CRM_AUTH_STORAGE_KEY, crmSessionStorage} from './crmSessionStorage'
 
 const invitationClients=new WeakSet<object>()
 export function hasBackendInvitationCallback(client:object){return invitationClients.has(client)}
@@ -11,7 +12,7 @@ export function createBackendPreviewClient(){
  // Tarayıcı SPA implicit callback'i yeni sekmede de çalışır; SDK callback hash'ini temizler.
  const callback=new URLSearchParams(window.location.hash.slice(1))
  const isInvitation=callback.get('type')==='invite'&&!!callback.get('access_token')
- const client=createClient(url,key,{auth:{storageKey:'demirturk-crm-backend-preview-auth',storage:sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}})
+ const client=createClient(url,key,{auth:{storageKey:CRM_AUTH_STORAGE_KEY,storage:crmSessionStorage(),persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}})
  // Yalnızca ekran seçimi; yetkiyi sunucudaki Auth oturumu ve CRM profili belirler.
  if(isInvitation)invitationClients.add(client)
  return client

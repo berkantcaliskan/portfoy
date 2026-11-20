@@ -66,6 +66,13 @@ export async function graphGet(path: string, token: string, version: string, fet
   return data
 }
 export const META_LEAD_FIELDS = 'id,created_time,form_id,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,is_organic,platform,field_data'
+export function leadRangePath(formId: string, from: number, to: number, cursor = '') {
+  const filtering = encodeURIComponent(JSON.stringify([
+    { field: 'time_created', operator: 'GREATER_THAN', value: Math.floor(from / 1000) - 1 },
+    { field: 'time_created', operator: 'LESS_THAN', value: Math.ceil(to / 1000) + 1 },
+  ]))
+  return `${formId}/leads?limit=25&filtering=${filtering}${cursor ? `&after=${encodeURIComponent(cursor)}` : ''}`
+}
 export function metaId(value: unknown): string | undefined {
   if (typeof value === 'string' && /^\d{1,32}$/.test(value)) return value
   if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) return String(value)

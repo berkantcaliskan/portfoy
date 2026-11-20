@@ -23,6 +23,7 @@ export class PermissionService {
 
     // Admin has unrestricted access
     if (user.role === 'ADMIN') return true
+    if (user.department === 'Müşteri İlişkileri') return lead.assignedToUserId === user.id
 
     // Scope: ALL
     if (user.scope === 'ALL') return true
@@ -42,11 +43,8 @@ export class PermissionService {
       return true
     }
 
-    // Scope: ASSIGNED_ONLY -> user must be explicitly assigned (or unassigned manual leads in Müşteri İlişkileri)
+    // Other workspaces retain their existing assigned-record rules.
     if (user.scope === 'ASSIGNED_ONLY') {
-      if (user.department === 'Müşteri İlişkileri' && !lead.assignedToUserId) {
-        return true
-      }
       return (
         lead.assignedToUserId === user.id ||
         lead.owner === user.fullName ||
@@ -58,10 +56,6 @@ export class PermissionService {
     if (user.scope === 'DEPARTMENT') {
       // Pazarlama sees all marketing/web/google/meta leads
       if (user.department === 'Pazarlama') {
-        return true
-      }
-      // Müşteri İlişkileri manages all customer records, inquiries, and sales handover tracking
-      if (user.department === 'Müşteri İlişkileri') {
         return true
       }
       // Muhasebe sees converted/won leads with transactions or deposit
@@ -80,7 +74,7 @@ export class PermissionService {
    */
   public filterLeads(user: AppUser | null, leads: Lead[]): Lead[] {
     if (!user) return leads
-    if (user.role === 'ADMIN' || user.scope === 'ALL') return leads
+    if (user.role === 'ADMIN') return leads
     return leads.filter((lead) => this.canAccessLead(user, lead))
   }
 
@@ -182,6 +176,7 @@ export class PermissionService {
   public canDeleteCustomer(user: AppUser | null): boolean {
     if (!user) return false
     if (user.role === 'ADMIN' || user.department === 'Yönetim') return true
+    if (user.department === 'Müşteri İlişkileri') return true
     return Boolean(user.permissions?.canDeleteCustomer)
   }
 
@@ -201,6 +196,7 @@ export class PermissionService {
 
   public canAssignConsultant(user: AppUser | null): boolean {
     if (!user) return false
+    if (user.role !== 'ADMIN' && user.department === 'Müşteri İlişkileri') return false
     if (user.role === 'ADMIN' || user.department === 'Yönetim' || user.isManager) return true
     return user.permissions?.canAssignConsultant !== false
   }

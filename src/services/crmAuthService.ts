@@ -22,8 +22,17 @@ export function crmEmailError(error:{code?:string;status?:number}):CrmAuthError{
  const status=Number.isInteger(error.status)?String(error.status):'unknown'
  return new CrmAuthError('code_failed',`Giriş e-postası gönderilemedi (Auth ${safeCode}, HTTP ${status}).`)
 }
+
+export function crmPasswordSignInError(error:{code?:string;status?:number;name?:string}):CrmAuthError {
+ if(error.code==='invalid_credentials')return new CrmAuthError('sign_in_failed','Kullanıcı adı, e-posta veya parola doğrulanamadı. Hesabınıza bağlı giriş bilgilerini kontrol edin.')
+ if(error.code==='email_not_confirmed')return new CrmAuthError('email_not_confirmed','Giriş yapmadan önce e-posta adresinizi doğrulayın.')
+ if(error.status===429||error.code==='over_request_rate_limit')return new CrmAuthError('request_rate_limited','Çok fazla giriş denemesi yapıldı. Bir süre bekleyip tekrar deneyin.')
+ if(error.name==='AuthRetryableFetchError'||error.status===0||error.status===undefined||error.status>=500)
+  return new CrmAuthError('sign_in_unavailable','Giriş sunucusuna ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.')
+ return new CrmAuthError('sign_in_failed','Giriş tamamlanamadı. Tekrar deneyin veya yöneticinizle iletişime geçin.')
+}
 const roles=['ADMIN','MANAGER','SPECIALIST','REPRESENTATIVE','MEMBER']
-const departments=['Satış','Kreatif','Müşteri İlişkileri','Muhasebe','Pazarlama','Yönetim']
+const departments=['Ön Ofis','Satış','Kreatif','Müşteri İlişkileri','Muhasebe','Pazarlama','Yönetim']
 const scopes=['ALL','DEPARTMENT','ASSIGNED_ONLY']
 export function parseCrmProfile(raw:any,authUserId:string):CrmAuthProfile {
  if(!raw||raw.auth_user_id!==authUserId||typeof raw.id!=='string'||!raw.id||typeof raw.full_name!=='string'
@@ -42,8 +51,12 @@ export function createCrmAuthService(client:SupabaseClient){
  const getProfile=async():Promise<CrmAuthProfile>=>{
   // Yerel depodaki user/role veya Auth metadata'sı yetki kaynağı değildir.
   const {data:identity,error:authError}=await client.auth.getUser()
+  if(authError && (authError.name==='AuthRetryableFetchError' || authError.status===0 || (authError.status??0)>=500 || authError.status===429))
+   throw new CrmAuthError('profile_unavailable','Sunucu bağlantısı geçici olarak kullanılamıyor.')
   if(authError||!identity.user) throw new CrmAuthError('authentication_required','Sunucu oturumu gerekli.')
   const {data,error}=await client.rpc('crm_get_my_profile')
+  if(error && (error.code==='' || error.code==='57014' || /Failed to fetch|NetworkError|AbortError|timeout/i.test(error.message)))
+   throw new CrmAuthError('profile_unavailable','Sunucu bağlantısı geçici olarak kullanılamıyor.')
   if(error) throw new CrmAuthError('identity_not_assigned','Bu hesaba etkin CRM personeli atanmamış veya profil okunamadı.')
   return parseCrmProfile(data,identity.user.id)
  }
@@ -63,9 +76,10 @@ export function createCrmAuthService(client:SupabaseClient){
   async signInWithPassword(email:string,password:string){
    if(!email.trim()||!password) throw new CrmAuthError('credentials_required','E-posta ve parola gerekli.')
    const identifier=email.trim().toLowerCase()
-   const loginEmail=identifier.includes('@')?identifier:`${identifier}@staff.demirturk.invalid`
+   const loginEmail=identifier.includes('@')?identifier
+    :identifier==='berkant'?'dijital@demirturkinsaat.com':`${identifier}@staff.demirturk.invalid`
    const {error}=await client.auth.signInWithPassword({email:loginEmail,password})
-   if(error) throw new CrmAuthError('sign_in_failed','Sunucu girişi reddedildi. E-posta ve parolayı kontrol edin.')
+   if(error) throw crmPasswordSignInError(error)
    try{return await getProfile()}
    catch(error){await client.auth.signOut({scope:'local'});throw error}
   },

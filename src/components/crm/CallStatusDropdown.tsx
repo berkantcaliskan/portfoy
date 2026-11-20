@@ -109,10 +109,6 @@ export const CallStatusDropdown: React.FC<CallStatusDropdownProps> = ({
         title="Çağrı Merkezi Bilgi Durumu Seç"
       >
         <div className="flex items-center gap-2 min-w-0 truncate">
-          <span
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: currentOption.dotColor }}
-          />
           <span className="truncate">{currentOption.label}</span>
         </div>
         <ChevronDown
@@ -170,10 +166,6 @@ export const CallStatusDropdown: React.FC<CallStatusDropdownProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: opt.dotColor }}
-                      />
                       <span>{opt.label}</span>
                     </div>
                     {isSelected && (

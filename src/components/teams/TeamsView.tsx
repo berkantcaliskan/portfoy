@@ -36,6 +36,7 @@ import {
   userStore,
 } from '@/services/userStore'
 import { CANONICAL_DEPARTMENTS } from '@/types/department'
+import { compareTeamMembers, isTeamDirectoryMember, teamDepartmentLabel } from '@/types/teamDirectory'
 import {
   teamOperationsStore,
   PRESENCE_STATUS_OPTIONS,
@@ -67,7 +68,74 @@ const ASSET_CATEGORY_LABELS: Record<SharedAssetCategory, string> = {
   EKIPMAN: 'Ofis & Saha Ekipmanı',
 }
 
-export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile }) => {
+function TeamDirectory() {
+  const [users, setUsers] = useState(() => userStore.getAllUsers())
+  const [, refresh] = useState(0)
+  const [search, setSearch] = useState('')
+  useEffect(() => userStore.subscribe(() => setUsers(userStore.getAllUsers())), [])
+  useEffect(() => teamOperationsStore.subscribe(() => refresh(value => value + 1)), [])
+
+  const members = users.filter(isTeamDirectoryMember).filter(member =>
+    `${member.fullName} ${teamDepartmentLabel(member)} ${getPresenceMeta(teamOperationsStore.getUserPresence(member.id).status).shortLabel} ${teamOperationsStore.getUserPresence(member.id).locationNote}`
+      .toLocaleLowerCase('tr').includes(search.toLocaleLowerCase('tr'))).sort(compareTeamMembers)
+  const assets = teamOperationsStore.getAssets()
+  const error = teamOperationsStore.getReadError()
+  return (
+    <section className="space-y-5">
+      <h2 className="flex items-center gap-2 text-2xl font-bold">
+        <Users className="size-5 text-[#b99881]" aria-hidden="true" /> Ekipler
+      </h2>
+      {error && <p role="alert" className="text-sm text-rose-400">{error}</p>}
+      <input aria-label="Kişi veya konum ara" value={search} onChange={event => setSearch(event.target.value)}
+        placeholder="Kişi veya konum ara…" className="rounded-full border border-[#4a443f] bg-transparent px-4 py-2 text-sm" />
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {members.map(member => {
+          const presence = teamOperationsStore.getUserPresence(member.id)
+          const meta = getPresenceMeta(presence.status)
+          return (
+          <li key={member.id}>
+            <GlassCard className="team-user-card min-w-0 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4a443f]/40 text-sm font-bold text-[#b99881]" aria-hidden="true">
+                  {member.avatarUrl
+                    ? <img src={member.avatarUrl} alt="" className="size-full object-cover" />
+                    : member.fullName.slice(0, 2).toLocaleUpperCase('tr')}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold">{member.fullName}</h3>
+                  <p className="text-xs text-[#a69f99]">{teamDepartmentLabel(member)} • @{member.username}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <span className={`size-2 rounded-full ${meta.dotClass}`} />
+                <span>{meta.shortLabel}</span>
+              </div>
+              {presence.locationNote && <p className="mt-2 text-xs text-[#a69f99] break-words">{presence.locationNote}</p>}
+              {presence.returnTime && <p className="mt-1 text-xs text-[#a69f99]">Beklenen dönüş {presence.returnTime}</p>}
+            </GlassCard>
+          </li>
+        )})}
+      </ul>
+      {assets.length > 0 && <section className="space-y-3">
+        <h3 className="font-semibold">Araçlar, anahtarlar ve ekipman</h3>
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{assets.map(asset => <li key={asset.id}>
+          <GlassCard className="p-4">
+            <h4 className="text-sm font-semibold">{asset.name}</h4>
+            <p className="mt-1 text-xs text-[#a69f99]">{asset.codeOrPlate}</p>
+            <p className="mt-2 text-sm">{asset.holderUserName || 'Ofiste'}</p>
+            {asset.destinationNote && <p className="mt-1 text-xs text-[#a69f99]">{asset.destinationNote}</p>}
+            {asset.expectedReturnTime && <p className="mt-1 text-xs text-[#a69f99]">Beklenen dönüş {asset.expectedReturnTime}</p>}
+          </GlassCard>
+        </li>)}</ul>
+      </section>}
+    </section>
+  )
+}
+
+export const TeamsView: React.FC<TeamsViewProps> = props =>
+  props.currentUser?.role === 'ADMIN' ? <TeamOperationsView {...props} /> : <TeamDirectory />
+
+const TeamOperationsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile }) => {
   const [users, setUsers] = useState<AppUser[]>(() => userStore.getAllUsers())
   const [presenceMap, setPresenceMap] = useState<Record<string, UserPresenceRecord>>(() =>
     teamOperationsStore.getAllPresenceMap()
@@ -179,14 +247,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
     : null
   const myMeta = getPresenceMeta(myPresence?.status)
 
-  // Only include users on the live presence board that belong to departments the current user is allowed to see
-  const trackedUsers = users.filter((u) => {
-    if (u.id === 'usr-berkant' && !presenceMap[u.id]) return false
-    if (!canSeeMultipleDepartments && u.department !== (currentUser?.department || 'Satış')) {
-      return false
-    }
-    return true
-  })
+  const trackedUsers = users.filter(isTeamDirectoryMember).sort(compareTeamMembers)
 
   // Summary KPIs
   const totalInOffice = trackedUsers.filter((u) => {
@@ -210,7 +271,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({ currentUser, onOpenProfile
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       const matchName = u.fullName.toLowerCase().includes(q)
-      const matchDept = u.department.toLowerCase().includes(q)
+      const matchDept = teamDepartmentLabel(u).toLocaleLowerCase('tr').includes(q)
       const matchNote = (rec.locationNote || '').toLowerCase().includes(q)
       if (!matchName && !matchDept && !matchNote) return false
     }
@@ -649,7 +710,7 @@ try {
                               {member.fullName}
                             </h4>
                             <p className="text-xs text-[#a69f99] truncate">
-                              {member.department} • @{member.username}
+                              {teamDepartmentLabel(member)} • @{member.username}
                             </p>
                           </div>
                         </div>
@@ -716,7 +777,8 @@ try {
                       <span>
                         Son güncelleme: {formatTimeShort(rec.updatedAt) || 'Bugün'}
                       </span>
-                      {currentUser?.role==='ADMIN'&&member.role!=='ADMIN'&&member.id.startsWith('auth-')&&<GlassButton variant="outline" size="sm" disabled={resettingMember!==null} onClick={async()=>{
+                        <div className="ml-auto flex flex-col items-end gap-2">
+                        {currentUser?.role==='ADMIN'&&member.role!=='ADMIN'&&member.id.startsWith('auth-')&&<GlassButton variant="outline" size="sm" disabled={resettingMember!==null} onClick={async()=>{
                         if(resettingMember||!window.confirm(member.fullName+' için yeni geçici parola oluşturulsun mu? İlk girişte değiştirmesi gerekecek.'))return
                         setResettingMember(member.id)
                         try{const result=await userStore.resetStaffPassword(member.id);setCreatedMemberBanner({fullName:member.fullName,username:result.username,password:result.password,department:member.department})}catch(error){window.alert(error instanceof Error?error.message:'Geçici parola oluşturulamadı.')}finally{setResettingMember(null)}
@@ -731,6 +793,7 @@ try {
                           <span>Durumu Güncelle</span>
                         </button>
                       )}
+                        </div>
                     </div>
                   </GlassCard>
                 )

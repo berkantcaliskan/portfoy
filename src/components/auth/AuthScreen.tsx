@@ -5,12 +5,14 @@ import { Eye, EyeOff, Lock, User, Mail, Building2, ShieldCheck, Sparkles, AlertC
 import { BookLogo, BrandLogoLockup } from '@/components/common/BookLogo'
 import { WindowControls } from '@/components/common/WindowControls'
 import { AppUser, Department, generateUsername, userStore } from '@/services/userStore'
+import { crmSessionStorage } from '@/services/crmSessionStorage'
 
 interface AuthScreenProps {
   onLoginSuccess: (user: AppUser) => void
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
+  const centralAuth = userStore.centralAuthEnabled
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(() =>
     !userStore.centralAuthEnabled && userStore.getAllUsers().length === 0 ? 'signup' : 'signin'
   )
@@ -21,6 +23,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [signInError, setSignInError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [rememberSession, setRememberSession] = useState(() => {
+    try { return crmSessionStorage().remembered() } catch { return false }
+  })
 
   // Sign Up (Admin / Manager) States
   const [fullName, setFullName] = useState('')
@@ -47,7 +52,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     setIsSubmitting(true)
     if(userStore.centralAuthEnabled){
-      try{onLoginSuccess(await userStore.loginWithServer(identifier,password))}
+      try{crmSessionStorage().setRemembered(rememberSession);onLoginSuccess(await userStore.loginWithServer(identifier,password))}
       catch(err){setSignInError(err instanceof Error?err.message:'Sunucu girişi tamamlanamadı.')}
       finally{setIsSubmitting(false);setPassword('')}
       return
@@ -169,23 +174,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             >
               Giriş Yap
             </button>
-            <button
-              type="button"
-              disabled={userStore.centralAuthEnabled}
-              onClick={() => {
-                setActiveTab('signup')
-                setSignUpError('')
-              }}
-              className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'signup'
-                  ? 'bg-[#b99881] text-[#1c1a18] shadow-md'
-                  : 'text-[#a69f99] hover:text-white'
-              }`}
-            >
-              {userStore.centralAuthEnabled?'Kayıt yöneticiye özel':'Yönetici Kaydı'}
-            </button>
+            {centralAuth ? (
+              <a href="?workspace=register" className="py-2 rounded-xl text-center text-xs font-bold text-[#52615a] hover:bg-white/70">
+                Davet koduyla kaydol
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('signup')
+                  setSignUpError('')
+                }}
+                className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'signup'
+                    ? 'bg-[#b99881] text-[#1c1a18] shadow-md'
+                    : 'text-[#a69f99] hover:text-white'
+                }`}
+              >
+                Yönetici Kaydı
+              </button>
+            )}
           </div>
-          {userStore.centralAuthEnabled&&<p className="text-sm mb-5">Yönetici girişi için doğrulanmış e-posta ve Supabase parolanızı kullanın. <a className="underline" href="/?workspace=backend">Hesap güvenliği ve parola işlemleri</a></p>}
+          {centralAuth && <p className="mb-5 text-sm">Kullanıcı adınızla veya hesabınıza bağlı e-postayla giriş yapın.</p>}
 
           {/* Tab 1: GİRİŞ YAP (SIGN IN) */}
           {activeTab === 'signin' && (
@@ -262,6 +272,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
+              {centralAuth && <label className="flex items-center gap-2 text-sm text-[#292d2b] cursor-pointer">
+                <input type="checkbox" checked={rememberSession} onChange={event => setRememberSession(event.target.checked)} disabled={isSubmitting} className="accent-[#657a72]" />
+                Oturum açık kalsın
+              </label>}
+
               {/* Hata Mesajı */}
               {signInError && (
                 <motion.div
@@ -294,22 +309,24 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               <div className="pt-3 border-t border-[#3d3733]/60 text-center space-y-2">
                 <p className="text-[11px] text-[#8c857f] leading-relaxed">
                   Çalışan hesapları şirket yöneticisi tarafından sistem içinden açılır.
-                  Yeni şirket açmak için{' '}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('signup')}
-                    className="text-[#b99881] font-semibold hover:underline cursor-pointer"
-                  >
-                    Yönetici Kaydı Yapın
-                  </button>
-                  .
+                  {!centralAuth && <>
+                    {' '}Yeni şirket açmak için{' '}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('signup')}
+                      className="text-[#b99881] font-semibold hover:underline cursor-pointer"
+                    >
+                      Yönetici Kaydı Yapın
+                    </button>
+                    .
+                  </>}
                 </p>
               </div>
             </motion.form>
           )}
 
           {/* Tab 2: YÖNETİCİ KAYDI (SIGN UP) */}
-          {activeTab === 'signup' && (
+          {!centralAuth && activeTab === 'signup' && (
             <motion.form
               key="signup"
               initial={{ opacity: 0, x: 10 }}

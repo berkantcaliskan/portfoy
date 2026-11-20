@@ -13,6 +13,7 @@ import {
   Upload,
   Trash2,
   X,
+  LoaderCircle,
 } from 'lucide-react'
 import {
   creativeStore,
@@ -58,16 +59,8 @@ export const CREATIVE_STATUS_META: Record<
   },
 }
 
-const GRADIENT_PRESETS = [
-  { label: 'İndigo Gece', value: 'from-indigo-600 via-blue-700 to-slate-900' },
-  { label: 'Cumhuriyet Kırmızısı', value: 'from-red-700 via-rose-800 to-slate-950' },
-  { label: 'Altın & Kehribar', value: 'from-amber-600 via-orange-700 to-stone-900' },
-  { label: 'Zümrüt Yeşil', value: 'from-emerald-600 via-teal-800 to-slate-950' },
-  { label: 'Mor & Kadife', value: 'from-purple-700 via-violet-800 to-slate-950' },
-  { label: 'Antrasit Minimal', value: 'from-zinc-700 via-neutral-900 to-black' },
-]
 
-export function CreativesGalleryView() {
+export function CreativesGalleryView({ title = 'Stüdyo' }: { title?: string } = {}) {
   const [creatives, setCreatives] = useState<CreativeAssetItem[]>(() =>
     creativeStore.getCreatives()
   )
@@ -86,14 +79,14 @@ export function CreativesGalleryView() {
 
   // New creative form states
   const [newTitle, setNewTitle] = useState('')
-  const [newProject, setNewProject] = useState('Eksen - 2')
-  const [newFormat, setNewFormat] = useState<CreativeFormat>('Reels / Video')
-  const [newPlatform, setNewPlatform] = useState('Instagram & Meta Ads')
-  const [newHeadline, setNewHeadline] = useState('')
+  const [newFormat, setNewFormat] = useState<CreativeFormat>('Düşey')
   const [newAdCopy, setNewAdCopy] = useState('')
-  const [newCtaText, setNewCtaText] = useState('Tanıtım Turu Randevusu Al')
-  const [newDueDate, setNewDueDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [newGradient, setNewGradient] = useState(GRADIENT_PRESETS[0].value)
+  const [customFormat, setCustomFormat] = useState('')
+  const [mediaType, setMediaType] = useState<CreativeAssetItem['mediaType']>('OTHER')
+  const [fileName, setFileName] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const createLock = React.useRef(false)
   const [newPreviewImage, setNewPreviewImage] = useState<string | undefined>(undefined)
 
   useEffect(() => {
@@ -140,6 +133,10 @@ export function CreativesGalleryView() {
   ) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 20 * 1024 * 1024) { setCreateError('Dosya en fazla 20 MB olabilir.'); return }
+    setFileName(file.name)
+    const kind: CreativeAssetItem['mediaType'] = file.type === 'image/gif' ? 'GIF' : file.type.startsWith('video/') ? 'VIDEO' : file.type.startsWith('image/') ? 'PHOTO' : file.type.startsWith('audio/') ? 'AUDIO' : file.type === 'application/pdf' ? 'PDF' : 'OTHER'
+    setMediaType(kind)
     const reader = new FileReader()
     reader.onload = async () => {
 try {
@@ -177,41 +174,24 @@ try {
 }
 
   const handleCreateCreative = async (e: React.FormEvent) => {
-try {
-
     e.preventDefault()
-    if (!newTitle.trim()) return
-    const currentUser = userStore.getCurrentUser()
-    const created = await creativeStore.addCreative({
-      title: newTitle.trim(),
-      project: newProject,
-      format: newFormat,
-      platform: newPlatform,
-      status: 'INCELEMEDE',
-      designer: currentUser?.fullName || 'Kreatif Ekip',
-      dueDate: newDueDate,
-      version: 'v1.0',
-      aspectRatio:
-        newFormat.includes('9:16') || newFormat.includes('Reels')
-          ? '9:16'
-          : newFormat.includes('1:1')
-          ? '1:1'
-          : '4:5',
-      accentGradient: newGradient,
-      previewImageUrl: newPreviewImage,
-      headline: newHeadline.trim() || newTitle.trim().toUpperCase(),
-      adCopy: newAdCopy.trim() || 'Demirtürk İnşaat güvencesiyle Karasu projelerimizi keşfedin.',
-      ctaText: newCtaText.trim() || 'Detaylı Bilgi Al',
-    })
-    setNewTitle('')
-    setNewHeadline('')
-    setNewAdCopy('')
-    setNewPreviewImage(undefined)
-    setShowCreateModal(false)
-    setSelectedCreativeId(created.id)
-  
-} catch (error) { window.alert(error instanceof Error ? error.message : "Sunucu işlemi doğrulanamadı.") }
-}
+    if (createLock.current || !newTitle.trim()) return
+    if (newFormat === 'Özel' && !customFormat.trim()) { setCreateError('Özel formatı yazın.'); return }
+    createLock.current = true; setCreating(true); setCreateError('')
+    try {
+      const currentUser = userStore.getCurrentUser()
+      const created = await creativeStore.addCreative({
+        title: newTitle.trim(), project: '', format: newFormat, customFormat: newFormat === 'Özel' ? customFormat.trim() : undefined,
+        platform: '', status: 'INCELEMEDE', designer: currentUser?.fullName || 'Kreatif Ekip', dueDate: '', version: 'v1.0',
+        aspectRatio: newFormat === 'Düşey' ? '9:16' : newFormat === 'Yatay' ? '16:9' : newFormat === 'Yatay gönderi' ? '1.91:1' : '1:1',
+        accentGradient: '', previewImageUrl: newPreviewImage, mediaType, mediaFileName: fileName,
+        headline: '', adCopy: newAdCopy.trim(), ctaText: '',
+      })
+      setNewTitle(''); setNewAdCopy(''); setCustomFormat(''); setNewPreviewImage(undefined); setFileName(''); setMediaType('OTHER')
+      setShowCreateModal(false); setSelectedCreativeId(created.id)
+    } catch (error) { setCreateError(error instanceof Error ? error.message : 'Kreatif yüklenemedi. Aynı bilgilerle tekrar deneyin.') }
+    finally { createLock.current = false; setCreating(false) }
+  }
 
   return (
     <div className="space-y-4 pb-8">
@@ -221,7 +201,7 @@ try {
           <div className="flex items-center gap-2.5">
             <Palette className="w-5 h-5 text-[#b99881]" />
             <h2 className="text-2xl font-bold text-white tracking-wide">
-              Stüdyo
+              {title}
             </h2>
           </div>
           <p className="text-xs text-[#a69f99] mt-1">
@@ -237,7 +217,7 @@ try {
           className="rounded-full px-4 py-2 text-xs font-bold"
         >
           <Plus className="w-4 h-4" />
-          <span>Yeni Kreatif Yükle / Oluştur</span>
+          <span>Yeni Kreatif</span>
         </GlassButton>
       </div>
 
@@ -318,7 +298,7 @@ try {
                       {item.code} • {item.version}
                     </span>
                     <span className="px-2.5 py-0.5 rounded-full bg-black/55 backdrop-blur-md text-[10px] font-medium text-white border border-white/10">
-                      {item.format}
+                      {item.format === 'Özel' ? item.customFormat || 'Özel' : item.format}
                     </span>
                   </div>
 
@@ -333,7 +313,7 @@ try {
                 {/* Bottom row inside preview */}
                 <div className="relative z-10 space-y-1.5">
                   <span className="inline-block text-[10px] uppercase tracking-wider font-bold text-white/85">
-                    DEMİRTÜRK İNŞAAT • {item.project}
+                    DEMİRTÜRK İNŞAAT{item.project ? ` • ${item.project}` : ''}
                   </span>
                   <p className="text-xs font-extrabold text-white line-clamp-2 leading-snug drop-shadow">
                     {item.headline}
@@ -351,7 +331,7 @@ try {
                   <div className="flex items-center justify-between text-[11px] text-[#a69f99]">
                     <span>{item.platform}</span>
                     <span>
-                      Teslim: {new Date(item.dueDate + 'T12:00:00').toLocaleDateString('tr-TR')}
+                      {item.dueDate ? `Teslim: ${new Date(item.dueDate + 'T12:00:00').toLocaleDateString('tr-TR')}` : ''}
                     </span>
                   </div>
                   <h3 className="text-sm font-bold text-white line-clamp-1">
@@ -461,7 +441,7 @@ try {
 
                 <div className="relative z-10 flex items-center justify-between">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-white/90">
-                    DEMİRTÜRK İNŞAAT • {selectedCreative.project}
+                    DEMİRTÜRK İNŞAAT{selectedCreative.project ? ` • ${selectedCreative.project}` : ''}
                   </span>
                   <label className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/65 hover:bg-black/80 text-[11px] text-white border border-white/15 cursor-pointer transition-colors">
                     <Upload className="w-3.5 h-3.5" />
@@ -647,24 +627,27 @@ try {
       {showCreateModal && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex items-center justify-center p-4"
-          onClick={() => setShowCreateModal(false)}
+          onClick={() => { if (!createLock.current) setShowCreateModal(false) }}
         >
           <div
-            className="glass-modal w-full max-w-lg rounded-[24px] bg-[#282522] border border-[#4a443f] p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+            className="glass-modal relative w-full max-w-lg rounded-[24px] bg-[#282522] border border-[#4a443f] p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
+            {creating && <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3"><LoaderCircle className="size-7 animate-spin text-[var(--accent-color)]" /><span className="text-sm">Yükleniyor…</span></div>}
+            <div style={{ visibility: creating ? 'hidden' : 'visible' }} inert={creating}>
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white">Yeni Kreatif Oluştur / Yükle</h3>
+              <h3 className="text-base font-bold text-white">Yeni Kreatif</h3>
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => { if (!createLock.current) setShowCreateModal(false) }}
                 className="p-1.5 rounded-full border border-[#4a443f] text-[#a69f99] hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateCreative} className="space-y-3.5">
+            <form onSubmit={handleCreateCreative} className="space-y-3.5 mt-4">
+              {createError && <p role="alert" className="text-xs text-rose-400">{createError}</p>}
               <div>
                 <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
                   Kreatif Başlığı
@@ -679,137 +662,30 @@ try {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Proje</label>
-                  <CustomSelect
-                    value={newProject}
-                    onChange={(e) => setNewProject(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
-                  >
-                    <option value="Eksen - 2">Eksen - 2</option>
-                    <option value="Portre">Portre</option>
-                    <option value="İnception">İnception</option>
-                    <option value="Modern">Modern</option>
-                    <option value="Tria">Tria</option>
-                    <option value="Kurumsal">Kurumsal • Tüm Projeler</option>
-                  </CustomSelect>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">Format</label>
-                  <CustomSelect
-                    value={newFormat}
-                    onChange={(e) => setNewFormat(e.target.value as CreativeFormat)}
-                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
-                  >
-                    <option value="Reels / Video">Reels / Video</option>
-                    <option value="Story (9:16)">Story (9:16)</option>
-                    <option value="Post / Kare (1:1)">Post / Kare (1:1)</option>
-                    <option value="Karusel">Karusel</option>
-                    <option value="3D Render">3D Render</option>
-                    <option value="Katalog / Broşür">Katalog / Broşür</option>
-                  </CustomSelect>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                    Mecra / Platform
-                  </label>
-                  <input
-                    type="text"
-                    value={newPlatform}
-                    onChange={(e) => setNewPlatform(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                    Teslim / Yayın Tarihi
-                  </label>
-                  <input
-                    type="date"
-                    value={newDueDate}
-                    onChange={(e) => setNewDueDate(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
-                  />
-                </div>
-              </div>
-
+              <label className="block text-xs font-semibold text-[var(--tertiary-white)]">Format
+                <CustomSelect title="Kreatif formatı" value={newFormat} onChange={event => setNewFormat(event.target.value as CreativeFormat)} className="mt-1 w-full rounded-full border border-[var(--glass-border)] px-3 py-2">
+                  {['Düşey','Yatay','Gönderi','Yatay gönderi','Özel'].map(format => <option key={format} value={format}>{format}</option>)}
+                </CustomSelect>
+              </label>
+              {newFormat === 'Özel' && <label className="block text-xs font-semibold">Özel format<input required maxLength={120} value={customFormat} onChange={event => setCustomFormat(event.target.value)} placeholder="Format veya ölçü girin" className="mt-1 w-full rounded-full border border-[var(--glass-border)] px-3 py-2" /></label>}
+              <label className="block text-xs font-semibold">Açıklama<textarea rows={3} maxLength={10000} value={newAdCopy} onChange={event => setNewAdCopy(event.target.value)} className="mt-1 w-full rounded-2xl border border-[var(--glass-border)] px-3 py-2" /></label>
               <div>
                 <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                  Görsel Üstü Ana Başlık (Headline)
-                </label>
-                <input
-                  type="text"
-                  value={newHeadline}
-                  onChange={(e) => setNewHeadline(e.target.value)}
-                  placeholder="Örn: 36 AY ELDEN SENETLE KARASU’DA DAİRE FIRSATI"
-                  className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                  Reklam Metni / Açıklama (Copy)
-                </label>
-                <textarea
-                  rows={2}
-                  value={newAdCopy}
-                  onChange={(e) => setNewAdCopy(e.target.value)}
-                  placeholder="Reklam açıklaması veya kreatif kurgu özeti..."
-                  className="w-full px-3.5 py-2 rounded-2xl bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                    CTA Buton Metni
-                  </label>
-                  <input
-                    type="text"
-                    value={newCtaText}
-                    onChange={(e) => setNewCtaText(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                    Tema Rengi
-                  </label>
-                  <CustomSelect
-                    value={newGradient}
-                    onChange={(e) => setNewGradient(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-full bg-[#1e1c1a] border border-[#4a443f] text-xs text-white focus:outline-none"
-                  >
-                    {GRADIENT_PRESETS.map((g) => (
-                      <option key={g.value} value={g.value}>
-                        {g.label}
-                      </option>
-                    ))}
-                  </CustomSelect>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#f3efe9] mb-1">
-                  Önizleme Görseli Yükle (Opsiyonel)
+                  Dosya
                 </label>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/*,audio/*,application/pdf"
                   onChange={(e) => handleImageFileChange(e)}
                   className="w-full text-xs text-[#a69f99]"
                 />
               </div>
 
+              {fileName && <p className="text-xs text-[var(--accent-color)] truncate">{fileName}</p>}
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => { if (!createLock.current) setShowCreateModal(false) }}
                   className="px-4 py-2 rounded-full glass-button-subtle border border-[#4a443f] text-xs text-[#a69f99] hover:text-white cursor-pointer"
                 >
                   Vazgeç
@@ -820,10 +696,11 @@ try {
                   size="sm"
                   className="rounded-full px-5 py-2 text-xs font-bold"
                 >
-                  Kreatifi Kaydet
+                  Yükle
                 </GlassButton>
               </div>
             </form>
+            </div>
           </div>
         </div>,
         document.body

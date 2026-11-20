@@ -2,6 +2,8 @@ import { MetaFormSummary, MetaWebhookEvent, MetaCapiEventLog, MetaCapiEventName 
 import { Lead, LeadStage } from '@/types/lead'
 import { leadStore } from './leadStore'
 import { supabase, SUPABASE_URL } from './supabaseClient'
+import { userStore } from './userStore'
+import { isCentralCrm } from './crmRuntime'
 import { rowToLead } from './dbMapper'
 import { MetaStageQueue } from './metaStageQueue'
 import { stageEvent } from '../../supabase/functions/_shared/meta-core'
@@ -13,6 +15,10 @@ export interface MetaApiConfig {
   webhookUrl: string; pageId: string; pageName: string; isConnected: boolean
   datasetId: string; testEventCode: string; autoSyncStages: boolean; crmName: string; lastCheckedAt?: string
 }
+export interface PendingMetaResult {
+  id: string; fullName: string; stage: LeadStage; revision: number; eventName: MetaCapiEventName
+  retry: boolean; sources: { id: string; label: string }[]
+}
 const DEFAULT_META_CONFIG: MetaApiConfig = {
   pageAccessToken: '', capiAccessToken: '', verifyToken: '',
   webhookUrl: import.meta.env.VITE_SUPABASE_URL ? SUPABASE_URL + '/functions/v1/meta-webhook' : '',
@@ -21,9 +27,37 @@ const DEFAULT_META_CONFIG: MetaApiConfig = {
 }
 export async function invokeMeta(body: Record<string, unknown>) {
   if (!import.meta.env.VITE_SUPABASE_URL) throw new Error('VITE_SUPABASE_URL yapılandırılmamış.')
-  const { data: session } = await supabase.auth.getSession()
-  if (!session.session) throw new Error('Meta işlemleri için Supabase Auth oturumu gerekli; yerel CRM girişi yeterli değildir.')
-  const { data, error } = await supabase.functions.invoke('meta-capi', { body, timeout: 70000 })
+  const central = userStore.centralAuthEnabled || isCentralCrm()
+  const client = central ? userStore.getServerClient() : supabase
+  if (!client) throw new Error('Meta işlemleri için uygulamada yeniden giriş yapın.')
+  const { data: session } = await client.auth.getSession()
+  if (!session.session) throw new Error(central ? 'Uygulama oturumu yenilenemedi. Hesabınızla tekrar giriş yapın.' : 'Verileri almak için uygulamada oturum açın.')
+  if (central && (!userStore.getCurrentUser()?.authUserId || session.session.user.id !== userStore.getCurrentUser()?.authUserId)) {
+    throw new Error('Meta işlemleri için uygulamadaki hesabınızı yeniden doğrulayın.')
+  }
+  const expectedUser = session.session.user.id
+  const checkAccount = () => {
+    if (central && (client !== userStore.getServerClient() || expectedUser !== userStore.getCurrentUser()?.authUserId)) {
+      throw new Error('Meta işlemi sırasında oturum değişti. Yeniden deneyin.')
+    }
+  }
+  const invoke = (token: string) => client.functions.invoke('meta-capi', {
+    body, headers: { Authorization: `Bearer ${token}` }, timeout: 70000,
+  })
+  checkAccount()
+  let { data, error } = await invoke(session.session.access_token)
+  // JWT reddi sunucuda herhangi bir kayıt veya gönderim yapılmadan döner.
+  // Aynı hesabın oturumunu bir kez yenile; olay/revision kimliklerini koru.
+  if (error?.context instanceof Response && error.context.status === 401) {
+    checkAccount()
+    const refreshed = await client.auth.refreshSession()
+    checkAccount()
+    if (refreshed.error || !refreshed.data.session || refreshed.data.session.user.id !== expectedUser) {
+      throw new Error('Uygulama oturumu yenilenemedi. Hesabınızla tekrar giriş yapın.')
+    }
+    ;({ data, error } = await invoke(refreshed.data.session.access_token))
+  }
+  checkAccount()
   if (error) {
     let message = 'Meta sunucu işlemi başarısız; oturum, yetki ve sunucu ayarlarını kontrol edin.'
     if (error.name === 'FunctionsFetchError' || error.name === 'AbortError') message = 'Sunucuya erişilemedi veya işlem süresi doldu. Bazı kayıtlar işlenmiş olabilir; durumu yenileyip aynı kapsamı güvenle tekrar kontrol edin.'
@@ -119,6 +153,7 @@ export function isLeadPendingMetaSync(lead: Lead): boolean {
 }
 
 class MetaStore {
+  private manualSending = false
   private stageWrites = new MetaStageQueue()
   public resetStageWrite(id: string) { this.stageWrites.reconcile(id) }
   public persistStageChange(lead: Lead) {
@@ -208,6 +243,48 @@ class MetaStore {
     return log
   }
   public getPendingMetaSyncLeads() { return leadStore.getAllRaw().filter(isLeadPendingMetaSync) }
+  public async getServerPendingResults(): Promise<PendingMetaResult[]> {
+    const results: PendingMetaResult[] = []
+    const cursors = new Set<string>()
+    let cursor: string | null = null
+    do {
+      const data = await invokeMeta({ action: 'pending', cursor })
+      if (!Array.isArray(data.records)) throw Error('Gönderim listesi sunucudan doğrulanamadı.')
+      results.push(...data.records)
+      cursor = data.cursor || null
+      if (cursor && cursors.has(cursor)) throw Error('Gönderim listesi tamamlanamadı; yeniden deneyin.')
+      if (cursor) cursors.add(cursor)
+    } while (cursor)
+    return results
+  }
+  public async sendServerPendingResults(targets: PendingMetaResult[], selections: Record<string,string> = {}, onProgress?: (message: string) => void) {
+    if (this.manualSending) throw Error('Önceki gönderim sürüyor.')
+    const actor = userStore.getCurrentUser()?.authUserId
+    if (!actor) throw Error('Uygulamada oturum açın.')
+    this.manualSending = true
+    const result = { sent: 0, failed: 0, waiting: 0, errors: [] as string[] }
+    try {
+      for (const [index, target] of targets.entries()) {
+        if (actor !== userStore.getCurrentUser()?.authUserId) throw Error('Gönderim sırasında oturum değişti.')
+        onProgress?.(`${index + 1}/${targets.length} sonuç gönderiliyor…`)
+        const source = selections[target.id] || (target.sources.length === 1 ? target.sources[0].id : '')
+        if (!target.sources.some(s => s.id === source)) { result.failed++; result.errors.push(`${target.fullName}: Başvuru seçilmeli.`); continue }
+        try {
+          const data = await invokeMeta({ action: 'enqueue', leadId: target.id, revision: target.revision,
+            eventName: target.eventName, leadgenId: source, retry: target.retry })
+          if (!data.event || data.event.test_mode !== false) throw Error('Canlı gönderim sonucu doğrulanamadı.')
+          const log = this.toLog(data.event)
+          if (log.status === 'SENT' && data.event.events_received === 1) result.sent++
+          else if (log.status === 'QUEUED') result.waiting++
+          else { result.failed++; result.errors.push(`${target.fullName}: ${log.errorMessage || 'Meta sonucu kabul etmedi.'}`) }
+          leadStore.updateMetaCapiStatus(target.id, { lastEventName: target.eventName,
+            label: mapStageOrSignalToMetaEvent(target.eventName).signalLabel, revision: target.revision,
+            metaLeadgenId: source, status: log.status, sentAt: log.sentAt, errorMessage: log.errorMessage })
+        } catch (error) { result.failed++; result.errors.push(`${target.fullName}: ${(error as Error).message}`) }
+      }
+      return result
+    } finally { this.manualSending = false }
+  }
   public async flushQueuedCapiEvents() {
     // Eski yerel payload'lar yeniden oynatılmaz. Yetkili worker kalıcı kuyruğu işler.
     await this.refreshStatus()
