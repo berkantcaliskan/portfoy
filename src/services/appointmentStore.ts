@@ -6,6 +6,13 @@ import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { syncService } from './syncService'
 import { rowToAppointment } from './dbMapper'
 
+// Eski kayıtlardaki var olmayan ofis adları tek bir "Ofis" olarak gösterilir
+const LEGACY_OFFICE_NAMES = new Set(['Demirtürk Panorama Satış Ofisi', 'Merkez Satış Ofisi'])
+export function normalizeAppointmentLocation(location?: string): string {
+  const value = (location || '').trim()
+  return !value || LEGACY_OFFICE_NAMES.has(value) ? 'Ofis' : value
+}
+
 export type AppointmentType = 'ONLINE' | 'OFFICE' | 'ON_SITE'
 export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'
 
@@ -187,7 +194,8 @@ class AppointmentStore {
         const page = await repository.list('appointments', cursor, 100)
         if (generation !== this.generation || sequence !== this.readSequence) return
         for (const row of page.records) {
-          records.push({ ...row.payload, id: row.id, createdByUserId: row.owner_id, createdByDepartment: row.department } as Appointment)
+          const record = { ...row.payload, id: row.id, createdByUserId: row.owner_id, createdByDepartment: row.department } as Appointment
+          records.push({ ...record, location: normalizeAppointmentLocation(record.location) })
           revisions.set(row.id, row.revision)
         }
         if (page.next !== null && page.next <= cursor) throw new Error('Randevu listesi doğrulanamadı.')
@@ -261,7 +269,7 @@ class AppointmentStore {
       customerPhone: data.customerPhone.trim(),
       date: data.date,
       time: data.time,
-      location: data.location || 'Merkez Satış Ofisi',
+      location: normalizeAppointmentLocation(data.location),
       type: data.type,
       status: 'SCHEDULED',
       assignedToUserId: data.assignedToUserId,

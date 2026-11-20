@@ -1,5 +1,11 @@
-.customer-records-table { min-width:1130px }
-.customer-records-table :is(td,th) { padding-inline:8px }
+.customer-records-table { min-width:1060px }
+.customer-records-table :is(td,th) { padding-inline:6px }
+.customer-records-table :is(td,th):first-child { padding-left:18px }
+/* Atanan Danışman, WhatsApp ikonuna yapışmasın */
+.customer-records-table :is(td,th):nth-child(4) { padding-left:16px }
+/* Bilgi ve Aşama tetikleyicileri sabit genişlikte; tabloda hücreye sığsın, komşu sütuna taşmasın */
+.customer-records-table td:is(:nth-child(5),:nth-child(6)) > button { width:146px!important; min-width:0!important; max-width:146px!important }
+.customer-records-table td:is(:nth-child(5),:nth-child(6)) > button > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .customer-note-lines { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; white-space:normal; overflow-wrap:anywhere; line-height:1.45 }
 .customer-stage-tabs { border:1px solid var(--glass-border); background:var(--surface-subtle,rgba(128,128,128,.06)); border-radius:24px; padding:3px 6px }
 .customer-stage-tabs .tab-pill-btn:not(.is-active-tab-pill),.customer-stage-tabs .card-action-btn { background:transparent!important; border-color:transparent!important; box-shadow:none!important }
@@ -7,6 +13,10 @@
 .lead-channel-icon {color:var(--text-muted,currentColor);line-height:1;margin-top:2px}
 .lead-channel-icon b {font-family:Arial,sans-serif;background:#f4d943;color:#302619;border-radius:3px;padding:1px 4px}
 .lead-phone-link {margin-left:auto;min-width:25px;min-height:25px;border-radius:50%}
-.lead-handover {width:31px;height:31px;border:1px solid var(--glass-border);border-radius:50%;gap:0}
-.lead-handover:hover,.lead-handover:focus-visible {color:#e4b84a!important;border-color:currentColor}
+.lead-handover {width:34px;height:34px;padding:0;border:1px solid var(--glass-border);border-radius:50%;gap:0;overflow:hidden;transition:background-color .15s,color .15s}
+.lead-handover svg {flex-shrink:0}
+/* Üzerine gelince kontur değil, yarı şeffaf sarı dolgu */
+.lead-handover:hover,.lead-handover:focus-visible {color:#e4b84a!important;background-color:rgb(228 184 74 / 38%)!important;border-color:var(--glass-border)!important;outline:none}
+/* Açık temada sarı zemin beyaza karışmasın: dolgu daha yoğun, ikon koyu sarı */
+html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .lead-handover:is(:hover,:focus-visible) {color:#8a6411!important;background-color:rgb(228 184 74 / 55%)!important}
 .lead-move-menu {position:absolute;top:0;min-width:115px;max-width:170px;max-height:145px;overflow:auto;border-radius:16px;padding:5px}

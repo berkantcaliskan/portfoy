@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
+  MessageSquareText,
   Users,
   Building2,
   Cloud,
@@ -76,7 +77,7 @@ const STORAGE_KEY_QUICK_ACCESS = 'demirturk_start_quick_access_v3'
 const STORAGE_KEY_QUICK_CALENDAR_SEEDED = 'demirturk_quick_calendar_seeded_v1'
 
 const DEFAULT_QUICK_ACCESS_IDS = ['calendar', 'contacts', 'payments', 'notepad', 'calculator']
-const RETIRED_TOOL_IDS = new Set(['commission', 'deedFee'])
+const RETIRED_TOOL_IDS = new Set(['commission', 'deedFee', 'compass', 'valuation', 'contracts', 'dask', 'taxincome', 'aidat'])
 
 export interface StartMenuItem {
   id: string
@@ -111,17 +112,12 @@ const START_MENU_ITEMS: StartMenuItem[] = [
   { id: 'bargain', name: 'Pazarlık Marjı', icon: Percent, type: 'tool', toolId: 'bargain' },
   { id: 'downpayment', name: 'Peşinat Planı', icon: CreditCard, type: 'tool', toolId: 'downpayment' },
   { id: 'parsel', name: 'TKGM Parsel', icon: MapPin, type: 'tool', toolId: 'parsel' },
-  { id: 'compass', name: 'Güneş & Cephe', icon: Compass, type: 'tool', toolId: 'compass' },
-  { id: 'valuation', name: 'Ekspertiz', icon: Building, type: 'tool', toolId: 'valuation' },
-  { id: 'contracts', name: 'Sözleşmeler', icon: FileCheck, type: 'tool', toolId: 'contracts' },
   { id: 'target', name: 'Satış Hedefi', icon: Target, type: 'tool', toolId: 'target' },
   { id: 'reminders', name: 'Hatırlatıcı', icon: Bell, type: 'tool', toolId: 'reminders' },
   { id: 'qr', name: 'Kartvizit QR', icon: QrCode, type: 'tool', toolId: 'qr' },
   { id: 'market', name: 'Piyasa Endeks', icon: BarChart3, type: 'tool', toolId: 'market' },
-  { id: 'dask', name: 'DASK Sigorta', icon: ShieldCheck, type: 'tool', toolId: 'dask' },
-  { id: 'taxincome', name: 'Kira Vergisi', icon: Receipt, type: 'tool', toolId: 'taxincome' },
-  { id: 'aidat', name: 'Aidat Dağıtıcı', icon: Home, type: 'tool', toolId: 'aidat' },
-  { id: 'weather', name: 'Saha Durumu', icon: Sun, type: 'tool', toolId: 'weather' },
+  { id: 'weather', name: 'Hava Durumu', icon: Sun, type: 'tool', toolId: 'weather' },
+  { id: 'replies', name: 'Hazır Mesajlar', icon: MessageSquareText, type: 'tool', toolId: 'replies' },
   { id: 'timer', name: 'Kronometre', icon: Timer, type: 'tool', toolId: 'timer' },
 ]
 
@@ -318,11 +314,15 @@ export const AppDock: React.FC<AppDockProps> = ({
   const maxQuickCount = startMenuGrid === '4x5' ? 4 : startMenuGrid === '5x5' ? 5 : 6
   const activeQuickAccessIds = quickAccessIds.slice(0, maxQuickCount)
 
+  // Hazır Mesajlar yalnızca Pazarlama departmanında görünür
+  const isMarketingUser = currentUser?.department === 'Pazarlama'
+  const menuItems = START_MENU_ITEMS.filter((item) => item.id !== 'replies' || isMarketingUser)
+
   const activeQuickAccessItems: StartMenuItem[] = activeQuickAccessIds
-    .map((id) => START_MENU_ITEMS.find((s) => s.id === id) || (id === 'settings' ? SETTINGS_MENU_ITEM : null))
+    .map((id) => menuItems.find((s) => s.id === id) || (id === 'settings' ? SETTINGS_MENU_ITEM : null))
     .filter(Boolean) as StartMenuItem[]
 
-  const remainingItems = START_MENU_ITEMS.filter((item) => !activeQuickAccessIds.includes(item.id))
+  const remainingItems = menuItems.filter((item) => !activeQuickAccessIds.includes(item.id))
 
   const hideTimerRef = useRef<number | null>(null)
   const startMenuRef = useRef<HTMLDivElement>(null)
@@ -336,7 +336,8 @@ export const AppDock: React.FC<AppDockProps> = ({
 
   // Sayfalar dock'ta yer almaz; yalnızca araçlar ve eylemler
   const visibleItems = dockItems.filter(
-    (item) => !item.tab && item.id !== 'dock-new-lead' && item.id !== 'dock-messages' && item.id !== 'dock-mail'
+    (item) => !item.tab && item.id !== 'dock-new-lead' && item.id !== 'dock-messages' && item.id !== 'dock-mail' &&
+      (item.toolId !== 'replies' || isMarketingUser)
   )
 
   // Sığmayan kelimeleri satır bazında '...' (ellipsis) ile kesen yardımcı fonksiyon
@@ -396,7 +397,8 @@ export const AppDock: React.FC<AppDockProps> = ({
     const handleMouseMove = (e: MouseEvent) => {
       const distFromBottom = window.innerHeight - e.clientY
       const sidebarWidth = window.innerWidth >= 768 ? (isSidebarCollapsed ? 68 : 216) : 0
-      const distFromCenter = Math.abs(e.clientX - (window.innerWidth + sidebarWidth) / 2)
+      const messagesOffset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--messages-sidebar-offset')) || 0
+      const distFromCenter = Math.abs(e.clientX - (window.innerWidth + sidebarWidth - messagesOffset) / 2)
       // Only reveal dock when cursor enters the narrow centered trigger zone around the dock line
       if (distFromBottom <= 18 && distFromCenter <= 110) {
         setIsVisible(true)
@@ -712,6 +714,7 @@ export const AppDock: React.FC<AppDockProps> = ({
           isVisible ? 'opacity-0 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'
         }`}
         title="Görev Çubuğunu Göster"
+        style={{ marginLeft: 'calc(var(--messages-sidebar-offset, 0px) / -2)' }}
       >
         <div className="h-1.5 w-32 sm:w-44 rounded-full dock-breathing-line group-hover:h-2 group-hover:w-48 transition-all duration-300 shadow-lg" />
       </div>
@@ -747,8 +750,10 @@ export const AppDock: React.FC<AppDockProps> = ({
         } transition-all duration-300 ease-out transform ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'
         }`}
+        // Mesajlar geniş modda açıkken içerik alanının ortasına kayar
+        style={{ marginLeft: 'calc(var(--messages-sidebar-offset, 0px) / -2)' }}
       >
-        {/* 
+        {/*
           BAŞLAT MENÜSÜ POPOVER (DOCK'UN TAM ÜSTÜNE DOĞRU AÇILIR)
           Sabit sol logo butonuna tıklandığında dock'un üzerinden yukarı doğru açılır
         */}
@@ -820,9 +825,6 @@ export const AppDock: React.FC<AppDockProps> = ({
                 <span className="text-[10px] font-bold text-[#dfb76c] uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3 text-[#dfb76c]" />
                   <span>Hızlı Erişim</span>
-                </span>
-                <span className="text-[10px] text-[#8c857f] font-medium">
-                  Sabit Sıra ({activeQuickAccessItems.length}/{maxQuickCount})
                 </span>
               </div>
 
@@ -1026,7 +1028,9 @@ export const AppDock: React.FC<AppDockProps> = ({
                   : 'bg-[#34302d] hover:bg-[#3d3733] border-[#b99881]/50 text-[#b99881] hover:scale-105'
               }`}
             >
-              <BookLogo className="w-5 h-5 transition-transform hover:scale-110" />
+              <span className={`start-logo flex ${isStartMenuOpen ? 'is-open' : ''}`}>
+                <BookLogo className="w-5 h-5 transition-transform hover:scale-110" />
+              </span>
             </button>
             <span
               className={`absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#1c1a18]/95 text-xs font-semibold text-white whitespace-nowrap pointer-events-none border border-[#4a443f] transition-all duration-100 ${

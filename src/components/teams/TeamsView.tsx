@@ -682,9 +682,9 @@ try {
                 return (
                   <GlassCard
                     key={member.id}
-                    className="team-user-card p-5 flex flex-col justify-between gap-4 transition-all"
+                    className="team-user-card px-5 py-4 flex flex-col justify-between gap-2.5 transition-all"
                   >
-                    <div className="space-y-3.5">
+                    <div className="space-y-2.5">
                       {/* Top Row: User Info + Status Pill */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
@@ -701,7 +701,7 @@ try {
                               )}
                             </div>
                             <span
-                              className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#2b2724] ${meta.dotClass}`}
+                              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${meta.dotClass}`}
                             />
                           </div>
 
@@ -773,11 +773,11 @@ try {
                     </div>
 
                     {/* Footer: Updated Time + Quick Update Button */}
-                    <div className="pt-1 flex flex-wrap gap-2 items-center justify-between text-[11px] text-[#8c857f]">
-                      <span>
+                    <div className="flex flex-nowrap gap-3 items-end justify-between text-[11px] text-[#8c857f]">
+                      <span className="pb-1 whitespace-nowrap">
                         Son güncelleme: {formatTimeShort(rec.updatedAt) || 'Bugün'}
                       </span>
-                        <div className="ml-auto flex flex-col items-end gap-2">
+                        <div className="ml-auto shrink-0 flex flex-col items-end gap-1.5">
                         {currentUser?.role==='ADMIN'&&member.role!=='ADMIN'&&member.id.startsWith('auth-')&&<GlassButton variant="outline" size="sm" disabled={resettingMember!==null} onClick={async()=>{
                         if(resettingMember||!window.confirm(member.fullName+' için yeni geçici parola oluşturulsun mu? İlk girişte değiştirmesi gerekecek.'))return
                         setResettingMember(member.id)

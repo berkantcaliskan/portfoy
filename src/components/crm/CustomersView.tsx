@@ -1,3 +1,4 @@
+import { visibleDepartment } from '@/types/teamDirectory'
 import React, { useState, useEffect } from 'react'
 import { usePersonalTools } from '@/services/personalToolWorkspace'
 import { LeadChannelIcon, manualChannels } from './LeadChannelIcon'
@@ -865,9 +866,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               Müşteriler
             </h2>
           </div>
-          {isMarketingView && <p className="text-xs text-[#a69f99] mt-1">
-            Kişi kimliği, başvuru geçmişleri, çağrı merkezi eşit ataması, nitelik ve satış devir havuzu.
-          </p>}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -1114,7 +1112,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               <div className="rounded-[24px] bg-[#282522]/80 border border-[#4a443f] overflow-hidden shadow-sm backdrop-blur-sm">
                 <div className="w-full overflow-x-auto">
                   <table className="customer-records-table w-full table-fixed text-xs text-left">
-                    <colgroup>{[75,180,192,130,155,150,undefined,66].map((w,i)=><col key={i} style={w?{width:w}:undefined}/>)}</colgroup>
+                    <colgroup>{[84,168,184,138,158,158,undefined,72].map((w,i)=><col key={i} style={w?{width:w}:undefined}/>)}</colgroup>
                     {segIdx === 0 && (
                       <thead>
                         <tr className="bg-white/[0.02] border-b border-[#4a443f]/60 text-[#8c857f] text-[11px]">
@@ -1294,7 +1292,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                                   <span className="text-xs text-[#f3efe9] group-hover:text-[#b99881] customer-note-lines transition-colors select-text">
                                     {formatSentenceNote(lead.notes)}
                                   </span>
-                                  <Edit3 className="w-3 h-3 text-[#8c857f] group-hover:text-[#b99881] opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
                                 </div>
                               ) : (
                                 <button
@@ -1314,7 +1311,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                               <div className="flex items-center gap-1.5 whitespace-nowrap">
                                 {permissionService.canHandOverToSales(currentUser ?? null) && (
                                   <button type="button" aria-label={isLeadHandedOverToSales(lead)?'Satışa Devredildi':'Satışa Devret'} className="lead-handover" onClick={()=>handleOpenAssign(lead)}>
-                                    {isLeadHandedOverToSales(lead)?<UserCheck size={15}/>:<><Users size={13}/><ArrowRight size={10}/></>}
+                                    {isLeadHandedOverToSales(lead)?<UserCheck size={14}/>:<><Users size={12}/><ArrowRight size={9} style={{marginLeft:-1}}/></>}
                                   </button>
                                 )}
                               </div>
@@ -1725,7 +1722,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                 { value: 'ALL_SALES', label: 'Tüm Satış Ekibi (Genel Satış Havuzu)' },
                 ...salesUsers.map((u) => ({
                   value: u.id,
-                  label: `${u.fullName} (${u.department} - ${u.role})`,
+                  label: currentUser?.role === 'ADMIN' ? `${u.fullName} (${u.department} - ${u.role})` : `${u.fullName} (${visibleDepartment(u, currentUser)})`,
                 })),
               ]}
             />

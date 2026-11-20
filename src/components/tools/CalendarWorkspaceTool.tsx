@@ -512,9 +512,11 @@ export function CalendarWorkspaceTool({payments}:{payments: {id:string;item:stri
                   onDoubleClick={() => handleOpenNewForm(cell.dateIso!)}
                   title="Günü filtrelemek için tıklayın, yeni plan eklemek için çift tıklayın"
                   className={`calendar-day-cell h-11 p-1.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none ${
-                    isSelected || isToday
-                      ? 'calendar-today-cell bg-[#b99881] text-white border-[#b99881] shadow-sm'
-                      : 'bg-transparent border-[#4a443f]/60 hover:!border-[var(--accent-color,#b99881)] text-white'
+                    isToday
+                      ? `calendar-today-cell bg-[#b99881] text-white border-[#b99881] shadow-sm${isSelected ? ' calendar-selected-cell' : ''}`
+                      : isSelected
+                        ? 'calendar-selected-cell bg-transparent text-white'
+                        : 'bg-transparent border-[#4a443f]/60 hover:!border-[var(--accent-color,#b99881)] text-white'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -528,7 +530,7 @@ export function CalendarWorkspaceTool({payments}:{payments: {id:string;item:stri
                     {dayEvents.length > 0 && (
                       <span
                         className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ${
-                          isSelected || isToday
+                          isToday
                             ? 'bg-white/25 text-white'
                             : 'bg-[#b99881]/20 text-[#b99881]'
                         }`}
@@ -547,7 +549,7 @@ export function CalendarWorkspaceTool({payments}:{payments: {id:string;item:stri
                           key={ev.id}
                           className="w-2 h-2 rounded-full shrink-0"
                           style={{
-                            backgroundColor: isSelected || isToday ? '#ffffff' : meta.dotColor,
+                            backgroundColor: isToday ? '#ffffff' : meta.dotColor,
                           }}
                           title={`${ev.time} - ${ev.title}`}
                         />
@@ -556,7 +558,7 @@ export function CalendarWorkspaceTool({payments}:{payments: {id:string;item:stri
                     {dayEvents.length === 1 && (
                       <span
                         className={`text-[9px] truncate leading-tight ${
-                          isSelected || isToday ? 'text-white' : 'text-[#8c857f]'
+                          isToday ? 'text-white' : 'text-[#8c857f]'
                         }`}
                       >
                         {dayEvents[0].title}

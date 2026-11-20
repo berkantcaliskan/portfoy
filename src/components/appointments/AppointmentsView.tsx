@@ -1,3 +1,4 @@
+import { visibleDepartment } from '@/types/teamDirectory'
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { CustomSelect } from '@/components/ui/CustomSelect'
@@ -71,7 +72,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   const [customerPhone, setCustomerPhone] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [time, setTime] = useState('14:00')
-  const [location, setLocation] = useState('Demirtürk Panorama Satış Ofisi')
+  const [location, setLocation] = useState('Ofis')
   const [type, setType] = useState<AppointmentType>('ON_SITE')
   const [projectName, setProjectName] = useState('Demirtürk Panorama Rezidans')
   const [assignedToUserName, setAssignedToUserName] = useState(currentUser?.fullName || 'Satış Danışmanı')
@@ -106,7 +107,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
     setCustomerPhone(appointment?.customerPhone ?? '')
     setDate(appointment?.date ?? new Date().toISOString().split('T')[0])
     setTime(appointment?.time ?? '14:00')
-    setLocation(appointment?.location ?? 'Demirtürk Panorama Satış Ofisi')
+    setLocation(appointment?.location ?? 'Ofis')
     setSource(appointment?.source || '')
     setType(appointment?.type ?? 'ON_SITE')
     setProjectName(appointment?.projectName ?? '')
@@ -217,7 +218,6 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   return (
     <div className="space-y-6">
       {appointmentStore.getReadError() && <p role="alert">{appointmentStore.getReadError()}</p>}
-      {userStore.centralAuthEnabled && <button type="button" onClick={() => void appointmentStore.refreshFromBackend()}>Randevuları yenile</button>}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -244,19 +244,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center justify-between gap-3 min-w-0">
-        <OverflowTabs
-          prefixLabel="Filtre:"
-          activeId={filterType}
-          onSelect={(id) => setFilterType(id)}
-          tabs={[
-            { id: 'ALL', label: 'Tüm Türler' },
-            { id: 'ON_SITE', label: 'Şantiye' },
-            { id: 'ONLINE', label: 'Online' },
-            { id: 'OFFICE', label: 'Ofis' },
-          ]}
-        />
-
+      <div className="flex items-center justify-end gap-3 min-w-0">
         <OverflowTabs
           className="justify-end max-w-[380px]"
           activeId={filterStatus}
@@ -496,7 +484,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               >
                 {allUsers.map((u) => (
                   <option key={u.id} value={u.fullName}>
-                    {u.fullName} ({u.department})
+                    {u.fullName} ({visibleDepartment(u, currentUser)})
                   </option>
                 ))}
               </CustomSelect>

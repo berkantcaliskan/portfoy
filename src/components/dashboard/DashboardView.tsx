@@ -39,6 +39,7 @@ import { Department } from '@/types/department'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassBadge } from '@/components/ui/GlassBadge'
+import { SalesRotationCard } from './SalesRotationCard'
 import { appointmentStore } from '@/services/appointmentStore'
 import { accountingStore } from '@/services/accountingStore'
 import { projectStore } from '@/services/projectStore'
@@ -223,23 +224,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="no-layer-btn group flex items-center gap-1.5 px-1 py-0.5 bg-transparent border-none text-[#d6beae] hover:text-white transition-all duration-200 cursor-pointer"
         >
           <Clock className="w-3.5 h-3.5 text-[#b99881] transition-colors" />
-          <span className="font-mono tracking-tight text-[12px] font-semibold text-white">
-            {hours}:{minutes}
+          {/* Saat ve saniye tek grup: aralarında boşluk olmaz */}
+          <span className="inline-flex items-baseline font-mono tracking-tight text-[12px] font-semibold">
+            <span className="text-white">{hours}:{minutes}</span>
+            <AnimatePresence initial={false}>
+              {showSeconds && (
+                <motion.span
+                  key="seconds"
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  className="text-[#b99881] overflow-hidden whitespace-nowrap"
+                >
+                  :{seconds}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </span>
-          <AnimatePresence>
-            {showSeconds && (
-              <motion.span
-                key="seconds"
-                initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                animate={{ opacity: 1, width: 'auto', marginLeft: 2 }}
-                exit={{ opacity: 0, width: 0, marginLeft: 0 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
-                className="font-mono text-[12px] font-semibold text-[#b99881] overflow-hidden whitespace-nowrap"
-              >
-                :{seconds}
-              </motion.span>
-            )}
-          </AnimatePresence>
         </button>
       </motion.div>
     </div>
@@ -906,9 +908,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           {a.location} • {a.date} {a.time}
                         </div>
                       </div>
-                      <GlassBadge size="sm" variant={a.type === 'ON_SITE' ? 'success' : 'info'}>
-                        {a.type === 'ON_SITE' ? 'Ofis / Şantiye' : 'Online'}
-                      </GlassBadge>
                     </div>
                   ))}
                   {renderChevronPager("salesAppts", appointments.length)}
@@ -1708,6 +1707,9 @@ try {
   return (
     <div className="w-full">
       {renderHeader()}
+
+      {/* Herkes için: satışçıların müşteriye çıkış sırası */}
+      <SalesRotationCard />
 
       {department === 'Pazarlama' && renderMarketingDashboard()}
       {department === 'Kreatif' && renderCreativeDashboard()}

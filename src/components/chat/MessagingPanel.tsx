@@ -1,3 +1,4 @@
+import { visibleDepartment } from '@/types/teamDirectory'
 import React, { useState, useEffect, useRef } from 'react'
 import {
   ChevronLeft,
@@ -29,11 +30,15 @@ export const IosChatBubbleIcon: React.FC<{ className?: string }> = ({ className 
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.9"
+    strokeWidth="1.8"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+    {/* Yumuşak köşeli konuşma balonu, kısa kuyruk ve yazıyor noktaları */}
+    <path d="M6.5 4h11A3.5 3.5 0 0 1 21 7.5v6a3.5 3.5 0 0 1-3.5 3.5H11l-4.2 3.1c-.5.4-1.3 0-1.3-.6V17A3.5 3.5 0 0 1 3 13.5v-6A3.5 3.5 0 0 1 6.5 4Z" />
+    <circle cx="8.5" cy="10.5" r="0.6" fill="currentColor" />
+    <circle cx="12" cy="10.5" r="0.6" fill="currentColor" />
+    <circle cx="15.5" cy="10.5" r="0.6" fill="currentColor" />
   </svg>
 )
 
@@ -353,7 +358,7 @@ export const MessagingPanel: React.FC<MessagingPanelProps> = ({
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-white truncate">{u.fullName}</div>
-                  <div className="text-[10px] text-[#b99881] truncate">{u.department}</div>
+                  <div className="text-[10px] text-[#b99881] truncate">{visibleDepartment(u, currentUser)}</div>
                 </div>
               </div>
 

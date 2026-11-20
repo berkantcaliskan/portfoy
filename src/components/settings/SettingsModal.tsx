@@ -1297,16 +1297,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
 
                   {(() => {
+                    // Adminler tüm departmanlara yetkili; tek tek listelemek yerine "Yönetim" gösterilir
                     const userAllowedDepts: Department[] =
                       currentUser?.role === 'ADMIN'
-                        ? CANONICAL_DEPARTMENTS
+                        ? ['Yönetim' as Department]
                         : Array.isArray(currentUser?.departments) && currentUser.departments.length > 0
                         ? currentUser.departments
                         : [currentDept]
                     return (
                       <div className="pt-2 border-t border-[#4a443f]/40">
                         <span className="text-[10px] text-[#8c857f] block uppercase tracking-wider mb-1.5">
-                          YETKİLİ ÇALIŞMA ALANI ({userAllowedDepts.length} DEPARTMAN)
+                          {currentUser?.role === 'ADMIN' ? 'YETKİLİ ÇALIŞMA ALANI' : `YETKİLİ ÇALIŞMA ALANI (${userAllowedDepts.length} DEPARTMAN)`}
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {userAllowedDepts.map((dept) => (

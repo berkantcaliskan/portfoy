@@ -24,7 +24,7 @@ export function VisitorEntryRow({ value, onChange, context, disabled, editing, o
     <td><OfficePeopleSelect label="İlişkili Temsilci" people={context.representatives} firstDepartment="Müşteri İlişkileri"
       value={officePersonIds(value, 'representative')} disabled={disabled}
       onChange={ids => onChange('representativeIds', ids)} /></td>
-    <td><CustomSelect title="Kaynak" value={value.source || ''} disabled={disabled} className="office-entry-control"
+    <td><CustomSelect title="Kanal" value={value.source || ''} disabled={disabled} className="office-entry-control"
       onChange={event => onChange('source', event.target.value)}><option value="">—</option>
       {VISITOR_SOURCE_OPTIONS.map(source => <option key={source} value={source}>{source}</option>)}
     </CustomSelect></td>

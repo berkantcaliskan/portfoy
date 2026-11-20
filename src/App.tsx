@@ -35,6 +35,7 @@ import { IdleScreenSaver } from '@/components/common/IdleScreenSaver'
 import { ApplicationLock } from '@/components/common/ApplicationLock'
 import { applicationLockStore } from '@/services/applicationLockStore'
 import { AmbientSceneOverlay } from '@/components/common/AmbientSceneOverlay'
+import { PetCompanion } from '@/components/common/PetCompanion'
 import { mailService } from '@/services/mailService'
 import { formatPhoneNumber } from '@/utils/formatters'
 
@@ -168,6 +169,12 @@ export function App() {
     return unsub
   }, [])
 
+  // Mesajlar geniş modda açıkken sabit öğeler (görev çubuğu, sahneler, evcil hayvan) da sola kayar
+  useEffect(() => {
+    const offset = isMessagingOpen && messagingMode === 'sidebar' && window.innerWidth >= 768 ? messagingSidebarWidth : 0
+    document.documentElement.style.setProperty('--messages-sidebar-offset', `${offset}px`)
+  }, [isMessagingOpen, messagingMode, messagingSidebarWidth])
+
   useEffect(() => {
     notificationStore.markTabAsViewed(activeTab)
   }, [])
@@ -176,6 +183,8 @@ export function App() {
     const cleanTab = (tab || '').replace(/^#\/?/, '') as NavTab
     let finalTab = cleanTab || 'dashboard'
     const account = userStore.getCurrentUser()
+    // Muhasebe'de sözleşmeler Arşiv sayfasının içinde yer alır
+    if (finalTab === 'office-contracts' && account?.department === 'Muhasebe') finalTab = 'accounting-archive'
     const officeState = frontOfficeStore.getSnapshot()
     const sharedContractPage = !officeState.active && (account?.department === 'Muhasebe' || account?.department === 'Yönetim')
     const officePage = finalTab === 'office-visitors' || (finalTab === 'office-contracts' && !sharedContractPage)
@@ -721,6 +730,7 @@ export function App() {
 
       {/* Ambient Animated Background & Bottom Edge Scene */}
       <AmbientSceneOverlay sidebarCollapsed={isSidebarCollapsed} />
+      <PetCompanion />
 
       {/* Bottom Dock with Start Menu */}
       <AppDock

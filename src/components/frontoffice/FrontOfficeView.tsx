@@ -154,7 +154,7 @@ export function FrontOfficeView() {
             <col className="office-actions-column" />
           </colgroup>
           <thead className="text-xs text-[#a69f99] border-b border-[#4a443f]"><tr>
-            {['Tarih', 'Adı, Soyadı', 'Telefon', 'İlişkili Temsilci', 'Kaynak', 'Satış Danışmanı', 'Açıklama'].map(label => <th key={label} scope="col">{label}</th>)}
+            {['Tarih', 'Adı, Soyadı', 'Telefon', 'İlişkili Temsilci', 'Kanal', 'Satış Danışmanı', 'Açıklama'].map(label => <th key={label} scope="col">{label}</th>)}
             <th scope="col" className="office-actions-heading">İşlemler</th>
           </tr></thead>
           <tbody>

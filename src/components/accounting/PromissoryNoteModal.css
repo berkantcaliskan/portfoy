@@ -158,8 +158,4 @@
 
 @media (max-height: 900px), (max-width: 760px) and (max-height: 920px) {
   .note-form { gap: 0.6rem; }
-  .note-form[data-form-step="parties"] [data-note-step="plan"],
-  .note-form[data-form-step="plan"] [data-note-step="parties"] { display: none; }
-  .note-form[data-form-step="parties"] .note-step-next,
-  .note-form[data-form-step="plan"] .note-step-back { display: inline-flex; }
 }

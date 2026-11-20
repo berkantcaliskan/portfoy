@@ -387,7 +387,7 @@ export function rowToAppointment(r: any): Appointment {
     customerPhone: r.customer_phone,
     date: r.date,
     time: r.time,
-    location: r.location,
+    location: !r.location || r.location === 'Demirtürk Panorama Satış Ofisi' || r.location === 'Merkez Satış Ofisi' ? 'Ofis' : r.location,
     type: r.type,
     status: r.status,
     assignedToUserId: r.assigned_to_user_id || undefined,

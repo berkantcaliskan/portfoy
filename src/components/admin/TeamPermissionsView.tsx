@@ -28,6 +28,7 @@ import {
   generateUsername,
 } from '@/services/userStore'
 import { CANONICAL_DEPARTMENTS } from '@/types/department'
+import { visibleAuthorizedDepartments } from '@/types/teamDirectory'
 import { FrontOfficeAccessPanel } from '@/components/frontoffice/FrontOfficeAccessPanel'
 
 export const TeamPermissionsView: React.FC = () => {
@@ -196,7 +197,8 @@ export const TeamPermissionsView: React.FC = () => {
 
       {/* Kullanıcılar Listesi */}
       <GlassCard className="p-5 bg-[#282522] border-[#4a443f]">
-        <div className="overflow-x-auto">
+        {/* Tablo zemini keskin köşeli görünmesin: kapsayıcı yuvarlatılıp içerik kırpılır */}
+        <div className="overflow-x-auto rounded-[20px]">
           <table className="w-full text-xs text-left">
             <thead>
               <tr className="border-b border-[#4a443f] text-[#8c857f] text-[11px]">
@@ -227,7 +229,7 @@ export const TeamPermissionsView: React.FC = () => {
 
                   <td className="py-3 px-3">
                     <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {user.departments?.map((d) => (
+                      {visibleAuthorizedDepartments(user).map((d) => (
                         <span key={d} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-[#a69f99]">
                           {d}
                         </span>
@@ -248,12 +250,13 @@ export const TeamPermissionsView: React.FC = () => {
                   </td>
 
                   <td className="py-3 px-3">
-                    <div className="flex flex-wrap gap-1 text-[10px] text-[#8c857f]">
+                    {/* Adminler tüm yetkilere sahip; özel yetki listelenmez */}
+                    {user.role !== 'ADMIN' && <div className="flex flex-wrap gap-1 text-[10px] text-[#8c857f]">
                       {user.permissions?.canEditProjectPrice && <span className="text-emerald-400">Fiyat</span>}
                       {user.permissions?.canChangeFlatStatus && <span className="text-sky-400">Daire Durumu</span>}
                       {user.permissions?.canApproveDiscounts && <span className="text-amber-400">İskonto</span>}
                       {user.permissions?.canRefundDeposit && <span className="text-rose-400">Kapora İade</span>}
-                    </div>
+                    </div>}
                   </td>
 
                   <td className="py-3 px-3 text-right">

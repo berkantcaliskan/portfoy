@@ -112,6 +112,7 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
   'Satış': [
     { id: 'dashboard', label: 'Başlangıç' },
     { id: 'crm', label: 'Satış' },
+    { id: 'customers', label: 'Müşteriler' },
     { id: 'appointments', label: 'Randevular' },
     { id: 'sales-performance', label: 'Performans' },
     { id: 'teams', label: 'Ekipler' },
@@ -146,7 +147,6 @@ export const DEPARTMENT_MENU_CONFIG: Record<Department, DepartmentPageConfig[]> 
     { id: 'payments', label: 'Ödemeler' },
     { id: 'financial-reports', label: 'Finansal Raporlar' },
     { id: 'accounting-archive', label: 'Arşiv' },
-    { id: 'office-contracts', label: 'Sözleşmeler' },
     { id: 'teams', label: 'Ekipler' },
     { id: 'shared', label: 'Paylaşılanlar' },
     { id: 'projects', label: 'Projeler' },

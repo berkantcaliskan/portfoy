@@ -1,3 +1,4 @@
+import { visibleDepartment } from '@/types/teamDirectory'
 import { CustomerContractButton } from '@/components/contracts/ContractWorkspace'
 import React, { useState } from 'react'
 import {
@@ -21,7 +22,7 @@ import { getLeadChannelLabel } from '@/components/crm/CustomersView'
 import { projectStore } from '@/services/projectStore'
 import { userStore } from '@/services/userStore'
 import { useStoreUpdates } from '@/components/common/useStoreUpdates'
-import { buildSalesRanking } from '@/utils/salesPerformance'
+import { buildSalesRanking, salesPeriodStart, type SalesPeriod } from '@/utils/salesPerformance'
 
 interface SalesTeamViewProps {
   leads: Lead[]
@@ -71,7 +72,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
       .filter((u: AppUser) => u.id !== 'usr-berkant' || leads.length > 0)
       .map((u: AppUser) => ({
         id: u.fullName,
-        name: `${u.fullName} (${u.department})`,
+        name: `${u.fullName} (${visibleDepartment(u, _currentUser)})`,
       })),
   ]
 
@@ -112,7 +113,13 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
     monthlyQuota > 0 ? Math.min(100, Math.round((totalClosedRevenue / monthlyQuota) * 100)) : 0
 
   // Rep leaderboard data dynamically calculated
-  const leaderboardData = buildSalesRanking(projectStore.getAll().flatMap(project => project.units || []), allUsers)
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<SalesPeriod>('MONTH')
+  // Yöneticiler bu sayfaya çalışma alanını Satış'a geçirerek gelir; bu yüzden hesap yetkisine bakılır
+  const isManagementView = _currentUser?.role === 'ADMIN' || _currentUser?.department === 'Yönetim' || !!_currentUser?.departments?.includes('Yönetim')
+  const isSellerView = !isManagementView && _currentUser?.department === 'Satış'
+  const fullRanking = buildSalesRanking(projectStore.getAll().flatMap(project => project.units || []), allUsers, salesPeriodStart(leaderboardPeriod))
+  // Satışçı yalnızca kendi kartını görür; tüm ekip sıralaması Yönetim'e özeldir
+  const leaderboardData = isSellerView ? fullRanking.filter(rep => rep.id === _currentUser?.id) : fullRanking
 
   return (
     <div className="space-y-6">
@@ -225,7 +232,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
       {/* View Toggle Bar (Katmansız, Pill Shaped) */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-white">Satış Kapanış Hattı (Deal Flow)</span>
+          <span className="text-xs font-bold text-white">Satış Kapanış Hattı</span>
           <span className="text-[11px] text-[#8c857f]">
             ({filteredLeads.length} aktif anlaşma)
           </span>
@@ -261,7 +268,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
       {/* View 1: Deal Pipeline Kanban (İç İçe Geçmeli & Sağa Dönük 3D Perspektif Kartlar — En Fazla 3 Öğe Gösterilir) */}
       {viewMode === 'kanban' && (
         <div
-          className="flex items-stretch overflow-x-auto lg:overflow-visible pt-4 pb-6 px-3 no-scrollbar select-none"
+          className="flex items-stretch justify-center overflow-x-auto lg:overflow-visible pt-4 pb-6 pl-3 pr-8 no-scrollbar select-none"
           onPointerLeave={() => setFocusedStage(null)}
           style={{ perspective: '1300px' }}
         >
@@ -310,7 +317,7 @@ export const SalesTeamView: React.FC<SalesTeamViewProps> = ({
                 }}
                 className={`perspective-deck-card ${
                   isFocused ? 'is-focused' : ''
-                } relative flex-1 min-w-[185px] sm:min-w-[200px] max-w-[240px] flex flex-col justify-between rounded-[24px] bg-[#282522] border border-[#4a443f] p-3 space-y-2.5 cursor-pointer ${
+                } relative flex-1 min-w-[185px] sm:min-w-[200px] flex flex-col justify-between rounded-[24px] bg-[#282522] border border-[#4a443f] p-3 space-y-2.5 cursor-pointer ${
                   idx > 0 ? '-ml-5 sm:-ml-6 lg:-ml-7' : ''
                 }`}
               >
@@ -578,20 +585,29 @@ return (
         ))}
 
       {/* Sales Leaderboard (Satışçı Başarı Sıralaması — En Fazla 3 Gösterim) */}
-      {_currentUser?.role === 'ADMIN' && <div className="p-6 rounded-[32px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md space-y-4">
-        <div className="flex items-center justify-between">
+      {(isManagementView || isSellerView) && <div className="p-6 rounded-[32px] bg-[#282522]/80 border border-[#4a443f] backdrop-blur-md space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-[#b99881]" />
             <h3 className="text-sm font-bold text-white">
-              Satış Ekibi Başarı Tablosu
+              {isSellerView ? 'Başarı Tablon' : 'Satış Ekibi Başarı Tablosu'}
             </h3>
+            <span className="text-xs text-[#a69f99]">· {leaderboardPeriod === 'WEEK' ? 'Bu hafta' : 'Bu ay'}</span>
           </div>
-          <span className="text-xs text-[#a69f99]">Bu Ayki Gerçekleşenler</span>
+          <div role="radiogroup" aria-label="Dönem" className="flex items-center gap-1 p-1 rounded-full bg-[#24211f] border border-[#4a443f]">
+            {([['WEEK', 'Haftalık'], ['MONTH', 'Aylık']] as const).map(([id, label]) => (
+              <button key={id} type="button" role="radio" aria-checked={leaderboardPeriod === id}
+                onClick={() => { setLeaderboardPeriod(id); setLeaderboardOffset(0) }}
+                className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors ${leaderboardPeriod === id ? 'bg-[var(--accent-color,#b99881)] text-white' : 'text-[#a69f99] hover:text-white'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {leaderboardData.length === 0 ? (
           <div className="p-8 text-center text-xs text-[#8c857f] rounded-[24px] border border-dashed border-[#4a443f]">
-            Henüz satış ekibi danışmanı bulunmuyor. Ayarlar &gt; Ekip Yönetimi üzerinden yeni ekip üyeleri ekleyebilirsiniz.
+            {isSellerView ? 'Bu dönem için satış kaydın bulunmuyor.' : 'Henüz satış ekibi danışmanı bulunmuyor. Ayarlar > Ekip Yönetimi üzerinden yeni ekip üyeleri ekleyebilirsiniz.'}
           </div>
         ) : (
           <>
@@ -605,7 +621,7 @@ return (
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#24211f] border border-[#4a443f]/40 flex items-center justify-center font-bold text-sm text-[#b99881]">
-                        #{leaderboardOffset + idx + 1}
+                        {isSellerView ? <Trophy className="w-4 h-4" /> : `#${leaderboardOffset + idx + 1}`}
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-white">{rep.name}</h4>

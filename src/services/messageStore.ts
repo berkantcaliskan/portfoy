@@ -100,8 +100,9 @@ class MessageStore {
   constructor() {
     this.backend.subscribe(()=>{if(isCentralCrm())this.rebuildServerMessages()})
     this.loadFromStorage()
+    // Kullanıcının son seçtiği görünüm (küçük pencere / geniş mod) hatırlanır
     try {
-      localStorage.setItem(STORAGE_KEY_MODE, 'popup')
+      if (localStorage.getItem(STORAGE_KEY_MODE) === 'sidebar') this.displayMode = 'sidebar'
     } catch {}
   }
 
@@ -142,25 +143,14 @@ class MessageStore {
     return this.isOpen
   }
 
+  // Açıp kapatmak görünüm modunu değiştirmez; geniş mod seçildiyse yeniden açılınca da geniş açılır
   public setPanelOpen(open: boolean) {
     this.isOpen = open
-    if (open) {
-      this.displayMode = 'popup'
-      try {
-        localStorage.setItem(STORAGE_KEY_MODE, 'popup')
-      } catch {}
-    }
     this.notify()
   }
 
   public togglePanel() {
     this.isOpen = !this.isOpen
-    if (this.isOpen) {
-      this.displayMode = 'popup'
-      try {
-        localStorage.setItem(STORAGE_KEY_MODE, 'popup')
-      } catch {}
-    }
     this.notify()
   }
 

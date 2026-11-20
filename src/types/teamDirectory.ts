@@ -17,6 +17,24 @@ export function teamDepartmentLabel(member: { username: string; department: stri
   return staffDepartmentLabels[member.username] ?? member.department
 }
 
+/**
+ * Başkalarına gösterilecek departman. Yetkiler değişmez; yalnızca görünen etiket.
+ * Adminler gerçek departmanı görür, diğerleri ekip rehberindeki etiketi (ör. Berkant → Pazarlama).
+ */
+export function visibleDepartment(
+  member: { username?: string; department: string },
+  viewer?: { role?: string } | null,
+): string {
+  if (viewer?.role === 'ADMIN' || !member.username) return member.department
+  return teamDepartmentLabel({ username: member.username, department: member.department })
+}
+
+/** Adminlerin yetkili alanları tek tek departmanlar yerine "Yönetim" olarak gösterilir. */
+export function visibleAuthorizedDepartments(member: { role?: string; department: string; departments?: string[] }): string[] {
+  if (member.role === 'ADMIN') return ['Yönetim']
+  return member.departments?.length ? member.departments : [member.department]
+}
+
 export function isTeamDirectoryMember(member: { username: string }): boolean {
   return member.username !== 'staging-meta-admin'
 }

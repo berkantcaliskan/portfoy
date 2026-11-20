@@ -1,3 +1,4 @@
+import { visibleDepartment } from '@/types/teamDirectory'
 import React, { useState, useEffect, useRef } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
@@ -1688,7 +1689,7 @@ export const SharedFilesView: React.FC = () => {
                       <label
                         key={member.id}
                         className="flex items-center gap-1.5 text-xs text-[#f3efe9] cursor-pointer py-0.5"
-                        title={`${member.fullName} (${member.department})`}
+                        title={`${member.fullName} (${visibleDepartment(member, currentUser)})`}
                       >
                         <input
                           type="checkbox"
@@ -1698,7 +1699,7 @@ export const SharedFilesView: React.FC = () => {
                         />
                         <span className="truncate">
                           {member.fullName}{' '}
-                          <span className="text-[10px] text-[#8c857f]">({member.department})</span>
+                          <span className="text-[10px] text-[#8c857f]">({visibleDepartment(member, currentUser)})</span>
                         </span>
                       </label>
                     )

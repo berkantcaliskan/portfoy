@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import { NatureSceneStyles, PineForestScene, RiverScene, VillageScene } from './AmbientNatureScenes'
 
-export type AmbientSceneId = 'cat-dog' | 'knight-campfire' | 'rose-garden' | 'lighthouse' | 'none'
+export type AmbientSceneId = 'cat-dog' | 'knight-campfire' | 'rose-garden' | 'lighthouse' | 'pine-forest' | 'river' | 'village' | 'none'
 
 export const AMBIENT_SCENE_OPTIONS: {
   id: AmbientSceneId
@@ -11,6 +12,9 @@ export const AMBIENT_SCENE_OPTIONS: {
   { id: 'knight-campfire', name: 'Şövalye & Kamp Ateşi' },
   { id: 'rose-garden', name: 'Gül & Çiçek Bahçesi' },
   { id: 'lighthouse', name: 'Deniz Feneri' },
+  { id: 'pine-forest', name: 'Çam Ormanı' },
+  { id: 'river', name: 'Nehir' },
+  { id: 'village', name: 'Köy' },
 ]
 
 export function getSavedAmbientScene(): AmbientSceneId {
@@ -65,76 +69,31 @@ export const AmbientSceneOverlay: React.FC<{ sidebarCollapsed?: boolean }> = ({
 
   return (
     <div
-      className={`fixed inset-y-0 right-0 left-0 ${leftOffsetClass} pointer-events-none overflow-hidden select-none z-[35] transition-[left] duration-300`}
+      className={`fixed inset-y-0 left-0 ${leftOffsetClass} pointer-events-none overflow-hidden select-none z-[35] transition-[left,right] duration-300`}
+      style={{ right: 'var(--messages-sidebar-offset, 0px)' }}
       aria-hidden="true"
     >
       <style>{`
         /* ============================================================
            1. KEDİ & KÖPEK KOŞTURMACASI (DOCK ÜSTÜNDEN ATLAYAN SÜREKLİ ANİMASYON)
            ============================================================ */
+        /* Zıplama yok: hayvanlar zemin hizasında, görev çubuğunun altından düz koşar */
         @keyframes petRunAcrossRight {
-          0% {
-            transform: translate3d(-160px, 0px, 0) scaleX(1);
-          }
-          34% {
-            transform: translate3d(calc(40vw - 80px), 0px, 0) scaleX(1) rotate(0deg);
-          }
-          39% {
-            transform: translate3d(calc(45vw - 60px), -68px, 0) scaleX(1) rotate(-14deg);
-          }
-          45% {
-            transform: translate3d(calc(50vw - 40px), -92px, 0) scaleX(1) rotate(2deg);
-          }
-          51% {
-            transform: translate3d(calc(55vw - 20px), -64px, 0) scaleX(1) rotate(14deg);
-          }
-          56% {
-            transform: translate3d(calc(60vw), 0px, 0) scaleX(1) rotate(0deg);
-          }
-          76% {
-            transform: translate3d(calc(80vw), 0px, 0) scaleX(1) rotate(0deg);
-          }
-          80% {
-            transform: translate3d(calc(84vw), -26px, 0) scaleX(1) rotate(-8deg);
-          }
-          84% {
-            transform: translate3d(calc(88vw), 0px, 0) scaleX(1) rotate(0deg);
-          }
-          100% {
-            transform: translate3d(calc(100vw + 180px), 0px, 0) scaleX(1);
-          }
+          0% { transform: translate3d(-160px, 0px, 0) scaleX(1); }
+          100% { transform: translate3d(calc(100vw + 180px), 0px, 0) scaleX(1); }
         }
 
         @keyframes petRunAcrossLeft {
-          0% {
-            transform: translate3d(calc(100vw + 180px), 0px, 0) scaleX(-1);
-          }
-          34% {
-            transform: translate3d(calc(60vw), 0px, 0) scaleX(-1) rotate(0deg);
-          }
-          39% {
-            transform: translate3d(calc(55vw - 20px), -68px, 0) scaleX(-1) rotate(-14deg);
-          }
-          45% {
-            transform: translate3d(calc(50vw - 40px), -94px, 0) scaleX(-1) rotate(2deg);
-          }
-          51% {
-            transform: translate3d(calc(45vw - 60px), -64px, 0) scaleX(-1) rotate(14deg);
-          }
-          56% {
-            transform: translate3d(calc(40vw - 80px), 0px, 0) scaleX(-1) rotate(0deg);
-          }
-          100% {
-            transform: translate3d(-180px, 0px, 0) scaleX(-1);
-          }
+          0% { transform: translate3d(calc(100vw + 180px), 0px, 0) scaleX(-1); }
+          100% { transform: translate3d(-180px, 0px, 0) scaleX(-1); }
         }
 
         @keyframes petGallopBounce {
           0%, 100% {
-            transform: translateY(0px) rotate(-2deg);
+            transform: translateY(0px) rotate(-1.5deg);
           }
           50% {
-            transform: translateY(-6px) rotate(3deg);
+            transform: translateY(-3px) rotate(2deg);
           }
         }
 
@@ -235,6 +194,11 @@ export const AmbientSceneOverlay: React.FC<{ sidebarCollapsed?: boolean }> = ({
       {/* ====================================================================
           SAHNE 1: KEDİ & KÖPEK KOŞTURMACASI (DOCK ÜSTÜNDEN ZIPLAR)
          ==================================================================== */}
+      <NatureSceneStyles />
+      {scene === 'pine-forest' && <PineForestScene isNight={isNight} />}
+      {scene === 'river' && <RiverScene isNight={isNight} />}
+      {scene === 'village' && <VillageScene isNight={isNight} />}
+
       {scene === 'cat-dog' && (
         <div className="absolute inset-x-0 bottom-0 h-[150px] overflow-hidden">
           {/* Sol ve Sağ Köşe Çimen & Küçük Papatya Kümesi */}

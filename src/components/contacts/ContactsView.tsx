@@ -1,3 +1,4 @@
+import { visibleDepartment } from '@/types/teamDirectory'
 import React, { useState, useEffect } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import {
@@ -60,6 +61,7 @@ export const ContactsView: React.FC = () => {
 
   // Combine store contacts with any registered team members if desired
   const allUsers = userStore.getAllUsers()
+  const viewer = userStore.getCurrentUser()
   // We can create virtual contacts for team members if they aren't in contacts already
   const teamMemberContacts: Contact[] = allUsers
     .filter((u) => !contacts.some((c) => c.fullName.toLowerCase() === u.fullName.toLowerCase()))
@@ -70,7 +72,10 @@ export const ContactsView: React.FC = () => {
       email: u.email || `${u.username}@demirturk.com`,
       category: 'EKIP',
       company: u.companyName || 'Demirtürk Gayrimenkul',
-      title: u.isManager || u.role === 'ADMIN' ? 'Yönetici' : `${u.department} Danışmanı`,
+      // Adminler gerçek unvanı görür; diğerleri ekip rehberindeki etiketi (ör. Berkant → Pazarlama)
+      title: viewer?.role === 'ADMIN'
+        ? (u.isManager || u.role === 'ADMIN' ? 'Yönetici' : `${u.department} Danışmanı`)
+        : (() => { const label = visibleDepartment(u, viewer); return label === 'Yönetici' || (u.isManager && u.role !== 'ADMIN') ? 'Yönetici' : `${label} Danışmanı` })(),
       notes: `@${u.username}`,
       createdAt: u.createdAt,
     }))

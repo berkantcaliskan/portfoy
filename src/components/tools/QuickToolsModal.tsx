@@ -1,4 +1,7 @@
 import {usePersonalTools} from '@/services/personalToolWorkspace'
+import { WeatherTool, DEFAULT_WEATHER_CITIES } from './WeatherTool'
+import { CurrencyTool } from './CurrencyTool'
+import { CannedRepliesTool, type CannedReply } from './CannedRepliesTool'
 import React, { useState, useEffect } from 'react'
 import { CustomSelect } from '@/components/ui/CustomSelect'
 import { createPortal } from 'react-dom'
@@ -45,6 +48,7 @@ import {
   Building2,
   Globe,
   Lock,
+  MessageSquareText,
 } from 'lucide-react'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassBadge } from '@/components/ui/GlassBadge'
@@ -79,6 +83,7 @@ export type ToolType =
   | 'aidat'
   | 'weather'
   | 'timer'
+  | 'replies'
 
 export type NoteShareScope = 'PRIVATE' | 'USERS' | 'DEPARTMENTS' | 'COMPANY'
 
@@ -310,22 +315,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // 4. DÖVİZ & KUR ÇEVİRİCİ STATE & LOGIC
   // ==========================================
   const [currencyAmount, setCurrencyAmount] = field<number>('currencyAmount', 0)
-  const [baseCurrency, setBaseCurrency] = field<'TRY' | 'USD' | 'EUR' | 'GBP'>('baseCurrency', 'USD')
-  const [rates] = useState({
-    USD: 38.5,
-    EUR: 42.1,
-    GBP: 50.2,
-    TRY: 1,
-  })
-
-  // Convert amount to TRY then to other currencies
-  const amountInTRY =
-    baseCurrency === 'TRY' ? currencyAmount : currencyAmount * rates[baseCurrency]
-
-  const convertedTRY = amountInTRY
-  const convertedUSD = Math.round((amountInTRY / rates.USD) * 100) / 100
-  const convertedEUR = Math.round((amountInTRY / rates.EUR) * 100) / 100
-  const convertedGBP = Math.round((amountInTRY / rates.GBP) * 100) / 100
+  const [baseCurrency, setBaseCurrency] = field<string>('baseCurrency', 'USD')
 
   // ==========================================
   // 5. KONUT KREDİSİ STATE & LOGIC
@@ -481,7 +471,9 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
   // ==========================================
   // 24. WEATHER (SAHA HAVA DURUMU)
   // ==========================================
-  const [weatherCity, setWeatherCity] = field('weatherCity', 'İstanbul')
+  const [weatherCities, setWeatherCities] = field<string[]>('weatherCities', DEFAULT_WEATHER_CITIES)
+  const [cannedReplies, setCannedReplies] = field<CannedReply[]>('cannedReplies', [])
+  const isMarketingUser = currentUser?.department === 'Pazarlama'
 
   // ==========================================
   // 25. TIMER (KRONOMETRE)
@@ -508,18 +500,13 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
     { id: 'bargain', label: 'Pazarlık Marjı', icon: Percent },
     { id: 'downpayment', label: 'Peşinat Planı', icon: CreditCard },
     { id: 'parsel', label: 'TKGM Parsel', icon: MapPin },
-    { id: 'compass', label: 'Güneş & Cephe', icon: Compass },
-    { id: 'valuation', label: 'Ekspertiz Değeri', icon: Building },
-    { id: 'contracts', label: 'Hazır Sözleşmeler', icon: FileCheck },
     { id: 'target', label: 'Satış Hedefi', icon: Target },
     { id: 'reminders', label: 'Tapu Hatırlatıcı', icon: Bell },
     { id: 'qr', label: 'Dijital Kartvizit', icon: QrCode },
     { id: 'market', label: 'Piyasa Endeksi', icon: BarChart3 },
-    { id: 'dask', label: 'DASK Sigorta', icon: ShieldCheck },
-    { id: 'taxincome', label: 'Kira Vergisi', icon: Receipt },
-    { id: 'aidat', label: 'Aidat Dağıtıcı', icon: Home },
-    { id: 'weather', label: 'Saha Hava Durumu', icon: Sun },
+    { id: 'weather', label: 'Hava Durumu', icon: Sun },
     { id: 'timer', label: 'Görüşme Kronometresi', icon: Timer },
+    ...(isMarketingUser ? [{ id: 'replies' as const, label: 'Hazır Mesajlar', icon: MessageSquareText }] : []),
   ]
 
   const currentTool = toolsList.find((t) => t.id === activeTool)
@@ -954,55 +941,7 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
         {/* TOOL 4: DÖVİZ & KUR ÇEVİRİCİ                         */}
         {/* ---------------------------------------------------- */}
         {activeTool === 'currency' && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Dönüştürülecek Tutar</label>
-                <input
-                  type="number"
-                  value={currencyAmount}
-                  onChange={(e) => setCurrencyAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2 text-base font-bold text-white focus:outline-none focus:border-[#b99881]"
-                />
-              </div>
-              <div className="w-32">
-                <label className="text-sm font-medium text-[#d6beae] block mb-1.5">Para Birimi</label>
-                <CustomSelect
-                  value={baseCurrency}
-                  onChange={(e) => setBaseCurrency(e.target.value as any)}
-                  className="w-full bg-[#282522] border border-[#4a443f] rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-[#b99881]"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="TRY">TRY (₺)</option>
-                </CustomSelect>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              <div className="p-3.5 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#d6beae] block mb-1">Türk Lirası (TRY)</span>
-                <p className="text-xl font-bold text-[#b99881] mt-1">{formatCurrency(convertedTRY)}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">1 $ = {rates.USD} ₺</span>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#d6beae] block mb-1">Amerikan Doları (USD)</span>
-                <p className="text-xl font-bold text-white mt-1">${convertedUSD.toLocaleString('tr-TR')}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">USD Baz Değer</span>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#d6beae] block mb-1">Euro (EUR)</span>
-                <p className="text-xl font-bold text-white mt-1">€{convertedEUR.toLocaleString('tr-TR')}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">1 € = {rates.EUR} ₺</span>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-[#282522] border border-[#4a443f]">
-                <span className="text-sm font-medium text-[#d6beae] block mb-1">İngiliz Sterlini (GBP)</span>
-                <p className="text-xl font-bold text-white mt-1">£{convertedGBP.toLocaleString('tr-TR')}</p>
-                <span className="text-xs sm:text-sm text-[#8c857f]">1 £ = {rates.GBP} ₺</span>
-              </div>
-            </div>
-          </div>
+          <CurrencyTool amount={currencyAmount} onAmountChange={setCurrencyAmount} base={baseCurrency} onBaseChange={setBaseCurrency} />
         )}
 
         {/* ---------------------------------------------------- */}
@@ -1930,35 +1869,8 @@ export const QuickToolsModal: React.FC<QuickToolsModalProps> = ({
         {/* ---------------------------------------------------- */}
         {/* TOOL 24: SAHA HAVA DURUMU                           */}
         {/* ---------------------------------------------------- */}
-        {activeTool === 'weather' && (
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              {(['İstanbul', 'Bodrum', 'Antalya', 'İzmir'] as const).map((city) => (
-                <button
-                  key={city}
-                  onClick={() => setWeatherCity(city)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold ${
-                    weatherCity === city ? 'bg-[#b99881] text-[#1c1a18] font-bold' : 'bg-[#282522] text-[#a69f99]'
-                  }`}
-                >
-                  {city}
-                </button>
-              ))}
-            </div>
-            <div className="p-5 rounded-2xl bg-[#282522] border border-[#4a443f] flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Sun className="w-10 h-10 text-amber-400" />
-                <div>
-                  <h4 className="text-sm font-bold text-white">{weatherCity} - Saha Durumu İdeal</h4>
-                  <p className="text-xs text-[#a69f99]">Açık & Güneşli, 24°C • Dron çekimi ve yer gösterme için uygun</p>
-                </div>
-              </div>
-              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
-                Çekime Uygun
-              </span>
-            </div>
-          </div>
-        )}
+        {activeTool === 'weather' && <WeatherTool cities={weatherCities} onChange={setWeatherCities} />}
+        {activeTool === 'replies' && isMarketingUser && <CannedRepliesTool replies={cannedReplies} onChange={setCannedReplies} />}
 
         {/* ---------------------------------------------------- */}
         {/* TOOL 25: GÖRÜŞME KRONOMETRESİ                       */}

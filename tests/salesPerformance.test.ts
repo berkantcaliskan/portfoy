@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildSalesRanking } from '../src/utils/salesPerformance.ts'
+import { buildSalesRanking, salesPeriodStart } from '../src/utils/salesPerformance.ts'
 
 const people = [
   { id: 'hazal', fullName: 'Hazal', department: 'Satış' },
@@ -27,6 +27,21 @@ test('Eski ve danışmanı belirtilmemiş satışlar toplamda bir kez sayılır'
   assert.equal(ranking.find(row => row.id === 'levent')?.count, 1)
   assert.equal(ranking.find(row => row.id === 'unassigned')?.count, 1)
   assert.ok(Math.abs(ranking.reduce((sum, row) => sum + row.percentage, 0) - 100) < 0.0001)
+})
+test('Haftalık dönem pazartesi, aylık dönem ayın ilk günü başlar', () => {
+  const thursday = new Date(2026, 10, 19, 15, 30)
+  assert.equal(salesPeriodStart('WEEK', thursday).getTime(), new Date(2026, 10, 16).getTime())
+  assert.equal(salesPeriodStart('MONTH', thursday).getTime(), new Date(2026, 10, 1).getTime())
+  const sunday = new Date(2026, 10, 22, 23, 0)
+  assert.equal(salesPeriodStart('WEEK', sunday).getTime(), new Date(2026, 10, 16).getTime())
+})
+test('Dönem dışındaki ve tarihi olmayan satışlar seçilen döneme sayılmaz', () => {
+  const at = (id: string, soldAt: string) => ({ status: 'SATILDI' as const, sale: { soldByUserId: id, soldByUserName: id, salePrice: 1, customerName: '', soldAt } })
+  const since = new Date(2026, 10, 16)
+  const ranking = buildSalesRanking([at('hazal', new Date(2026, 10, 17).toISOString()), at('hazal', new Date(2026, 10, 10).toISOString()), at('levent', '')], people, since)
+  assert.equal(ranking.find(row => row.id === 'hazal')?.count, 1)
+  assert.equal(ranking.find(row => row.id === 'levent')?.count, 0)
+  assert.equal(ranking.find(row => row.id === 'hazal')?.percentage, 100)
 })
 test('Satış yoksa tüm paylar sıfırdır, eşit satışlar isim sırasındadır', () => {
   assert.ok(buildSalesRanking([], people).every(row => row.percentage === 0))

@@ -360,6 +360,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const showTeamOperations = currentUser?.role === 'ADMIN'
   const myPresence = currentUser ? teamOperationsStore.getUserPresence(currentUser.id) : null
   const myPresenceMeta = getPresenceMeta(myPresence?.status)
+  // Durum renklerini halka için düz renge çevirir (Tailwind sınıfı dinamik üretilemez)
+  const presenceColor = (dotClass: string) => ({
+    'bg-emerald-400': '#34d399', 'bg-[#dfb76c]': '#dfb76c', 'bg-sky-400': '#38bdf8', 'bg-orange-400': '#fb923c',
+    'bg-amber-300': '#fcd34d', 'bg-rose-400': '#fb7185', 'bg-[#8c857f]': '#8c857f',
+  } as Record<string, string>)[dotClass] ?? '#8c857f'
 
   // Current active department workspace
   const activeDept: Department = currentUser?.department || 'Pazarlama'
@@ -721,7 +726,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <motion.div
             initial={false}
             animate={{
-              width: isSearchOpen ? 280 : 40,
+              width: isSearchOpen ? 280 : 44,
             }}
             transition={{
               type: 'spring',
@@ -729,10 +734,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               damping: 28,
               mass: 0.8,
             }}
-            className={`top-utility-pill h-10 rounded-full border border-[#4a443f]/60 bg-white flex items-center overflow-hidden select-none transition-colors ${
+            className={`top-utility-pill h-11 min-h-[44px] max-h-[44px] box-border rounded-full border border-[#4a443f]/60 bg-white flex items-center overflow-hidden select-none transition-colors ${
               isSearchOpen
                 ? 'px-3.5'
-                : 'w-10 min-w-[40px] aspect-square p-0 justify-center cursor-pointer hover:border-[#b99881]/50'
+                : 'w-11 min-w-[44px] aspect-square p-0 justify-center cursor-pointer hover:border-[#b99881]/50'
             }`}
             onClick={() => {
               if (!isSearchOpen) {
@@ -744,8 +749,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             title={!isSearchOpen ? 'Arama Yap' : undefined}
           >
-            <div className={`shrink-0 flex items-center justify-center ${isSearchOpen ? 'mr-2' : 'w-10 h-10'}`}>
-              <Search className="w-[18px] h-[18px] text-[#b99881]" strokeWidth={2} />
+            <div className={`shrink-0 flex items-center justify-center ${isSearchOpen ? 'mr-2' : 'w-full h-full'}`}>
+              <Search className="w-5 h-5 text-[#b99881]" strokeWidth={2} />
             </div>
 
             <AnimatePresence>
@@ -959,11 +964,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => setIsAppMenuOpen(!isAppMenuOpen)}
-            className="top-utility-pill w-10 h-10 rounded-full border border-[#4a443f]/60 bg-white hover:border-[#b99881]/50 transition-all cursor-pointer flex items-center justify-center"
+            className="top-utility-pill w-11 h-11 rounded-full border border-[#4a443f]/60 bg-white hover:border-[#b99881]/50 transition-all cursor-pointer flex items-center justify-center"
             title="Hızlı Araçlar & Uygulama Menüsü"
           >
             <svg
-              className="w-[18px] h-[18px] text-[#b99881]"
+              className="w-5 h-5 text-[#b99881]"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -1080,7 +1085,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 messageStore.setPanelOpen(false)
               }
             }}
-            className={`top-utility-pill relative w-10 h-10 rounded-full border bg-white hover:border-[#b99881]/50 transition-all duration-300 cursor-pointer flex items-center justify-center ${
+            className={`top-utility-pill relative w-11 h-11 rounded-full border bg-white hover:border-[#b99881]/50 transition-all duration-300 cursor-pointer flex items-center justify-center ${
               isBellPulsing
                 ? 'scale-115 border-[#b99881] ring-4 ring-[#b99881]/30'
                 : 'border-[#4a443f]/60 scale-100'
@@ -1088,13 +1093,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Bildirimler"
           >
             <Bell
-              className={`w-[18px] h-[18px] text-[#b99881] transition-transform duration-300 ${
+              className={`w-5 h-5 text-[#b99881] transition-transform duration-300 ${
                 isBellPulsing ? 'rotate-12 scale-110' : ''
               }`}
               strokeWidth={2}
             />
             {totalUnreadNotifications > 0 && (
-              <span className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
+              <span aria-label={`${totalUnreadNotifications} okunmamış bildirim`} className="absolute top-0.5 right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-[var(--accent-color,#b99881)] text-white text-[10px] font-bold leading-none flex items-center justify-center">
+                {totalUnreadNotifications > 99 ? '99+' : totalUnreadNotifications}
+              </span>
             )}
           </button>
 
@@ -1134,15 +1141,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }
               }
             }}
-            className="top-utility-pill group h-10 flex items-center gap-2.5 pl-1.5 pr-3.5 rounded-full bg-white border border-[#4a443f]/60 hover:border-[#b99881]/50 transition-all cursor-pointer active:scale-[0.98]"
+            className={`top-utility-pill group h-11 flex items-center gap-2.5 pl-1.5 pr-3.5 rounded-full bg-white border border-[#4a443f]/60 hover:border-[#b99881]/50 transition-all cursor-pointer active:scale-[0.98] ${currentUser ? 'presence-pill' : ''}`}
+            style={currentUser ? ({ '--presence-color': presenceColor(myPresenceMeta.dotClass) } as React.CSSProperties) : undefined}
             title={
               currentUser
-                ? `${currentUser.fullName} (@${currentUser.username})`
+                ? `${currentUser.fullName} (@${currentUser.username}) · ${myPresenceMeta.label}`
                 : 'Giriş Yap'
             }
           >
-            {/* Sol: Yuvarlak Avatar + Durum Noktası */}
-            <div className="relative w-7 h-7 rounded-full bg-[#282522] border border-[#4a443f]/40 flex items-center justify-center shrink-0">
+            {/* Sol: Yuvarlak Avatar; çevresindeki halka çevrimiçi durumunu gösterir */}
+            <div className="relative w-8 h-8 rounded-full bg-[#282522] border border-[#4a443f]/40 flex items-center justify-center shrink-0">
               <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
                 {currentUser?.avatarUrl ? (
                   <img
@@ -1164,11 +1172,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 )}
               </div>
-              {currentUser && (
-                <span
-                  className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white ${myPresenceMeta.dotClass}`}
-                />
-              )}
             </div>
 
             {/* Orta: Kullanıcı Adı */}
@@ -1198,7 +1201,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {showAccounts && allowAccountSwitch ? <AccountSwitchPanel key={currentUser.id} onBack={() => setShowAccounts(false)} /> : <>
                 {/* 1. Kullanıcı Kimlik Özeti */}
                 <div className="flex items-center gap-3 px-1 pb-2.5 border-b border-[#4a443f]/60">
-                  <div className="relative size-12 rounded-full bg-[#282522] border border-[#b99881]/50 flex items-center justify-center shrink-0">
+                  <div className="relative size-12 rounded-full bg-[#282522] flex items-center justify-center shrink-0" title={myPresenceMeta.label}>
+                    <span aria-hidden="true" className="presence-ring" style={{ '--presence-color': presenceColor(myPresenceMeta.dotClass) } as React.CSSProperties} />
                     {currentUser.avatarUrl ? (
                       <img
                         src={currentUser.avatarUrl}
@@ -1216,9 +1220,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                           .toUpperCase()}
                       </span>
                     )}
-                    {currentUser && <span
-                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-white ${myPresenceMeta.dotClass}`}
-                    />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-white truncate">
@@ -1511,7 +1512,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </motion.div>
 
                     {unread > 0 && isSidebarCollapsed && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#dfb76c] ring-2 ring-[#34302c]" />
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--accent-color,#b99881)]" />
                     )}
                   </button>
                 )
@@ -1533,7 +1534,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className={`flex items-center justify-start h-[40px] min-h-[40px] p-0 ${
                     isSidebarCollapsed ? 'w-[40px] min-w-[40px] max-w-[40px]' : 'w-full'
                   } rounded-full bg-[#282522] hover:bg-[#3d3733] border border-[#4a443f] text-xs text-[#d6beae] hover:text-white transition-[width,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer select-none overflow-hidden shrink-0`}
-                  title={`Departman / Çalışma Alanı: ${workspaceName}`}
+                  title={`${workspaceName} Departmanı`}
                 >
                   {/* Sabit 40x40px İkon Yuvası: Daraltıldığında aktif departman ikonu tam merkezde durur */}
                   <div className="w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center">
@@ -1574,7 +1575,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="dropdown-panel dropdown-panel-up absolute left-0 w-[212px] bottom-full mb-1.5 rounded-[22px] p-2 z-50 border border-[#4a443f]"
                     >
                       <div className="px-2.5 py-1 text-[10px] font-semibold text-[#8c857f] uppercase tracking-wider">
-                        Yetkili Çalışma Alanları
+                        Çalışma Alanları
                       </div>
                       <div className="space-y-1 mt-0.5">
                         {authorizedDepts.map((dept) => {
@@ -1664,7 +1665,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Mail className="w-[18px] h-[18px] text-[#b99881] shrink-0" strokeWidth={1.9} />
                 {unreadMailCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#b99881] text-white text-[9px] font-bold flex items-center justify-center">
+                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--accent-color,#b99881)] text-white text-[9px] font-bold leading-none flex items-center justify-center">
                     {unreadMailCount > 99 ? '99+' : unreadMailCount}
                   </span>
                 )}
@@ -1686,9 +1687,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }}
                   className="sidebar-pill-item relative w-[40px] h-[40px] min-w-[40px] min-h-[40px] shrink-0 rounded-full flex items-center justify-center text-[#a69f99] hover:text-[#f3efe9] hover:bg-white/10 transition-colors cursor-pointer"
                 >
-                  <IosChatBubbleIcon className="w-[18px] h-[18px] shrink-0" />
+                  <IosChatBubbleIcon className="w-[18px] h-[18px] shrink-0 text-[#b99881]" />
                   {unreadMessages > 0 && (
-                    <span aria-label={`${unreadMessages} okunmamış mesaj`} className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-[var(--card-surface)]">{unreadMessages}</span>
+                    <span aria-label={`${unreadMessages} okunmamış mesaj`} className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--accent-color,#b99881)] text-white text-[9px] font-bold leading-none flex items-center justify-center">{unreadMessages > 99 ? '99+' : unreadMessages}</span>
                   )}
                 </button>
 
@@ -1999,7 +2000,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <IosChatBubbleIcon className="w-4 h-4" />
           {unreadMessages > 0 && (
-            <span aria-label={`${unreadMessages} okunmamış mesaj`} className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadMessages}</span>
+            <span aria-label={`${unreadMessages} okunmamış mesaj`} className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-color,#b99881)] text-white text-[9px] font-extrabold flex items-center justify-center">{unreadMessages > 99 ? '99+' : unreadMessages}</span>
           )}
         </button>
 

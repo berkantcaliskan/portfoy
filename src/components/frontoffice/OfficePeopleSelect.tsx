@@ -3,6 +3,14 @@ import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import type { OfficeContext } from '@/types/frontOffice'
 import { sortOfficePeople } from '@/types/frontOffice'
+import { userStore } from '@/services/userStore'
+import { visibleDepartment } from '@/types/teamDirectory'
+
+// Sunucudan gelen kişide kullanıcı adı yok; görünen departman için kullanıcı listesinden bulunur
+function shownDepartment(person: { id: string; department?: string }) {
+  const user = userStore.getAll().find(u => u.id === person.id)
+  return visibleDepartment({ username: user?.username, department: person.department || '' }, userStore.getCurrentUser())
+}
 
 export function OfficePeopleSelect({ label, people, firstDepartment, value, onChange, disabled }: {
   label: string
@@ -76,7 +84,7 @@ export function OfficePeopleSelect({ label, people, firstDepartment, value, onCh
       {choices.map(person => <label key={person.id} className="office-people-option">
         <input type="checkbox" checked={value.includes(person.id)} onChange={event => onChange(event.target.checked
           ? [...value, person.id] : value.filter(id => id !== person.id))} />
-        <span>{person.department && <span className="opacity-60">{person.department} · </span>}{person.name}</span>
+        <span>{person.department && <span className="opacity-60">{shownDepartment(person)} · </span>}{person.name}</span>
       </label>)}
     </div>, document.body)}
   </>
