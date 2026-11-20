@@ -15,6 +15,9 @@ import {createBackendPreviewClient} from './crmBackendClient'
 import {createCrmAuthService,type CrmAuthProfile} from './crmAuthService'
 import {createCrmAccountService} from './crmAccountService'
 import {createCrmMainSession} from './crmMainSession'
+// teamDirectory.ts'deki SYSTEM_USERNAMES ile aynı tutulmalı (testler bu dosyayı bağımlılıkları taklit ederek yükler)
+const SYSTEM_USERNAMES = new Set(['staging-meta-admin'])
+const isSystemAccount = (user: { username?: string }) => !!user.username && SYSTEM_USERNAMES.has(user.username)
 
 export type { Department, UserRole, AccessScope, UserPermissions }
 
@@ -393,12 +396,19 @@ class UserStore {
     return () => this.listeners.delete(listener)
   }
 
+  // Sistem hesapları (ör. Staging Meta Yöneticisi) yalnızca adminlere ve her zaman listenin sonunda görünür
+  private visibleUsers(): AppUser[] {
+    const isAdmin = this.currentUser?.role === 'ADMIN'
+    const people = this.users.filter(u => !isSystemAccount(u))
+    return isAdmin ? [...people, ...this.users.filter(isSystemAccount)] : people
+  }
+
   getAllUsers(): AppUser[] {
-    return [...this.users]
+    return this.visibleUsers()
   }
 
   getAll(): AppUser[] {
-    return [...this.users]
+    return this.visibleUsers()
   }
 
   getCurrentUser(): AppUser | null {

@@ -28,7 +28,7 @@ import {
   generateUsername,
 } from '@/services/userStore'
 import { CANONICAL_DEPARTMENTS } from '@/types/department'
-import { visibleAuthorizedDepartments } from '@/types/teamDirectory'
+import { isSystemAccount, SYSTEM_CATEGORY_LABEL, visibleAuthorizedDepartments } from '@/types/teamDirectory'
 import { FrontOfficeAccessPanel } from '@/components/frontoffice/FrontOfficeAccessPanel'
 
 export const TeamPermissionsView: React.FC = () => {
@@ -211,7 +211,8 @@ export const TeamPermissionsView: React.FC = () => {
                 <th className="py-2.5 px-3 text-right">İşlem</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]">
+            {/* Satır zeminleri başlıktan sonra başladığı için köşeler satır grubunda yuvarlatılıp kırpılır */}
+            <tbody className="divide-y divide-[#4a443f]/60 text-[#f3efe9]" style={{ clipPath: 'inset(0 round 18px)' }}>
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-[#34302d] transition-colors">
                   <td className="py-3 px-3">
@@ -223,7 +224,7 @@ export const TeamPermissionsView: React.FC = () => {
 
                   <td className="py-3 px-3">
                     <span className="px-2 py-0.5 rounded-full bg-[#34302d] text-[#b99881] border border-[#4a443f] text-[11px]">
-                      {user.department}
+                      {isSystemAccount(user) ? SYSTEM_CATEGORY_LABEL : user.department}
                     </span>
                   </td>
 

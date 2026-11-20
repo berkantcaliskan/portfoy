@@ -255,7 +255,8 @@ export function PetCompanion() {
   }
 
   return (
-    <div className="fixed bottom-3 z-[36] select-none" style={{ width: 170, right: 'calc(12px + var(--messages-sidebar-offset, 0px))', transition: 'right .25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+    <div className="fixed bottom-2 z-[36] select-none"
+      style={{ width: 170, right: 'calc(4px + var(--messages-sidebar-offset, 0px))', transition: 'right .25s cubic-bezier(0.16, 1, 0.3, 1)', transform: 'scale(0.88)', transformOrigin: 'bottom right' }}>
       <style>{PET_KEYFRAMES}</style>
 
       {bubble && (
