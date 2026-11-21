@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../data/crm_repository.dart';
-import '../data/models.dart';
-import '../data/sales_rules.dart';
+import '../core/crm_repository.dart';
+import '../core/models.dart';
+import '../core/sales_rules.dart';
 import '../ui/format.dart';
 import 'sales_controller.dart';
 

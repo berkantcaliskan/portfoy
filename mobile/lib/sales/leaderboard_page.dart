@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/sales_rules.dart';
+import '../core/sales_rules.dart';
 import 'sales_controller.dart';
 
 /// Başarı tablosu: Yönetim tüm ekibi, satışçı yalnızca kendini görür (masaüstüyle aynı).

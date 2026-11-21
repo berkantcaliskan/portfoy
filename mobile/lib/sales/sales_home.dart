@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/sales_rules.dart';
+import '../core/sales_rules.dart';
 import 'appointments_page.dart';
 import 'leaderboard_page.dart';
 import 'pipeline_page.dart';

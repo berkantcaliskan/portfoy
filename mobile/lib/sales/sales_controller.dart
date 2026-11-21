@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../data/crm_repository.dart';
-import '../data/models.dart';
-import '../data/sales_rules.dart';
+import '../core/crm_repository.dart';
+import '../core/models.dart';
+import '../core/sales_rules.dart';
 
 /// Satış ekranlarının ortak verisi. Masaüstündeki gibi: açılışta, öne gelince,
 /// canlı değişiklik haberinde ve öndeyken düzenli aralıklarla sunucudan yeniden okunur.

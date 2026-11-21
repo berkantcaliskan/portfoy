@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/models.dart';
-import '../data/sales_rules.dart';
+import '../core/models.dart';
+import '../core/sales_rules.dart';
 import '../ui/format.dart';
 import 'lead_detail_page.dart';
 import 'sales_controller.dart';

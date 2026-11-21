@@ -1,8 +1,8 @@
 // Masaüstündeki kurallarla birebir aynı sonucu verdiğini doğrulayan testler
 // (tests/salesPerformance.test.ts ve permissionService.ts davranışları).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:portfoy_mobile/data/models.dart';
-import 'package:portfoy_mobile/data/sales_rules.dart';
+import 'package:portfoy_mobile/core/models.dart';
+import 'package:portfoy_mobile/core/sales_rules.dart';
 import 'package:portfoy_mobile/ui/format.dart';
 
 Profile profile({String role = 'REPRESENTATIVE', String department = 'Satış', String scope = 'DEPARTMENT', List<String> departments = const []}) =>

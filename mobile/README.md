@@ -18,9 +18,9 @@ Müşteri İlişkileri için açıktır; yalnızca Satış'taki kullanıcı masa
 
 | Mobil | Masaüstü karşılığı |
 |---|---|
-| `lib/data/models.dart` | `src/types/lead.ts`, `src/services/dbMapper.ts` (rowToLead), `appointmentStore.ts` |
-| `lib/data/sales_rules.dart` | `SalesTeamView.tsx`, `permissionService.ts`, `leadStore.ts` (updateStage), `utils/salesPerformance.ts` |
-| `lib/data/crm_repository.dart` | `crmAuthService.ts`, `leadStore.ts` (crm_update_lead_work, crm_add_lead_note), `crmBackendRepository.ts` |
+| `lib/core/models.dart` | `src/types/lead.ts`, `src/services/dbMapper.ts` (rowToLead), `appointmentStore.ts` |
+| `lib/core/sales_rules.dart` | `SalesTeamView.tsx`, `permissionService.ts`, `leadStore.ts` (updateStage), `utils/salesPerformance.ts` |
+| `lib/core/crm_repository.dart` | `crmAuthService.ts`, `leadStore.ts` (crm_update_lead_work, crm_add_lead_note), `crmBackendRepository.ts` |
 | `lib/ui/format.dart` | `utils/formatters.ts` |
 
 Bu dosyalardaki bir kural masaüstünde değişirse mobilde de aynı şekilde değiştirilmelidir. `test/sales_rules_test.dart`

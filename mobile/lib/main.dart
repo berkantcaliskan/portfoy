@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'data/crm_repository.dart';
+import 'core/crm_repository.dart';
 import 'sales/sales_controller.dart';
 import 'sales/sales_home.dart';
 import 'ui/theme.dart';

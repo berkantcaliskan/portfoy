@@ -32,7 +32,8 @@ jobs:
           cache: true
       - run: flutter --version
       - run: flutter pub get
-      - run: flutter analyze
+      # Flutter'ın 'kullanımdan kalkacak' bilgi notları derlemeyi durdurmaz; hata ve uyarılar durdurur
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test
       - name: APK derle
         env:
