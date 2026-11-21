@@ -20,3 +20,51 @@
 /* Açık temada sarı zemin beyaza karışmasın: dolgu daha yoğun, ikon koyu sarı */
 html:not([data-theme-accent="night"]):not([data-theme-accent="amber"]):not([data-theme-accent="emerald"]):not([data-theme-accent="sapphire"]):not([data-theme-accent="platinum"]) .lead-handover:is(:hover,:focus-visible) {color:#8a6411!important;background-color:rgb(228 184 74 / 55%)!important}
 .lead-move-menu {position:absolute;top:0;min-width:115px;max-width:170px;max-height:145px;overflow:auto;border-radius:16px;padding:5px}
+
+.customer-send-header { container: send-header / inline-size; align-items: flex-start }
+.customer-send-actions {
+  display: grid;
+  grid-template-columns: auto 11rem auto auto;
+  grid-template-areas: "pull send distribute add" ". status status status";
+  gap: .25rem .6rem;
+  align-items: center;
+  justify-items: start;
+  max-inline-size: 100%;
+}
+.customer-send-actions .customer-pull-button { grid-area: pull }
+.customer-send-actions .customer-distribute-button { grid-area: distribute }
+.customer-send-actions .customer-add-button { grid-area: add }
+.customer-send-actions .customer-pull-feedback { grid-column: 1 / -1; grid-row: auto; max-width: 100% }
+.meta-send-button {
+  grid-area: send;
+  white-space: nowrap;
+  border-color: var(--glass-border);
+  background: color-mix(in srgb, var(--accent-color, #657a72) 75%, #17201c);
+  color: white;
+  min-inline-size: 0;
+  cursor: pointer;
+}
+.meta-send-button:disabled { min-inline-size: min(100%, 11rem); cursor: progress }
+.meta-send-button svg { flex: none }
+.meta-send-status {
+  grid-area: status;
+  justify-self: stretch;
+  min-block-size: 1rem;
+  overflow-wrap: anywhere;
+  /* Feedback wraps within the action columns without changing their width. */
+  contain: inline-size;
+}
+@container send-header (max-width: 43rem) {
+  .customer-send-actions {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "pull send" ". status" "distribute add";
+  }
+  .meta-send-status { min-block-size: 2rem }
+}
+@container send-header (max-width: 22rem) {
+  .customer-send-actions {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "pull" "send" "status" "distribute" "add";
+  }
+}

@@ -173,7 +173,7 @@
     },
     {
       "path": "src/components/crm/MetaSendButton.tsx",
-      "sha256": "c929b6473dac77f48ff7b6b4de22479927fc352efa56ddf799c1dba54d1d2719"
+      "sha256": "94381ea9314c300db67781849db04e93603e660c049d96afcc0c3333955bca46"
     },
     {
       "path": "supabase/functions/_shared/meta-daily-intake.ts",

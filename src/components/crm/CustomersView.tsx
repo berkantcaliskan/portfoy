@@ -853,12 +853,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   const otherCount = dateFilteredLeads.filter(
     (l) => l.stage === 'LOST' || l.stage === 'NO_INTENT' || l.callStatus === 'NO_INTENT'
   ).length
+  const canUseMetaActions = currentUser?.department === 'Yönetim' ||
+    currentUser?.departments?.includes('Yönetim') || currentUser?.role === 'ADMIN'
+  const showSendToolbar = isMarketingView && canUseMetaActions
 
   return (
     <div className="space-y-6">
       {preferences.state.error&&!isMarketingView&&<p role="alert">{preferences.state.error} {preferences.state.conflict?<><button onClick={()=>preferences.resolve(false)}>Sunucudakini kullan</button> · <button onClick={()=>preferences.resolve(true)}>Düzenlememi kaydet</button></>:<button onClick={preferences.retry}>Tekrar dene</button>}</p>}
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className={`flex flex-wrap items-center justify-between gap-4 ${showSendToolbar ? 'customer-send-header' : ''}`}>
         <div>
           <div className="flex items-center gap-2.5">
             <Users className="w-5 h-5 text-[#b99881]" />
@@ -868,10 +871,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className={showSendToolbar ? 'customer-send-actions' : 'flex flex-wrap items-center gap-3'}>
           {pullFeedback && (
             <span
-              className={`text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 shadow-sm ${
+              className={`customer-pull-feedback text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 shadow-sm ${
                 pullFeedback.isNew
                   ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300 font-medium'
                   : 'bg-[#282522] border-[#4a443f] text-[#d6beae]'
@@ -886,9 +889,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             </span>
           )}
 
-          {(currentUser?.department === 'Yönetim' ||
-            currentUser?.departments?.includes('Yönetim') ||
-            currentUser?.role === 'ADMIN') && (
+          {canUseMetaActions && (
             <>
               <button
                 onClick={() => handlePullData()}
@@ -897,7 +898,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   setIsPullDateModalOpen(true)
                 }}
                 disabled={isPulling}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm disabled:opacity-50 select-none"
+                className="customer-pull-button flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm disabled:opacity-50 select-none"
                 title="Sol Tık: Sunucudaki son Meta kaydından itibaren al • Sağ Tık: Tarih aralığı seç"
               >
                 <DownloadCloud className={`w-3.5 h-3.5 text-[#b99881] ${isPulling ? 'animate-bounce text-amber-400' : ''}`} />
@@ -908,7 +909,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               {callCenterUsers.length > 0 && (
                 <button
                   onClick={handleManualAutoAssign}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm"
+                  className="customer-distribute-button flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#34302d] hover:bg-[#3d3733] border border-[#4a443f] text-xs font-semibold text-[#d6beae] hover:text-white cursor-pointer transition-colors shadow-sm"
                   title="Atanmamış tüm müşteri adaylarını çağrı merkezi ekibine eşit paylaştırır"
                 >
                   <RefreshCw className="w-3.5 h-3.5 text-[#b99881]" />
@@ -924,7 +925,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
               size="sm"
               icon={<Plus className="w-3.5 h-3.5" />}
               onClick={onOpenNewLead}
-              className="rounded-full px-4 text-xs font-semibold"
+              className="customer-add-button rounded-full px-4 text-xs font-semibold"
             >
               Yeni Müşteri Ekle
             </GlassButton>

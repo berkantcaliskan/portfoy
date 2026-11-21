@@ -9,6 +9,7 @@ export function MetaSendButton() {
   const account = userStore.getCurrentUser()?.authUserId
   const [count, setCount] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [targets, setTargets] = useState<PendingMetaResult[] | null>(null)
@@ -28,7 +29,12 @@ export function MetaSendButton() {
     return () => { active = false; clearInterval(timer) }
   }, [account])
   const send = async (rows: PendingMetaResult[]) => {
-    const result = await metaStore.sendServerPendingResults(rows, sources, text => { if (current()) setMessage(text) })
+    const result = await metaStore.sendServerPendingResults(rows, sources, text => {
+      if (!current()) return
+      const counter = text.match(/^(\d+\/\d+)\s/)?.[1]
+      if (counter) setProgress(counter)
+      setMessage(counter ? '' : text)
+    })
     if (!current()) return
     setTargets(null)
     setMessage(`Meta ${result.sent} sonucu kabul etti${result.waiting ? `; ${result.waiting} bekliyor` : ''}${result.failed ? `; ${result.failed} gönderilemedi` : ''}.`)
@@ -38,7 +44,7 @@ export function MetaSendButton() {
   }
   const run = async (selected?: PendingMetaResult[]) => {
     if (lock.current) return
-    lock.current = true; setBusy(true); setError(''); setMessage('Sonuçlar sunucudan kontrol ediliyor…')
+    lock.current = true; setBusy(true); setProgress(''); setError(''); setMessage('Sonuçlar sunucudan kontrol ediliyor…')
     try {
       const rows = selected || await metaStore.getServerPendingResults()
       if (!current()) return
@@ -51,16 +57,18 @@ export function MetaSendButton() {
     } catch (e) { if (current()) { setError(e instanceof Error ? e.message : 'Gönderim tamamlanamadı.'); setMessage('') } }
     finally { lock.current = false; setBusy(false) }
   }
+  const counter = busy ? progress || (count ? `0/${count}` : '') : count !== null ? `(${count})` : ''
   return <>
     <button type="button" disabled={busy} onClick={() => void run()}
       title="18 Kasım 2026 ve sonrasındaki gönderilmemiş uygun sonuçları sunucudan kontrol edip gönder"
-      className="flex items-center gap-1.5 rounded-full border border-[#4a443f] bg-[var(--accent-color)] px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60">
-      {busy ? <LoaderCircle size={14} className="animate-spin" /> : <Send size={14} />}
-      {busy ? 'Gönderiliyor…' : `Veriyi Gönder${count !== null ? ` (${count})` : ''}`}
+      className="meta-send-button inline-flex items-center justify-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold">
+      {busy ? <LoaderCircle size={15} stroke="white" className="motion-safe:animate-spin" aria-hidden="true" /> : <Send size={15} stroke="white" aria-hidden="true" />}
+      {busy ? 'Gönderiliyor…' : 'Veriyi Gönder'}
+      {counter && <span className="tabular-nums">{counter}</span>}
     </button>
-    {(message || error) && <div className="basis-full text-xs" role={error ? 'alert' : 'status'} aria-live="polite">
-      {message && <p>{message}</p>}{error && <p className="mt-1 text-rose-400">{error}</p>}
-    </div>}
+    <div className="meta-send-status text-xs" role="status" aria-live="polite">
+      {message && <p>{message}</p>}{error && <p role="alert" className="text-rose-400">{error}</p>}
+    </div>
     <GlassModal isOpen={targets !== null} onClose={() => { if (!busy) setTargets(null) }} title="İlgili başvuruyu seçin" maxWidth="lg">
       <p className="mb-4 text-xs">Diğer uygun sonuçlar da aynı işlemde gönderilecek. 18 Kasım öncesi başvurular gönderilmez.</p>
       <div className="space-y-3">{targets?.filter(row => row.sources.length > 1).map(row => <label key={row.id} className="block text-xs">
